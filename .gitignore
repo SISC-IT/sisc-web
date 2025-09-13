@@ -18,8 +18,8 @@
 /target/
 
 # ===== Node.js (React / Vite) =====
-/node_modules/
-/dist/
+node_modules/
+dist/
 
 # ===== Python (AI / Data) =====
 __pycache__/
