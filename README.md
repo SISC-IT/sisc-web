@@ -1,4 +1,4 @@
-# sejong-invest-club
+# sisc-web
 세종투자연구회 금융IT팀 서비스
 
 ## 프로젝트1
