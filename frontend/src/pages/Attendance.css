@@ -1,0 +1,18 @@
+.attendance-text {
+  color: #fff;
+  font-family: Pretendard;
+  font-size: 36px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 100%;
+  letter-spacing: 1.44px;
+  margin-top: 124px;
+}
+
+.attendance-list {
+  margin-top: 72px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
