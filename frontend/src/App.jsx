@@ -10,6 +10,7 @@ import Mypage from './pages/Mypage';
 import AttendanceAll from './pages/AttendanceAll';
 import AttendanceAsset from './pages/AttendanceAsset';
 import AttendanceFinanceIt from './pages/AttendanceFinanceIt';
+import AttendanceManage from './pages/AttendanceManage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             path="/attendance-financeit"
             element={<AttendanceFinanceIt />}
           />
+          <Route path="/attendance/manage" element={<AttendanceManage />} />
           <Route path="/board" element={<Board />} />
           <Route path="/stock-game" element={<StockGame />} />
           <Route path="/back-test" element={<BackTest />} />
