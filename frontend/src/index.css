@@ -1,0 +1,19 @@
+@import 'pretendard/dist/web/static/pretendard.css';
+
+body {
+  font-family:
+    'Pretendard',
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    Roboto,
+    'Helvetica Neue',
+    'Segoe UI',
+    'Apple SD Gothic Neo',
+    'Noto Sans KR',
+    'Malgun Gothic',
+    sans-serif;
+  background-color: #0f1215;
+  margin: 0;
+  box-sizing: border-box;
+}
