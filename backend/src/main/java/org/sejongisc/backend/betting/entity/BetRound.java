@@ -1,19 +1,23 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
+import org.sejongisc.backend.betting.enums.BetOption;
+import org.sejongisc.backend.betting.enums.MarketType;
+import org.sejongisc.backend.betting.enums.Scope;
+import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-public class BetRound {
+public class BetRound extends BasePostgresEntity {
 
-    @Id @GeneratedValue
-    @org.hibernate.annotations.UuidGenerator
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Enumerated(EnumType.STRING)
@@ -33,18 +37,13 @@ public class BetRound {
 
     private boolean status; // enum 고려할 것
 
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime openAt;
+    private LocalDateTime openAt;
 
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime lockAt;
+    private LocalDateTime lockAt;
 
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime settleAt;
-
-    @CreatedDate
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime createdAt;
+    private LocalDateTime settleAt;
+    
+    //private LocalDateTime createdAt; // 상속 받음 (createdDate)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = true)
@@ -56,8 +55,4 @@ public class BetRound {
 
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal previousClosePrice;
-
-    public enum Scope {DAILY, WEEKLY};
-    public enum BetOption {RISE, FALL};
-    public enum MarketType {KOREA, US}
 }
