@@ -1,5 +1,5 @@
 package org.sejongisc.backend.user.entity;
 
 public enum AuthProvider {
-    GOOGLE, GITHUB
+    GOOGLE, GITHUB, KAKAO
 }

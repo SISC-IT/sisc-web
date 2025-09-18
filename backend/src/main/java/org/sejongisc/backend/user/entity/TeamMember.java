@@ -17,7 +17,7 @@ import java.util.UUID;
 public class TeamMember {
 
     @Id
-    @UuidGenerator
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "uuid")
     private UUID id;
 

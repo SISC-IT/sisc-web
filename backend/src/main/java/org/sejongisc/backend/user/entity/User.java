@@ -3,7 +3,6 @@ package org.sejongisc.backend.user.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
-import org.hibernate.mapping.UserDefinedObjectType;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.util.ArrayList;
@@ -47,5 +46,5 @@ public class User extends BasePostgresEntity{
     // User : OAuthAccounts = 1 : N(여러 OAuth를 연결 가능)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<UserOauthAcoount> oauthAccounts = new ArrayList<>();
+    private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
 }
