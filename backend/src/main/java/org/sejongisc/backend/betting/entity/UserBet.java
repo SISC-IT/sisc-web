@@ -13,7 +13,7 @@ import java.util.UUID;
 public class UserBet extends BasePostgresEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private UUID userBetId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "round_id", nullable = false)
