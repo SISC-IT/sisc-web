@@ -19,9 +19,9 @@ import java.util.UUID;
 public class User extends BasePostgresEntity{
 
     @Id
-    @UuidGenerator
-    //@Column(columnDefinition = "uuid")  //postgre에서 자동으로 매핑해줌
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "user_id", columnDefinition = "uuid")
+    private UUID userId;
 
     //OAuth 전용 계정 대비 nullable 허용 가능
     @Column(columnDefinition = "citext", unique = true)

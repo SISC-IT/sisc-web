@@ -17,8 +17,8 @@ public class Team {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "uuid")
-    private UUID id;
+    @Column(name = "team_id", columnDefinition = "uuid")
+    private UUID teamId;
 
     @Column(nullable = false, unique = true)
     private String name;

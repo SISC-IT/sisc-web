@@ -18,8 +18,8 @@ public class TeamMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "uuid")
-    private UUID id;
+    @Column(name = "team_member_id", columnDefinition = "uuid")
+    private UUID teamMemberId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, columnDefinition = "uuid")

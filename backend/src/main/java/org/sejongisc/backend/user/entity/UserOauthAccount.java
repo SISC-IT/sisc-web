@@ -18,8 +18,8 @@ public class UserOauthAccount extends BasePostgresEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "uuid")
-    private UUID id;
+    @Column(name = "user_oauth_account_id", columnDefinition = "uuid")
+    private UUID userOauthAccountId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, columnDefinition = "uuid")
