@@ -18,7 +18,7 @@ import java.util.UUID;
 public class BetRound extends BasePostgresEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private UUID betRoundID;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
