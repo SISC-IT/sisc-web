@@ -1,19 +1,18 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
+import org.sejongisc.backend.betting.enums.Status;
+import org.sejongisc.backend.betting.enums.BetOption;
+import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-public class UserBet {
+public class UserBet extends BasePostgresEntity {
 
-    @Id @GeneratedValue
-    @org.hibernate.annotations.UuidGenerator
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -25,7 +24,7 @@ public class UserBet {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private BetRound.BetOption option;
+    private BetOption option;
 
     private boolean isFree;
 
@@ -35,17 +34,9 @@ public class UserBet {
     @Column(nullable = true)
     private Integer payoutPoints;
 
-    @CreatedDate
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime createdAt;
-
-    @LastModifiedDate
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime updatedAt; // 일단 미사용
+    // private LocalDateTime createdAt; // 상속 받음 (createdDate)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status;
-
-    public enum Status{OPEN, CLOSED};
 }
