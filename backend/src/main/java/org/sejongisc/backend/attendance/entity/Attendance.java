@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -17,18 +18,18 @@ import java.time.LocalDateTime;
 public class Attendance {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "attendance_id")
-    private Long attendanceId;
+    @GeneratedValue(generator = "UUID")
+    @Column(name = "attendance_id", columnDefinition = "uuid")
+    private UUID attendanceId;
 
-    @Column(name = "session_id", nullable = false)
-    private Long sessionId;
+    @Column(name = "session_id", nullable = false, columnDefinition = "uuid")
+    private UUID attendanceSessionId;
 
-    @Column(name = "member_id", nullable = false)
-    private Long memberId;
+    @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
+    private UUID userId;
 
     @Enumerated(EnumType.STRING)
-    private AttendanceStatus status;
+    private AttendanceStatus attendanceStatus;
 
     @CreationTimestamp
     @Column(name = "checked_at")
@@ -42,6 +43,9 @@ public class Attendance {
 
     @Embedded
     private Location checkInLocation;
+
+    @Column(name = "device_info")
+    private String deviceInfo;
 
     // 지각 여부 계산 / 상태 업데이트
 }

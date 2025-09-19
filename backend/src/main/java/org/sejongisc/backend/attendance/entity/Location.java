@@ -15,7 +15,7 @@ public class Location {
     private Double lat;
 
     @Column(name = "longitude", precision = 10, scale = 7)
-    private Long lng;
+    private Double lng;
 
     @Column(name = "radius_meters")
     private Integer radiusMeters;

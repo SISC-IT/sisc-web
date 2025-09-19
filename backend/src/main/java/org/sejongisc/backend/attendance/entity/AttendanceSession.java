@@ -2,8 +2,10 @@ package org.sejongisc.backend.attendance.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -14,9 +16,9 @@ import java.time.LocalDateTime;
 public class AttendanceSession {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "session_id")
-    private Long sessionId;
+    @GeneratedValue(generator = "UUID")
+    @Column(name = "attendance_session_id", columnDefinition = "uuid")
+    private UUID attendanceSessionId;
 
     @Column(nullable = false)
     private String title;       // "세투연 9/17"
@@ -38,5 +40,14 @@ public class AttendanceSession {
     @Embedded
     private Location location;      // 위치 기반 출석을 위한 GPS 좌표
 
+    @Enumerated(EnumType.STRING)
+    private SessionVisibility visibility;
+
+    @Enumerated(EnumType.STRING)
+    private SessionStatus status;
+
+    @CreationTimestamp
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
 }
