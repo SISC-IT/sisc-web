@@ -18,7 +18,7 @@ import java.util.UUID;
 public class Attendance {
 
     @Id
-    @GeneratedValue(generator = "UUID")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "attendance_id", columnDefinition = "uuid")
     private UUID attendanceId;
 

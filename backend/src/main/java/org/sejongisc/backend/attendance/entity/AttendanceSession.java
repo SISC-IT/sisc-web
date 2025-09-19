@@ -3,6 +3,7 @@ package org.sejongisc.backend.attendance.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -13,10 +14,10 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AttendanceSession {
+public class AttendanceSession extends BasePostgresEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID")
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "attendance_session_id", columnDefinition = "uuid")
     private UUID attendanceSessionId;
 
