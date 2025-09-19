@@ -9,10 +9,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.util.UUID;
 
 @Entity
-@EntityListeners(AuditingEntityListener.class)
 public class UserBet extends BasePostgresEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "uuid")
     private UUID userBetId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
