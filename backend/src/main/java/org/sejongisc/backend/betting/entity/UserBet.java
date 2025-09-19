@@ -1,7 +1,7 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
-import org.sejongisc.backend.betting.enums.Status;
+import org.sejongisc.backend.betting.enums.BetStatus;
 import org.sejongisc.backend.betting.enums.BetOption;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -34,9 +34,7 @@ public class UserBet extends BasePostgresEntity {
     @Column(nullable = true)
     private Integer payoutPoints;
 
-    // private LocalDateTime createdAt; // 상속 받음 (createdDate)
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status;
+    private BetStatus betStatus;
 }
