@@ -7,7 +7,12 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
   // GLOBAL
+
   INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에 문제가 발생했습니다."),
+
+  // TEMPLATE
+
+  TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 템플릿이 존재하지 않습니다."),
 
   // AUTH
 

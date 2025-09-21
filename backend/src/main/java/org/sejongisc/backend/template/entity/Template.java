@@ -4,6 +4,8 @@ package org.sejongisc.backend.template.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
+import org.sejongisc.backend.template.dto.TemplateRequest;
+import org.sejongisc.backend.user.entity.User;
 
 import java.util.UUID;
 
@@ -16,10 +18,11 @@ import java.util.UUID;
 public class Template extends BasePostgresEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID id;
+  @Column(name = "template_id", columnDefinition = "uuid")
+  private UUID templateId;
 
-  //@ManyToOne
-  //private User user;
+  @ManyToOne
+  private User user;
 
   private String title;           // 템플릿 제목
   private String description;     // 템플릿 설명
@@ -28,4 +31,43 @@ public class Template extends BasePostgresEntity {
   private int likeCount;          // 좋아요 개수
   // DB 트랜잭션에서 동시성 업데이트(likeCount + 1) 충돌 관리가 필요
   // JPA 기본 @Version 낙관적 락을 붙이거나, DB update ... set like_count = like_count + 1 쿼리로 처리
+
+  public void updateFromTemplateRequest(TemplateRequest templateRequest) {
+    this.title = templateRequest.getTitle();
+    this.description = templateRequest.getDescription();
+    this.isPublic = templateRequest.getIsPublic();
+  }
+
+  public void incrementBookmarkCount() {
+    this.bookmarkCount += 1;
+  }
+
+  public void decrementBookmarkCount() {
+    if (this.bookmarkCount > 0) {
+      this.bookmarkCount -= 1;
+    }
+    //TODO : 로깅처리
+  }
+
+  public void incrementLikeCount() {
+    this.likeCount += 1;
+  }
+
+  public void decrementLikeCount() {
+    if (this.likeCount > 0) {
+      this.likeCount -= 1;
+    }
+    //TODO : 로깅처리
+  }
+
+  public static Template createTemplateFromTemplateRequest(TemplateRequest templateRequest) {
+    return Template.builder()
+        .title(templateRequest.getTitle())
+        .description(templateRequest.getDescription())
+        .isPublic(templateRequest.getIsPublic())
+        .user(templateRequest.getUser())
+        .bookmarkCount(0)
+        .likeCount(0)
+        .build();
+  }
 }
