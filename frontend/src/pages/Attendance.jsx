@@ -3,7 +3,7 @@ import './Attendance.css';
 import icon1 from '../assets/at_icon_1.png';
 import icon2 from '../assets/at_icon_2.png';
 import icon3 from '../assets/at_icon_3.png';
-import AttendanceSelectBox from '../components/AttendanceSelectBox.jsx';
+import AttendanceSelectBox from '../components/attendance/AttendanceSelectBox';
 
 const attendanceSelectData = [
   { icon: icon1, text: '전체 출석', path: '/attendance-all' },
