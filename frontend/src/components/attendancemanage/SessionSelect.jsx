@@ -7,8 +7,9 @@ const SessionSelect = ({
 }) => {
   return (
     <div className={styles.field}>
-      <label className={styles.srOnly}>세션선택</label>
+      <label htmlFor="session-select" className={styles.srOnly}>세션선택</label>
       <select
+        id="session-select"
         className={styles.select}
         value={selectedId}
         onChange={(e) => onChange(e.target.value)}
