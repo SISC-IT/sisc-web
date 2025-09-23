@@ -30,6 +30,14 @@ const SessionForm = ({ styles, onCreate }) => {
     setSs('');
   };
 
+  const handleTimeChange = (setter, max) => (e) => {
+    let value = onlyDigits(e.target.value);
+    if (parseInt(value, 10) > max) {
+      value = max.toString();
+    }
+    setter(value.slice(0, 2));
+  };
+
   return (
     <section className={styles.card}>
       <div className={styles.cardHeader}>
@@ -65,21 +73,21 @@ const SessionForm = ({ styles, onCreate }) => {
               placeholder="시(HH)"
               value={hh}
               inputMode="numeric"
-              onChange={(e) => setHh(onlyDigits(e.target.value).slice(0, 2))}
+              onChange={handleTimeChange(setHh, 24)}
             />
             <input
               className={styles.input}
               placeholder="분(MM)"
               value={mm}
               inputMode="numeric"
-              onChange={(e) => setMm(onlyDigits(e.target.value).slice(0, 2))}
+              onChange={handleTimeChange(setMm, 60)}
             />
             <input
               className={styles.input}
               placeholder="초(SS)"
               value={ss}
               inputMode="numeric"
-              onChange={(e) => setSs(onlyDigits(e.target.value).slice(0, 2))}
+              onChange={handleTimeChange(setSs, 60)}
             />
           </div>
         </div>
