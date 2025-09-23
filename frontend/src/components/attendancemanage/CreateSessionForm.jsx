@@ -9,10 +9,10 @@ const SessionForm = ({ styles, onCreate }) => {
   const [ss, setSs] = useState('');
 
   const durationSec = useMemo(() => {
-    const H = parseInt(hh || '0', 10) || 0;
-    const M = parseInt(mm || '0', 10) || 0;
-    const S = parseInt(ss || '0', 10) || 0;
-    return Math.max(0, H * 3600 + M * 60 + S);
+    const h = parseInt(hh || '0', 10) || 0;
+    const m = parseInt(mm || '0', 10) || 0;
+    const s = parseInt(ss || '0', 10) || 0;
+    return Math.max(0, h * 3600 + m * 60 + s);
   }, [hh, mm, ss]);
 
   const handleSubmit = (e) => {
@@ -46,48 +46,58 @@ const SessionForm = ({ styles, onCreate }) => {
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.field}>
-          <label>세션 제목</label>
+          <label htmlFor="session-title">세션 제목</label>
           <input
+            id="session-title"
             className={styles.input}
-            placeholder="세션 제목"
+            placeholder="(ex: 금융IT 출석)"
             value={title}
+            type="text"
             onChange={(e) => setTitle(e.target.value)}
           />
         </div>
 
         <div className={styles.field}>
-          <label>세션 번호</label>
+          <label htmlFor="session-code">세션 번호</label>
           <input
+            id="session-code"
             className={styles.input}
-            placeholder="세션 번호"
+            placeholder="(ex: 12345678)"
             value={code}
+            type="text"
             onChange={(e) => setCode(e.target.value)}
           />
         </div>
 
         <div className={styles.field}>
-          <label>세션 시간</label>
+          <label htmlFor="session-ss">세션 시간</label>
           <div className={styles.timefield}>
             <input
+              id="session-hh"
               className={styles.input}
               placeholder="시(HH)"
               value={hh}
               inputMode="numeric"
-              onChange={handleTimeChange(setHh, 24)}
+              type="text"
+              onChange={handleTimeChange(setHh, 23)}
             />
             <input
+              id="session-mm"
               className={styles.input}
               placeholder="분(MM)"
               value={mm}
               inputMode="numeric"
-              onChange={handleTimeChange(setMm, 60)}
+              type="text"
+              onChange={handleTimeChange(setMm, 59)}
             />
             <input
+              id="session-ss"
               className={styles.input}
               placeholder="초(SS)"
               value={ss}
               inputMode="numeric"
-              onChange={handleTimeChange(setSs, 60)}
+              type="text"
+              onChange={handleTimeChange(setSs, 59)}
             />
           </div>
         </div>
