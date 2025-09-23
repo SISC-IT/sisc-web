@@ -11,10 +11,10 @@ import lombok.*;
 @AllArgsConstructor
 public class Location {
 
-    @Column(name = "latitude", precision = 10, scale = 7)
+    @Column(name = "latitude")
     private Double lat;
 
-    @Column(name = "longitude", precision = 10, scale = 7)
+    @Column(name = "longitude")
     private Double lng;
 
     @Column(name = "radius_meters")
