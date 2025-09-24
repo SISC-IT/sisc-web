@@ -1,23 +1,24 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
-import org.sejongisc.backend.betting.enums.BetOption;
-import org.sejongisc.backend.betting.enums.MarketType;
-import org.sejongisc.backend.betting.enums.Scope;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@EntityListeners(AuditingEntityListener.class)
+@Builder
+@Getter
+@NoArgsConstructor @AllArgsConstructor
 public class BetRound extends BasePostgresEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "uuid")
     private UUID betRoundID;
 
     @Enumerated(EnumType.STRING)
@@ -42,8 +43,6 @@ public class BetRound extends BasePostgresEntity {
     private LocalDateTime lockAt;
 
     private LocalDateTime settleAt;
-    
-    //private LocalDateTime createdAt; // 상속 받음 (createdDate)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = true)
@@ -55,4 +54,7 @@ public class BetRound extends BasePostgresEntity {
 
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal previousClosePrice;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal settleClosePrice;
 }
