@@ -3,6 +3,7 @@ import StrategyInfoCard from '../components/backtest/StrategyInfoCard';
 import StocksCard from '../components/backtest/StocksCard';
 import EntryRulesCard from '../components/backtest/EntryRulesCard';
 import ExitRulesCard from '../components/backtest/ExitRulesCard';
+import NotesCard from '../components/backtest/NotesCard';
 
 const BackTest = () => {
   return (
@@ -13,6 +14,7 @@ const BackTest = () => {
       <StocksCard />
       <EntryRulesCard />
       <ExitRulesCard />
+      <NotesCard />
     </div>
   );
 };
