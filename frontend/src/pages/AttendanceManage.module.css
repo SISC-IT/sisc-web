@@ -1,6 +1,6 @@
 :root {
   --bg: #f8f9fa;
-  --card: #ffffff;
+  --card: #f1f3f5;
   --panel: #f1f3f5;
   --text: #212529;
   --muted: #868e96;
@@ -81,7 +81,9 @@ fieldset {
   border-radius: 10px;
   padding: 12px 12px;
   outline: none;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  transition:
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
 }
 
 .input:focus {
