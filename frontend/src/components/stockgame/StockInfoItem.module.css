@@ -1,0 +1,19 @@
+.stock-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stock-key {
+  font-size: 16px;
+  font-weight: 500;
+  font-style: medium;
+  color: #828282;
+}
+
+.stock-value {
+  font-size: 28px;
+  font-weight: 500;
+  font-style: medium;
+  color: #616161;
+}
