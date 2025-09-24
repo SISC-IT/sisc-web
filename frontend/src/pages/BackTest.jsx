@@ -2,6 +2,7 @@ import styles from './BackTest.module.css';
 import StrategyInfoCard from '../components/backtest/StrategyInfoCard';
 import StocksCard from '../components/backtest/StocksCard';
 import EntryRulesCard from '../components/backtest/EntryRulesCard';
+import ExitRulesCard from '../components/backtest/ExitRulesCard';
 
 const BackTest = () => {
   return (
@@ -11,6 +12,7 @@ const BackTest = () => {
       <StrategyInfoCard />
       <StocksCard />
       <EntryRulesCard />
+      <ExitRulesCard />
     </div>
   );
 };
