@@ -83,7 +83,7 @@
 }
 
 .newPostButton {
-  background-color: #6366f1;
+  background: linear-gradient(to right, #d8e8ff, #d1d8ff, #dddeff);;
   color: white;
   border: none;
   border-radius: 8px;
