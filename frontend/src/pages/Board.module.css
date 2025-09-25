@@ -43,10 +43,10 @@
 }
 
 .searchIcon {
-  background-color: #1e293b;
+  background-color: #000000;
   color: white;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
