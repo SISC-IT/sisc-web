@@ -8,7 +8,7 @@ import java.util.UUID;
 
 @Getter
 @AllArgsConstructor
-public class UserInfoResponseDto {
+public class UserInfoResponse {
     private UUID id;
     private String name;
     private String email;

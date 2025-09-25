@@ -1,14 +1,13 @@
 package org.sejongisc.backend.user.service;
 
-import com.sun.jdi.request.DuplicateRequestException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.dto.SignupRequestDto;
-import org.sejongisc.backend.user.dto.SignupResponseDto;
+import org.sejongisc.backend.user.dto.SignupRequest;
+import org.sejongisc.backend.user.dto.SignupResponse;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,7 +24,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public SignupResponseDto signUp(SignupRequestDto dto) {
+    public SignupResponse signUp(SignupRequest dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
@@ -52,7 +51,7 @@ public class UserServiceImpl implements UserService {
 
         try {
             User saved = userRepository.save(user);
-            return SignupResponseDto.from(saved);
+            return SignupResponse.from(saved);
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.DUPLICATE_USER);
         }

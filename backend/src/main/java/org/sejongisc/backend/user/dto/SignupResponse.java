@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
-public class SignupResponseDto {
+public class SignupResponse {
     private final UUID userId;
     private final String name;
     private final String email;
@@ -21,7 +21,7 @@ public class SignupResponseDto {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
     private final LocalDateTime updatedAt;
 
-    private SignupResponseDto(UUID userId, String name, String email, Role role, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private SignupResponse(UUID userId, String name, String email, Role role, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.userId=userId;
         this.name=name;
         this.email=email;
@@ -30,8 +30,8 @@ public class SignupResponseDto {
         this.updatedAt = updatedAt;
     }
 
-    public static SignupResponseDto from(User user) {
-        return new SignupResponseDto(
+    public static SignupResponse from(User user) {
+        return new SignupResponse(
                 user.getUserId(),
                 user.getName(),
                 user.getEmail(),

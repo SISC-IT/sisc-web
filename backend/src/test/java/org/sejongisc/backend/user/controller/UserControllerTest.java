@@ -10,8 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
-import org.sejongisc.backend.user.dto.SignupRequestDto;
-import org.sejongisc.backend.user.dto.SignupResponseDto;
+import org.sejongisc.backend.user.dto.SignupRequest;
+import org.sejongisc.backend.user.dto.SignupResponse;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.service.UserService;
@@ -19,7 +19,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -65,7 +64,7 @@ class UserControllerTest {
     @Test
     @DisplayName("POST /user/signup - 201 Created & 응답 DTO 반환")
     void signup_success() throws Exception {
-        SignupRequestDto req = SignupRequestDto.builder()
+        SignupRequest req = SignupRequest.builder()
                 .name("홍길동")
                 .email("hong@example.com")
                 .password("Password123!")
@@ -87,9 +86,9 @@ class UserControllerTest {
         entity.setCreatedDate(now);
         entity.setUpdatedDate(now);
 
-        SignupResponseDto resp = SignupResponseDto.from(entity);
+        SignupResponse resp = SignupResponse.from(entity);
 
-        when(userService.signUp(any(SignupRequestDto.class))).thenReturn(resp);
+        when(userService.signUp(any(SignupRequest.class))).thenReturn(resp);
 
         mockMvc.perform(post("/user/signup")
                         .contentType(MediaType.APPLICATION_JSON)

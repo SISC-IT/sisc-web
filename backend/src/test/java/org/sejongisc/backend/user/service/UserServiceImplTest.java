@@ -18,8 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.dto.SignupRequestDto;
-import org.sejongisc.backend.user.dto.SignupResponseDto;
+import org.sejongisc.backend.user.dto.SignupRequest;
+import org.sejongisc.backend.user.dto.SignupResponse;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,7 +36,7 @@ class UserServiceImplTest {
     @DisplayName("회원가입 성공: 비밀번호 인코딩, 저장, DTO 매핑 확인")
     void signUp_success() {
         // given
-        SignupRequestDto req = SignupRequestDto.builder()
+        SignupRequest req = SignupRequest.builder()
                 .name("홍길동")
                 .email("hong@example.com")
                 .password("Password123!")
@@ -62,7 +62,7 @@ class UserServiceImplTest {
         });
 
         // when
-        SignupResponseDto res = userService.signUp(req);
+        SignupResponse res = userService.signUp(req);
 
         // then
         assertAll(
@@ -84,7 +84,7 @@ class UserServiceImplTest {
     @DisplayName("회원가입 실패: 이메일 중복이면 CustomException(DUPLICATE_EMAIL)")
     void signUp_duplicateEmail_throws() {
         // given
-        SignupRequestDto req = SignupRequestDto.builder()
+        SignupRequest req = SignupRequest.builder()
                 .name("홍길동")
                 .email("dup@example.com")
                 .password("Password123!")
@@ -109,7 +109,7 @@ class UserServiceImplTest {
     @DisplayName("회원가입: Role이 null이면 기본값 MEMBER로 저장")
     void signUp_nullRole_defaultsToMember() {
         // given
-        SignupRequestDto req = SignupRequestDto.builder()
+        SignupRequest req = SignupRequest.builder()
                 .name("이몽룡")
                 .email("lee@example.com")
                 .password("Secret!234")
@@ -134,7 +134,7 @@ class UserServiceImplTest {
         });
 
         // when
-        SignupResponseDto res = userService.signUp(req);
+        SignupResponse res = userService.signUp(req);
 
         // then
         assertThat(res.getRole()).isEqualTo(Role.TEAM_MEMBER);
@@ -144,7 +144,7 @@ class UserServiceImplTest {
     @DisplayName("회원가입 실패: 전화번호 중복이면 CustomException(DUPLICATE_PHONE)")
     void signUp_duplicatePhone_throws() {
         // given
-        SignupRequestDto req = SignupRequestDto.builder()
+        SignupRequest req = SignupRequest.builder()
                 .name("성춘향")
                 .email("spring@example.com")
                 .password("Password!123")
@@ -171,7 +171,7 @@ class UserServiceImplTest {
     @DisplayName("회원가입 실패: DB 무결성 제약 위반 시 CustomException(DUPLICATE_USER)")
     void signUp_dataIntegrityViolation_throws() {
         // given
-        SignupRequestDto req = SignupRequestDto.builder()
+        SignupRequest req = SignupRequest.builder()
                 .name("임꺽정")
                 .email("im@example.com")
                 .password("Pw123456!")
