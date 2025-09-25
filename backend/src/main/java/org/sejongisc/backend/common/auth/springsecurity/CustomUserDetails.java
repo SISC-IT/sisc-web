@@ -14,7 +14,7 @@ import java.util.UUID;
 @Getter
 public class CustomUserDetails implements UserDetails {
 
-    private final UUID uuid;
+    private final UUID userId;
     private final String name;
     private final String email;
     private final String password;
@@ -23,7 +23,7 @@ public class CustomUserDetails implements UserDetails {
     private final Integer point;
 
     public CustomUserDetails(User user) {
-        this.uuid = user.getUserId();
+        this.userId = user.getUserId();
         this.name = user.getName();
         this.email = user.getEmail();
         this.password = user.getPasswordHash();
