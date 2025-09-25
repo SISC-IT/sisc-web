@@ -24,7 +24,7 @@ const Sidebar = () => {
       />
       <nav aria-label="사이드바">
         <div className={styles['menu-section']}>
-          <h3 className={styles['menu-title']}>Main</h3>
+          <span className={styles['menu-title']}>Main</span>
           <ul>
             <li>
               <NavLink
@@ -76,7 +76,7 @@ const Sidebar = () => {
         </div>
 
         <div className={styles['menu-section']}>
-          <h3 className={styles['menu-title']}>트레이딩</h3>
+          <span className={styles['menu-title']}>트레이딩</span>
           <ul>
             <li>
               <NavLink
@@ -112,7 +112,7 @@ const Sidebar = () => {
         </div>
 
         <div className={styles['menu-section']}>
-          <h3 className={styles['menu-title']}>계정</h3>
+          <span className={styles['menu-title']}>계정</span>
           <ul>
             <li>
               <NavLink
