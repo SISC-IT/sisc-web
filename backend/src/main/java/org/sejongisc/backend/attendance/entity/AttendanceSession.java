@@ -51,4 +51,54 @@ public class AttendanceSession extends BasePostgresEntity {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    /**
+     * 현재 세션 상태 계산
+     */
+    public SessionStatus calculateCurrentStatus() {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.isBefore(startsAt)) {
+            return SessionStatus.UPCOMING;
+        } else if (now.isAfter(getEndsAt())) {
+            return SessionStatus.CLOSED;
+        } else {
+            return SessionStatus.OPEN;
+        }
+    }
+
+    /**
+     * 세션 종료 시간 계산
+     */
+    public boolean isCheckInAvailable() {
+        LocalDateTime now = LocalDateTime.now();
+        return now.isAfter(startsAt) && now.isBefore(getEndsAt());
+    }
+
+    /**
+     * 세션 종료 시간 계산
+     */
+    public LocalDateTime getEndsAt() {
+        return startsAt.plusSeconds(windowSeconds != null ? windowSeconds : 1800);
+    }
+
+    /**
+     * 남은 시간 계산 (초단위)
+     */
+    public long getRemainingSeconds() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endsAt = getEndsAt();
+
+        if (now.isAfter(endsAt)) {
+            return 0;
+        }
+
+        return java.time.Duration.between(now, endsAt).getSeconds();
+    }
+
+    /**
+     * 6자리 고유 코드 생성
+     */
+    public static String generateUniqueCode() {
+        return String.format("%06d", new java.util.Random().nextInt(1000000));
+    }
 }
