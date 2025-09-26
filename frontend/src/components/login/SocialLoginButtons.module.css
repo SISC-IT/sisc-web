@@ -1,0 +1,84 @@
+.wrapper {
+  margin-top: 16px;
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  margin-bottom: 26px;
+  margin-top: 26px;
+  width: 100%;
+  height: 1px;
+}
+
+.buttons {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 480px) {
+  .buttons {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  transition:
+    transform 0.04s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+  outline: none;
+  border: 1px solid transparent;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+}
+
+.icon {
+  flex: 0 0 40px;
+}
+
+.google {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+.google:hover {
+  background: #f9fafb;
+}
+
+.naver {
+  background: #03c75a;
+  color: #ffffff;
+}
+.naver:hover {
+  filter: brightness(0.95);
+}
+
+.kakao {
+  background: #fee500;
+  color: #191600;
+  border-color: #e5e7eb;
+}
+.kakao:hover {
+  filter: brightness(0.98);
+}
+
+.label {
+  white-space: nowrap;
+  font-size: 14px;
+}
