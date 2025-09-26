@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name="user")
+@Table(name="users") // user가 예약어라 users로 테이블명 지정
 @Getter
 @Setter
 @NoArgsConstructor

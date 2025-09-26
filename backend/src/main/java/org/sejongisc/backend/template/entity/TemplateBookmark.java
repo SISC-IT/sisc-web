@@ -6,14 +6,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
+import org.sejongisc.backend.user.entity.User;
 
 
 @Entity
-@Table(
-    uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"template_id", "user_id"})
-    }
-)
 @Getter
 @Builder
 @NoArgsConstructor
@@ -27,7 +23,7 @@ public class TemplateBookmark extends BasePostgresEntity {
   @JoinColumn(name = "template_id")
   private Template template;
 
-  //@ManyToOne(fetch = FetchType.LAZY)
-  //@JoinColumn(name = "template_id")
-  //private User user;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  private User user;
 }
