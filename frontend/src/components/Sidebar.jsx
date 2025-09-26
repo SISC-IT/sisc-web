@@ -1,62 +1,128 @@
-import { Link } from 'react-router-dom';
-import './Sidebar.css';
+import { NavLink } from 'react-router-dom';
+import styles from './Sidebar.module.css';
 
 const Sidebar = () => {
   return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-header-logo"></div>
-        <div className="sidebar-header-text">
-          <p className="sidebar-header-text-ko">세종투자연구회</p>
-          <p className="sidebar-header-text-en">Finance . IT</p>
+    <div className={styles['sidebar']}>
+      <div className={styles['sidebar-header']}>
+        <div className={styles['sidebar-header-logo']}></div>
+        <div className={styles['sidebar-header-text']}>
+          <span className={styles['sidebar-header-text-ko']}>
+            세종투자연구회
+          </span>
+          <span className={styles['sidebar-header-text-en']}>Finance . IT</span>
         </div>
       </div>
-      <hr style={{ width: '163px', marginBottom: '30px' }} />
+      <hr
+        style={{
+          width: '163px',
+          marginBottom: '30px',
+          border: 'none',
+          height: '1px',
+          backgroundColor: '#656565',
+        }}
+      />
       <nav aria-label="사이드바">
-        <div className="menu-section">
-          <h3 className="menu-title">Main</h3>
+        <div className={styles['menu-section']}>
+          <span className={styles['menu-title']}>Main</span>
           <ul>
             <li>
-              <Link to="/">홈</Link>
+              <NavLink
+                to="/"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                홈
+              </NavLink>
             </li>
             <li>
-              <Link to="/board">게시판</Link>
+              <NavLink
+                to="/board"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                게시판
+              </NavLink>
             </li>
           </ul>
         </div>
 
-        <div className="menu-section">
-          <h3 className="menu-title">출석체크</h3>
+        <div className={styles['menu-section']}>
+          <h3 className={styles['menu-title']}>출석체크</h3>
           <ul>
             <li>
-              <Link to="/attendance">출석하기</Link>
+              <NavLink
+                to="/attendance"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                출석하기
+              </NavLink>
             </li>
             <li>
-              <Link to="/attendance/manage">출석관리(담당자)</Link>
+              <NavLink
+                to="/attendance-manage"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                출석관리(담당자)
+              </NavLink>
             </li>
           </ul>
         </div>
 
-        <div className="menu-section">
-          <h3 className="menu-title">트레이딩</h3>
+        <div className={styles['menu-section']}>
+          <span className={styles['menu-title']}>트레이딩</span>
           <ul>
             <li>
-              <Link to="/quant-bot">퀀트봇</Link>
+              <NavLink
+                to="/quant-bot"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                퀀트봇
+              </NavLink>
             </li>
             <li>
-              <Link to="/stock-game">주식베팅</Link>
+              <NavLink
+                to="/stock-game"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                주식베팅
+              </NavLink>
             </li>
             <li>
-              <Link to="/back-test">백테스팅</Link>
+              <NavLink
+                to="/back-test"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                백테스팅
+              </NavLink>
             </li>
           </ul>
         </div>
 
-        <div className="menu-section">
-          <h3 className="menu-title">계정</h3>
+        <div className={styles['menu-section']}>
+          <span className={styles['menu-title']}>계정</span>
           <ul>
             <li>
-              <Link to="/mypage">마이페이지</Link>
+              <NavLink
+                to="/mypage"
+                className={({ isActive }) =>
+                  isActive ? styles['active-link'] : styles['inactive-link']
+                }
+              >
+                마이페이지
+              </NavLink>
             </li>
           </ul>
         </div>

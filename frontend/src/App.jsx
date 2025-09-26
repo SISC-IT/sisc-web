@@ -12,6 +12,7 @@ import AttendanceAsset from './pages/AttendanceAsset';
 import AttendanceFinanceIt from './pages/AttendanceFinanceIt';
 import AttendanceManage from './pages/AttendanceManage';
 import Login from './pages/Login';
+import QuantBot from './pages/QuantBot';
 
 function App() {
   return (
@@ -26,8 +27,9 @@ function App() {
             path="/attendance-financeit"
             element={<AttendanceFinanceIt />}
           />
-          <Route path="/attendance/manage" element={<AttendanceManage />} />
+          <Route path="/attendance-manage" element={<AttendanceManage />} />
           <Route path="/board" element={<Board />} />
+          <Route path="/quant-bot" element={<QuantBot />} />
           <Route path="/stock-game" element={<StockGame />} />
           <Route path="/back-test" element={<BackTest />} />
           <Route path="/mypage" element={<Mypage />} />
