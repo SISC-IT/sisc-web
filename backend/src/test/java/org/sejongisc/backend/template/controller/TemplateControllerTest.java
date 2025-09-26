@@ -43,11 +43,10 @@ class TemplateControllerTest {
   @Autowired private ObjectMapper objectMapper;
 
   @MockBean private TemplateService templateService;
-  @MockBean
-  JpaMetamodelMappingContext jpaMetamodelMappingContext;
+  @MockBean JpaMetamodelMappingContext jpaMetamodelMappingContext;
   @MockBean AuditorAware<String> auditorAware;
 
-  private UserDetails 테스트유저(UUID userId) {
+  private UserDetails 인증_사용자(UUID userId) {
     User u = User.builder()
         .userId(userId)
         .name("tester")
@@ -61,9 +60,9 @@ class TemplateControllerTest {
   // ===== 목록 조회 =====
   @Test
   @DisplayName("[GET] /api/backtest/templates : 인증 O → 200 & 리스트 반환")
-  void 인증이_되면_200_OK_리스트_반환() throws Exception {
+  void 목록조회_인증되어있으면_200과_리스트를_반환한다() throws Exception {
     UUID uid = UUID.randomUUID();
-    UserDetails principal = 테스트유저(uid);
+    UserDetails principal = 인증_사용자(uid);
 
     Template t1 = Template.of(User.builder().userId(uid).name("tester").email("test@example.com").build(),
         "t1", "d1", true);
@@ -83,19 +82,19 @@ class TemplateControllerTest {
   }
 
   @Test
-  @DisplayName("[GET] /api/backtest/templates : 인증 X → 401")
-  void 목록조회_비인증_401() throws Exception {
+  @DisplayName("[GET] /api/backtest/templates : 인증 X → 403")
+  void 목록조회_미인증이면_403을_반환한다() throws Exception {
     mockMvc.perform(get("/api/backtest/templates"))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isForbidden());
   }
 
   // ===== 상세 조회 =====
   @Test
   @DisplayName("[GET] /api/backtest/templates/{id} : 인증 O → 200 & 단건 반환")
-  void 상세조회_인증_OK() throws Exception {
+  void 상세조회_인증되어있으면_200과_단건을_반환한다() throws Exception {
     UUID uid = UUID.randomUUID();
     UUID tid = UUID.randomUUID();
-    UserDetails principal = 테스트유저(uid);
+    UserDetails principal = 인증_사용자(uid);
 
     Template t = Template.of(
         User.builder().userId(uid).name("tester").email("test@example.com").build(),
@@ -110,18 +109,18 @@ class TemplateControllerTest {
   }
 
   @Test
-  @DisplayName("[GET] /api/backtest/templates/{id} : 인증 X → 401")
-  void 상세조회_비인증_401() throws Exception {
+  @DisplayName("[GET] /api/backtest/templates/{id} : 인증 X → 403")
+  void 상세조회_미인증이면_403을_반환한다() throws Exception {
     mockMvc.perform(get("/api/backtest/templates/{templateId}", UUID.randomUUID()))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isForbidden());
   }
 
   // ===== 생성 =====
   @Test
   @DisplayName("[POST] /api/backtest/templates : 인증 O → 200 & 생성")
-  void 생성_인증_OK() throws Exception {
+  void 생성_인증되어있으면_200과_생성결과를_반환한다() throws Exception {
     UUID uid = UUID.randomUUID();
-    UserDetails principal = 테스트유저(uid);
+    UserDetails principal = 인증_사용자(uid);
 
     TemplateRequest req = new TemplateRequest();
     req.setTitle("new title");
@@ -145,8 +144,8 @@ class TemplateControllerTest {
   }
 
   @Test
-  @DisplayName("[POST] /api/backtest/templates : 인증 X → 401")
-  void 생성_비인증_401() throws Exception {
+  @DisplayName("[POST] /api/backtest/templates : 인증 X → 403")
+  void 생성_미인증이면_403을_반환한다() throws Exception {
     TemplateRequest req = new TemplateRequest();
     req.setTitle("new title");
     req.setDescription("new desc");
@@ -155,16 +154,16 @@ class TemplateControllerTest {
     mockMvc.perform(post("/api/backtest/templates")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(req)))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isForbidden());
   }
 
   // ===== 수정 =====
   @Test
   @DisplayName("[PATCH] /api/backtest/templates/{id} : 인증 O → 200 & 수정")
-  void 수정_인증_OK() throws Exception {
+  void 수정_인증되어있으면_200과_수정결과를_반환한다() throws Exception {
     UUID uid = UUID.randomUUID();
     UUID tid = UUID.randomUUID();
-    UserDetails principal = 테스트유저(uid);
+    UserDetails principal = 인증_사용자(uid);
 
     TemplateRequest req = new TemplateRequest();
     req.setTemplateId(tid);
@@ -189,8 +188,8 @@ class TemplateControllerTest {
   }
 
   @Test
-  @DisplayName("[PATCH] /api/backtest/templates/{id} : 인증 X → 401")
-  void 수정_비인증_401() throws Exception {
+  @DisplayName("[PATCH] /api/backtest/templates/{id} : 인증 X → 403")
+  void 수정_미인증이면_403을_반환한다() throws Exception {
     UUID tid = UUID.randomUUID();
 
     TemplateRequest req = new TemplateRequest();
@@ -202,16 +201,16 @@ class TemplateControllerTest {
     mockMvc.perform(patch("/api/backtest/templates/{templateId}", tid)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(req)))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isForbidden());
   }
 
   // ===== 삭제 =====
   @Test
   @DisplayName("[DELETE] /api/backtest/templates/{id} : 인증 O → 200 & 삭제")
-  void 삭제_인증_OK() throws Exception {
+  void 삭제_인증되어있으면_200을_반환한다() throws Exception {
     UUID uid = UUID.randomUUID();
     UUID tid = UUID.randomUUID();
-    UserDetails principal = 테스트유저(uid);
+    UserDetails principal = 인증_사용자(uid);
 
     mockMvc.perform(delete("/api/backtest/templates/{templateId}", tid)
             .with(user(principal)))
@@ -219,10 +218,10 @@ class TemplateControllerTest {
   }
 
   @Test
-  @DisplayName("[DELETE] /api/backtest/templates/{id} : 인증 X → 401")
-  void 삭제_비인증_401() throws Exception {
+  @DisplayName("[DELETE] /api/backtest/templates/{id} : 인증 X → 403")
+  void 삭제_미인증이면_403을_반환한다() throws Exception {
     mockMvc.perform(delete("/api/backtest/templates/{templateId}", UUID.randomUUID()))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isForbidden());
   }
 
   @TestConfiguration
