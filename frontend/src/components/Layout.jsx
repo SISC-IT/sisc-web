@@ -5,7 +5,7 @@ function Layout() {
   return (
     <div style={{ display: 'flex' }}>
       <Sidebar />
-      <main style={{ flex: 1, padding: '20px' }}>
+      <main style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <Outlet />
       </main>
     </div>

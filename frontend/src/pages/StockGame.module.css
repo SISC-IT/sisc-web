@@ -1,0 +1,23 @@
+.stock-game {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 45px;
+  gap: 30px;
+}
+
+.title {
+  font-weight: 600;
+  font-style: medium;
+  font-size: 36px;
+  color: #171717;
+  margin-top: 50px;
+  margin-bottom: 30px;
+}
+
+.last-game {
+  font-weight: 600;
+  font-style: Bold;
+  font-size: 20px;
+  margin-bottom: 15px;
+}

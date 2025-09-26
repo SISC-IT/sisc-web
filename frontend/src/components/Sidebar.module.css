@@ -1,14 +1,14 @@
 .sidebar {
   height: 100vh;
-  padding: 0 20px 0 20px;
-  margin-left: 50px;
+  padding: 0 32px;
+  background-color: #0e1a2c;
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 55px;
+  margin-top: 40px;
   margin-bottom: 20px;
 }
 
@@ -45,21 +45,25 @@
   font-size: 12px;
   font-style: semibold;
   font-weight: 600;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
 }
 
 .menu-section {
-  margin-bottom: 50px;
+  margin-bottom: 30px;
 }
 
 .menu-section > ul {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .menu-section li {
-  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
 }
 
 .menu-section a {
@@ -68,4 +72,16 @@
   font-weight: 500;
   font-style: Medium;
   font-size: 16px;
+}
+
+.active-link {
+  background-color: #d9d9d90d;
+  border-radius: 4px;
+  width: 100%;
+  padding: 10px 8px;
+}
+
+.inactive-link {
+  background-color: transparent;
+  padding: 10px 8px;
 }
