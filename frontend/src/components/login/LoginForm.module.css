@@ -22,7 +22,7 @@
   width: 60px;
 }
 
-.loginForm h2 {
+.loginForm h1 {
   margin-bottom: 72px;
   color: #142d56;
   font-size: 24px;
@@ -60,7 +60,7 @@
   width: 100%;
   padding: 12px;
   margin-top: 30px;
-  background-color: #007bff;
+  background-color: #0e1a2c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -68,10 +68,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease;
-}
-
-.loginButton:hover {
-  background-color: #0056b3;
 }
 
 .loginButton:disabled {

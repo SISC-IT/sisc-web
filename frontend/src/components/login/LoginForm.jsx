@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import styles from './LoginForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
@@ -33,16 +33,15 @@ const LoginForm = () => {
           <img src={sejong_logo} alt="sejong_logo" className={styles.logo} />
         </div>
 
-        <h2>Sejong Investment Scholars Club</h2>
+        <h1>Sejong Investment Scholars Club</h1>
         <div className={styles.inputGroup}>
           <label htmlFor="email">Email</label>
           <input
-            type="text"
+            type="email"
             id="email"
             value={id}
             onChange={(e) => setId(e.target.value)}
             placeholder="이메일을 입력하세요"
-            autoComplete="username"
           />
         </div>
         <div className={styles.inputGroup}>
@@ -53,7 +52,6 @@ const LoginForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="비밀번호를 입력하세요"
-            autoComplete="current-password"
           />
         </div>
         <button
@@ -65,13 +63,13 @@ const LoginForm = () => {
         </button>
       </form>
       <nav className={styles.findContainer}>
-        <NavLink to="/findid" className={styles.text}>
+        <NavLink to="/find-id" className={styles.text}>
           아이디 찾기
         </NavLink>
         <span className={styles.divider} aria-hidden="true">
           |
         </span>
-        <NavLink to="/findpassword" className={styles.text}>
+        <NavLink to="/find-password" className={styles.text}>
           비밀번호 찾기
         </NavLink>
       </nav>
