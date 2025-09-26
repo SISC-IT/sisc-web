@@ -11,13 +11,14 @@ import AttendanceAll from './pages/AttendanceAll';
 import AttendanceAsset from './pages/AttendanceAsset';
 import AttendanceFinanceIt from './pages/AttendanceFinanceIt';
 import AttendanceManage from './pages/AttendanceManage';
+import Login from './pages/Login';
 
 function App() {
   return (
     <>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Login />} />
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/attendance-all" element={<AttendanceAll />} />
           <Route path="/attendance-asset" element={<AttendanceAsset />} />
