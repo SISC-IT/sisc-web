@@ -21,7 +21,8 @@ public class Template extends BasePostgresEntity {
   @Column(name = "template_id", columnDefinition = "uuid")
   private UUID templateId;
 
-  @ManyToOne
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
   private String title;           // 템플릿 제목
@@ -32,10 +33,10 @@ public class Template extends BasePostgresEntity {
   // DB 트랜잭션에서 동시성 업데이트(likeCount + 1) 충돌 관리가 필요
   // JPA 기본 @Version 낙관적 락을 붙이거나, DB update ... set like_count = like_count + 1 쿼리로 처리
 
-  public void updateFromTemplateRequest(TemplateRequest templateRequest) {
-    this.title = templateRequest.getTitle();
-    this.description = templateRequest.getDescription();
-    this.isPublic = templateRequest.getIsPublic();
+  public void update(String title, String description, Boolean isPublic) {
+    this.title = title;
+    this.description = description;
+    this.isPublic = isPublic;
   }
 
   public void incrementBookmarkCount() {
@@ -60,12 +61,12 @@ public class Template extends BasePostgresEntity {
     //TODO : 로깅처리
   }
 
-  public static Template createTemplateFromTemplateRequest(TemplateRequest templateRequest) {
+  public static Template of(User user, String title, String description, Boolean isPublic) {
     return Template.builder()
-        .title(templateRequest.getTitle())
-        .description(templateRequest.getDescription())
-        .isPublic(templateRequest.getIsPublic())
-        .user(templateRequest.getUser())
+        .user(user)
+        .title(title)
+        .description(description)
+        .isPublic(isPublic)
         .bookmarkCount(0)
         .likeCount(0)
         .build();

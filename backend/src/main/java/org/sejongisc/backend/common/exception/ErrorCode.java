@@ -14,6 +14,8 @@ public enum ErrorCode {
 
   TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 템플릿이 존재하지 않습니다."),
 
+  TEMPLATE_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "템플릿 소유자가 아닙니다."),
+
   // AUTH
 
   UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패했습니다."),

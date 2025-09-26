@@ -12,7 +12,7 @@ import java.util.UUID;
 public class TemplateRequest {
 
   //@Schema(hidden = true, description = "유저")
-  private User user;
+  private UUID userId;
 
   //@Schema(hidden = true, description = "템플릿 ID")
   private UUID templateId;  // 템플릿 ID
