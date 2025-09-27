@@ -35,4 +35,14 @@ public class PointHistory extends BasePostgresEntity {
 
   @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
   private UUID userId;
+
+  public static PointHistory of(UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
+    return PointHistory.builder()
+        .userId(userId)
+        .amount(amount)
+        .reason(reason)
+        .pointOrigin(origin)
+        .pointOriginId(originId)
+        .build();
+  }
 }

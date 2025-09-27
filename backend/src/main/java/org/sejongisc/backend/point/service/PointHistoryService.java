@@ -16,6 +16,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 포인트 증감 기록 서비스
+ * userId에 대한 검증 로직이 없습니다.
+ * 따라서 customUserDetails.getUserId() 에서 가져오는 userId를 사용해야합니다.
+ * 해당 userId는 필터에서 검증이 완료되기에, 검증할 필요가 없기 때문입니다.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -23,7 +29,7 @@ public class PointHistoryService {
 
   private final PointHistoryRepository pointHistoryRepository;
 
-  // 유저의 포인트 기록 페이징 조회 - 포인트 기록이 많아질 수 있으므로 페이징 처리
+  // 특정 유저의 포인트 기록 페이징 조회 (포인트 기록은 많아질 수 있으므로, 페이징 처리)
   public Page<PointHistory> getPointHistoryListByUserId(UUID userId, PageRequest pageRequest) {
     return pointHistoryRepository.findAllByUserId(userId, pageRequest);
   }
@@ -38,22 +44,14 @@ public class PointHistoryService {
     int currentBalance = getCurrentPointBalance(userId);
 
     // 포인트 차감 시 잔액 부족 검증
-    if (amount < 0) {
-      if (currentBalance + amount < 0) {
-        throw new CustomException(ErrorCode.NOT_ENOUGH_POINT_BALANCE);
-      }
+    if (amount < 0 && currentBalance + amount < 0) {
+      throw new CustomException(ErrorCode.NOT_ENOUGH_POINT_BALANCE);
     }
 
-    // 포인트 기록 생성
-    PointHistory pointHistory = PointHistory.builder()
-        .userId(userId)
-        .amount(amount)
-        .reason(reason)
-        .pointOrigin(origin)
-        .pointOriginId(originId)
-        .build();
-
-    return pointHistoryRepository.save(pointHistory);
+    // 포인트 기록 생성 및 저장
+    return pointHistoryRepository.save(
+        PointHistory.of(userId, amount, reason, origin, originId)
+    );
   }
 
   // 특정 유저의 현재 포인트 잔액 조회
