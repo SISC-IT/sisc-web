@@ -8,7 +8,10 @@ const EmailVerificationPopup = ({ onClose, onEmailVerified }) => {
   const handleSendCode = () => {
     if (!isCodeSent) {
       alert('인증번호가 전송되었습니다.');
-      setIsCodeSent(true);
+
+      // 3초정도 대기하는 로직 추가 필요
+
+      setIsCodeSent(true); // 3초 이후 재전송 버튼 활성화
     } else {
       alert('인증번호가 재전송되었습니다.');
     }

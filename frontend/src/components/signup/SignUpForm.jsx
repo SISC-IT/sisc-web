@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import loginStyles from '../login/LoginForm.module.css';
+import styles from '../login/LoginForm.module.css'; // 로그인 페이지와 유사하므로 LoginForm.module.css를 사용
 import signupStyles from './SignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 import EmailVerificationPopup from './EmailVerificationPopup';
@@ -8,6 +8,7 @@ import EmailVerificationPopup from './EmailVerificationPopup';
 const SignUpForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPopupOpen, setPopupOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState(false);
@@ -19,9 +20,16 @@ const SignUpForm = () => {
     return emailRegex.test(email);
   };
 
+  // 핸드폰 번호 유효성 검사
+  const isPhoneNumberValid = () => {
+    const phoneRegex = /^\d{10,11}$/;
+    return phoneRegex.test(phoneNumber);
+  };
+
   // 회원가입 제출 유효성 검사
   const isFormValid =
-    email.trim() !== '' &&
+    isEmailValid() &&
+    isPhoneNumberValid() &&
     password.trim() !== '' &&
     password === confirmPassword &&
     confirmEmail;
@@ -49,18 +57,13 @@ const SignUpForm = () => {
 
   return (
     <>
-      <div className={loginStyles.formContainer}>
-        <form className={loginStyles.loginForm} onSubmit={handleSignUp}>
-          <div className={loginStyles.logoBox}>
-            <img
-              src={sejong_logo}
-              alt="sejong_logo"
-              className={loginStyles.logo}
-            />
+      <div className={styles.formContainer}>
+        <form className={styles.loginForm} onSubmit={handleSignUp}>
+          <div className={styles.logoBox}>
+            <img src={sejong_logo} alt="sejong_logo" className={styles.logo} />
           </div>
-
           <h1>Sejong Investment Scholars Club</h1>
-          <div className={loginStyles.inputGroup}>
+          <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>
             <div className={signupStyles.emailContainer}>
               <input
@@ -81,7 +84,17 @@ const SignUpForm = () => {
               </button>
             </div>
           </div>
-          <div className={loginStyles.inputGroup}>
+          <div className={styles.inputGroup}>
+            <label htmlFor="phone">핸드폰 번호</label>
+            <input
+              type="text"
+              id="phone"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="ex) 01012345678"
+            />
+          </div>
+          <div className={styles.inputGroup}>
             <label htmlFor="password">비밀번호</label>
             <input
               type="password"
@@ -91,7 +104,7 @@ const SignUpForm = () => {
               placeholder="비밀번호를 입력하세요"
             />
           </div>
-          <div className={loginStyles.inputGroup}>
+          <div className={styles.inputGroup}>
             <label htmlFor="confirm-password">비밀번호 확인</label>
             <input
               type="password"
@@ -103,7 +116,7 @@ const SignUpForm = () => {
           </div>
           <button
             type="submit"
-            className={loginStyles.loginButton}
+            className={styles.loginButton}
             disabled={!isFormValid}
           >
             회원가입

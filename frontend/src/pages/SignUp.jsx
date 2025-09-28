@@ -3,7 +3,7 @@ import styles from './Login.module.css';
 
 const SignUp = () => {
   return (
-    <div className={styles.loginContainer}>
+    <div className={styles.signUpContainer}>
       <SignUpForm />
     </div>
   );
