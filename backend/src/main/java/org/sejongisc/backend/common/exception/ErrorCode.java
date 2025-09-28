@@ -10,6 +10,12 @@ public enum ErrorCode {
 
   INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에 문제가 발생했습니다."),
 
+  // TEMPLATE
+
+  TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 템플릿이 존재하지 않습니다."),
+
+  TEMPLATE_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "템플릿 소유자가 아닙니다."),
+
   // POINT
 
   INVALID_POINT_AMOUNT(HttpStatus.BAD_REQUEST, "포인트 변동량은 0일 수 없습니다"),
