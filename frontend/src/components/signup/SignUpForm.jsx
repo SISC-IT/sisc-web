@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../login/LoginForm.module.css'; // 로그인 페이지와 유사하므로 LoginForm.module.css를 사용
-import signupStyles from './SignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 import EmailVerificationPopup from './EmailVerificationPopup';
 
@@ -65,19 +64,19 @@ const SignUpForm = () => {
           <h1>Sejong Investment Scholars Club</h1>
           <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>
-            <div className={signupStyles.emailContainer}>
+            <div className={styles.emailContainer}>
               <input
                 type="email"
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="이메일을 입력하세요"
-                className={signupStyles.emailInput}
+                className={styles.emailInput}
               />
               <button
                 type="button"
                 onClick={openPopup}
-                className={signupStyles.verifyButton}
+                className={styles.verifyButton}
                 disabled={!isEmailValid()}
               >
                 인증

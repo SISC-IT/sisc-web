@@ -1,5 +1,5 @@
 import LoginForm from '../components/login/LoginForm';
-import styles from './Login.module.css';
+import styles from './Sign.module.css';
 
 const Login = () => {
   return (
