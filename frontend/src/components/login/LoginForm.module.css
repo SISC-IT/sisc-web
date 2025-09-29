@@ -78,12 +78,12 @@
 .findContainer {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-size: 14px;
   color: #9ca3af;
   align-self: flex-start;
   padding-left: 12px;
-  padding-top: 20px;
+  padding-top: 10px;
 }
 .text {
   color: inherit;
