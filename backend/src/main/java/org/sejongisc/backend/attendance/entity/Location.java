@@ -34,6 +34,7 @@ public class Location {
         double deltaLatRad = Math.toRadians(other.lat - this.lat);
         double deltaLngRad = Math.toRadians(other.lng - this.lng);
 
+        // Haversine 공식 적용
         double a = Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2) +
                 Math.cos(lat1Rad) * Math.cos(lat2Rad) *
                         Math.sin(deltaLngRad / 2) * Math.sin(deltaLngRad / 2);
