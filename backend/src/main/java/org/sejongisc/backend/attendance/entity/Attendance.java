@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
+import org.sejongisc.backend.user.entity.User;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,11 +24,12 @@ public class Attendance extends BasePostgresEntity {
     @Column(name = "attendance_id", columnDefinition = "uuid")
     private UUID attendanceId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(name = "session_id", nullable = false, columnDefinition = "uuid")
     private UUID attendanceSessionId;
-
-    @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
-    private UUID userId;
 
     @Enumerated(EnumType.STRING)
     private AttendanceStatus attendanceStatus;
