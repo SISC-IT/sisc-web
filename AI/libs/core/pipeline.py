@@ -10,7 +10,7 @@ from typing import Dict
 from finder.modules.finder import run_finder_with_scores  # 종목+점수 매기기 포함
 from transform.modules.transform import run_transform
 from xai.modules.xai import run_xai
-from AI.libs.utils.data import fetch_stock_data, fetch_fundamentals
+from AI.libs.utils.data import fetch_ohlcv
 from AI.libs.utils.io import _log
 
 # ==============================================
@@ -69,8 +69,7 @@ def run_daily_tasks(config: dict, run_date: str, finder_df: pd.DataFrame) -> Non
     interval = str(config.get("data", {}).get("interval", "1d"))
     cache_dir = str(config.get("storage", {}).get("cache_dir", ""))
 
-    market_data = fetch_stock_data(tickers, period_days=window_days, interval=interval, cache_dir=cache_dir)
-    fundamentals = fetch_fundamentals(tickers)
+    market_data = fetch_ohlcv(tickers, period_days=window_days, interval=interval, cache_dir=cache_dir)
 
     # Transform (학습 + 로그 생성)
     tr = run_transform(
