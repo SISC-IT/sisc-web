@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,7 +16,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Attendance {
+public class Attendance extends BasePostgresEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -48,6 +49,7 @@ public class Attendance {
     private String deviceInfo;
 
     // 지각 여부 계산 / 상태 업데이트
+
     /**
      * 지각 여부 판단
      */

@@ -1,10 +1,7 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
-import org.sejongisc.backend.betting.enums.BetStatus;
-import org.sejongisc.backend.betting.enums.BetOption;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.util.UUID;
 
