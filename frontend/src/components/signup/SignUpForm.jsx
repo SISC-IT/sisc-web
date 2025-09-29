@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from '../login/LoginForm.module.css'; // 로그인 페이지와 유사하므로 LoginForm.module.css를 사용
+import styles from '../SignForm.module.css'; // 로그인 페이지와 유사하므로 LoginForm.module.css를 사용
 import sejong_logo from '../../assets/sejong_logo.png';
 import EmailVerificationPopup from './EmailVerificationPopup';
 

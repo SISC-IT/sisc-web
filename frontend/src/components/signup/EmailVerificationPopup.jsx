@@ -4,14 +4,19 @@ import styles from './EmailVerificationPopup.module.css';
 const EmailVerificationPopup = ({ onClose, onEmailVerified }) => {
   const [code, setCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
   const handleSendCode = () => {
+    // 3초정도 대기하는 로직 추가 필요
+    setIsButtonDisabled(true);
+
+    setTimeout(() => {
+      setIsButtonDisabled(false);
+    }, 3000);
+
     if (!isCodeSent) {
       alert('인증번호가 전송되었습니다.');
-
-      // 3초정도 대기하는 로직 추가 필요
-
-      setIsCodeSent(true); // 3초 이후 재전송 버튼 활성화
+      setIsCodeSent(true); // 최초 1회만 "인증번호 보내기" 메시지이고, 이후 "재전송"으로 뜨게 설정
     } else {
       alert('인증번호가 재전송되었습니다.');
     }
@@ -48,8 +53,13 @@ const EmailVerificationPopup = ({ onClose, onEmailVerified }) => {
                 type="button"
                 className={`${styles.button} ${styles.sendButton}`}
                 onClick={handleSendCode}
+                disabled={isButtonDisabled}
               >
-                {isCodeSent ? '재전송' : '인증번호 보내기'}
+                {isButtonDisabled
+                  ? '전송 중...'
+                  : isCodeSent
+                    ? '재전송'
+                    : '인증번호 보내기'}
               </button>
             </div>
           </div>
