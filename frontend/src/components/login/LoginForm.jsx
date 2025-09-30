@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import styles from './LoginForm.module.css';
+import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 
 import SocialLoginButtons from './SocialLoginButtons';
@@ -8,6 +8,7 @@ import SocialLoginButtons from './SocialLoginButtons';
 const LoginForm = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
+
   const nav = useNavigate();
 
   const isFormValid = id.trim() !== '' && password.trim() !== '';
