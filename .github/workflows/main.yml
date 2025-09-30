@@ -56,6 +56,10 @@ jobs:
         if: steps.filter.outputs.backend == 'true'
         working-directory: ${{ env.WORKDIR }}
         run: ./gradlew --no-daemon clean test jacocoTestReport
+        env:
+          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+          SPRING_DATASOURCE_USERNAME: sa
+          SPRING_DATASOURCE_PASSWORD: ""
 
       # diff-cover 설치
       - name: Set up Python and install diff-cover
