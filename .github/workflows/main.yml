@@ -95,16 +95,21 @@ jobs:
       - name: Generate diff coverage (markdown + html)
         if: steps.filter.outputs.backend == 'true'
         id: diffcover
-        working-directory: ${{ env.WORKDIR }}
-        continue-on-error: true   # ✅ 실패해도 다음 스텝 실행하도록
+        working-directory: ${{ env.WORKDIR }}   # backend
+        continue-on-error: true
         run: |
-          REPORT="${{ env.WORKDIR }}/build/reports/jacoco/test/jacocoTestReport.xml"
-          SRC_ROOTS="${{ env.WORKDIR }}/src/main/java"
-          git fetch origin main:main
+          REPORT="build/reports/jacoco/test/jacocoTestReport.xml"
+          SRC_ROOTS="src/main/java"
+      
+          if [ ! -f "$REPORT" ]; then
+            echo "No JaCoCo report found at $REPORT" > diff-coverage.md
+            exit 0
+          fi
+      
           diff-cover "$REPORT" \
             --compare-branch origin/main \
-            --markdown-report diff-coverage.md \
-            --html-report diff-coverage.html \
+            --format markdown:diff-coverage.md \
+            --format html:diff-coverage.html \
             --src-roots "$SRC_ROOTS" \
             --fail-under ${{ env.DIFF_COVER_MIN }}
 
