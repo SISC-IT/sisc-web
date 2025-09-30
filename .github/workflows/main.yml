@@ -97,9 +97,14 @@ jobs:
           path: ${{ env.WORKDIR }}/diff-coverage.md
 
       # ✅ 기준 미달이면 PR을 Draft로 전환
-      - name: 기준 미달 PR을 Draft로 전환
+      - name: 기준 미달 PR을 Draft로 전환 (gh CLI)
         if: github.event_name == 'pull_request' && steps.filter.outputs.backend == 'true' && steps.diffcover.outcome == 'failure'
-        uses: peter-evans/convert-to-draft@v3
+        env:
+          GH_TOKEN: ${{ github.token }}   # 런너에 기본 포함 토큰
+        run: |
+          gh pr ready --undo \
+            ${{ github.event.pull_request.number }} \
+            -R ${{ github.repository }}
 
       # 아티팩트 업로드 (항상)
       - name: Upload diff coverage HTML
