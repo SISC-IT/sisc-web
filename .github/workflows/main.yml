@@ -17,13 +17,27 @@ jobs:
   build-test:
     name: Backend Gate
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout (with full history for diff)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # backend/** 경로 변경 감지
       - name: Path filter
         id: filter
         uses: dorny/paths-filter@v3
@@ -52,7 +66,14 @@ jobs:
       - name: Build & Test (generate JaCoCo XML)
         if: steps.filter.outputs.backend == 'true'
         working-directory: ${{ env.WORKDIR }}
-        run: ./gradlew --no-daemon clean test jacocoTestReport
+        run: |
+          echo "Waiting for Postgres to be ready..."
+          sleep 5
+          ./gradlew --no-daemon clean test jacocoTestReport
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
+          SPRING_DATASOURCE_USERNAME: testuser
+          SPRING_DATASOURCE_PASSWORD: testpass
 
       - name: Set up Python and install diff-cover
         if: steps.filter.outputs.backend == 'true'
@@ -64,7 +85,11 @@ jobs:
         if: steps.filter.outputs.backend == 'true'
         run: pip install diff-cover
 
-      # diff coverage 계산
+      - name: 비교 브랜치 설정
+        if: steps.filter.outputs.backend == 'true'
+        id: base
+        run: echo "ref=main" >> $GITHUB_OUTPUT
+
       - name: Generate diff coverage (markdown + html)
         if: steps.filter.outputs.backend == 'true'
         id: diffcover
@@ -75,7 +100,7 @@ jobs:
           SRC_ROOTS="src/main/java"
 
           if [ ! -f "$REPORT" ]; then
-            echo "⚠️ No JaCoCo XML report found at $REPORT" > diff-coverage.md
+            echo "⚠️ No JaCoCo report found at $REPORT" > diff-coverage.md
             exit 0
           fi
 
@@ -86,7 +111,6 @@ jobs:
             --src-roots "$SRC_ROOTS" \
             --fail-under ${{ env.DIFF_COVER_MIN }}
 
-          # diff 결과가 없을 때도 빈 파일 보장
           if [ ! -f diff-coverage.md ]; then
             echo "⚠️ No diff coverage results" > diff-coverage.md
           fi
