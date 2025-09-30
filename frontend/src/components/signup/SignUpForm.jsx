@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from '../SignForm.module.css'; // 로그인 페이지와 유사하므로 LoginForm.module.css를 사용
+import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
-import EmailVerificationPopup from './EmailVerificationPopup';
+import EmailVerificationModal from './EmailVerificationModal';
 
 const SignUpForm = () => {
   const [email, setEmail] = useState('');
@@ -84,10 +84,10 @@ const SignUpForm = () => {
             </div>
           </div>
           <div className={styles.inputGroup}>
-            <label htmlFor="phone">핸드폰 번호</label>
+            <label htmlFor="phone-number">핸드폰 번호</label>
             <input
               type="text"
-              id="phone"
+              id="phone-number"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="ex) 01012345678"
@@ -123,7 +123,7 @@ const SignUpForm = () => {
         </form>
       </div>
       {isPopupOpen && (
-        <EmailVerificationPopup
+        <EmailVerificationModal
           onClose={closePopup}
           onEmailVerified={handleEmailVerified}
         />

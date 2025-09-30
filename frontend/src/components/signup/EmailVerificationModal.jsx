@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import styles from './EmailVerificationPopup.module.css';
+import styles from './EmailVerificationModal.module.css';
 
-const EmailVerificationPopup = ({ onClose, onEmailVerified }) => {
+const EmailVerificationModal = ({ onClose, onEmailVerified }) => {
   const [code, setCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
@@ -84,4 +84,4 @@ const EmailVerificationPopup = ({ onClose, onEmailVerified }) => {
   );
 };
 
-export default EmailVerificationPopup;
+export default EmailVerificationModal;
