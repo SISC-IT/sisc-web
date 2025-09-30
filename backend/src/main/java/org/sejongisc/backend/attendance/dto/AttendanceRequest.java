@@ -14,7 +14,6 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class AttendanceRequest {
 
     // === 출석 체크용 필드들 ===
