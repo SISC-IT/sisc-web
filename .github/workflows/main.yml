@@ -3,9 +3,6 @@ name: 백엔드 CI (Gradle + JaCoCo + Diff Coverage)
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - 'backend/**'        # ✅ backend 변경에만 실행
-      - '.github/workflows/**'
 
 permissions:
   contents: read
@@ -66,6 +63,7 @@ jobs:
         with:
           python-version: '3.x'
       - name: Install diff-cover
+        if: steps.filter.outputs.backend == 'true'
         run: pip install diff-cover
 
       # 비교 브랜치: main 고정
