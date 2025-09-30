@@ -99,7 +99,7 @@ jobs:
       # ✅ 기준 미달이면 PR을 Draft로 전환
       - name: 기준 미달 PR을 Draft로 전환
         if: github.event_name == 'pull_request' && steps.filter.outputs.backend == 'true' && steps.diffcover.outcome == 'failure'
-        uses: peter-evans/convert-to-draft@v2
+        uses: peter-evans/convert-to-draft@v3
 
       # 아티팩트 업로드 (항상)
       - name: Upload diff coverage HTML
