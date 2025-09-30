@@ -1,0 +1,12 @@
+name: Smoke
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hello from Smoke! PR base=main trigger works."
