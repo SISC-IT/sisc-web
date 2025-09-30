@@ -1,0 +1,113 @@
+name: 백엔드 CI (Gradle + JaCoCo + Diff Coverage)
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'        # ✅ backend 변경에만 실행
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  WORKDIR: backend        # ✅ 백엔드 모듈 루트
+  JAVA_VERSION: '21'
+  DIFF_COVER_MIN: '70'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 변경 경로 감지: backend/** 에 변경이 있는지 확인
+      - name: Path filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+
+      # 백엔드 변경 없음 → 성공 처리하고 조용히 종료
+      - name: Skip-no backend changes
+        if: steps.filter.outputs.backend != 'true'
+        run: |
+          echo "No backend changes detected."
+
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Gradle 실행권한 제공
+        working-directory: ${{ env.WORKDIR }}
+        run: chmod +x ./gradlew
+
+      - name: Build & Test (generate JaCoCo XML)
+        working-directory: ${{ env.WORKDIR }}
+        run: ./gradlew --no-daemon clean test jacocoTestReport
+
+      # diff-cover 설치
+      - name: Set up Python and install diff-cover
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install diff-cover
+        run: pip install diff-cover
+
+      # 비교 브랜치: main 고정
+      - name: 비교 브랜치 설정
+        id: base
+        run: echo "ref=main" >> $GITHUB_OUTPUT
+
+      # diff 커버리지 (변경 라인만)
+      - name: Generate diff coverage (markdown + html)
+        id: diffcover
+        working-directory: ${{ env.WORKDIR }}
+        continue-on-error: true   # ✅ 실패해도 다음 스텝 실행하도록
+        run: |
+          REPORT="${{ env.WORKDIR }}/build/reports/jacoco/test/jacocoTestReport.xml"
+          SRC_ROOTS="${{ env.WORKDIR }}/src/main/java"
+          git fetch origin main:main
+          diff-cover "$REPORT" \
+            --compare-branch origin/main \
+            --markdown-report diff-coverage.md \
+            --html-report diff-coverage.html \
+            --src-roots "$SRC_ROOTS" \
+            --fail-under ${{ env.DIFF_COVER_MIN }}
+
+      # (선택) 실패 시 커버리지 리포트 코멘트 업데이트
+      - name: Comment diff coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: ${{ env.WORKDIR }}/diff-coverage.md
+
+      # ✅ 기준 미달이면 PR을 Draft로 전환
+      - name: 기준 미달 PR을 Draft로 전환
+        if: github.event_name == 'pull_request' && steps.diffcover.outcome == 'failure'
+        uses: peter-evans/convert-to-draft@v2
+
+      # 아티팩트 업로드 (항상)
+      - name: Upload diff coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-coverage-html
+          path: ${{ env.WORKDIR }}/diff-coverage.html
+
+      # ✅ 마지막에 잡을 실패로 마무리(머지 차단)
+      - name: Fail job if diff coverage under threshold
+        if: steps.diffcover.outcome == 'failure'
+        run: |
+          echo "Diff coverage below threshold (${{ env.DIFF_COVER_MIN }}%). Failing job."
+          exit 1

@@ -1,0 +1,14 @@
+.container {
+  margin: 0 auto;
+  padding: 80px;
+  display: grid;
+  gap: 30px;
+  background: #ffffff;
+}
+
+.pageTitle {
+  margin-bottom: 40px;
+  font-size: 28px;
+  font-weight: 600;
+  color: #171717;
+}
