@@ -102,7 +102,7 @@ class PointHistoryServiceTest {
     when(pointHistoryRepository.findAllByUserId(userId, pageRequest))
         .thenReturn(new PageImpl<>(List.of(h1, h2)));
 
-    Page<PointHistory> result = pointHistoryService.getPointHistoryListByUserId(userId, pageRequest);
+    Page<PointHistory> result = pointHistoryService.getPointHistoryListByUserId(userId, pageRequest).getPointHistoryPage();
 
     assertThat(result.getContent()).hasSize(2);
     assertThat(result.getContent().get(0).getReason()).isEqualTo(PointReason.REGISTRATION);

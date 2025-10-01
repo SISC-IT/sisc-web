@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.point.dto.PointHistoryResponse;
 import org.sejongisc.backend.point.entity.PointHistory;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
@@ -29,9 +30,25 @@ public class PointHistoryService {
 
   private final PointHistoryRepository pointHistoryRepository;
 
-  // 특정 유저의 포인트 기록 페이징 조회 (포인트 기록은 많아질 수 있으므로, 페이징 처리)
-  public Page<PointHistory> getPointHistoryListByUserId(UUID userId, PageRequest pageRequest) {
-    return pointHistoryRepository.findAllByUserId(userId, pageRequest);
+  public PointHistoryResponse getPointLeaderboard(int period) {
+    // period: 1(일간), 7(주간), 30(월간)
+    if (period != 1 && period != 7 && period != 30) {
+      throw new CustomException(ErrorCode.INVALID_PERIOD);
+    }
+    if (limit <= 0 || limit > 100) {
+      throw new CustomException(ErrorCode.INVALID_LIMIT);
+    }
+
+    return PointHistoryResponse.builder()
+        .leaderboard(topPointHistories)
+        .build();
+  }
+
+  // 특정 유저의 포인트 기록 페이징 조회 (포인트 기록은 많아질 수 있으므로 페이징 처리)
+  public PointHistoryResponse getPointHistoryListByUserId(UUID userId, PageRequest pageRequest) {
+    return PointHistoryResponse.builder()
+        .pointHistoryPage(pointHistoryRepository.findAllByUserId(userId, pageRequest))
+        .build();
   }
 
   // 포인트 증감 기록 생성
