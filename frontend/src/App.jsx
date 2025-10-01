@@ -9,6 +9,7 @@ import BackTest from './pages/BackTest';
 import Mypage from './pages/Mypage';
 import AttendanceManage from './pages/AttendanceManage';
 import Login from './pages/Login';
+import SignUp from './pages/SignUp';
 import QuantBot from './pages/QuantBot';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
     <>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/attendance" element={<Attendance />} />
