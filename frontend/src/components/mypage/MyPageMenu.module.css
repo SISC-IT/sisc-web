@@ -1,0 +1,79 @@
+.menuContainer {
+  display: flex;
+  align-items: stretch;
+  border-radius: 15px;
+  overflow: hidden;
+
+  background: #f9f9f9;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.menuItemWrapper {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.menuItemWrapper:not(:last-child) {
+  position: relative;
+}
+
+.menuItemWrapper:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 10%;
+  height: 80%;
+  border-right: 0.6px solid #aaaaaa;
+}
+
+.menuButton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+
+  background: #f9f9f9;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.menuButton:hover {
+  background: #f1f1f1;
+}
+
+.menuTextBox {
+  flex: 1;
+}
+
+.menuTitle {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 4px 0;
+  color: #616161;
+}
+
+.chevronRight {
+  margin-left: 5px;
+  font-weight: 500;
+}
+
+.menuDesc {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+  color: #aaaaaa;
+}
+
+.menuIcon {
+  width: 80px;
+  height: 75px;
+  margin-top: 12px;
+  align-self: center;
+}
