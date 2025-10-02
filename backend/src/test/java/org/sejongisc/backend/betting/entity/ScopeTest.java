@@ -10,7 +10,7 @@ class ScopeTest {
 
     @Test
     void getOpenAt_DAILY는_같은날_아침9시() {
-        LocalDateTime base = LocalDateTime.of(2025, 9, 25, 12, 0); // 목요일, 정오
+        LocalDateTime base = LocalDateTime.now();
 
         LocalDateTime openAt = Scope.DAILY.getOpenAt(base);
 
@@ -20,19 +20,19 @@ class ScopeTest {
     }
 
     @Test
-    void getLockAt_DAILY는_같은날_오후4시() {
-        LocalDateTime base = LocalDateTime.of(2025, 9, 25, 12, 0);
+    void getLockAt_DAILY는_같은날_오후10시() {
+        LocalDateTime base = LocalDateTime.now();
 
         LocalDateTime lockAt = Scope.DAILY.getLockAt(base);
 
         assertThat(lockAt.toLocalDate()).isEqualTo(base.toLocalDate()); // 같은 날
-        assertThat(lockAt.getHour()).isEqualTo(16);
+        assertThat(lockAt.getHour()).isEqualTo(22);
         assertThat(lockAt.getMinute()).isEqualTo(0);
     }
 
     @Test
     void getOpenAt_WEEKLY는_월요일_아침9시() {
-        LocalDateTime base = LocalDateTime.of(2025, 9, 25, 12, 0); // 목요일
+        LocalDateTime base = LocalDateTime.now();
 
         LocalDateTime openAt = Scope.WEEKLY.getOpenAt(base);
 
@@ -41,12 +41,12 @@ class ScopeTest {
     }
 
     @Test
-    void getLockAt_WEEKLY는_금요일_오후4시() {
-        LocalDateTime base = LocalDateTime.of(2025, 9, 25, 12, 0); // 목요일
+    void getLockAt_WEEKLY는_금요일_오후10시() {
+        LocalDateTime base = LocalDateTime.now();
 
         LocalDateTime lockAt = Scope.WEEKLY.getLockAt(base);
 
         assertThat(lockAt.getDayOfWeek().name()).isEqualTo("FRIDAY");
-        assertThat(lockAt.getHour()).isEqualTo(16);
+        assertThat(lockAt.getHour()).isEqualTo(22);
     }
 }
