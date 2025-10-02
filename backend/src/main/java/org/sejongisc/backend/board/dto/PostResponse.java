@@ -10,10 +10,9 @@ import java.util.UUID;
 @Getter
 @AllArgsConstructor
 public class PostResponse {
-    private UUID postId;
+    private UUID id;
     private String title;
     private String content;
-    private String postType;
     private String authorName;
     private List<AttachmentResponse> attachments;
     private LocalDateTime createdAt;
@@ -21,8 +20,8 @@ public class PostResponse {
     @Getter
     @AllArgsConstructor
     public static class AttachmentResponse {
-        private UUID fileId;
-        private String fileName;
-        private String fileUrl;
+        private UUID id;
+        private String filename;
+        private String url;
     }
 }
