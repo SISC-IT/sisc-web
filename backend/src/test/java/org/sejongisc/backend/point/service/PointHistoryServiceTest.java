@@ -7,10 +7,13 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.point.dto.PointHistoryResponse;
 import org.sejongisc.backend.point.entity.PointHistory;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.repository.PointHistoryRepository;
+import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +29,9 @@ class PointHistoryServiceTest {
   @Mock
   private PointHistoryRepository pointHistoryRepository;
 
+  @Mock
+  private UserRepository userRepository;
+
   @InjectMocks
   private PointHistoryService pointHistoryService;
 
@@ -37,6 +43,44 @@ class PointHistoryServiceTest {
     MockitoAnnotations.openMocks(this);
     userId = UUID.randomUUID();
     originId = UUID.randomUUID();
+  }
+
+  @Test
+  void 포인트리더보드_성공() {
+    // given
+    int period = 7; // 주간
+    User u1 = User.builder()
+        .userId(UUID.randomUUID())
+        .name("a")
+        .email("a@test.com")
+        .point(300)
+        .build();
+    User u2 = User.builder()
+        .userId(UUID.randomUUID())
+        .name("b")
+        .email("b@test.com")
+        .point(100)
+        .build();
+
+    when(userRepository.findAllByOrderByPointDesc())
+        .thenReturn(List.of(u1, u2));
+
+    // when
+    PointHistoryResponse response = pointHistoryService.getPointLeaderboard(period);
+
+    // then
+    assertThat(response.getLeaderboardUsers()).hasSize(2);
+    assertThat(response.getLeaderboardUsers().get(0).getPoint()).isEqualTo(300);
+    assertThat(response.getLeaderboardUsers().get(1).getPoint()).isEqualTo(100);
+  }
+
+  @Test
+  void 포인트리더보드_실패_잘못된_period_예외발생() {
+    assertThatThrownBy(() ->
+        pointHistoryService.getPointLeaderboard(5) // 지원되지 않는 period
+    )
+        .isInstanceOf(CustomException.class)
+        .hasMessage(ErrorCode.INVALID_PERIOD.getMessage());
   }
 
   @Test
@@ -80,16 +124,6 @@ class PointHistoryServiceTest {
     )
         .isInstanceOf(CustomException.class)
         .hasMessage(ErrorCode.NOT_ENOUGH_POINT_BALANCE.getMessage());
-  }
-
-  @Test
-  void 현재포인트잔액_조회_성공() {
-    when(pointHistoryRepository.getCurrentBalance(userId)).thenReturn(200);
-
-    int balance = pointHistoryService.getCurrentPointBalance(userId);
-
-    assertThat(balance).isEqualTo(200);
-    verify(pointHistoryRepository).getCurrentBalance(userId);
   }
 
   @Test
