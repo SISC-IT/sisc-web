@@ -1,5 +1,6 @@
 package org.sejongisc.backend.point.service;
 
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -12,6 +13,7 @@ import org.sejongisc.backend.point.repository.PointHistoryRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,27 +54,38 @@ public class PointHistoryService {
   // 포인트 증감 기록 생성 및 유저 포인트 업데이트
   @Transactional
   public PointHistory createPointHistory(UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
-    // 포인트 증감 검증
     if (amount == 0) {
       throw new CustomException(ErrorCode.INVALID_POINT_AMOUNT);
     }
 
-    User user = userRepository.findById(userId)
-        .orElseThrow(()-> new CustomException(ErrorCode.USER_NOT_FOUND));
-    int currentBalance = user.getPoint();
+    int maxRetries = 3;
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-    // 포인트 차감 시 잔액 부족 검증
-    if (amount < 0 && currentBalance + amount < 0) {
-      throw new CustomException(ErrorCode.NOT_ENOUGH_POINT_BALANCE);
+        if (amount > 0) {
+          user.addPoint(amount);
+        } else {
+          user.subtractPoint(-amount);
+        }
+
+        PointHistory history = PointHistory.of(userId, amount, reason, origin, originId);
+        return pointHistoryRepository.save(history);
+      } catch (OptimisticLockException | ObjectOptimisticLockingFailureException e) {
+        log.warn("낙관적 락 충돌 발생 : 재시도 {}회차", attempt);
+        if (attempt == maxRetries) {
+          throw new CustomException(ErrorCode.CONCURRENT_UPDATE);
+        }
+        try {
+          Thread.sleep(100); // 백오프 - 직접 sleep
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+      }
     }
-
-    // 포인트 기록 생성 및 저장
-    PointHistory pointHistory = pointHistoryRepository.save(
-        PointHistory.of(userId, amount, reason, origin, originId)
-    );
-
-    user.updatePoint(amount);
-    return pointHistory;
+    return null;
   }
 
   // 유저 탈퇴 시 특정 유저의 모든 포인트 기록 삭제
