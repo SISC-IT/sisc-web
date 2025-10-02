@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import styles from './EmailVerificationModal.module.css';
+import styles from './VerificationModal.module.css';
 
-const EmailVerificationModal = ({ onClose, onEmailVerified }) => {
+// 로그인 페이지 - 이메일 찾기, 비밀번호 찾기
+// 회원가입 페이지 - 이메일 인증
+
+const VerificationModal = ({ onClose, onEmailVerified, title }) => {
   const [code, setCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
@@ -27,14 +30,14 @@ const EmailVerificationModal = ({ onClose, onEmailVerified }) => {
     alert(`입력된 인증번호: ${code}`);
 
     // 이메일 인증 성공 시 수행
-    onEmailVerified(); // 부모의 setConfirmEmail() 호출
+    // onEmailVerified(); // 부모의 setConfirmEmail() 호출 - 회원가입:이메일 인증 시에만 사용
     onClose(); // 팝업 닫기
   };
 
   return (
     <div className={styles.overlay}>
       <div className={styles.popup}>
-        <h1>이메일 인증</h1>
+        <h1>{title}</h1>
         <form onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
             <label htmlFor="verification-code" className={styles.label}>
@@ -84,4 +87,4 @@ const EmailVerificationModal = ({ onClose, onEmailVerified }) => {
   );
 };
 
-export default EmailVerificationModal;
+export default VerificationModal;
