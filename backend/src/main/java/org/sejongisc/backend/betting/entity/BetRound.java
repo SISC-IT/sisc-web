@@ -1,10 +1,7 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.math.BigDecimal;
@@ -36,7 +33,7 @@ public class BetRound extends BasePostgresEntity {
     @Column(precision = 6, scale = 3)
     private BigDecimal baseMultiplier;
 
-    private boolean status; // enum 고려할 것
+    private Boolean status; // enum 고려할 것
 
     private LocalDateTime openAt;
 

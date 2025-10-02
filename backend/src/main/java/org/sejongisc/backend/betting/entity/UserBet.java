@@ -23,7 +23,7 @@ public class UserBet extends BasePostgresEntity {
     @Column(nullable = false)
     private BetOption option;
 
-    private boolean isFree;
+    private Boolean isFree;
 
     @Column(nullable = false)
     private Integer stakePoints;
