@@ -107,7 +107,7 @@ const LoginForm = () => {
               }}
               // mode={findEmail}
             >
-              아이디 찾기
+              이메일 찾기
             </NavLink>
             <span className={styles.divider} aria-hidden="true">
               |
