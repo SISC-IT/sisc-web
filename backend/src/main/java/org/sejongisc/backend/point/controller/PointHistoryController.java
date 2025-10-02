@@ -33,9 +33,8 @@ public class PointHistoryController {
 
   @GetMapping("/leaderboard")
   public ResponseEntity<PointHistoryResponse> getPointLeaderboard(
-      @RequestParam int period,
-      @RequestParam int limit
+      @RequestParam int period
   ) {
-    return ResponseEntity.ok(pointHistoryService.getPointLeaderboard(period, limit));
+    return ResponseEntity.ok(pointHistoryService.getPointLeaderboard(period));
   }
 }

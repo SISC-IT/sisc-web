@@ -9,12 +9,12 @@ import org.sejongisc.backend.point.entity.PointHistory;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.repository.PointHistoryRepository;
-import org.springframework.data.domain.Page;
+import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,18 +29,16 @@ import java.util.UUID;
 public class PointHistoryService {
 
   private final PointHistoryRepository pointHistoryRepository;
+  private final UserRepository userRepository;
 
   public PointHistoryResponse getPointLeaderboard(int period) {
     // period: 1(일간), 7(주간), 30(월간)
     if (period != 1 && period != 7 && period != 30) {
       throw new CustomException(ErrorCode.INVALID_PERIOD);
     }
-    if (limit <= 0 || limit > 100) {
-      throw new CustomException(ErrorCode.INVALID_LIMIT);
-    }
 
     return PointHistoryResponse.builder()
-        .leaderboard(topPointHistories)
+        .leaderboardUsers(userRepository.findAllByOrderByPointDesc())
         .build();
   }
 
@@ -51,14 +49,17 @@ public class PointHistoryService {
         .build();
   }
 
-  // 포인트 증감 기록 생성
+  // 포인트 증감 기록 생성 및 유저 포인트 업데이트
+  @Transactional
   public PointHistory createPointHistory(UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
     // 포인트 증감 검증
     if (amount == 0) {
       throw new CustomException(ErrorCode.INVALID_POINT_AMOUNT);
     }
 
-    int currentBalance = getCurrentPointBalance(userId);
+    User user = userRepository.findById(userId)
+        .orElseThrow(()-> new CustomException(ErrorCode.USER_NOT_FOUND));
+    int currentBalance = user.getPoint();
 
     // 포인트 차감 시 잔액 부족 검증
     if (amount < 0 && currentBalance + amount < 0) {
@@ -66,14 +67,12 @@ public class PointHistoryService {
     }
 
     // 포인트 기록 생성 및 저장
-    return pointHistoryRepository.save(
+    PointHistory pointHistory = pointHistoryRepository.save(
         PointHistory.of(userId, amount, reason, origin, originId)
     );
-  }
 
-  // 특정 유저의 현재 포인트 잔액 조회
-  public int getCurrentPointBalance(UUID userId) {
-    return pointHistoryRepository.getCurrentBalance(userId);
+    user.updatePoint(amount);
+    return pointHistory;
   }
 
   // 유저 탈퇴 시 특정 유저의 모든 포인트 기록 삭제

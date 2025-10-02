@@ -47,4 +47,8 @@ public class User extends BasePostgresEntity{
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
+
+    public void updatePoint(int amount) {
+        this.point += amount;
+    }
 }

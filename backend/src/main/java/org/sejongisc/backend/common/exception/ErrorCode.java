@@ -18,6 +18,8 @@ public enum ErrorCode {
 
   // POINT
 
+  INVALID_PERIOD(HttpStatus.BAD_REQUEST, "유효하지 않은 리더보드 기간입니다."),
+
   INVALID_POINT_AMOUNT(HttpStatus.BAD_REQUEST, "포인트 변동량은 0일 수 없습니다"),
 
   NOT_ENOUGH_POINT_BALANCE(HttpStatus.BAD_REQUEST, "포인트 잔액이 부족합니다"),
