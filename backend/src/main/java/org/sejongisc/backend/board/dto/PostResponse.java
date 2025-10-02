@@ -14,14 +14,6 @@ public class PostResponse {
     private String title;
     private String content;
     private String authorName;
-    private List<AttachmentResponse> attachments;
+    private List<PostAttachmentDto> attachments;
     private LocalDateTime createdAt;
-
-    @Getter
-    @AllArgsConstructor
-    public static class AttachmentResponse {
-        private UUID id;
-        private String filename;
-        private String url;
-    }
 }

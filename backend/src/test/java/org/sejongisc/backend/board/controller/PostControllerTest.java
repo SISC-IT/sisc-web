@@ -16,7 +16,6 @@ import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -46,19 +45,17 @@ class PostControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-
         mockMvc = MockMvcBuilders.standaloneSetup(postController)
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
     }
 
     @Test
-    @DisplayName("POST /posts - 게시물 생성 성공")
+    @DisplayName("POST /api/posts - 게시물 생성 성공")
     void createPost_success() throws Exception {
         PostRequest req = new PostRequest();
         req.setTitle("공지사항");
         req.setContent("이번 달 모임 일정 안내");
-        req.setAttachments(List.of());
 
         UUID postId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
@@ -70,13 +67,10 @@ class PostControllerTest {
 
         when(postService.createPost(any(PostRequest.class), any(UUID.class))).thenReturn(resp);
 
-        User mockUser = User.builder()
-                .userId(UUID.randomUUID())
-                .name("관리자")
-                .build();
+        User mockUser = User.builder().userId(UUID.randomUUID()).name("관리자").build();
         CustomUserDetails principal = new CustomUserDetails(mockUser);
 
-        mockMvc.perform(post("/posts")
+        mockMvc.perform(post("/api/posts")
                         .with(SecurityMockMvcRequestPostProcessors.user(principal))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -87,23 +81,20 @@ class PostControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /posts/{id} - 게시물 수정 성공")
+    @DisplayName("PATCH /api/posts/{id} - 게시물 수정 성공")
     void updatePost_success() throws Exception {
         UUID postId = UUID.randomUUID();
-
         PostRequest req = new PostRequest();
         req.setTitle("수정된 제목");
         req.setContent("수정된 내용");
-        req.setAttachments(List.of());
 
         PostResponse resp = new PostResponse(
-                postId, "수정된 제목", "수정된 내용",
-                "관리자", List.of(), LocalDateTime.now()
+                postId, "수정된 제목", "수정된 내용", "관리자", List.of(), LocalDateTime.now()
         );
 
         when(postService.updatePost(any(UUID.class), any(PostRequest.class))).thenReturn(resp);
 
-        mockMvc.perform(patch("/posts/" + postId)
+        mockMvc.perform(patch("/api/posts/" + postId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -112,27 +103,25 @@ class PostControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /posts/{id} - 게시물 삭제 성공")
+    @DisplayName("DELETE /api/posts/{id} - 게시물 삭제 성공")
     void deletePost_success() throws Exception {
         UUID postId = UUID.randomUUID();
 
-        mockMvc.perform(delete("/posts/" + postId))
+        mockMvc.perform(delete("/api/posts/" + postId))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("GET /posts/search - 게시물 검색 성공")
+    @DisplayName("GET /api/posts/search - 게시물 검색 성공")
     void searchPosts_success() throws Exception {
         UUID postId = UUID.randomUUID();
-
         PostResponse resp = new PostResponse(
-                postId, "검색된 글", "검색 본문",
-                "홍길동", List.of(), LocalDateTime.now()
+                postId, "검색된 글", "검색 본문", "홍길동", List.of(), LocalDateTime.now()
         );
 
         when(postService.searchPosts("검색")).thenReturn(List.of(resp));
 
-        mockMvc.perform(get("/posts/search").param("keyword", "검색"))
+        mockMvc.perform(get("/api/posts/search").param("keyword", "검색"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title", is("검색된 글")))
                 .andExpect(jsonPath("$[0].authorName", is("홍길동")));

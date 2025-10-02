@@ -1,10 +1,10 @@
 package org.sejongisc.backend.board.service;
 
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.board.dao.PostAttachmentRepository;
 import org.sejongisc.backend.board.dao.PostRepository;
 import org.sejongisc.backend.board.dto.PostRequest;
 import org.sejongisc.backend.board.dto.PostResponse;
+import org.sejongisc.backend.board.dto.PostAttachmentDto;
 import org.sejongisc.backend.board.entity.Board;
 import org.sejongisc.backend.board.entity.Post;
 import org.sejongisc.backend.board.entity.PostAttachment;
@@ -23,59 +23,70 @@ import java.util.stream.Collectors;
 public class PostService {
 
     private final PostRepository postRepository;
-    private final PostAttachmentRepository postAttachmentRepository;
     private final UserRepository userRepository;
 
     public PostResponse createPost(PostRequest request, UUID userId) {
         User author = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Board board = Board.builder().id(request.getBoardId()).build();
+                .orElseThrow(() -> new IllegalArgumentException("작성자 없음"));
 
         Post post = Post.builder()
+                .board(Board.builder().id(request.getBoardId()).build())
+                .author(author)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .author(author)
-                .board(board)
+                .postType(request.getPostType())
                 .build();
 
         if (request.getAttachments() != null) {
-            for (PostRequest.AttachmentDto dto : request.getAttachments()) {
-                PostAttachment attachment = PostAttachment.builder()
-                        .filename(dto.getFilename())
-                        .url(dto.getUrl())
-                        .mimeType(dto.getMimeType())
-                        .post(post)
-                        .build();
-                post.getAttachments().add(attachment);
-            }
+            List<PostAttachment> atts = request.getAttachments().stream()
+                    .map(dto -> PostAttachment.builder()
+                            .fileName(dto.getFileName())
+                            .fileUrl(dto.getFileUrl())
+                            .post(post)
+                            .build())
+                    .toList();
+            post.setAttachments(atts);
         }
 
         Post saved = postRepository.save(post);
-        return toResponse(saved);
+
+        return new PostResponse(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getContent(),
+                saved.getAuthor().getName(),
+                saved.getAttachments().stream()
+                        .map(a -> {
+                            PostAttachmentDto dto = new PostAttachmentDto();
+                            dto.setFileName(a.getFileName());
+                            dto.setFileUrl(a.getFileUrl());
+                            return dto;
+                        }).collect(Collectors.toList()),
+                saved.getCreatedAt()
+        );
     }
 
     public PostResponse updatePost(UUID postId, PostRequest request) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+                .orElseThrow(() -> new IllegalArgumentException("게시물 없음"));
 
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
 
-        post.getAttachments().clear();
-        if (request.getAttachments() != null) {
-            for (PostRequest.AttachmentDto dto : request.getAttachments()) {
-                PostAttachment attachment = PostAttachment.builder()
-                        .filename(dto.getFilename())
-                        .url(dto.getUrl())
-                        .mimeType(dto.getMimeType())
-                        .post(post)
-                        .build();
-                post.getAttachments().add(attachment);
-            }
-        }
-
-        return toResponse(post);
+        return new PostResponse(
+                post.getId(),
+                post.getTitle(),
+                post.getContent(),
+                post.getAuthor().getName(),
+                post.getAttachments().stream()
+                        .map(a -> {
+                            PostAttachmentDto dto = new PostAttachmentDto();
+                            dto.setFileName(a.getFileName());
+                            dto.setFileUrl(a.getFileUrl());
+                            return dto;
+                        }).collect(Collectors.toList()),
+                post.getUpdatedAt()
+        );
     }
 
     public void deletePost(UUID postId) {
@@ -83,26 +94,21 @@ public class PostService {
     }
 
     public List<PostResponse> searchPosts(String keyword) {
-        return postRepository.findByTitleContainingOrContentContaining(keyword, keyword)
-                .stream()
-                .map(this::toResponse)
+        List<Post> posts = postRepository.findByTitleContainingOrContentContaining(keyword, keyword);
+        return posts.stream()
+                .map(p -> new PostResponse(
+                        p.getId(),
+                        p.getTitle(),
+                        p.getContent(),
+                        p.getAuthor().getName(),
+                        p.getAttachments().stream().map(a -> {
+                            PostAttachmentDto dto = new PostAttachmentDto();
+                            dto.setFileName(a.getFileName());
+                            dto.setFileUrl(a.getFileUrl());
+                            return dto;
+                        }).collect(Collectors.toList()),
+                        p.getCreatedAt()
+                ))
                 .collect(Collectors.toList());
-    }
-
-    private PostResponse toResponse(Post post) {
-        return new PostResponse(
-                post.getId(),
-                post.getTitle(),
-                post.getContent(),
-                post.getAuthor().getName(),
-                post.getAttachments().stream()
-                        .map(a -> new PostResponse.AttachmentResponse(
-                                a.getId(),
-                                a.getFilename(),
-                                a.getUrl()
-                        ))
-                        .collect(Collectors.toList()),
-                post.getCreatedDate()
-        );
     }
 }

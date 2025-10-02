@@ -2,28 +2,30 @@ package org.sejongisc.backend.board.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.util.UUID;
 
 @Entity
-@Table(name = "post_attachment")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name = "post_attachment") // 이름 변경 반영
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class PostAttachment {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", columnDefinition = "uuid")
-    private UUID id;
+    @Column(name = "post_attachment_id", columnDefinition = "uuid")
+    private UUID postAttachmentId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "post_id", columnDefinition = "uuid", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id", nullable = false, columnDefinition = "uuid")
     private Post post;
 
-    @Column(nullable = false)
-    private String filename;
+    @Column(name = "file_name", nullable = false)
+    private String fileName;
 
-    @Column(nullable = false)
-    private String url;
-
-    @Column(name = "mime_type")
-    private String mimeType;
+    @Column(name = "file_url", nullable = false)
+    private String fileUrl;
 }

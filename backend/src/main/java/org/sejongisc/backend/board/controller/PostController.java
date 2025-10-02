@@ -13,36 +13,46 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/posts")
 @RequiredArgsConstructor
+@RequestMapping("/api/posts") // API 명세서에 맞게 통일
 public class PostController {
 
     private final PostService postService;
 
+    /**
+     * 게시물 생성
+     */
     @PostMapping
     public ResponseEntity<PostResponse> createPost(
             @RequestBody PostRequest request,
-            @AuthenticationPrincipal CustomUserDetails principal
-    ) {
-        PostResponse response = postService.createPost(request, principal.getUserId());
+            @AuthenticationPrincipal CustomUserDetails user) {
+        PostResponse response = postService.createPost(request, user.getUserId());
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{postId}")
+    /**
+     * 게시물 수정
+     */
+    @PatchMapping("/{id}")
     public ResponseEntity<PostResponse> updatePost(
-            @PathVariable UUID postId,
-            @RequestBody PostRequest request
-    ) {
-        PostResponse response = postService.updatePost(postId, request);
+            @PathVariable UUID id,
+            @RequestBody PostRequest request) {
+        PostResponse response = postService.updatePost(id, request);
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(@PathVariable UUID postId) {
-        postService.deletePost(postId);
+    /**
+     * 게시물 삭제
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePost(@PathVariable UUID id) {
+        postService.deletePost(id);
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * 게시물 검색
+     */
     @GetMapping("/search")
     public ResponseEntity<List<PostResponse>> searchPosts(@RequestParam String keyword) {
         List<PostResponse> responses = postService.searchPosts(keyword);

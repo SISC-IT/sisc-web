@@ -26,23 +26,16 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PostServiceTest {
 
-    @Mock
-    PostRepository postRepository;
+    @Mock PostRepository postRepository;
+    @Mock UserRepository userRepository;
 
-    @Mock
-    UserRepository userRepository;
-
-    @InjectMocks
-    PostService postService;
+    @InjectMocks PostService postService;
 
     @Test
     @DisplayName("게시물 생성 성공")
     void createPost_success() {
         UUID userId = UUID.randomUUID();
-        User user = User.builder()
-                .userId(userId)
-                .name("관리자")
-                .build();
+        User user = User.builder().userId(userId).name("관리자").build();
 
         PostRequest req = new PostRequest();
         req.setBoardId(UUID.randomUUID());
@@ -54,6 +47,7 @@ class PostServiceTest {
             Post p = inv.getArgument(0, Post.class);
             p.setId(UUID.randomUUID());
             p.setBoard(Board.builder().id(req.getBoardId()).build());
+            p.setCreatedAt(LocalDateTime.now());
             return p;
         });
 
@@ -67,10 +61,7 @@ class PostServiceTest {
     @DisplayName("게시물 검색 성공")
     void searchPosts_success() {
         UUID postId = UUID.randomUUID();
-        User user = User.builder()
-                .userId(UUID.randomUUID())
-                .name("홍길동")
-                .build();
+        User user = User.builder().userId(UUID.randomUUID()).name("홍길동").build();
 
         Post post = Post.builder()
                 .id(postId)
