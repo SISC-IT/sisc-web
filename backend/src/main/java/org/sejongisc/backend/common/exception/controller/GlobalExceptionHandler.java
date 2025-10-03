@@ -39,11 +39,4 @@ public class GlobalExceptionHandler {
     // 예상치 못한 예외 => 500
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
   }
-
-  @ExceptionHandler(IllegalStateException.class)
-  public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
-    return ResponseEntity.badRequest().body(
-        new ErrorResponse(ErrorCode.INVALID_STATE, ex.getMessage())
-    );
-  }
 }

@@ -2,7 +2,6 @@ package org.sejongisc.backend.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UuidGenerator;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.util.ArrayList;
@@ -52,14 +51,7 @@ public class User extends BasePostgresEntity{
     @Builder.Default
     private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
 
-    public void addPoint(int amount) {
+    public void updatePoint(int amount) {
         this.point += amount;
-    }
-
-    public void subtractPoint(int amount) {
-        if (this.point - amount < 0) {
-            throw new IllegalStateException("잔액 부족으로 포인트를 차감할 수 없습니다.");
-        }
-        this.point -= amount;
     }
 }

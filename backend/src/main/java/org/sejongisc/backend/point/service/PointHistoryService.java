@@ -64,11 +64,10 @@ public class PointHistoryService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (amount > 0) {
-          user.addPoint(amount);
-        } else {
-          user.subtractPoint(-amount);
+        if (user.getPoint() + amount < 0) {
+          throw new CustomException(ErrorCode.NOT_ENOUGH_POINT_BALANCE);
         }
+        user.updatePoint(amount);
 
         PointHistory history = PointHistory.of(userId, amount, reason, origin, originId);
         return pointHistoryRepository.save(history);
