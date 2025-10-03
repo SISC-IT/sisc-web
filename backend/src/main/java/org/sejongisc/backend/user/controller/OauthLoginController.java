@@ -3,12 +3,15 @@ package org.sejongisc.backend.user.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.user.dto.GithubUserInfoResponse;
 import org.sejongisc.backend.user.dto.GoogleUserInfoResponse;
 import org.sejongisc.backend.user.dto.KakaoUserInfoResponse;
 import org.sejongisc.backend.user.dto.LoginResponse;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.oauth.GithubUserInfoAdapter;
 import org.sejongisc.backend.user.oauth.GoogleUserInfoAdapter;
 import org.sejongisc.backend.user.oauth.KakaoUserInfoAdapter;
+import org.sejongisc.backend.user.service.GithubService;
 import org.sejongisc.backend.user.service.GoogleService;
 import org.sejongisc.backend.user.service.KakaoService;
 import org.sejongisc.backend.user.service.UserService;
@@ -25,7 +28,7 @@ public class OauthLoginController {
 
     private final GoogleService googleService;
     private final KakaoService kakaoService;
-    // Github
+    private final GithubService githubService;
     private final UserService userService;
     private final JwtProvider jwtProvider;
 
@@ -46,7 +49,12 @@ public class OauthLoginController {
 
                 user = userService.findOrCreateUser(new KakaoUserInfoAdapter(kakaoInfo));
             }
-            // Github 추가
+            case "GITHUB" ->{
+                String accesToken = githubService.getAccessTokenFromGithub(code).getAccessToken();
+                GithubUserInfoResponse githubInfo = githubService.getUserInfo(accesToken);
+
+                user = userService.findOrCreateUser(new GithubUserInfoAdapter(githubInfo));
+            }
             default -> throw new IllegalArgumentException("Unknown provider " + provider);
         }
 

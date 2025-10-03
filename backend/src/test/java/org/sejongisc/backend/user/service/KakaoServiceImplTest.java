@@ -47,7 +47,7 @@ class KakaoServiceImplTest {
                 .addHeader("Content-Type", "application/json"));
 
         // when
-        String accessToken = kakaoService.getAccessTokenFromKakao("test-code");
+        String accessToken = kakaoService.getAccessTokenFromKakao("test-code").getAccessToken();
 
         // then
         assertThat(accessToken).isEqualTo("mock-access-token");
