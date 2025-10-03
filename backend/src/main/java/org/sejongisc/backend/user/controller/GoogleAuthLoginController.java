@@ -3,13 +3,12 @@
 //import lombok.RequiredArgsConstructor;
 //import lombok.extern.slf4j.Slf4j;
 //import org.sejongisc.backend.common.auth.jwt.JwtProvider;
-//import org.sejongisc.backend.user.dto.KakaoUserInfoResponse;
+//import org.sejongisc.backend.user.dto.GoogleTokenResponse;
+//import org.sejongisc.backend.user.dto.GoogleUserInfoResponse;
 //import org.sejongisc.backend.user.dto.LoginResponse;
 //import org.sejongisc.backend.user.entity.User;
-//import org.sejongisc.backend.user.service.KakaoService;
+//import org.sejongisc.backend.user.service.GoogleService;
 //import org.sejongisc.backend.user.service.UserService;
-//import org.springframework.http.HttpHeaders;
-//import org.springframework.http.ResponseCookie;
 //import org.springframework.http.ResponseEntity;
 //import org.springframework.web.bind.annotation.GetMapping;
 //import org.springframework.web.bind.annotation.RequestParam;
@@ -18,30 +17,32 @@
 //@Slf4j
 //@RestController
 //@RequiredArgsConstructor
-//public class KakaoAuthLoginController {
+//public class GoogleAuthLoginController {
 //
-//    private final KakaoService kakaoService;
+//    private final GoogleService googleService;
 //    private final UserService userService;
 //    private final JwtProvider jwtProvider;
 //
-////    private static final String FRONT_BASEURL = "http://localhost:5173";
+//    @GetMapping("/auth/login/google")
+//    public ResponseEntity<LoginResponse> googleLogin(@RequestParam("code") String code) {
+//        // 인가코드(code)로 구글 토큰 발급
+//        GoogleTokenResponse tokenResponse = googleService.getAccessTokenFromGoogle(code);
+//        String accessToken = tokenResponse.getAccessToken();
 //
-//    @GetMapping("/auth/login/kakao")
-//    public ResponseEntity<LoginResponse> KakaoLogin(@RequestParam("code") String code) {
-//        String accessToken = kakaoService.getAccessTokenFromKakao(code);
-//
-//        KakaoUserInfoResponse userInfo = kakaoService.getUserInfo(accessToken);
+//        // 구글 UserInfo API로 사용자 정보 가져오기
+//        GoogleUserInfoResponse userInfo = googleService.getUserInfo(accessToken);
 //
 //        // DB 조회 or 신규 가입
-//        User user = userService.findOrCreateUser(userInfo);
+//        User user = userService.findOrCreateGoogleUser(userInfo);
 //
+//        // JWT 발급
 //        String jwt = jwtProvider.createToken(user.getUserId(), user.getRole());
 //
-//        // HttpOnly 쿠키에 담기
+//        // HttpOnly 쿠키 저장
 //        ResponseCookie cookie = ResponseCookie.from("access", jwt)
 //                .httpOnly(true)
-//                .secure(true)   // 배포 환경에서는 true
-//                .sameSite("None")   // CORS 대응
+//                .secure(true)           // 운영 환경 true
+//                .sameSite("None")       // CORS 대응
 //                .path("/")
 //                .maxAge(60 * 60)
 //                .build();
@@ -50,17 +51,16 @@
 //        LoginResponse response = LoginResponse.builder()
 //                .accessToken(jwt)
 //                .userId(user.getUserId())
-//                // .email(user.getEmail())
 //                .name(user.getName())
 //                .role(user.getRole())
 //                .phoneNumber(user.getPhoneNumber())
 //                .point(user.getPoint())
 //                .build();
 //
+//        log.info(" [Google Login] userId={} email={}", user.getUserId(), user.getEmail());
 //
 //        return ResponseEntity.ok()
 //                .header(HttpHeaders.SET_COOKIE, cookie.toString())
 //                .body(response);
 //    }
-//
 //}

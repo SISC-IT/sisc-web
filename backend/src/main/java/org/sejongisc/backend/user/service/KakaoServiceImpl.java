@@ -36,9 +36,9 @@ public class KakaoServiceImpl implements KakaoService{
     }
 
     @Override
-    public String getAccessTokenFromKakao(String code) {
+    public KakaoTokenResponse getAccessTokenFromKakao(String code) {
 
-        KakaoTokenResponse kakaoTokenResponseDto = WebClient.create(KAUTH_TOKEN_URL_HOST).post()
+        KakaoTokenResponse kakaoTokenResponse = WebClient.create(KAUTH_TOKEN_URL_HOST).post()
                 .uri(uriBuilder -> uriBuilder
                         // .scheme("https")
                         .path("/oauth/token")
@@ -53,12 +53,12 @@ public class KakaoServiceImpl implements KakaoService{
                 .bodyToMono(KakaoTokenResponse.class)
                 .block();
 
-        log.info(" [Kakao Service] Access Token ------> {}", kakaoTokenResponseDto.getAccessToken());
-        log.info(" [Kakao Service] Refresh Token ------> {}", kakaoTokenResponseDto.getRefreshToken());
-        log.info(" [Kakao Service] Id Token ------> {}", kakaoTokenResponseDto.getIdToken());
-        log.info(" [Kakao Service] Scope ------> {}", kakaoTokenResponseDto.getScope());
+        log.info(" [Kakao Service] Access Token ------> {}", kakaoTokenResponse.getAccessToken());
+        log.info(" [Kakao Service] Refresh Token ------> {}", kakaoTokenResponse.getRefreshToken());
+        log.info(" [Kakao Service] Id Token ------> {}", kakaoTokenResponse.getIdToken());
+        log.info(" [Kakao Service] Scope ------> {}", kakaoTokenResponse.getScope());
 
-        return kakaoTokenResponseDto.getAccessToken();
+        return kakaoTokenResponse;
     }
 
     @Override

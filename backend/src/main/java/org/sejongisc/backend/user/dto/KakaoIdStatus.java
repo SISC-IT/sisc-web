@@ -6,7 +6,7 @@ import org.sejongisc.backend.user.entity.Role;
 
 @Getter
 @AllArgsConstructor
-public class KakaoIdStatusDto {
+public class KakaoIdStatus {
     private Long kakaoId;
     private Role role;
 }

@@ -14,6 +14,7 @@ import org.sejongisc.backend.user.entity.AuthProvider;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserOauthAccount;
+import org.sejongisc.backend.user.oauth.OauthUserInfo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -67,18 +68,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User findOrCreateUser(KakaoUserInfoResponse kakaoInfo) {
-        String providerUid = String.valueOf(kakaoInfo.getId());
+    public User findOrCreateUser(OauthUserInfo oauthInfo) {
+        String providerUid = oauthInfo.getProviderUid();
 
         // 기존 OAuth 계정 찾기
         return oauthAccountRepository
-                .findByProviderAndProviderUid(AuthProvider.KAKAO, providerUid)
+                .findByProviderAndProviderUid(oauthInfo.getProvider(), providerUid)
                 .map(UserOauthAccount::getUser)
                 .orElseGet(() -> {
                     // 새로운 User 생성
                     User newUser = User.builder()
-                            .name(Optional.ofNullable(kakaoInfo.getKakaoAccount().getName())
-                                    .orElse(kakaoInfo.getKakaoAccount().getProfile().getNickName()))
+                            .name(oauthInfo.getName())
                             // .email(kakaoInfo.getKakaoAccount().getEmail()) // Email을 받기 위해서는 Kakao에 신청
                             .role(Role.TEAM_MEMBER)
                             .build();
@@ -87,7 +87,7 @@ public class UserServiceImpl implements UserService {
 
                     UserOauthAccount newOauth = UserOauthAccount.builder()
                             .user(savedUser)
-                            .provider(AuthProvider.KAKAO)
+                            .provider(oauthInfo.getProvider())
                             .providerUid(providerUid)
                             .build();
 
