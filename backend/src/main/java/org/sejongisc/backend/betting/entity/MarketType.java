@@ -1,4 +1,4 @@
-package org.sejongisc.backend.betting.enums;
+package org.sejongisc.backend.betting.entity;
 
 public enum MarketType {
     KOREA,

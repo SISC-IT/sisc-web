@@ -1,0 +1,144 @@
+name: Backend-CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  WORKDIR: backend
+  JAVA_VERSION: '21'
+  DIFF_COVER_MIN: '70'
+
+jobs:
+  build-test:
+    name: Backend Gate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout (with full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Path filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+
+      - name: Skip-no backend changes
+        if: steps.filter.outputs.backend != 'true'
+        run: echo "No backend changes detected."
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        if: steps.filter.outputs.backend == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Gradle 실행권한 제공
+        if: steps.filter.outputs.backend == 'true'
+        working-directory: ${{ env.WORKDIR }}
+        run: chmod +x ./gradlew
+
+      - name: Build & Test (generate JaCoCo XML)
+        if: steps.filter.outputs.backend == 'true'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          echo "Waiting for Postgres to be ready..."
+          sleep 5
+          ./gradlew --no-daemon clean test jacocoTestReport
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
+          SPRING_DATASOURCE_USERNAME: testuser
+          SPRING_DATASOURCE_PASSWORD: testpass
+
+      - name: Set up Python and install diff-cover
+        if: steps.filter.outputs.backend == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install diff-cover
+        if: steps.filter.outputs.backend == 'true'
+        run: pip install diff-cover
+
+      - name: 비교 브랜치 설정
+        if: steps.filter.outputs.backend == 'true'
+        id: base
+        run: echo "ref=main" >> $GITHUB_OUTPUT
+
+      - name: Generate diff coverage (markdown + html)
+        if: steps.filter.outputs.backend == 'true'
+        id: diffcover
+        working-directory: ${{ env.WORKDIR }}
+        continue-on-error: true
+        run: |
+          REPORT="build/reports/jacoco/test/jacocoTestReport.xml"
+          SRC_ROOTS="src/main/java"
+
+          if [ ! -f "$REPORT" ]; then
+            echo "⚠️ No JaCoCo report found at $REPORT" > diff-coverage.md
+            exit 0
+          fi
+
+          diff-cover "$REPORT" \
+            --compare-branch origin/main \
+            --format markdown:diff-coverage.md \
+            --format html:diff-coverage.html \
+            --src-roots "$SRC_ROOTS" \
+            --fail-under ${{ env.DIFF_COVER_MIN }}
+
+          if [ ! -f diff-coverage.md ]; then
+            echo "⚠️ No diff coverage results" > diff-coverage.md
+          fi
+
+      - name: Comment diff coverage on PR
+        if: github.event_name == 'pull_request' && steps.filter.outputs.backend == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: ${{ env.WORKDIR }}/diff-coverage.md
+
+      - name: 기준 미달 PR을 Draft로 전환 (gh CLI)
+        if: github.event_name == 'pull_request' && steps.filter.outputs.backend == 'true' && steps.diffcover.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr ready --undo \
+            ${{ github.event.pull_request.number }} \
+            -R ${{ github.repository }}
+
+      - name: Upload diff coverage HTML
+        if: always() && steps.filter.outputs.backend == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-coverage-html
+          path: ${{ env.WORKDIR }}/diff-coverage.html
+
+      - name: Fail job if diff coverage under threshold
+        if: steps.filter.outputs.backend == 'true' && steps.diffcover.outcome == 'failure'
+        run: |
+          echo "❌ Diff coverage below threshold (${{ env.DIFF_COVER_MIN }}%). Failing job."
+          exit 1
