@@ -202,8 +202,8 @@ class PointHistoryServiceTest {
     assertThatThrownBy(() ->
         pointHistoryService.createPointHistory(userId, -100, PointReason.BETTING, PointOrigin.BETTING, originId)
     )
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("잔액 부족으로 포인트를 차감할 수 없습니다.");
+        .isInstanceOf(CustomException.class)
+        .hasMessage(ErrorCode.NOT_ENOUGH_POINT_BALANCE.getMessage());
   }
 
   @Test
