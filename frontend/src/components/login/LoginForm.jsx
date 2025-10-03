@@ -5,60 +5,40 @@ import sejong_logo from '../../assets/sejong_logo.png';
 
 import SocialLoginButtons from './SocialLoginButtons';
 import VerificationModal from './../VerificationModal';
+import ResetPasswordModal from './ResetPasswordModal';
+import FindEmailResultModal from './FindEmailResultModal';
 
 const LoginForm = () => {
   const nav = useNavigate();
 
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
-  // const [isModalOpen, setModalOpen] = useState(false);
-  const [isFindEmailModalOpen, setFindEmailModalOpen] = useState(false);
-  const [isFindPasswordModalOpen, setFindPasswordModalOpen] = useState(false);
+  const [modalStep, setModalStep] = useState('closed');
+  const [foundEmail, setFoundEmail] = useState('ex@n.com');
 
-  // 모달 띄우기 & 끄기
-  const openModal = (idx) => {
-    switch (idx) {
-      case 1:
-        setFindEmailModalOpen(true);
-        break;
-      case 2:
-        setFindPasswordModalOpen(true);
-        break;
+  const handlePhoneVerificationSuccess = (result) => {
+    if (modalStep === 'verifyPhoneForId') {
+      setFoundEmail(result.email);
+      setModalStep('showId');
+    } else if (modalStep === 'verifyPhoneForPassword') {
+      setModalStep('resetPassword');
     }
-    // setModalOpen(true);
-  };
-  const closeModal = (idx) => {
-    switch (idx) {
-      case 1:
-        setFindEmailModalOpen(false);
-        break;
-      case 2:
-        setFindPasswordModalOpen(false);
-        break;
-    }
-    // setModalOpen(false);
   };
 
-  // 각 모드에 맞는 함수들
-  const findEmail = () => {};
-  const findPassword = () => {};
+  const closeModal = () => {
+    setModalStep('closed');
+  };
 
   const isFormValid = id.trim() !== '' && password.trim() !== '';
 
   const handleLogin = (e) => {
     e.preventDefault();
-
-    // 안전장치
     if (!id || !password) {
       alert('아이디와 비밀번호를 모두 입력해주세요.');
       return;
     }
-
-    // 로그인 성공&실패 로직
-
-    // 로컬 스토리지
     localStorage.setItem('authToken', 'dummy-token-12345');
-    nav('/'); // 임시 페이지 이동
+    nav('/');
   };
 
   return (
@@ -100,51 +80,50 @@ const LoginForm = () => {
         </form>
         <div className={styles.textContainer}>
           <div>
-            <NavLink
+            <a
               className={styles.text}
-              onClick={() => {
-                openModal(1);
-              }}
-              // mode={findEmail}
+              onClick={() => setModalStep('verifyPhoneForId')}
             >
               이메일 찾기
-            </NavLink>
+            </a>
             <span className={styles.divider} aria-hidden="true">
               |
             </span>
-            <NavLink
+            <a
               className={styles.text}
-              onClick={() => {
-                openModal(2);
-              }}
-              // mode={findPassword}
+              onClick={() => setModalStep('verifyPhoneForPassword')}
             >
               비밀번호 찾기
-            </NavLink>
+            </a>
           </div>
           <NavLink to="/signup" className={styles.text}>
             회원가입
           </NavLink>
         </div>
 
-        {/* 소셜 로그인 버튼들 */}
         <SocialLoginButtons />
       </div>
-      {isFindEmailModalOpen && (
+
+      {(modalStep === 'verifyPhoneForId' ||
+        modalStep === 'verifyPhoneForPassword') && (
         <VerificationModal
-          onClose={() => {
-            closeModal(1);
-          }}
-          title={'이메일 찾기'}
+          title="전화번호 인증"
+          onClose={closeModal}
+          onSuccess={handlePhoneVerificationSuccess}
         />
       )}
-      {isFindPasswordModalOpen && (
-        <VerificationModal
-          onClose={() => {
-            closeModal(2);
-          }}
-          title={'비밀번호 찾기'}
+
+      {modalStep === 'showId' && (
+        <FindEmailResultModal
+          title="아이디 찾기 결과"
+          onClose={closeModal}
+          onSuccess={closeModal} // 확인 버튼 누르면 닫히도록 onSuccess에 closeModal 전달
+          result={foundEmail}
         />
+      )}
+
+      {modalStep === 'resetPassword' && (
+        <ResetPasswordModal onSuccess={closeModal} />
       )}
     </>
   );

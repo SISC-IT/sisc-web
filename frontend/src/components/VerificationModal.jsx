@@ -1,37 +1,44 @@
 import { useState } from 'react';
 import styles from './VerificationModal.module.css';
 
-// 로그인 페이지 - 이메일 찾기, 비밀번호 찾기
-// 회원가입 페이지 - 이메일 인증
-
-const VerificationModal = ({ onClose, onEmailVerified, title }) => {
+const VerificationModal = ({ title, onClose, onSuccess }) => {
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
-  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [sendButtonDisabled, setSendButtonDisabled] = useState(false);
 
-  const handleSendCode = () => {
-    // 3초정도 대기하는 로직 추가 필요
-    setIsButtonDisabled(true);
-
-    setTimeout(() => {
-      setIsButtonDisabled(false);
-    }, 3000);
-
-    if (!isCodeSent) {
-      alert('인증번호가 전송되었습니다.');
-      setIsCodeSent(true); // 최초 1회만 "인증번호 보내기" 메시지이고, 이후 "재전송"으로 뜨게 설정
-    } else {
-      alert('인증번호가 재전송되었습니다.');
+  const handleSendCode = async () => {
+    if (!phoneNumber) {
+      alert('전화번호를 입력해주세요.');
+      return;
     }
+    setSendButtonDisabled(true);
+    console.log(`${phoneNumber}로 인증번호 전송 API 호출`);
+    // <<-- 실제 API 호출 로직: await api.sendVerificationCode(phoneNumber) -->>
+
+    alert('인증번호가 전송되었습니다.');
+    setIsCodeSent(true);
+    setTimeout(() => setSendButtonDisabled(false), 3000);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert(`입력된 인증번호: ${code}`);
+    if (!code) {
+      alert('인증번호를 입력해주세요.');
+      return;
+    }
+    console.log(`${phoneNumber}와 ${code}로 인증 확인 API 호출`);
 
-    // 이메일 인증 성공 시 수행
-    // onEmailVerified(); // 부모의 setConfirmEmail() 호출 - 회원가입:이메일 인증 시에만 사용
-    onClose(); // 팝업 닫기
+    try {
+      // <<-- 실제 API 호출 로직: const result = await api.verifyCode(phoneNumber, code) -->>
+
+      const mockResult = { email: 'user@example.com', message: '인증 성공' };
+      alert('인증에 성공했습니다!');
+      onSuccess(mockResult);
+    } catch (error) {
+      console.error('인증 실패:', error);
+      alert('인증번호가 올바르지 않습니다.');
+    }
   };
 
   return (
@@ -40,10 +47,31 @@ const VerificationModal = ({ onClose, onEmailVerified, title }) => {
         <h1>{title}</h1>
         <form onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
-            <label htmlFor="verification-code" className={styles.label}>
-              인증번호
-            </label>
+            <label htmlFor="phone-number">전화번호</label>
             <div className={styles.verificationContainer}>
+              <input
+                type="tel"
+                id="phone-number"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="'-' 없이 입력"
+                className={styles.codeInput}
+                disabled={isCodeSent}
+              />
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={sendButtonDisabled}
+                className={`${styles.button} ${styles.sendButton}`}
+              >
+                {isCodeSent ? '재전송' : '인증번호 전송'}
+              </button>
+            </div>
+          </div>
+
+          {isCodeSent && (
+            <div className={styles.inputGroup}>
+              <label htmlFor="verification-code">인증번호</label>
               <input
                 type="text"
                 id="verification-code"
@@ -52,31 +80,20 @@ const VerificationModal = ({ onClose, onEmailVerified, title }) => {
                 placeholder="인증번호를 입력하세요"
                 className={styles.codeInput}
               />
-              <button
-                type="button"
-                className={`${styles.button} ${styles.sendButton}`}
-                onClick={handleSendCode}
-                disabled={isButtonDisabled}
-              >
-                {isButtonDisabled
-                  ? '전송 중...'
-                  : isCodeSent
-                    ? '재전송'
-                    : '인증번호 보내기'}
-              </button>
             </div>
-          </div>
+          )}
+
           <div className={styles.buttonGroup}>
             <button
               type="submit"
               className={`${styles.button} ${styles.submitButton}`}
             >
-              제출
+              인증 확인
             </button>
             <button
               type="button"
-              className={`${styles.button} ${styles.closeButton}`}
               onClick={onClose}
+              className={`${styles.button} ${styles.closeButton}`}
             >
               닫기
             </button>
