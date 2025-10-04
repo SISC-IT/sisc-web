@@ -18,7 +18,6 @@ public class PointHistory extends BasePostgresEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(columnDefinition = "uuid")
   private Long pointHistoryId;
 
   @Column(nullable = false)
