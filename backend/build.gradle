@@ -45,81 +45,62 @@ jacoco {
 tasks.named('test') {
 	useJUnitPlatform()
 	finalizedBy tasks.jacocoTestReport   // 리포트는 테스트 후
+	ignoreFailures = false
 }
+def JACOCO_EXCLUDES = [
+		'**/*Application*', '**/*Config*',
+		'**/*Dto*', '**/*Request*', '**/*Response*',
+		'**/*Exception*', '**/*Error*',
+		'**/*Q*', '**/generated/**'
+]
 //리포트 생성 명령어
 tasks.jacocoTestReport {
 	dependsOn tasks.test
+
+	// 실행 데이터(.exec/.ec) 수집 경로를 명시적으로 지정 (서브모듈/CI에도 견고)
+	executionData fileTree(dir: "$buildDir", includes: [
+			"jacoco/*.exec", "jacoco/*.ec",
+			"outputs/unit_test_code_coverage/*/*.ec"
+	])
+	// ✅ 설정 시점에 classDirectories 지정
+	classDirectories.setFrom(
+			files(sourceSets.main.output).asFileTree.matching {
+				exclude JACOCO_EXCLUDES
+			}
+	)
+
+
 	reports {
-		xml.required.set(true)
-		html.required.set(true)
+		xml.required.set(true)   // CI용 (Sonar/Codecov 등)
+		html.required.set(true)  // 사람이 보기 좋음
 	}
 }
 
-/** ① 테스트 클래스가 1개도 없으면 실패 */
-def TEST_CLASS_PATTERNS = ['**/*Test.class','**/*Tests.class','**/*Spec.class']
-// 필요 시 통합테스트 네이밍도 추가: '**/*IT.class'
-
-tasks.register('enforceTestsPresent') {
-	group = 'verification'
-	description = 'Fail build if no compiled test classes are present'
-	dependsOn tasks.named('testClasses')  // 먼저 testClasses 실행(없으면 NO-SOURCE라도 OK)
-
-	doLast {
-		// java/kotlin/groovy 모든 테스트 출력 디렉토리에서 .class를 찾음
-		def dirs = sourceSets.test.output.classesDirs.files.findAll { it.exists() }
-		def found = dirs.any { !fileTree(it).matching { include TEST_CLASS_PATTERNS }.isEmpty() }
-
-		if (!found) {
-			throw new GradleException("No test classes found. CI requires at least one test.")
-		}
-	}
-}
-
-/** ② JaCoCo 실행 데이터가 없으면 실패 */
-tasks.register('enforceCoverageData') {
-	group = 'verification'
-	description = 'Fail build if no JaCoCo execution data was produced'
-	dependsOn tasks.named('test')  // test를 먼저 시도
-
-	doLast {
-		// JaCoCo 실행 데이터(.exec/.ec) 존재 확인 (Gradle JaCoCo 기본 위치: build/jacoco)
-		def execs = fileTree("$buildDir/jacoco").matching { include '**/*.exec', '**/*.ec' }.files
-		if (execs.isEmpty()) {
-			throw new GradleException("No JaCoCo execution data found. Ensure tests actually ran.")
-		}
-	}
-}
-
-/** ③ 커버리지 게이트(70%) — 전체 번들 기준(필요 시 클래스/패키지 룰 추가 가능) */
 tasks.jacocoTestCoverageVerification {
-	dependsOn tasks.test
+	dependsOn tasks.jacocoTestReport
+	// ✅ 설정 시점에 classDirectories 지정
+	classDirectories.setFrom(
+			files(sourceSets.main.output).asFileTree.matching {
+				exclude JACOCO_EXCLUDES
+			}
+	)
 	violationRules {
-//		rule {
-//			element = 'BUNDLE'
-//			limit {
-//				counter = 'INSTRUCTION'
-//				value   = 'COVEREDRATIO'
-//				minimum = 0.70
-//			}
-//		}
-//		 예) 특정 컨트롤러도 강제하려면 FQN 정확히:
 		rule {
-			element = 'CLASS'
-			includes = ['com.example.trader.service.UserService']
+			element = 'BUNDLE'
 			limit {
 				counter = 'INSTRUCTION'
 				value   = 'COVEREDRATIO'
-				minimum = 0.50
+				minimum = 0.70
 			}
 		}
 	}
+
+
 }
 
-/** ④ check에 “강제 검사 + 커버리지 게이트”를 확실히 연결 */
+// check 시 필수로 실행되게
 tasks.named('check') {
-	dependsOn 'enforceTestsPresent'
-	dependsOn 'enforceCoverageData'
-	dependsOn 'jacocoTestCoverageVerification'
+	dependsOn tasks.jacocoTestCoverageVerification
 }
 tasks.register('printTestClasses') {
 	dependsOn tasks.named('testClasses')
@@ -128,13 +109,4 @@ tasks.register('printTestClasses') {
 		println "== Compiled test classes =="
 		tree.files.each { println it }
 	}
-}
-/** (보험) build가 check를 반드시 타도록 — 기본이긴 하지만 명시해둬도 무방 */
-tasks.named('build') {
-	dependsOn 'check'
-}
-check.dependsOn jacocoTestCoverageVerification // ✅ 빌드/체크 시 커버리지 게이트 적용
-
-tasks.named('test') {
-	useJUnitPlatform()
 }

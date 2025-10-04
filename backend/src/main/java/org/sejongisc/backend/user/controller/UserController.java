@@ -32,7 +32,7 @@ public class UserController {
         log.info("email : " + user.getEmail() + " 권한: " + user.getAuthorities());
 
         UserInfoResponse response = new UserInfoResponse(
-                user.getUuid(),
+                user.getUserId(),
                 user.getName(),
                 user.getEmail(),
                 user.getPhoneNumber(),
