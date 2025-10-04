@@ -74,6 +74,19 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
           SPRING_DATASOURCE_USERNAME: testuser
           SPRING_DATASOURCE_PASSWORD: testpass
+          # ===== JWT =====
+          JWT_SECRET: test-jwt-secret
+        
+          # ===== GOOGLE =====
+          GOOGLE_CLIENT_ID: test-google-client-id
+          GOOGLE_CLIENT_SECRET: test-google-client-secret
+        
+          # ===== KAKAO =====
+          KAKAO_CLIENT_ID: test-kakao-client-id
+        
+          # ===== GITHUB =====
+          GITHUB_CLIENT_ID: test-github-client-id
+          GITHUB_CLIENT_SECRET: test-github-client-secret
 
       - name: Set up Python and install diff-cover
         if: steps.filter.outputs.backend == 'true'
