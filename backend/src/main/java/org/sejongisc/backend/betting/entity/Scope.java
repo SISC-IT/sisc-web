@@ -10,7 +10,7 @@ public enum Scope {
         }
         @Override
         public LocalDateTime getLockAt(LocalDateTime base) {
-            return base.withHour(16).withMinute(0).withSecond(0).withNano(0);
+            return base.withHour(22).withMinute(0).withSecond(0).withNano(0);
         }
     },
     WEEKLY {
@@ -22,7 +22,7 @@ public enum Scope {
         @Override
         public LocalDateTime getLockAt(LocalDateTime base) {
             return base.with(java.time.DayOfWeek.FRIDAY)
-                    .withHour(16).withMinute(0).withSecond(0).withNano(0);
+                    .withHour(22).withMinute(0).withSecond(0).withNano(0);
         }
     };
 
