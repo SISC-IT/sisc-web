@@ -21,7 +21,7 @@ function PointsSection({ items }) {
             <span
               className={it.point >= 0 ? styles.pointPlus : styles.pointMinus}
             >
-              {it.point > 0 ? `+${it.point}` : it.point}P
+              {it.point >= 0 ? `+${it.point}` : it.point}P
             </span>
           </div>
         </li>
