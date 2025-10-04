@@ -1,7 +1,7 @@
 .menuContainer {
   display: flex;
   align-items: stretch;
-  border-radius: 15px;
+  border-radius: 5px;
   overflow: hidden;
 
   background: #f9f9f9;
