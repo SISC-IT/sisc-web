@@ -53,6 +53,6 @@ public class TemplateController {
   public ResponseEntity<Void> deleteTemplate(@PathVariable UUID templateId,
                                              @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     templateService.deleteTemplate(templateId, customUserDetails.getUserId());
-    return ResponseEntity.ok().build();
+    return ResponseEntity.noContent().build();
   }
 }
