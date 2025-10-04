@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 import styles from './Modal.module.css';
+import AttendanceSection from './AttendanceSection';
+import ActivitySection from './ActivitySection';
+import PointsSection from './PointsSection';
 
 const Modal = ({ isOpen, onClose, title, kind, data }) => {
   useEffect(() => {
@@ -36,6 +39,9 @@ const Modal = ({ isOpen, onClose, title, kind, data }) => {
         <hr className={styles.modalDivider} />
 
         <div className={styles.modalBody}>
+          {kind === 'attendance' && <AttendanceSection items={data.items} />}
+          {kind === 'activity' && <ActivitySection items={data.items} />}
+          {kind === 'points' && <PointsSection items={data.items} />}
         </div>
       </div>
     </div>
