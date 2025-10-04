@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name="users") // user가 예약어라 users로 테이블명 지정
+@Table(name="users")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,7 +24,7 @@ public class User extends BasePostgresEntity{
     private UUID userId;
 
     //OAuth 전용 계정 대비 nullable 허용 가능
-    @Column(columnDefinition = "citext", unique = true)
+    @Column(columnDefinition = "citext", unique = true, nullable = true)
     private String email;
 
     @Column(name = "password_hash")
@@ -47,4 +47,13 @@ public class User extends BasePostgresEntity{
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
+
+
+    // 기본값 지정
+    @PrePersist
+    public void prePersist() {
+        if (this.role == null) {
+            this.role = Role.TEAM_MEMBER;
+        }
+    }
 }
