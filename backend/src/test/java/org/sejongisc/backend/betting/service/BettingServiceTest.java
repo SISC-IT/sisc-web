@@ -121,7 +121,7 @@ class BettingServiceTest {
         // then
         assertThat(result).isPresent();
         assertThat(result.get().getScope()).isEqualTo(Scope.DAILY);
-        assertThat(result.get().getStatus()).isTrue();
+        assertThat(result.get().isStatus()).isTrue();
         verify(betRoundRepository, times(1)).findByStatusTrueAndScope(Scope.DAILY);
     }
 

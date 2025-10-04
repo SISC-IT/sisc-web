@@ -29,13 +29,13 @@ public class BetRound extends BasePostgresEntity {
     private String symbol;
 
     @Column(nullable = false)
-    private Boolean allowFree;
+    private boolean allowFree;
 
     @Column(precision = 6, scale = 3)
     private BigDecimal baseMultiplier;
 
     @Column(nullable = false)
-    private Boolean status; // enum 고려할 것
+    private boolean status; // enum 고려할 것
 
     private LocalDateTime openAt;
 
