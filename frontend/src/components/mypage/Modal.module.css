@@ -1,0 +1,118 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modalContent {
+  background: #fff;
+  border-radius: 12px;
+  width: 905px;
+  height: 585px;
+  padding: 52px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #171717;
+}
+
+.modalDivider {
+  border: none;
+  border-top: 0.6px solid #6a6a6a;
+  margin: 16px 0;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.closeButton {
+  display: inline-block;
+  border: none;
+  background-color: #fff;
+  color: #171717;
+  font-weight: 400;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+/* 공통 리스트 */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.left {
+  min-width: 0;
+}
+
+.right {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  gap: 8px;
+  border-radius: 17.5px;
+  background-color: #f6f6f6;
+}
+
+.title {
+  margin-bottom: 7px;
+  font-size: 20px;
+  font-weight: 500;
+  color: #171717;
+  line-height: 1.4;
+}
+
+.time {
+  font-size: 14px;
+  font-weight: 400;
+  color: #828282;
+}
+
+/* 포인트 뱃지 */
+.pointIcon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.pointPlus {
+  font-weight: 700;
+  color: #1a7f37;
+}
+
+.pointMinus {
+  font-weight: 700;
+  color: #c62828;
+}
