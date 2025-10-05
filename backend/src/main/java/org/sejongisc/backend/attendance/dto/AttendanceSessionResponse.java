@@ -1,10 +1,7 @@
 package org.sejongisc.backend.attendance.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
 import org.sejongisc.backend.attendance.entity.SessionVisibility;
 
@@ -12,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
-@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AttendanceSessionResponse {

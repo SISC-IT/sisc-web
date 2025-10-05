@@ -2,6 +2,7 @@ package org.sejongisc.backend.attendance.repository;
 
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
+import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -26,4 +27,10 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
 
     // 모든 세션을 최신순으로 조회 (관리자용)
     List<AttendanceSession> findAllByOrderByStartsAtDesc();
+
+    // 공개 세션만 조회
+    List<AttendanceSession> findByVisibilityOrderByStartsAtDesc(SessionVisibility visibility);
+
+    // 코드 중복 체크
+    boolean existsByCode(String code);
 }

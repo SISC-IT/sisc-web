@@ -1,5 +1,6 @@
 package org.sejongisc.backend.attendance.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,8 +29,10 @@ public class Attendance extends BasePostgresEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "session_id", nullable = false, columnDefinition = "uuid")
-    private UUID attendanceSessionId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id", nullable = false)
+    @JsonBackReference
+    private AttendanceSession attendanceSession;
 
     @Enumerated(EnumType.STRING)
     private AttendanceStatus attendanceStatus;
@@ -55,11 +58,11 @@ public class Attendance extends BasePostgresEntity {
     /**
      * 지각 여부 판단
      */
-    public boolean isLate(AttendanceSession session) {
-        if (checkedAt == null || session.getStartsAt() == null) {
+    public boolean isLate() {
+        if (checkedAt == null || attendanceSession.getStartsAt() == null) {
             return false;
         }
-        return checkedAt.isAfter(session.getStartsAt());
+        return checkedAt.isAfter(attendanceSession.getStartsAt());
     }
 
     /**

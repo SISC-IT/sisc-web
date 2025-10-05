@@ -1,17 +1,20 @@
 package org.sejongisc.backend.attendance.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class AttendanceSession extends BasePostgresEntity {
@@ -47,9 +50,10 @@ public class AttendanceSession extends BasePostgresEntity {
     @Enumerated(EnumType.STRING)
     private SessionStatus status;
 
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    @Builder.Default
+    private List<Attendance> attendances = new ArrayList<>();
 
     /**
      * 현재 세션 상태 계산

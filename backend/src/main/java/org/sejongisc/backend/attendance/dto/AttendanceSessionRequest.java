@@ -1,16 +1,13 @@
 package org.sejongisc.backend.attendance.dto;
 
 import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.sejongisc.backend.attendance.entity.SessionVisibility;
 
 import java.time.LocalDateTime;
 
 @Getter
-@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AttendanceSessionRequest {
