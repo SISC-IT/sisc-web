@@ -42,27 +42,27 @@ print(company.head())
 
 ticker_list = company['ticker'].unique() # 498
 
-
+#중복 정의라 주석처리했습니다. 확인후 수정 바람.
 # 결측치 처리
-def fill_financials(df: pd.DataFrame, industry_median: pd.DataFrame = None):
-    df = df.copy()
-    
-    # 1. Forward/Backward fill (연속 시계열 기준)
-    df = df.ffill().bfill()
-    
-    # 2. Equity 보정 (자산 - 부채)
-    if 'Assets' in df.columns and 'Liabilities' in df.columns:
-        df['Equity'] = df['Assets'] - df['Liabilities']
-    
-    # 3. EPS 보정 (순이익 / 자본 or 주식수 정보 있을 경우)
-    if 'NetIncome' in df.columns and 'EPS' in df.columns:
-        df['EPS'] = df['EPS'].fillna(df['NetIncome'] / (df['Equity'].replace(0, pd.NA)))
-    
-    # 4. 업계 중앙값으로 채우기 (옵션)
-    if industry_median is not None:
-        df = df.fillna(industry_median)
-    
-    return df
+#def fill_financials(df: pd.DataFrame, industry_median: pd.DataFrame = None):
+#    df = df.copy()
+#    
+#    # 1. Forward/Backward fill (연속 시계열 기준)
+#    df = df.ffill().bfill()
+#    
+#    # 2. Equity 보정 (자산 - 부채)
+#    if 'Assets' in df.columns and 'Liabilities' in df.columns:
+#        df['Equity'] = df['Assets'] - df['Liabilities']
+#    
+#    # 3. EPS 보정 (순이익 / 자본 or 주식수 정보 있을 경우)
+#    if 'NetIncome' in df.columns and 'EPS' in df.columns:
+#        df['EPS'] = df['EPS'].fillna(df['NetIncome'] / (df['Equity'].replace(0, pd.NA)))
+#    
+#    # 4. 업계 중앙값으로 채우기 (옵션)
+#    if industry_median is not None:
+#        df = df.fillna(industry_median)
+#    
+#    return df
 
 def fill_financials(df, industry_medians=None):
     df = df.copy()
@@ -243,4 +243,5 @@ eval_df.sort_values(by='stability_score', ascending=False, inplace=True)
 
 # save
 eval_df.to_csv(f'data/stability_score_{datetime.now().year}.csv', index=False)
+
 
