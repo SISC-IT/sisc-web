@@ -9,20 +9,36 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 import psycopg2
 
-conn = psycopg2.connect(
-    dbname="neondb",
-    user="neondb_owner",
-    password="npg_hWkg04MwGlYs",
-    host="ep-misty-lab-adgec0kl-pooler.c-2.us-east-1.aws.neon.tech",
-    port="5432"
-)
-cur = conn.cursor()
+from pathlib import Path
+import os
+
+def load_config(path: str = "AI/configs/config.json") -> dict: #컨피그 파일 열기
+    p=Path(path)
+    if not p.exists():
+        alt = Path(__file__).parent / path
+        if alt.exists():
+            p=alt
+        else:
+            raise FileNotFoundError(f"config file not found: {path}")
+    with p.open("r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    if "db" not in cfg:
+        raise ValueError("config.json에 'db'섹션이 없습니다.")
+    # port 정수 보정
+    if isinstance(cfg["db"].get("port",5432),str): #타입 검사, 없는경우 5432 사용
+        cfg["db"]["port"]=int(cfg["db"]["port"])
+    return cfg
+
+cfg = load_config("AI/configs/config.json")
+db_cfg = cfg["db"]
+
+# DB 연결 & 데이터 로드
 
 query = "SELECT * FROM company_fundamentals;"
-company = pd.read_sql(query, conn)
-conn.close()
+with psycopg2.connect(**db_cfg) as conn:
+    company = pd.read_sql(query, conn)
 
-company.head()
+print(company.head())
 
 ticker_list = company['ticker'].unique() # 498
 
@@ -227,3 +243,4 @@ eval_df.sort_values(by='stability_score', ascending=False, inplace=True)
 
 # save
 eval_df.to_csv(f'data/stability_score_{datetime.now().year}.csv', index=False)
+
