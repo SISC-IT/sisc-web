@@ -54,6 +54,10 @@ public class AttendanceService {
         // 위치 정보가 있는 세션에 대해서만 사용자 위치 생성 및 검증
         Location userLocation = null;
         if (session.getLocation() != null) {
+              if (request.getLatitude() == null || request.getLongitude() == null) {
+                    throw new IllegalArgumentException("위치 기반 출석에는 위도와 경도가 필요합니다");
+              }
+
             userLocation = Location.builder()
                     .lat(request.getLatitude())
                     .lng(request.getLongitude())

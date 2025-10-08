@@ -187,6 +187,8 @@ public class AttendanceSessionService {
                     .lng(request.getLongitude())
                     .radiusMeters(request.getRadiusMeters())
                     .build();
+        }else {
+            location = session.getLocation();
         }
 
         session = session.toBuilder()
@@ -279,7 +281,7 @@ public class AttendanceSessionService {
      * - 000000 ~ 999999 범위 내 랜덤 생성
      */
     private String generateRandomCode() {
-        Random random = new Random();
+        java.security.SecureRandom random = new java.security.SecureRandom();
         StringBuilder code = new StringBuilder();
         for (int i = 0; i < 6; i++) {
             code.append(random.nextInt(10));
@@ -303,7 +305,7 @@ public class AttendanceSessionService {
             remainingSeconds = java.time.Duration.between(now, session.getStartsAt()).getSeconds();
         } else if (now.isBefore(endTime)) {
             remainingSeconds = java.time.Duration.between(now, endTime).getSeconds();
-            checkInAvailable = true;
+            checkInAvailable = session.getStatus() == SessionStatus.OPEN;
         }
 
         Long participantCount = attendanceRepository.countByAttendanceSession(session);
