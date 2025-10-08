@@ -107,7 +107,7 @@ public class AttendanceServiceTest {
         String invalidCode = "999999";
         AttendanceRequest request = AttendanceRequest.builder()
                 .code(invalidCode)
-                .longitude(37.5665)
+                .latitude(37.5665)
                 .longitude(126.9780)
                 .build();
 

@@ -89,7 +89,7 @@ public class AttendanceController {
     public ResponseEntity<AttendanceResponse> updateAttendanceStatus(
             @PathVariable UUID sessionId,
             @PathVariable UUID memberId,
-            @PathVariable String status,
+            @RequestParam String status,
             @RequestParam(required = false) String reason,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 

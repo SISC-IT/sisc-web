@@ -158,9 +158,12 @@ public class AttendanceSessionService {
         List<AttendanceSession> allSessions = attendanceSessionRepository.findAllByOrderByStartsAtDesc();
 
         return allSessions.stream()
-                .filter(session -> {
-                    LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
-                    return now.isAfter(session.getStartsAt()) && now.isBefore(endTime);
+                 .filter(session -> {
+                 if (session.getStatus() != SessionStatus.OPEN) {
+                            return false;
+                        }
+                 LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
+                    return !now.isBefore(session.getStartsAt()) && now.isBefore(endTime);
                 })
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());

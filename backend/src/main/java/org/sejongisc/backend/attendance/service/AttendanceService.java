@@ -51,21 +51,26 @@ public class AttendanceService {
             throw new IllegalStateException("이미 출석 체크인한 세션입니다");
         }
 
-        Location userLocation = Location.builder()
-                .lat(request.getLatitude())
-                .lng(request.getLongitude())
-                .build();
+        // 위치 정보가 있는 세션에 대해서만 사용자 위치 생성 및 검증
+        Location userLocation = null;
+        if (session.getLocation() != null) {
+            userLocation = Location.builder()
+                    .lat(request.getLatitude())
+                    .lng(request.getLongitude())
+                    .build();
 
-        if (!session.getLocation().isWithRange(userLocation)) {
-            throw new IllegalArgumentException("출석 허용 범위를 벗어났습니다");
+            if (!session.getLocation().isWithRange(userLocation)) {
+                throw new IllegalArgumentException("출석 허용 범위를 벗어났습니다");
+            }
         }
+
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(session.getStartsAt())) {
             throw new IllegalStateException("아직 출석 시간이 아닙니다");
         }
 
-        LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
+        LocalDateTime endTime = session.getEndsAt();
         if (now.isAfter(endTime)) {
             throw new IllegalStateException("출석 시간이 종료되었습니다");
         }
