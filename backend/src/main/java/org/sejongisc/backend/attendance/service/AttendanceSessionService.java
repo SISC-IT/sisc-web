@@ -29,10 +29,14 @@ public class AttendanceSessionService {
     private final AttendanceSessionRepository attendanceSessionRepository;
 
     /**
-     * 출석 세션 생성
-     * - 6자리 유니크 코드 자동 생성
-     * - GPS 위치 및 반경 설정 (선택사항)
-     * - 기본 상태 UPCOMING 으로 설정
+     * Creates and persists a new attendance session from the provided request.
+     *
+     * If latitude and longitude are present the session will include a Location with the specified radius.
+     * The session is assigned a unique 6-digit code, visibility defaults to PUBLIC when not provided,
+     * and status is initialized to UPCOMING.
+     *
+     * @param request the request containing session properties (title, tag, startsAt, windowSeconds, rewardPoints, optional latitude/longitude/radius, and optional visibility)
+     * @return an AttendanceSessionResponse representing the persisted session, including the generated code and computed metadata
      */
     public AttendanceSessionResponse createSession(AttendanceSessionRequest request) {
         log.info("출석 세션 생성 시작: 제목={}", request.getTitle());
@@ -68,8 +72,12 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 세션 ID로 상세 정보 조회
-     * - 남은 시간, 참여자 수 등 계산된 정보 포함
+     * Fetches an attendance session by its ID and returns a response including computed fields
+     * such as endsAt, remainingSeconds, checkInAvailable, and participantCount.
+     *
+     * @param sessionId the UUID of the attendance session to retrieve
+     * @return an AttendanceSessionResponse containing session details and computed metadata
+     * @throws IllegalArgumentException if no session exists with the given ID
      */
     @Transactional(readOnly = true)
     public AttendanceSessionResponse getSessionById(UUID sessionId) {
@@ -80,9 +88,14 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 출석 코드로 세션 조회
-     * - 학생이 코드 입력 시 사용
-     * - 체크인 가능 여부 자동 계산
+     * Finds an attendance session by its 6-digit attendance code.
+     *
+     * Used when a student submits a code; the returned response includes dynamic fields
+     * such as remainingSeconds and checkInAvailable reflecting the session's current state.
+     *
+     * @param code the 6-digit attendance code
+     * @return an AttendanceSessionResponse representing the matched session and its computed state
+     * @throws IllegalArgumentException if no session exists for the given code
      */
     @Transactional(readOnly = true)
     public AttendanceSessionResponse getSessionByCode(String code) {
@@ -93,9 +106,9 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 모든 세션 목록 조회
-     * - 관리자용, 공개/비공개 모두 포함
-     * - 최신 순으로 정렬
+     * Retrieve all attendance sessions ordered by start time, including both public and private sessions.
+     *
+     * @return a list of AttendanceSessionResponse objects ordered by startsAt in descending order
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getAllSessions() {
@@ -107,8 +120,10 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 태그별 세션 목록 조회
-     * - "금융IT", "동아리 전체" 등 태그로 필터링
+     * Retrieve attendance sessions that match the specified tag.
+     *
+     * @param tag the tag to filter sessions by (for example, "금융IT" or "동아리 전체")
+     * @return a list of AttendanceSessionResponse objects for sessions with the specified tag; empty list if none match
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getSessionsByTag(String tag) {
@@ -120,8 +135,10 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 상태별 세션 목록 조회
-     * - UPCOMING/OPEN/CLOSED 상태펼 필터링
+     * Retrieve attendance sessions filtered by the given session status.
+     *
+     * @param status the session status to filter by (e.g., UPCOMING, OPEN, CLOSED)
+     * @return a list of AttendanceSessionResponse objects matching the provided status
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getSessionsByStatus(SessionStatus status) {
@@ -133,9 +150,9 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 공개 세션 목록 조회
-     * - 학생들이 볼 수 있는 공개 세션만 조회
-     * - 최신 순으로 정렬
+     * Get public attendance sessions visible to students, ordered by start time descending.
+     *
+     * @return a list of AttendanceSessionResponse for sessions with PUBLIC visibility ordered by startsAt descending
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getPublicSessions() {
@@ -148,9 +165,9 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 활성 세션 목록 조회
-     * - 현재 체크인 가능한 세션들만 필터링
-     * - 시작 시간 ~ 종료 시간 범위 내 세션
+     * Retrieve attendance sessions that are currently within their check-in window.
+     *
+     * @return a list of AttendanceSessionResponse for sessions whose current time is after their start time and before their end time
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getActiveSessions() {
@@ -167,9 +184,14 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 세션 정보 수정
-     * - 제목, 시간, 위치, 반경 등 수정 가능
-     * - 코드는 변경되지 않음 (보안상 이유)
+     * Update an existing attendance session's mutable fields.
+     *
+     * Updates title, tag, start time, attendance window, reward points, visibility, and location; the session's 6-digit code is left unchanged.
+     *
+     * @param sessionId the UUID of the attendance session to update
+     * @param request   the new session values (if latitude and longitude are provided a location is set; if they are absent the location is cleared)
+     * @return          the updated AttendanceSessionResponse representing the saved session
+     * @throws IllegalArgumentException if no session exists with the given sessionId
      */
     public AttendanceSessionResponse updateSession(UUID sessionId, AttendanceSessionRequest request) {
         log.info("출석 세션 수정 시작: 세션ID={}", sessionId);
@@ -204,9 +226,12 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 세션 완전 삭제
-     * - CASCADE 관련 출석 기록도 함께 삭제
-     * - 주의: 복구 불가능
+     * Permanently deletes an attendance session and its associated attendance records.
+     *
+     * This operation removes the session entity (and cascaded attendance records) from the database and cannot be undone.
+     *
+     * @param sessionId the UUID of the attendance session to delete
+     * @throws IllegalArgumentException if no session exists with the given `sessionId`
      */
     public void deleteSession(UUID sessionId) {
         log.info("출석 세션 삭제 시작: 세션ID={}", sessionId);
@@ -220,9 +245,12 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 세션 수동 활성화
-     * - 세션 상태를 OPEN으로 변경
-     * - 시간과 관계없이 체크인 활성화
+     * Activates an attendance session by setting its status to OPEN and persisting the change.
+     *
+     * This forces check-in availability for the session regardless of its scheduled times.
+     *
+     * @param sessionId the UUID of the attendance session to activate
+     * @throws IllegalArgumentException if no session exists with the given id
      */
     public void activateSession(UUID sessionId) {
         log.info("출석 세션 활성화 시작: 세션ID={}", sessionId);
@@ -240,9 +268,10 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 세션 수동 종료
-     * - 세션 상태를 CLOSED로 변경
-     * - 체크인 비활성화
+     * Manually closes the attendance session identified by the given ID by setting its status to CLOSED.
+     *
+     * @param sessionId the UUID of the attendance session to close
+     * @throws IllegalArgumentException if no session exists for the provided `sessionId`
      */
     public void closeSession(UUID sessionId) {
         log.info("출석 세션 종료 시작: 세션ID={}", sessionId);
@@ -260,8 +289,9 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 중복되지 않은 6자리 코드 생성
-     * - DB에서 중복 검사 후 유니크 코드 리턴
+     * Generate a unique 6-digit numeric attendance code that does not collide with existing sessions.
+     *
+     * @return a 6-digit numeric string that is not present in the attendance session repository
      */
     private String generateUniqueCode() {
         String code;
@@ -272,8 +302,9 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 6자리 랜덤 숫자 코드 생성
-     * - 000000 ~ 999999 범위 내 랜덤 생성
+     * Generate a six-digit numeric code.
+     *
+     * @return a six-character string consisting of digits '0'–'9', ranging from "000000" to "999999"
      */
     private String generateRandomCode() {
         Random random = new Random();
@@ -285,9 +316,13 @@ public class AttendanceSessionService {
     }
 
     /**
-     * AttendanceSession 엔티티를 Response DTO로 변환
-     * - 남은 시간, 체크인 가능 여부, 참여자 수 계산
-     * - 현재 시간 기준으로 동적 정보 생성
+     * Convert an AttendanceSession entity into an AttendanceSessionResponse DTO.
+     *
+     * The response includes static session fields and computed, time-dependent values such as `endsAt`,
+     * `remainingSeconds`, `checkInAvailable`, and `participantCount`.
+     *
+     * @param session the AttendanceSession entity to convert
+     * @return an AttendanceSessionResponse populated from the entity and computed fields
      */
     private AttendanceSessionResponse convertToResponse(AttendanceSession session) {
         LocalDateTime now = LocalDateTime.now();

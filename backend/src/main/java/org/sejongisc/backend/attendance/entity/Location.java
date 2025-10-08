@@ -31,7 +31,12 @@ public class Location {
     @Positive(message = "반경은 양수여야 합니다")
     private Integer radiusMeters;
 
-    // 거리계산 메서드
+    /**
+     * Compute the haversine distance in meters between this location and another location.
+     *
+     * @param other the other Location to measure to; if null or if its latitude or longitude is null, the method treats it as invalid
+     * @return the distance in meters between the two locations, or Double.MAX_VALUE if the other location is null or has null coordinates
+     */
     public double calculateDistance(Location other) {
         if (other == null || other.lat == null || other.lng == null) {
             return Double.MAX_VALUE;
@@ -53,6 +58,14 @@ public class Location {
         return R * c; // 미터 단위 거리
     }
 
+    /**
+     * Checks whether the provided user location is within this location's allowed radius.
+     *
+     * If the provided location is null or this location's `radiusMeters` is null, location validation is considered disabled and the method returns `true`.
+     *
+     * @param userLocation the location to check
+     * @return `true` if the distance from this location to `userLocation` is less than or equal to `radiusMeters`, `false` otherwise
+     */
     public boolean isWithRange(Location userLocation) {
         if (userLocation == null || radiusMeters == null) {
             return true; // 위치 검증 비활성화

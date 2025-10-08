@@ -26,10 +26,12 @@ public class AttendanceSessionController {
     private final AttendanceSessionService attendanceSessionService;
 
     /**
-     * 출석 세션 생성 (관리자용)
-     * - 6자리 랜덤 코드 자동 생성
-     * - GPS 위치 및 반경 설정
-     * - 시간 윈도우 설정
+     * Create a new attendance session with configured location and time constraints.
+     *
+     * The created session will include a system-generated 6-digit attendance code, configured GPS location and radius, and the session time window.
+     *
+     * @param request the attendance session creation payload containing title, location, radius, start/end times, visibility, tags, and other session settings
+     * @return the created AttendanceSessionResponse containing the session's identifier, generated code, and persisted session details
      */
     @PostMapping
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -44,9 +46,12 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 세션 상세 조회
-     * - 세션 ID로 상세 정보 조회
-     * - 남은 시간, 참여자 수 등 포함
+     * Retrieve detailed information for an attendance session by its ID.
+     *
+     * Includes session metadata such as remaining time and participant count.
+     *
+     * @param sessionId the UUID of the attendance session to retrieve
+     * @return an AttendanceSessionResponse containing the session details, including remaining time and participant count
      */
     @GetMapping("/{sessionId}")
     public ResponseEntity<AttendanceSessionResponse> getSession(@PathVariable UUID sessionId) {
@@ -58,9 +63,10 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 출석 코드로 세션 조회
-     * - 학생이 출석 코드 입력 시 사용
-     * - 체크인 가능 여부 확인
+     * Retrieves the attendance session associated with the given attendance code and whether it can be checked into.
+     *
+     * @param code the attendance code provided by a student
+     * @return the attendance session details, including whether the session is currently open for check-in
      */
     @GetMapping("/code/{code}")
     public ResponseEntity<AttendanceSessionResponse> getSessionByCode(@PathVariable String code) {
@@ -72,9 +78,9 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 모든 세션 목록 조회
-     * - 최신 순으로 정렬
-     * - 공개/비공개 세션 모두 포함
+     * Retrieve all attendance sessions, including both public and private, sorted by newest first.
+     *
+     * @return a list of AttendanceSessionResponse objects for all sessions sorted by newest first
      */
     @GetMapping
     public ResponseEntity<List<AttendanceSessionResponse>> getAllSessions() {
@@ -86,9 +92,9 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 공개 세션 목록 조회
-     * - 학생들이 볼 수 있는 공개 세션만 조회
-     * - 최신 순으로 정렬
+     * Retrieves attendance sessions that are publicly visible to students, ordered by most recent.
+     *
+     * @return a list of AttendanceSessionResponse representing public sessions ordered by most recent
      */
     @GetMapping("/public")
     public ResponseEntity<List<AttendanceSessionResponse>> getPublicSessions() {
@@ -100,9 +106,12 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 현재 활성 세션 목록 조회
-     * - 체크인 가능한 세션들만 조회
-     * - 시작시간 ~ 종료 시간 범위 내
+     * Retrieve the attendance sessions that are currently active and available for check-in.
+     *
+     * Sessions returned are those whose current time falls between their configured start and end times
+     * and are eligible for student check-in.
+     *
+     * @return a list of AttendanceSessionResponse objects for active, check-in-eligible sessions
      */
     @GetMapping("/active")
     public ResponseEntity<List<AttendanceSessionResponse>> getActiveSessions() {
@@ -114,8 +123,10 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 태그별 세션 목록 조회
-     * - "금융IT", "동아리 전체" 등 태그로 필터링
+     * Retrieves attendance sessions filtered by the given tag.
+     *
+     * @param tag the tag name used to filter sessions (e.g., "FinanceIT", "All Clubs")
+     * @return a list of AttendanceSessionResponse objects for sessions that match the tag
      */
     @GetMapping("/tag/{tag}")
     public ResponseEntity<List<AttendanceSessionResponse>> getSessionsByTag(@PathVariable String tag) {
@@ -127,8 +138,10 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 상태별 세션 목록 조회 (관리자용)
-     * - UPCOMING/OPEN/CLOSED 상태별 필터링
+     * Retrieve attendance sessions filtered by status for administrators.
+     *
+     * @param status the session status to filter by — one of UPCOMING, OPEN, or CLOSED
+     * @return a list of AttendanceSessionResponse objects matching the specified status
      */
     @GetMapping("/status/{status}")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -141,9 +154,13 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 세션 정보 수정 (관리자용)
-     * - 제목, 시간, 위치, 반경 등 수정 가능
-     * - 코드는 변경 불가
+     * Update an existing attendance session's editable fields.
+     *
+     * <p>Modifiable fields include title, time, location, and radius; the session code cannot be changed.</p>
+     *
+     * @param sessionId the UUID of the session to update
+     * @param request   request payload containing the new values for editable session fields
+     * @return the updated attendance session
      */
     @PutMapping("/{sessionId}")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -161,9 +178,10 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 세션 활성화 (관리자용)
-     * - 세션 상태를 OPEN으로 변경
-     * - 체크인 수동 활성화
+     * Activate an attendance session and enable manual check-in (administrative action).
+     *
+     * @param sessionId the UUID of the attendance session to activate
+     * @return HTTP 200 OK with an empty body
      */
     @PostMapping("/{sessionId}/activate")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -178,9 +196,12 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 세션 종료 (관리자용)
-     * - 세션 상태를 CLOSED로 변경
-     * - 체크인 수동 종료
+     * Closes an attendance session and terminates any active check-ins.
+     *
+     * Sets the session's status to CLOSED and ends ongoing manual check-ins for the specified session.
+     *
+     * @param sessionId the UUID of the attendance session to close
+     * @return a ResponseEntity with HTTP 200 OK and an empty body
      */
     @PostMapping("/{sessionId}/close")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -195,9 +216,11 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 세션 삭제 (관리자용)
-     * - 세션 완전 삭제 (출석 기록도 함께 삭제)
-     * - 주의: 복구 불가
+     * Permanently deletes an attendance session and all associated attendance records.
+     *
+     * This operation is irreversible and intended for administrator use.
+     *
+     * @param sessionId UUID of the attendance session to delete
      */
     @DeleteMapping("/{sessionId}")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")

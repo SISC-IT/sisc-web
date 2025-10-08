@@ -13,24 +13,59 @@ import java.util.UUID;
 @Repository
 public interface AttendanceSessionRepository extends JpaRepository<AttendanceSession, UUID> {
 
-    // 출석 코드로 세션 찾기 (학생 출석 체크)
+    /**
+ * Finds the attendance session that matches the given attendance code.
+ *
+ * @param code the unique attendance code associated with a session
+ * @return an Optional containing the matching AttendanceSession if present, empty otherwise
+ */
     Optional<AttendanceSession> findByCode(String code);
 
-    // 태그별 세션 조회
+    /**
+ * Finds attendance sessions labeled with the specified tag.
+ *
+ * @param tag the tag to match on
+ * @return a list of AttendanceSession entities that have the given tag; empty list if none found
+ */
     List<AttendanceSession> findByTag(String tag);
 
-    // 상태별 세션 조회
+    /**
+ * Finds attendance sessions with the specified status.
+ *
+ * @param status the session status to filter by
+ * @return a list of AttendanceSession entities that have the given status
+ */
     List<AttendanceSession> findByStatus(SessionStatus status);
 
-    // 태그와 상태로 세션 조회
+    /**
+ * Finds attendance sessions that match both the specified tag and session status.
+ *
+ * @param tag    the tag to filter sessions by
+ * @param status the session status to filter sessions by
+ * @return a list of AttendanceSession entities matching the given tag and status; empty if none found
+ */
     List<AttendanceSession> findByTagAndStatus(String tag, SessionStatus status);
 
-    // 모든 세션을 최신순으로 조회 (관리자용)
+    /**
+ * Retrieve all attendance sessions ordered by start time from newest to oldest.
+ *
+ * @return a list of AttendanceSession objects ordered by `startsAt` in descending order
+ */
     List<AttendanceSession> findAllByOrderByStartsAtDesc();
 
-    // 공개 세션만 조회
+    /**
+ * Retrieves attendance sessions with the specified visibility ordered by start time descending.
+ *
+ * @param visibility the session visibility to filter by
+ * @return a list of AttendanceSession objects matching the visibility, ordered by `startsAt` from newest to oldest
+ */
     List<AttendanceSession> findByVisibilityOrderByStartsAtDesc(SessionVisibility visibility);
 
-    // 코드 중복 체크
+    /**
+ * Determines whether an AttendanceSession with the given code exists.
+ *
+ * @param code the session code to check for existence
+ * @return `true` if an AttendanceSession with the specified code exists, `false` otherwise
+ */
     boolean existsByCode(String code);
 }

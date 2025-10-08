@@ -30,10 +30,16 @@ public class AttendanceService {
 
 
     /**
-     * 출석 체크인 처리
-     * - 코드 유효성 및 중복 춣석 방지
-     * - GPS 위치 및 반경 검증
-     * - 시간 윈도우 검증 및 지각 판별
+     * Process a user's attendance check-in for the specified session.
+     *
+     * Validates session existence and code, prevents duplicate check-ins, verifies the user's GPS location is within the session's allowed range, enforces the session time window, determines PRESENT or LATE status, persists the attendance, and returns the saved attendance as a response DTO.
+     *
+     * @param sessionId the identifier of the attendance session
+     * @param request   the check-in request containing the session code, latitude, longitude, optional note, and device information
+     * @param user      the user performing the check-in
+     * @return          an AttendanceResponse representing the persisted attendance record
+     * @throws IllegalArgumentException if the session does not exist, the provided code does not match the session code, or the user's location is outside the allowed range
+     * @throws IllegalStateException    if the user has already checked in for the session, the check-in occurs before the session start, or the check-in occurs after the session's allowed window
      */
     public AttendanceResponse checkIn(UUID sessionId, AttendanceRequest request, User user) {
         log.info("출석 체크인 시작: 사용자={}, 세션ID={}, 코드={}", user.getName(), sessionId, request.getCode());
@@ -92,9 +98,11 @@ public class AttendanceService {
     }
 
     /**
-     * 세션별 출석 목록 조회
-     * - 관리자가 특정 세션의 모든 출석자 확인
-     * - 출석 시간 순으로 정렬
+     * Retrieve attendance records for the specified session ordered by check-in time.
+     *
+     * @param sessionId the UUID of the attendance session to query
+     * @return a list of AttendanceResponse objects ordered by checkedAt ascending
+     * @throws IllegalArgumentException if the session with the given ID does not exist
      */
     @Transactional(readOnly = true)
     public List<AttendanceResponse> getAttendanceBySession(UUID sessionId) {
@@ -109,9 +117,10 @@ public class AttendanceService {
     }
 
     /**
-     * 사용자별 출석 이력 조회
-     * - 개인의 모든 출석 기록 조회
-     * - 최신 순으로 정렬
+     * Retrieves all attendance records for the given user ordered by checkedAt descending.
+     *
+     * @param user the user whose attendance records to retrieve
+     * @return a list of AttendanceResponse objects ordered by checkedAt descending
      */
     @Transactional(readOnly = true)
     public List<AttendanceResponse> getAttendancesByUser(User user) {
@@ -123,9 +132,17 @@ public class AttendanceService {
     }
 
     /**
-     * 출석 상태 수정(관리자용)
-     * - PRESENT/LATE/ABSENT 등으로 상태 변경
-     * - 수정 사유 기록 및 로그 남기기
+     * Update a member's attendance status for a specific session.
+     *
+     * Updates the attendance record's status (e.g., PRESENT, LATE, ABSENT), records the provided reason, persists the change, and returns the updated representation.
+     *
+     * @param sessionId the identifier of the attendance session
+     * @param memberId  the identifier of the member whose attendance will be updated
+     * @param status    the new attendance status as a string (case-insensitive; must match an AttendanceStatus enum value)
+     * @param reason    an optional reason or note explaining the status change
+     * @param adminUser the administrator performing the update
+     * @return the updated AttendanceResponse reflecting the persisted changes
+     * @throws IllegalArgumentException if the session does not exist, the member's attendance is not found, or the provided status is invalid
      */
     public AttendanceResponse updateAttendanceStatus(UUID sessionId, UUID memberId, String status, String reason, User adminUser) {
         log.info("출석 상태 수정 시작: 세션ID={}, 멤버ID={}, 새로운상태={}, 관리자={}", sessionId, memberId, status, adminUser.getName());
@@ -154,9 +171,12 @@ public class AttendanceService {
     }
 
     /**
-     * Attendance 엔티티를 AttendanceResponse DTO로 변환
-     * - 엔티티의 모든 필드를 Response 형태로 매핑
-     * - 사용자 이름, 위치 정보, 지각 여부 포함
+     * Convert an Attendance entity to an AttendanceResponse DTO.
+     *
+     * @param attendance the Attendance entity to convert
+     * @return an AttendanceResponse populated with the attendance's identifiers, user and session info,
+     *         status, timestamps, awarded points, note, device information, late flag, and optional
+     *         check-in latitude/longitude (null if no check-in location)
      */
     private AttendanceResponse convertToResponse(Attendance attendance) {
         return AttendanceResponse.builder()

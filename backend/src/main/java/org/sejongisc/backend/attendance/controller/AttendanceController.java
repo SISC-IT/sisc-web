@@ -27,10 +27,12 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     /**
-     * 학생 출석 체크인
-     * - 출석 코드와 GPS 위치를 이요한 춣석 처리
-     * - 위치 범위, 시간 위도우 검증 포함
-     * - 중복 출석 방지
+     * Records a student's attendance for a session using an attendance code and GPS location.
+     *
+     * @param sessionId the UUID of the session to check into
+     * @param request the attendance submission containing the attendance code and GPS location
+     * @param userDetails the authenticated principal for the user performing the check-in
+     * @return the created AttendanceResponse describing the recorded attendance and its status
      */
     @PostMapping("/sessions/{sessionId}/check-in")
     public ResponseEntity<AttendanceResponse> checkIn(
@@ -49,9 +51,12 @@ public class AttendanceController {
     }
 
     /**
-     * 세션별 출석 목록 조회(관리자용)
-     * - 특정 세션의 모든 출석 기록 조회
-     * - 출석 시간 순으로 정렬
+     * Retrieve attendance records for a session for administrators.
+     *
+     * Returns all attendance entries for the specified session ordered by attendance time.
+     *
+     * @param sessionId the UUID of the session whose attendance records are requested
+     * @return a list of AttendanceResponse objects for the session, ordered by attendance time
      */
     @GetMapping("/sessions/{sessionId}/attendances")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -64,9 +69,10 @@ public class AttendanceController {
     }
 
     /**
-     * 내 출석 기록 조회
-     * - 로그인한 사용자의 모든 출석 기록 조회
-     * - 최신 순으로 정렬
+     * Retrieve the authenticated user's attendance history.
+     *
+     * @param userDetails the authenticated user's security principal
+     * @return a list of AttendanceResponse representing the user's attendance records ordered from newest to oldest
      */
     @GetMapping("/history")
     public ResponseEntity<List<AttendanceResponse>> getMyAttendances(
@@ -80,9 +86,15 @@ public class AttendanceController {
     }
 
     /**
-     * 출석 상태 수정(관리자용)
-     * - PRESENT/LATE/ABSENT 등으로 상태 변경
-     * - 수정 사유 기록 가능
+     * Update a member's attendance status for a session.
+     *
+     * Allows an administrator to set the attendance status (for example, `PRESENT`, `LATE`, `ABSENT`)
+     * and optionally provide a reason for the change.
+     *
+     * @param status       the new attendance status (e.g., `PRESENT`, `LATE`, `ABSENT`)
+     * @param reason       optional reason for the status change; may be null
+     * @param userDetails  the authenticated administrator performing the update
+     * @return             the updated AttendanceResponse reflecting the new status
      */
     @PostMapping("/sessions/{sessionId}/attendances/{memberId}")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -104,6 +116,12 @@ public class AttendanceController {
     }
 
 
+    /**
+     * Convert a CustomUserDetails security principal into a User domain entity.
+     *
+     * @param userDetails the authenticated principal containing user attributes
+     * @return a User populated with the principal's id, name, email, password hash, phone number, role, and point
+     */
     private User convertToUser(CustomUserDetails userDetails) {
         return User.builder()
                 .userId(userDetails.getUserId())

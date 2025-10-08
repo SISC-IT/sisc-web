@@ -56,7 +56,9 @@ public class AttendanceSession extends BasePostgresEntity {
     private List<Attendance> attendances = new ArrayList<>();
 
     /**
-     * 현재 세션 상태 계산
+     * Determine the session's current status based on the current time relative to its start and end.
+     *
+     * @return `UPCOMING` if the current time is before `startsAt`, `CLOSED` if it is after `getEndsAt()`, `OPEN` otherwise.
      */
     public SessionStatus calculateCurrentStatus() {
         LocalDateTime now = LocalDateTime.now();
@@ -71,7 +73,11 @@ public class AttendanceSession extends BasePostgresEntity {
     }
 
     /**
-     * 세션 종료 시간 계산
+     * Determines whether check-in is currently permitted for the session.
+     *
+     * Uses the system clock to compare the current time against the session start and end (start plus the configured window).
+     *
+     * @return `true` if the current time is strictly after the session start and strictly before the session end, `false` otherwise.
      */
     public boolean isCheckInAvailable() {
         LocalDateTime now = LocalDateTime.now();
@@ -79,14 +85,20 @@ public class AttendanceSession extends BasePostgresEntity {
     }
 
     /**
-     * 세션 종료 시간 계산
+     * Compute the session end time based on the start time and configured attendance window.
+     *
+     * If `windowSeconds` is null, a default of 1800 seconds (30 minutes) is used.
+     *
+     * @return the end time equal to `startsAt` plus the attendance window in seconds
      */
     public LocalDateTime getEndsAt() {
         return startsAt.plusSeconds(windowSeconds != null ? windowSeconds : 1800);
     }
 
     /**
-     * 남은 시간 계산 (초단위)
+     * Compute the number of seconds remaining until the session ends.
+     *
+     * @return Number of seconds remaining until the session end; `0` if the session has already ended.
      */
     public long getRemainingSeconds() {
         LocalDateTime now = LocalDateTime.now();

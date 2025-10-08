@@ -56,8 +56,12 @@ public class Attendance extends BasePostgresEntity {
     // 지각 여부 계산 / 상태 업데이트
 
     /**
-     * 지각 여부 판단
-     */
+         * Determines whether this attendance record is late.
+         *
+         * If either `checkedAt` or the attendance session's start time is null, this method returns `false`.
+         *
+         * @return `true` if `checkedAt` is after the session's start time, `false` otherwise.
+         */
     public boolean isLate() {
         if (checkedAt == null || attendanceSession.getStartsAt() == null) {
             return false;
@@ -66,7 +70,10 @@ public class Attendance extends BasePostgresEntity {
     }
 
     /**
-     * 상태 업데이트 (관리자용)
+     * Update the attendance status and optionally record a reason.
+     *
+     * @param newStatus the new AttendanceStatus to set
+     * @param reason    an optional reason to store in the attendance note; if null or empty after trimming it is ignored
      */
     public void updateStatus(AttendanceStatus newStatus, String reason) {
         this.attendanceStatus = newStatus;
@@ -76,7 +83,9 @@ public class Attendance extends BasePostgresEntity {
     }
 
     /**
-     * 출석 시간 자동 설정
+     * Mark this attendance as present and record the current time.
+     *
+     * Sets the attendanceStatus to PRESENT and updates checkedAt to the current system time.
      */
     public void markPresent() {
         this.attendanceStatus = AttendanceStatus.PRESENT;
@@ -84,11 +93,12 @@ public class Attendance extends BasePostgresEntity {
     }
 
     /**
-     * 지각 처리
+     * Marks this attendance as late and records the current check-in time.
+     *
+     * Sets the attendance status to `LATE` and updates `checkedAt` to the current system time.
      */
     public void markLate() {
         this.attendanceStatus = AttendanceStatus.LATE;
         this.checkedAt = LocalDateTime.now();
     }
 }
-
