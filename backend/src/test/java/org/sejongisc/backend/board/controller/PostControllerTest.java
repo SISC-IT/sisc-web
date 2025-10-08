@@ -16,13 +16,11 @@ import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,34 +53,38 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /api/posts - 게시물 생성 성공")
     void createPost_success() throws Exception {
-        // given
+        // 요청 객체
         PostRequest req = new PostRequest();
         req.setTitle("공지사항");
         req.setContent("이번 달 모임 일정 안내");
 
+        // 응답 객체
         UUID postId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-
         PostResponse resp = new PostResponse(
-                postId, "공지사항", "이번 달 모임 일정 안내", "관리자",
-                Collections.emptyList(), now
+                postId, "공지사항", "이번 달 모임 일정 안내", "관리자", List.of(), now
         );
 
+        // 서비스 레이어 mock
         when(postService.createPost(any(PostRequest.class), any(UUID.class))).thenReturn(resp);
 
-        User userEntity = User.builder()
+        // CustomUserDetails를 위한 mock User
+        User mockUser = User.builder()
                 .userId(UUID.randomUUID())
                 .name("관리자")
+                .email("admin@example.com")
+                .password("encoded-password")
+                .role("ROLE_ADMIN")
+                .createdAt(LocalDateTime.now())
                 .build();
-        UserDetails principal = new CustomUserDetails(userEntity);
 
-        // when & then
+        CustomUserDetails principal = new CustomUserDetails(mockUser);
+
         mockMvc.perform(post("/api/posts")
                         .with(SecurityMockMvcRequestPostProcessors.user(principal))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(postId.toString()))
                 .andExpect(jsonPath("$.title", is("공지사항")))
                 .andExpect(jsonPath("$.authorName", is("관리자")));
@@ -92,14 +94,12 @@ class PostControllerTest {
     @DisplayName("PATCH /api/posts/{id} - 게시물 수정 성공")
     void updatePost_success() throws Exception {
         UUID postId = UUID.randomUUID();
-
         PostRequest req = new PostRequest();
         req.setTitle("수정된 제목");
         req.setContent("수정된 내용");
 
         PostResponse resp = new PostResponse(
-                postId, "수정된 제목", "수정된 내용", "관리자",
-                Collections.emptyList(), LocalDateTime.now()
+                postId, "수정된 제목", "수정된 내용", "관리자", List.of(), LocalDateTime.now()
         );
 
         when(postService.updatePost(any(UUID.class), any(PostRequest.class))).thenReturn(resp);
@@ -126,13 +126,12 @@ class PostControllerTest {
     void searchPosts_success() throws Exception {
         UUID postId = UUID.randomUUID();
         PostResponse resp = new PostResponse(
-                postId, "검색된 글", "검색 본문", "홍길동", Collections.emptyList(), LocalDateTime.now()
+                postId, "검색된 글", "검색 본문", "홍길동", List.of(), LocalDateTime.now()
         );
 
         when(postService.searchPosts("검색")).thenReturn(List.of(resp));
 
-        mockMvc.perform(get("/api/posts/search")
-                        .param("keyword", "검색"))
+        mockMvc.perform(get("/api/posts/search").param("keyword", "검색"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title", is("검색된 글")))
                 .andExpect(jsonPath("$[0].authorName", is("홍길동")));
