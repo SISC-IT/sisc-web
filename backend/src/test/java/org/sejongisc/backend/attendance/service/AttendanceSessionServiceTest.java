@@ -233,6 +233,7 @@ public class AttendanceSessionServiceTest {
                         .code("111111")
                         .startsAt(now.minusMinutes(10))
                         .windowSeconds(1800)
+                        .status(SessionStatus.OPEN)
                         .build(),
                 AttendanceSession.builder()
                         .attendanceSessionId(UUID.randomUUID())
