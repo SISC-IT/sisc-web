@@ -121,7 +121,7 @@ public class AttendanceSessionController {
     public ResponseEntity<List<AttendanceSessionResponse>> getSessionsByTag(@PathVariable String tag) {
         log.info("태그별 출석 세션 조회: 태그={}", tag);
 
-        List<AttendanceSessionResponse> sessions = attendanceSessionService.getSessionByTag(tag);
+        List<AttendanceSessionResponse> sessions = attendanceSessionService.getSessionsByTag(tag);
 
         return ResponseEntity.ok(sessions);
     }
@@ -135,7 +135,7 @@ public class AttendanceSessionController {
     public ResponseEntity<List<AttendanceSessionResponse>> getSessionsByStatus(@PathVariable SessionStatus status) {
         log.info("상태별 출석 세션 조회: 상태={}", status);
 
-        List<AttendanceSessionResponse> sessions = attendanceSessionService.getSessionByStatus(status);
+        List<AttendanceSessionResponse> sessions = attendanceSessionService.getSessionsByStatus(status);
 
         return ResponseEntity.ok(sessions);
     }

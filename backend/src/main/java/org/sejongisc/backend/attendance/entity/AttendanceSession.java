@@ -98,11 +98,4 @@ public class AttendanceSession extends BasePostgresEntity {
 
         return java.time.Duration.between(now, endsAt).getSeconds();
     }
-
-    /**
-     * 6자리 고유 코드 생성
-     */
-    public static String generateUniqueCode() {
-        return String.format("%06d", new java.util.Random().nextInt(1000000));
-    }
 }

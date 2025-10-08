@@ -48,7 +48,7 @@ public class AttendanceService {
         }
 
         if (attendanceRepository.existsByAttendanceSessionAndUser(session, user)) {
-            throw new IllegalStateException("이미 출석 체크인한 세션입니다.");
+            throw new IllegalStateException("이미 출석 체크인한 세션입니다");
         }
 
         Location userLocation = Location.builder()

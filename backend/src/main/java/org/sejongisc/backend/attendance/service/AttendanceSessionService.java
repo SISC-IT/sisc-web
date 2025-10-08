@@ -2,7 +2,6 @@ package org.sejongisc.backend.attendance.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.AttendanceRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
@@ -109,10 +108,10 @@ public class AttendanceSessionService {
 
     /**
      * 태그별 세션 목록 조회
-     * - "금융IT", "동아리 전체" 등 태크로 필터링
+     * - "금융IT", "동아리 전체" 등 태그로 필터링
      */
     @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionByTag(String tag) {
+    public List<AttendanceSessionResponse> getSessionsByTag(String tag) {
         List<AttendanceSession> sessions = attendanceSessionRepository.findByTag(tag);
 
         return sessions.stream()
@@ -125,7 +124,7 @@ public class AttendanceSessionService {
      * - UPCOMING/OPEN/CLOSED 상태펼 필터링
      */
     @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionByStatus(SessionStatus status) {
+    public List<AttendanceSessionResponse> getSessionsByStatus(SessionStatus status) {
         List<AttendanceSession> sessions = attendanceSessionRepository.findByStatus(status);
 
         return sessions.stream()
@@ -217,7 +216,7 @@ public class AttendanceSessionService {
 
         attendanceSessionRepository.delete(session);
 
-        log.info("출석 세션 삭제 완료: 세션ID={}", session);
+        log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
     }
 
     /**
@@ -318,6 +317,7 @@ public class AttendanceSessionService {
                 .longitude(session.getLocation() != null ? session.getLocation().getLng() : null)
                 .radiusMeters(session.getLocation() != null ? session.getLocation().getRadiusMeters() : null)
                 .visibility(session.getVisibility())
+                .status(session.getStatus())
                 .createdAt(session.getCreatedDate())
                 .updatedAt(session.getUpdatedDate())
                 .endsAt(endTime)
