@@ -1,0 +1,419 @@
+date,summary
+2025-09-18 03:25,"{
+  ""Stock"": """",
+  ""Event"": ""Federal Reserve decides to lower the federal funds rate by 0.25% points"",
+  ""Factor"": ""Expectations for inflation and economic growth"",
+  ""Reason"": ""The Fed added a new phrase \""employment increase is slowing down\"" to the policy decision statement, citing \""economic activity is easing up,\"" amid concerns over wage growth."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.5
+}"
+2025-09-18 02:41,"{
+  ""Stock"": ""RDTT"",
+  ""Event"": ""New AI content license agreement with Alphabet"",
+  ""Factor"": ""AI and data licensing agreements"",
+  ""Reason"": ""The company is negotiating a new license agreement for its content with Google."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.6
+}"
+2025-09-18 02:18,"{
+  ""Stock"": ""MSFT"",
+  ""Event"": ""Declining stock price on second consecutive day of losses."",
+  ""Factor"": ""Valuation concerns and low P/E ratio compared to industry average."",
+  ""Reason"": ""Investors are paying attention to the valuation burden and lower profit/earnings per share (P/E) ratio compared to the software industry average."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.5
+}"
+2025-09-18 02:12,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of losses."",
+  ""Factor"": ""Concerns over FSD system's performance and discontinuation of Cybertruck model."",
+  ""Reason"": ""Tesla's FSD system has been criticized for its failure to recognize railway crossings, leading to investor anxiety. Additionally, the company discontinued the Cybertruck model, causing a price increase for remaining stock.""
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.8
+}"
+2025-09-18 01:15,"{
+  ""Stock"": ""STUB"",
+  ""Event"": ""Listing on New York Stock Exchange"",
+  ""Factor"": ""Initial Public Offering (IPO) and expansion of ticket sales business"",
+  ""Reason"": ""The company aims to raise $8 billion through IPO and expand its business with a target valuation of $23.50."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-18 01:11,"{
+  ""Stock"": ""HD"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": """",
+  ""Reason"": ""No explicit reason mentioned in the article, but overall market trend and upcoming projects are implied."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.5
+}"
+2025-09-18 00:47,"{
+  ""Stock"": ""FREG"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about FERG's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-18 11:23,"{
+  ""Stock"": """",
+  ""Event"": ""Investor and business agreements"",
+  ""Factor"": ""Marine asset investment, cooperation with digital finance"",
+  ""Reason"": ""The news explicitly mentions the signing of a business agreement between two companies to promote marine asset investment and cooperate on digital finance."",
+  ""Sentiment"": ""Neutral""
+}"
+2025-09-18 10:57,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Investor optimism about Tesla's AI and humanoid robot developments"",
+  ""Reason"": ""Musk's large-scale stock buybacks were a key driver behind the recent stock rally"",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-18 08:52,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""China bans NVIDIA chip orders, Chinese tech competitors strengthen competitiveness"",
+  ""Factor"": ""Chinese government's ban on NVIDIA chip orders to enhance technological competitiveness"",
+  ""Reason"": ""The news explicitly mentions that China has banned NVIDIA chip orders and tests to strengthen its technological competitiveness."",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.7
+}
+
+{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Tesla agrees to settle lawsuit over Model 3 Autopilot accident"",
+  ""Factor"": ""Settlement agreement in a lawsuit related to an Autopilot accident"",
+  ""Reason"": ""The news explicitly mentions that Tesla has agreed to settle a lawsuit over a Model 3 Autopilot accident."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.7
+}
+
+{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Alphabet's Waymo partners with Lift for autonomous ride-hailing service"",
+  ""Factor"": ""Partnership between Waymo and Lift for autonomous ride-hailing"",
+  ""Reason"": ""The news explicitly mentions that Alphabet's Waymo has partnered with Lift for an autonomous ride-hailing service."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}
+
+{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Google releases agent-based payment protocol for AI-powered shopping"",
+  ""Factor"": ""Release of a new payment protocol using AI technology"",
+  ""Reason"": ""The news explicitly mentions that Google has released a new payment protocol using AI technology."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}
+
+{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Elon Musk instructs xAI employees to submit a single page performance report"",
+  ""Factor"": ""Instruction from Elon Musk to xAI employees on reporting performance"",
+  ""Reason"": ""The news explicitly mentions that Elon Musk has instructed xAI employees to submit a single-page performance report."",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.7
+}
+
+{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Amazon updates Seller Assistant with new features for AI-powered sales strategy"",
+  ""Factor"": ""Update to Amazon's Seller Assistant with new AI-powered features"",
+  ""Reason"": ""The news explicitly mentions that Amazon has updated its Seller Assistant with new AI-powered features."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-18 08:50,"{
+  ""Stock"": ""FOMC"",
+  ""Event"": ""Decision to lower interest rate by 0.25% for the first time this year and possible two more cuts in the next two months"",
+  ""Factor"": ""Expectations of a cooling labor market and slowing economic growth"",
+  ""Reason"": ""The Fed's decision was based on its assessment of a weakening labor market and slowing economic growth, which led to a decrease in inflation expectations"",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.5
+}"
+2025-09-18 08:34,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""No event mentioned in the article"",
+  ""Factor"": ""None"",
+  ""Reason"": ""None"",
+  ""Sentiment"": ""Negative"", # Inaccurate, as the sentiment is positive
+  ""Confidence"": 0"
+2025-09-18 08:21,"Here is the summarized output in JSON format:
+
+[
+  {
+    ""Stock"": ""Tech Stocks"",
+    ""Event"": ""Decline after FOMC meeting"",
+    ""Factor"": ""Concerns over interest rate hikes"",
+    ""Reason"": ""Most traders expected a 50bp cut, but Fed surprised with a 25bp cut"",
+    ""Sentiment"": ""Negative"",
+    ""Confidence"": ""High""
+  },
+  {
+    ""Stock"": ""Retail Stocks (e.g. Walmart, Costco)"",
+    ""Event"": ""Rise after FOMC meeting"",
+    ""Factor"": ""Positive impact of interest rate cuts on consumer spending"",
+    ""Reason"": ""Expectations of a lower cost of borrowing boosted investor confidence"",
+    ""Sentiment"": ""Positive"",
+    ""Confidence"": ""Medium""
+  },
+  {
+    ""Stock"": ""Dow Jones"",
+    ""Event"": ""Increase after FOMC meeting"",
+    ""Factor"": ""Boost from retail and consumer stocks"",
+    ""Reason"": ""Dow Jones rose despite concerns over inflation and interest rates"",
+    ""Sentiment"": ""Positive"",
+    ""Confidence"": ""Medium""
+  },
+  {
+    ""Stock"": "" Russell 2000"",
+    ""Event"": ""Increase after FOMC meeting"",
+    ""Factor"": ""Small-cap stocks benefited from Fed's cautious tone"",
+    ""Reason"": ""Russell 2000 rose as investors anticipated a lower risk of interest rate hikes"",
+    ""Sentiment"": ""Positive"",
+    ""Confidence"": ""Medium""
+  }
+]"
+2025-09-18 07:44,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-18 07:18,"{
+  ""Stock"": ""None"",
+  ""Event"": ""Federal Reserve raises interest rates for the first time this year, but no clear signal for future rate cuts."",
+  ""Factor"": ""Mixed signals from Fed officials regarding future rate hikes and cuts."",
+  ""Reason"": ""The article mentions that investors had mixed expectations after FOMC results, with some expecting additional rate cuts in the near term."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.5
+}"
+2025-09-18 06:45,"{
+  ""Stock"": ""None"",
+  ""Event"": ""Federal Reserve cuts interest rates for the first time in 9 months"",
+  ""Factor"": ""Investor optimism about the economy and the Fed's monetary policy"",
+  ""Reason"": ""The news explicitly mentions that investor optimism about the economy and the Fed's monetary policy was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": null
+}"
+2025-09-18 06:12,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""No Event Information Available in the Article."",
+  ""Factor"": ""None"",
+  ""Reason"": ""None"",
+  ""Sentiment"": ""None"",
+  ""Confidence"": ""N/A""
+}"
+2025-09-18 06:05,"{
+  ""Stock"": """",
+  ""Event"": ""FOMC meeting"",
+  ""Factor"": ""Fed's interest rate decision"",
+  ""Reason"": ""Investor optimism about Fed's AI and humanoid robot developments was not mentioned in the article."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0
+}"
+2025-09-18 05:53,"{
+  ""Stock"": ""NYSE"",
+  ""Event"": ""Second consecutive day of gains"",
+  ""Factor"": ""Expectations for AI and humanoid robots"",
+  ""Reason"": ""Investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-18 05:14,"{
+  ""Stock"": """",
+  ""Event"": ""Market closes with a mixed day."",
+  ""Factor"": null,
+  ""Reason"": null,
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": null
+}"
+2025-09-18 05:12,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""No event mentioned in the news article"",
+  ""Factor"": ""None"",
+  ""Reason"": ""No reason given for the stock price change"",
+  ""Sentiment"": ""Positive"", 
+  ""Confidence"": 0.0
+}"
+2025-09-18 05:12,"{
+  ""Stock"": """",
+  ""Event"": ""No specific stock mentioned"",
+  ""Factor"": None,
+  ""Reason"": None,
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0
+}"
+2025-09-18 05:09,"{
+  ""Stock"": ""NYSE"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": null,
+  ""Reason"": null,
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": null
+}"
+2025-09-18 05:09,"{
+  ""Stock"": ""US Indices"",
+  ""Event"": ""Mixed market reaction to Fed's rate cut"",
+  ""Factor"": None,
+  ""Reason"": ""No specific reason mentioned in the article."",
+  ""Sentiment"": ""Neutral""
+}"
+2025-09-18 05:04,"Unfortunately, I couldn't find any news article to extract information from. The text you provided appears to be a Korean news headline.
+
+If you provide me with the actual news article, I'll be happy to help you extract key information in the required format."
+2025-09-18 23:37,"{
+  ""Stock"": """",
+  ""Event"": ""Decrease in new unemployment claims"",
+  ""Factor"": ""Economic indicators and market expectations"",
+  ""Reason"": ""Market expectations and economic indicators show a decline in new unemployment claims after a recent increase."",
+  ""Sentiment"": ""Neutral""
+}"
+2025-09-18 23:34,"{
+  ""Stock"": ""IONQ"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Government cooperation, M&A announcements and growing expectations for quantum computing applications"",
+  ""Reason"": ""The news explicitly mentions that the company's partnership with the US Department of Energy, recent M&A announcements, and investor optimism about quantum computing developments were key drivers behind the rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-18 23:24,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""No event information found in the article, only market news and analysis."",
+  ""Factor"": ""None mentioned"",
+  ""Reason"": ""None"",
+  ""Sentiment"": ""Positive"", # Based on overall market trends
+  ""Confidence"": 0.4 # Range(0, 1)"
+2025-09-18 23:04,"{
+  ""Stock"": ""UBER"",
+  ""Event"": ""Starts drone delivery program with Flight Rex"",
+  ""Factor"": ""Partnership and expansion of its logistics strategy"",
+  ""Reason"": ""The news explicitly mentions the partnership as a key driver behind the recent stock movement."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-18 22:55,"{
+  ""Stock"": ""GOOGL"",
+  ""Event"": ""Second consecutive day of gains"",
+  ""Factor"": ""Growing investor optimism about Alphabet's search engine and AI capabilities"",
+  ""Reason"": ""The news explicitly mentions that the recent rally is driven by investor confidence in Alphabet's search engine and AI developments."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-18 21:56,"{
+  ""Stock"": ""META"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and content licensing agreements with major media companies."",
+  ""Reason"": ""Media reports indicate that Meta is negotiating contracts with major publishers to enhance its AI services."",
+  ""Sentiment"": ""Positive""
+}"
+2025-09-18 21:50,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""Not applicable, not related to TSLA stock."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0
+}"
+2025-09-18 17:53,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-18 17:40,"{
+  ""Stock"": ""TSM"",
+  ""Event"": ""China's ban on buying latest AI chips from Nvidia causes stock downturn."",
+  ""Factor"": ""China's regulations and ban on buying latest AI chips"",
+  ""Reason"": ""Analysts believe the news will lead to a decrease in investor optimism and a possible decline in the stock price."",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.8
+}"
+2025-09-18 17:39,"{
+  ""Stock"": ""OPENDOOR"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for digital health care and online communities"",
+  ""Reason"": ""The news explicitly mentions that investor optimism about OpenDoor's digital health care and online community developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive""
+}"
+2025-09-18 17:39,"{
+  ""Stock"": ""ULTA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Realized performance and optimism about long-term growth"",
+  ""Reason"": ""The company's strong realized performance and positive outlook for its future growth were cited as key drivers behind the rally."",
+  ""Sentiment"": ""Positive"", 
+  ""Confidence"": 0.8
+}"
+2025-09-18 17:38,"{
+  ""Stock"": ""Commodity"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Global central bank's steady buying and dollar weakness."",
+  ""Reason"": ""Experts believe that the ongoing surge in gold prices is driven by the global central bank's steady buying and dollar weakness, which could lead to further price increases."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-18 17:38,"{
+  ""Stock"": ""ALIBABA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Alibaba's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-18 17:30,"{
+  ""Stock"": ""IONQ"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Investment in quantum computing and M&A activity with OkoNic"",
+  ""Reason"": ""Announcement of investment in quantum computing and acquisition of OkoNic"",
+  ""Sentiment"": ""Positive""
+}"
+2025-09-18 16:08,"{
+  ""Stock"": "" Nikkei225"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Interest rate cut by the US Federal Reserve and positive investor sentiment about Japanese electronics industry"",
+  ""Reason"": ""The news explicitly mentions that interest rate cut and investor optimism were key drivers behind the recent stock rally.""
+  ""Sentiment"": ""Positive""
+}"
+2025-09-18 15:57,"{
+  ""Stock"": ""Nikkei 225"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Interest rate cut by the Fed and rising chip stocks."",
+  ""Reason"": ""The Nikkei 225 broke above its moving average and overcame its previous record, driven by investor optimism about interest rates and chip stocks."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-18 15:14,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": null,
+  ""Reason"": null,
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": null
+}"
+2025-09-18 13:39,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""No specific event mentioned"",
+  ""Factor"": ""None mentioned"",
+  ""Reason"": ""No specific reason mentioned"",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0
+}"
+2025-09-18 11:45,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Not available"",
+  ""Factor"": ""Not available"",
+  ""Reason"": ""Not available"",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.0
+}"
+2025-09-18 11:39,"{
+  ""Stock"": ""USD"",
+  ""Event"": ""Expectation of continued dollar weakness"",
+  ""Factor"": ""Increased expectations for inflation and monetary policy tightening by the Fed"",
+  ""Reason"": ""The news mentions that investors are concerned about the potential impact on the economy and financial markets due to the recent rate hike and ongoing dollar weakness."",
+  ""Sentiment"": ""Negative""
+}"

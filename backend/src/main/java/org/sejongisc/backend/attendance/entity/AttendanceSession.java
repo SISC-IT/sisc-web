@@ -1,17 +1,20 @@
 package org.sejongisc.backend.attendance.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class AttendanceSession extends BasePostgresEntity {
@@ -47,8 +50,52 @@ public class AttendanceSession extends BasePostgresEntity {
     @Enumerated(EnumType.STRING)
     private SessionStatus status;
 
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    @Builder.Default
+    private List<Attendance> attendances = new ArrayList<>();
 
+    /**
+     * 현재 세션 상태 계산
+     */
+    public SessionStatus calculateCurrentStatus() {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.isBefore(startsAt)) {
+            return SessionStatus.UPCOMING;
+        } else if (now.isAfter(getEndsAt())) {
+            return SessionStatus.CLOSED;
+        } else {
+            return SessionStatus.OPEN;
+        }
+    }
+
+    /**
+     * 세션 종료 시간 계산
+     */
+    public boolean isCheckInAvailable() {
+        LocalDateTime now = LocalDateTime.now();
+        return now.isAfter(startsAt) && now.isBefore(getEndsAt());
+    }
+
+    /**
+     * 세션 종료 시간 계산
+     */
+    public LocalDateTime getEndsAt() {
+        return startsAt.plusSeconds(windowSeconds != null ? windowSeconds : 1800);
+    }
+
+    /**
+     * 남은 시간 계산 (초단위)
+     */
+    public long getRemainingSeconds() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endsAt = getEndsAt();
+
+        if (now.isAfter(endsAt)) {
+            return 0;
+        }
+
+        return java.time.Duration.between(now, endsAt).getSeconds();
+    }
 }
