@@ -10,11 +10,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+        show_sql: false
+        format_sql: false
 
 jwt:
   secret: test-secret
-firebase:
-  credential-path: classpath:firebase/test-key.json
 
 google:
   client:
@@ -22,11 +22,13 @@ google:
     secret: test-google-secret
   redirect:
     uri: http://localhost:8080/auth/google/
+
 kakao:
   client:
     id: test-kakao-id
   redirect:
     uri: http://localhost:8080/auth/kakao/
+
 github:
   client:
     id: test-github-id
