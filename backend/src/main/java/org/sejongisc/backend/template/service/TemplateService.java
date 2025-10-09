@@ -33,6 +33,7 @@ public class TemplateService {
 
   // 템플릿 ID로 템플릿 조회
   public TemplateResponse findById(UUID templateId) {
+    // TODO : 백테스트 기록도 같이 조회
     return TemplateResponse.builder()
         .template(
             templateRepository.findById(templateId)
@@ -42,12 +43,12 @@ public class TemplateService {
   }
 
   // 템플릿 생성
-  public TemplateResponse createTemplate(TemplateRequest templateRequest) {
+  public TemplateResponse createTemplate(TemplateRequest request) {
     // userId 만을 가진 FK 전용 프록시 객체 생성
-    User userRef = em.getReference(User.class, templateRequest.getUserId());
+    User userRef = em.getReference(User.class, request.getUserId());
 
-    Template template = Template.of(userRef, templateRequest.getTitle(),
-        templateRequest.getDescription(), templateRequest.getIsPublic());
+    Template template = Template.of(userRef, request.getTitle(),
+        request.getDescription(), request.getIsPublic());
 
     templateRepository.save(template);
 
@@ -57,10 +58,10 @@ public class TemplateService {
   }
 
   // 템플릿 수정
-  public TemplateResponse updateTemplate(TemplateRequest templateRequest) {
-    Template template = authorizeTemplateOwner(templateRequest.getTemplateId(), templateRequest.getUserId());
+  public TemplateResponse updateTemplate(TemplateRequest request) {
+    Template template = authorizeTemplateOwner(request.getTemplateId(), request.getUserId());
 
-    template.update(templateRequest.getTitle(), templateRequest.getDescription(), templateRequest.getIsPublic());
+    template.update(request.getTitle(), request.getDescription(), request.getIsPublic());
 
     templateRepository.save(template);
 
