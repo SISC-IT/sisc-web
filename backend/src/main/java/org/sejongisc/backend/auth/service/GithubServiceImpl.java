@@ -33,7 +33,7 @@ public class GithubServiceImpl implements GithubService {
     }
 
     // ✅ 테스트용 생성자
-    protected GithubServiceImpl(String clientId, String clientSecret,
+    public GithubServiceImpl(String clientId, String clientSecret,
                                 String tokenUrl, String userInfoUrl) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;

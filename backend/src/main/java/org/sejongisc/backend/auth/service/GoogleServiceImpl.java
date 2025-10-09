@@ -38,7 +38,7 @@ public class GoogleServiceImpl implements GoogleService {
     }
 
     // 테스트용 생성자 (MockWebServer 등)
-    protected GoogleServiceImpl(String clientId, String clientSecret, String redirectUri,
+    public GoogleServiceImpl(String clientId, String clientSecret, String redirectUri,
                                 String GOOGLE_TOKEN_URL_HOST, String GOOGLE_USERINFO_URL_HOST) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;

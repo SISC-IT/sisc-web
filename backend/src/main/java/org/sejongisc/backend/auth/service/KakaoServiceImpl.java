@@ -28,7 +28,7 @@ public class KakaoServiceImpl implements KakaoService{
     }
 
     // 테스트에서 MockwebServer 주소 주입할 수 있는 생성자
-    protected KakaoServiceImpl(String clientId,  String KAUTH_TOKEN_URL_HOST, String KAUTH_USER_URL_HOST) {
+    public KakaoServiceImpl(String clientId,  String KAUTH_TOKEN_URL_HOST, String KAUTH_USER_URL_HOST) {
         this.clientId = clientId;
         this.KAUTH_TOKEN_URL_HOST = KAUTH_TOKEN_URL_HOST.replace("https://", "http://");
         this.KAUTH_USER_URL_HOST = KAUTH_USER_URL_HOST.replace("https://", "http://");
