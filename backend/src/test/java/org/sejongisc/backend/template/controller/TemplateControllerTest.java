@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(TemplateController.class)
 @Import({SecurityConfig.class, TemplateControllerTest.DisableJpaAuditingConfig.class})
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 class TemplateControllerTest {
 
   @Autowired private MockMvc mockMvc;

@@ -18,15 +18,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.dao.UserOauthAccountRepository;
+import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.dto.SignupRequest;
-import org.sejongisc.backend.user.dto.SignupResponse;
-import org.sejongisc.backend.user.entity.AuthProvider;
+import org.sejongisc.backend.auth.dto.SignupRequest;
+import org.sejongisc.backend.auth.dto.SignupResponse;
+import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.user.entity.UserOauthAccount;
-import org.sejongisc.backend.user.oauth.OauthUserInfo;
+import org.sejongisc.backend.auth.entity.UserOauthAccount;
+import org.sejongisc.backend.auth.oauth.OauthUserInfo;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)

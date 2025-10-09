@@ -6,8 +6,9 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.sejongisc.backend.user.dto.GoogleTokenResponse;
-import org.sejongisc.backend.user.dto.GoogleUserInfoResponse;
+import org.sejongisc.backend.auth.dto.GoogleTokenResponse;
+import org.sejongisc.backend.auth.dto.GoogleUserInfoResponse;
+import org.sejongisc.backend.auth.service.GoogleServiceImpl;
 
 import java.io.IOException;
 
