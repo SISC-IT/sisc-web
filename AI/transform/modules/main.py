@@ -9,7 +9,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, Model
 
 from AI.libs.utils.io import _log
-from .model import build_transformer_classifier  # <-- 모델 분리됨
+from .models import build_transformer_classifier  # <-- 모델 분리됨
 
 # ===== 공개 상수 =====
 FEATURES: List[str] = [
@@ -269,3 +269,4 @@ def run_transform(
         "feature1","feature2","feature3","prob1","prob2","prob3"
     ])
     return {"logs": logs_df}
+
