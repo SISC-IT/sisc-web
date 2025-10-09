@@ -1,4 +1,4 @@
-package org.sejongisc.backend.user.service;
+package org.sejongisc.backend.auth.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.mockwebserver.MockResponse;
@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.auth.dto.GoogleTokenResponse;
 import org.sejongisc.backend.auth.dto.GoogleUserInfoResponse;
-import org.sejongisc.backend.auth.service.GoogleServiceImpl;
 
 import java.io.IOException;
 
