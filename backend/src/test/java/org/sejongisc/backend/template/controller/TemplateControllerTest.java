@@ -22,6 +22,7 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -37,6 +38,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(TemplateController.class)
 @Import({SecurityConfig.class, TemplateControllerTest.DisableJpaAuditingConfig.class})
 @AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource(properties = {
+        "JWT_SECRET=test-secret",
+        "SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb",
+        "SPRING_DATASOURCE_USERNAME=sa",
+        "SPRING_DATASOURCE_PASSWORD=",
+        "FIREBASE_CREDENTIAL_PATH=classpath:firebase/test-key.json"
+})
 class TemplateControllerTest {
 
   @Autowired private MockMvc mockMvc;
