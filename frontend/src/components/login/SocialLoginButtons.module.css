@@ -1,0 +1,67 @@
+.socialContainer {
+  margin-top: 16px;
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  margin-bottom: 18px;
+  margin-top: 26px;
+}
+
+.buttonGroup {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50px;
+  font-weight: 600;
+
+  outline: none;
+  border: 1px solid transparent;
+}
+
+.icon {
+  flex: 0 0 40px;
+}
+
+.google {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+.google:hover {
+  background: #f9fafb;
+}
+
+.naver {
+  background: #03c75a;
+  color: #ffffff;
+}
+.naver:hover {
+  filter: brightness(0.95);
+}
+
+.kakao {
+  background: #fee500;
+  color: #191600;
+  border-color: #e5e7eb;
+}
+.kakao:hover {
+  filter: brightness(0.95);
+}
+
+.label {
+  white-space: nowrap;
+  font-size: 14px;
+}
