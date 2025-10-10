@@ -19,7 +19,13 @@ const ProfileCard = () => {
             type="button"
             className={styles.iconBtn}
             aria-label="이름 수정"
-            onClick={() => setUserName('김코딩')}
+            onClick={() => {
+              // TODO: 이름 수정 모달 구현 (현재는 임시 prompt 사용)
+              const newName = prompt('새 이름을 입력하세요:', userName);
+              if (newName && newName.trim()) {
+                setUserName(newName.trim());
+              }
+            }}
           >
             <span className={styles.nameChange}>
               이름 수정하기{' '}
