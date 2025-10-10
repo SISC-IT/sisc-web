@@ -95,6 +95,10 @@
   align-items: center;
   padding-top: 10px;
 }
+.textContainer .text {
+  cursor: pointer;
+}
+
 .divider {
   color: #9ca3af;
   font-size: 14px;

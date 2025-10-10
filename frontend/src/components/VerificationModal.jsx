@@ -14,7 +14,7 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
     }
     setSendButtonDisabled(true);
     console.log(`${phoneNumber}로 인증번호 전송 API 호출`);
-    // <<-- 실제 API 호출 로직: await api.sendVerificationCode(phoneNumber) -->>
+    // 실제 api 추가
 
     alert('인증번호가 전송되었습니다.');
     setIsCodeSent(true);
@@ -43,11 +43,11 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
 
   return (
     <div className={styles.overlay}>
-      <div className={styles.popup}>
+      <div className={styles.modal}>
         <h1>{title}</h1>
         <form onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
-            <label htmlFor="phone-number">전화번호</label>
+            <label htmlFor="phone-number">전화번호 인증</label>
             <div className={styles.verificationContainer}>
               <input
                 type="tel"
@@ -64,14 +64,18 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
                 disabled={sendButtonDisabled}
                 className={`${styles.button} ${styles.sendButton}`}
               >
-                {isCodeSent ? '재전송' : '인증번호 전송'}
+                {sendButtonDisabled
+                  ? '전송 중...'
+                  : isCodeSent
+                    ? '재전송'
+                    : '인증번호 전송'}
               </button>
             </div>
           </div>
 
-          {isCodeSent && (
-            <div className={styles.inputGroup}>
-              <label htmlFor="verification-code">인증번호</label>
+          <div className={styles.inputGroup}>
+            <label htmlFor="verification-code">인증번호</label>
+            <div className={styles.verificationContainer}>
               <input
                 type="text"
                 id="verification-code"
@@ -80,16 +84,17 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
                 placeholder="인증번호를 입력하세요"
                 className={styles.codeInput}
               />
+              <button
+                type="submit"
+                className={`${styles.button} ${styles.submitButton}`}
+                disabled={!isCodeSent}
+              >
+                인증 확인
+              </button>
             </div>
-          )}
+          </div>
 
           <div className={styles.buttonGroup}>
-            <button
-              type="submit"
-              className={`${styles.button} ${styles.submitButton}`}
-            >
-              인증 확인
-            </button>
             <button
               type="button"
               onClick={onClose}

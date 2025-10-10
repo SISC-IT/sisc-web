@@ -11,15 +11,16 @@ import FindEmailResultModal from './FindEmailResultModal';
 const LoginForm = () => {
   const nav = useNavigate();
 
-  const [id, setId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [modalStep, setModalStep] = useState('closed');
-  const [foundEmail, setFoundEmail] = useState('ex@n.com');
+  const [foundEmail, setFoundEmail] = useState('');
 
+  // 전화번호 인증 성공 시 호출하는 함수
   const handlePhoneVerificationSuccess = (result) => {
-    if (modalStep === 'verifyPhoneForId') {
-      setFoundEmail(result.email);
-      setModalStep('showId');
+    if (modalStep === 'verifyPhoneForEmail') {
+      setFoundEmail('example@google.com');
+      setModalStep('showEmail');
     } else if (modalStep === 'verifyPhoneForPassword') {
       setModalStep('resetPassword');
     }
@@ -29,14 +30,17 @@ const LoginForm = () => {
     setModalStep('closed');
   };
 
-  const isFormValid = id.trim() !== '' && password.trim() !== '';
+  const isFormValid = email.trim() !== '' && password.trim() !== '';
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (!id || !password) {
-      alert('아이디와 비밀번호를 모두 입력해주세요.');
+    // 안전장치
+    if (!email || !password) {
+      alert('이메일과 비밀번호를 모두 입력해주세요.');
       return;
     }
+
+    // 로그인 성공 시 로직
     localStorage.setItem('authToken', 'dummy-token-12345');
     nav('/');
   };
@@ -55,8 +59,8 @@ const LoginForm = () => {
             <input
               type="email"
               id="email"
-              value={id}
-              onChange={(e) => setId(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일을 입력하세요"
             />
           </div>
@@ -82,7 +86,7 @@ const LoginForm = () => {
           <div>
             <a
               className={styles.text}
-              onClick={() => setModalStep('verifyPhoneForId')}
+              onClick={() => setModalStep('verifyPhoneForEmail')}
             >
               이메일 찾기
             </a>
@@ -104,26 +108,29 @@ const LoginForm = () => {
         <SocialLoginButtons />
       </div>
 
-      {(modalStep === 'verifyPhoneForId' ||
+      {(modalStep === 'verifyPhoneForEmail' ||
         modalStep === 'verifyPhoneForPassword') && (
         <VerificationModal
-          title="전화번호 인증"
+          title={
+            modalStep === 'verifyPhoneForEmail'
+              ? '이메일 찾기'
+              : '비밀번호 찾기'
+          }
           onClose={closeModal}
           onSuccess={handlePhoneVerificationSuccess}
         />
       )}
 
-      {modalStep === 'showId' && (
+      {modalStep === 'showEmail' && (
         <FindEmailResultModal
-          title="아이디 찾기 결과"
+          title="이메일 찾기 결과"
           onClose={closeModal}
-          onSuccess={closeModal} // 확인 버튼 누르면 닫히도록 onSuccess에 closeModal 전달
           result={foundEmail}
         />
       )}
 
       {modalStep === 'resetPassword' && (
-        <ResetPasswordModal onSuccess={closeModal} />
+        <ResetPasswordModal onClose={closeModal} />
       )}
     </>
   );
