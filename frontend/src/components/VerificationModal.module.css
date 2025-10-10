@@ -19,18 +19,22 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.modalTitle {
+.modalHeader {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 52px;
 }
 
-.modal h1 {
-  margin-top: 0;
-
-  text-align: left;
+h1 {
+  color: #000;
+  font-family: Pretendard;
   font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 100%;
 }
+
 h1.findEmailH1 {
   margin-bottom: 33px;
 }

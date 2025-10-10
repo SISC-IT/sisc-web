@@ -48,7 +48,7 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
-        <div className={styles.modalTitle}>
+        <div className={styles.modalHeader}>
           <h1>{title}</h1>
           <button
             type="button"
