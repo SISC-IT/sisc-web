@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import styles from './ProfileCard.module.css';
 import ProfileImage from '../../assets/profile-image.png';
 import Coin4 from '../../assets/coin4.svg';
-import PencilIcon from '../../assets/pencil-icon.svg';
 
 const ProfileCard = () => {
+  const [userName, setUserName] = useState('김성림');
+
   return (
     <section className={styles.profileRow} aria-label="프로필">
       <div>
@@ -12,17 +14,17 @@ const ProfileCard = () => {
 
       <div className={styles.textWrap}>
         <div className={styles.nameRow}>
-          <h2 className={styles.username}>김성림</h2>
+          <h2 className={styles.username}>{userName}</h2>
           <button
             type="button"
             className={styles.iconBtn}
             aria-label="이름 수정"
+            onClick={() => setUserName('김코딩')}
           >
-            <img
-              src={PencilIcon}
-              className={styles.pencilIcon}
-              alt="이름 수정 아이콘"
-            />
+            <span className={styles.nameChange}>
+              이름 수정하기{' '}
+              <span className={styles.chevronRight}>&gt;</span>{' '}
+            </span>
           </button>
         </div>
 
