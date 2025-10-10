@@ -19,9 +19,14 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.modalTitle {
+  display: flex;
+  align-items: center;
+  margin-bottom: 52px;
+}
+
 .modal h1 {
   margin-top: 0;
-  margin-bottom: 52px;
 
   text-align: left;
   font-size: 20px;
@@ -29,6 +34,17 @@
 h1.findEmailH1 {
   margin-bottom: 33px;
 }
+
+.closeButton {
+  display: inline-block;
+  border: none;
+  background-color: #ffffff;
+  color: #171717;
+  font-weight: 400;
+  font-size: 26px;
+  cursor: pointer;
+}
+
 .modal p {
   margin: 0px;
 }
@@ -116,10 +132,6 @@ h1.findEmailH1 {
 }
 .submitButton:disabled {
   background: #bce5ff;
-}
-
-.closeButton {
-  background-color: #dc3545;
 }
 
 .resetPasswordButton {

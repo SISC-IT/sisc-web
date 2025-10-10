@@ -48,7 +48,18 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
-        <h1>{title}</h1>
+        <div className={styles.modalTitle}>
+          <h1>{title}</h1>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="닫기"
+          >
+            &times;
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
             <label htmlFor="phone-number">전화번호 인증</label>
@@ -97,7 +108,7 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
             </div>
           </div>
 
-          <div className={styles.buttonGroup}>
+          {/* <div className={styles.buttonGroup}>
             <button
               type="button"
               onClick={onClose}
@@ -105,7 +116,7 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
             >
               닫기
             </button>
-          </div>
+          </div> */}
         </form>
       </div>
     </div>
