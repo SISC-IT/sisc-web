@@ -1,4 +1,4 @@
-import styles from './Modal.module.css';
+import styles from './ActivityModal.module.css';
 import PointIcon from '../../assets/coin4.svg';
 
 function PointsSection({ items }) {

@@ -1,4 +1,4 @@
-import styles from './Modal.module.css';
+import styles from './ActivityModal.module.css';
 
 const ActivitySection = ({ items }) => {
   return (

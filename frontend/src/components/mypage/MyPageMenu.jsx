@@ -4,7 +4,7 @@ import AttendanceIcon from '../../assets/s-coin-blue.svg';
 import ActivityIcon from '../../assets/s-coin-purple.svg';
 import PointPocketIcon from '../../assets/point-pocket.svg';
 import { getMockByKey } from '../../utils/myPageMenuMock';
-import Modal from './Modal';
+import ActivityModal from './ActivityModal';
 
 const MENU_ITEMS = [
   {
@@ -69,7 +69,7 @@ const MyPageMenu = () => {
         ))}
       </div>
 
-      <Modal
+      <ActivityModal
         isOpen={!!selectedItem}
         onClose={handleClose}
         title={selectedItem?.title || ''}

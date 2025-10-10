@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import styles from './Modal.module.css';
+import styles from './ActivityModal.module.css';
 import AttendanceSection from './AttendanceSection';
 import ActivitySection from './ActivitySection';
 import PointsSection from './PointsSection';
 
-const Modal = ({ isOpen, onClose, title, kind, data }) => {
+const ActivityModal = ({ isOpen, onClose, title, kind, data }) => {
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e) => {
@@ -48,4 +48,4 @@ const Modal = ({ isOpen, onClose, title, kind, data }) => {
   );
 };
 
-export default Modal;
+export default ActivityModal;
