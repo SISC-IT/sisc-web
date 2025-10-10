@@ -10,7 +10,7 @@ const AccountSecurity = () => {
       </p>
 
       <button type="button" className={styles.button}>
-        <img src={lockIcon} alt="Lock Icon" className={styles.icon} />
+        <img src={lockIcon} alt="잠금 아이콘" className={styles.icon} />
         <span className={styles.buttonName}>비밀번호 수정</span>
       </button>
     </div>
