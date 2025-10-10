@@ -54,7 +54,6 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
             type="button"
             className={styles.closeButton}
             onClick={onClose}
-            aria-label="닫기"
           >
             &times;
           </button>
