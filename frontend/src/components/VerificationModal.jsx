@@ -3,7 +3,7 @@ import styles from './VerificationModal.module.css';
 
 const VerificationModal = ({ title, onClose, onSuccess }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [code, setCode] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [sendButtonDisabled, setSendButtonDisabled] = useState(false);
 
@@ -27,11 +27,11 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!code) {
+    if (!verificationCode) {
       alert('인증번호를 입력해주세요.');
       return;
     }
-    console.log(`${phoneNumber}와 ${code}로 인증 확인 API 호출`);
+    console.log(`${phoneNumber}와 ${verificationCode}로 인증 확인 API 호출`);
 
     try {
       // <<-- 실제 API 호출 로직: const result = await api.verifyCode(phoneNumber, code) -->>
@@ -93,8 +93,8 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
               <input
                 type="text"
                 id="verification-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
                 placeholder="인증번호를 입력하세요"
                 className={styles.codeInput}
               />
