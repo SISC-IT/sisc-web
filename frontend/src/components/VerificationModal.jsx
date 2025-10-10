@@ -7,11 +7,15 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [sendButtonDisabled, setSendButtonDisabled] = useState(false);
 
+  // 전화번호를 입력받아 코드를 보내는 함수
   const handleSendCode = async () => {
-    if (!phoneNumber) {
-      alert('전화번호를 입력해주세요.');
+    // 전화번호 형식에 맞지 않을 시 return
+    const phoneRegex = /^01[0-9]{1}[0-9]{7,8}$/;
+    if (!phoneNumber || !phoneRegex.test(phoneNumber)) {
+      alert('올바른 전화번호 형식을 입력해주세요. (예: 01012345678)');
       return;
     }
+
     setSendButtonDisabled(true);
     console.log(`${phoneNumber}로 인증번호 전송 API 호출`);
     // 실제 api 추가
@@ -56,7 +60,6 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="'-' 없이 입력"
                 className={styles.codeInput}
-                disabled={isCodeSent}
               />
               <button
                 type="button"

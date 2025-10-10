@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styles from '../VerificationModal.module.css';
 
-const ResetPasswordForm = ({ onClose }) => {
+const ResetPasswordModal = ({ onClose }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -64,4 +64,4 @@ const ResetPasswordForm = ({ onClose }) => {
   );
 };
 
-export default ResetPasswordForm;
+export default ResetPasswordModal;
