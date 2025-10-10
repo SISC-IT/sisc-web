@@ -1,6 +1,7 @@
 import styles from './Mypage.module.css';
 import MyPageMenu from '../components/mypage/MyPageMenu';
 import ProfileCard from '../components/mypage/ProfileCard';
+import AccountSecurity from '../components/mypage/AccountSecurity';
 
 const Mypage = () => {
   return (
@@ -9,6 +10,7 @@ const Mypage = () => {
 
       <ProfileCard />
       <MyPageMenu />
+      <AccountSecurity />
     </div>
   );
 };
