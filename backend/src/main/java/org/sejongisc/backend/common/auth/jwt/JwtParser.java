@@ -48,7 +48,7 @@ public class JwtParser {
     public Role getRoleFromToken(String token) {
         Claims claims = parseClaims(token);
         String roleStr = claims.get("role", String.class);
-        return Role.valueOf(roleStr);
+        return (roleStr != null) ? Role.valueOf(roleStr) : null;
     }
 
     // 토큰 유효성 검증

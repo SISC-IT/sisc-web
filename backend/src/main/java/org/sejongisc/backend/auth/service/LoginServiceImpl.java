@@ -35,9 +35,11 @@ public class LoginServiceImpl implements LoginService, UserDetailsService {
         }
 
         String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole());
+        String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .name(user.getName())

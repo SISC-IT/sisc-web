@@ -25,6 +25,9 @@ public class JwtProvider {
     @Value("${jwt.expireDate.accessToken}")
     private long accessTokenValidityInMillis;
 
+    @Value("${jwt.expireDate.refreshToken}")
+    private  long refreshTokenValidityInMillis;
+
     @PostConstruct
     public void init() {
         byte[] keyBytes = Base64.getDecoder().decode(rawSecretKey);
@@ -43,6 +46,20 @@ public class JwtProvider {
                 .setExpiration(expiryDate)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    // RefreshToken
+    public String createRefreshToken(UUID userId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshTokenValidityInMillis);
+
+        return Jwts.builder()
+                .setSubject(userId.toString())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .compact();
+
     }
 
     // 토큰에서 사용자 ID 추출

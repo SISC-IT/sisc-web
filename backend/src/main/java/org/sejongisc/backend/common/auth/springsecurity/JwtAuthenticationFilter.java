@@ -55,7 +55,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (EXCLUDE_PATTERNS.contains(requestURI)) {
+        if (EXCLUDE_PATTERNS.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestURI))) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -65,14 +65,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (token != null && jwtParser.validationToken(token)) {
                 UsernamePasswordAuthenticationToken authentication = jwtParser.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                log.debug("Valid JWT token found for request: {}", request.getRequestURI());
+
+                filterChain.doFilter(request, response);
             } else {
                 throw new JwtException("Token is null or invalid");
             }
-            filterChain.doFilter(request, response);
 
         } catch (JwtException e) {
             ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.INVALID_ACCESS_TOKEN);
             response.setContentType("application/json;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write(toJson(errorResponse));
         }
     }
@@ -85,13 +89,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals("access")) {
-                    return cookie.getValue();
-                }
-            }
+        String bearerToken = request.getHeader("Authorization");
+        if(StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
         }
         return null;
     }

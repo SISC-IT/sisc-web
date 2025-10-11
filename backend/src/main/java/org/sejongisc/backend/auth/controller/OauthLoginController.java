@@ -37,19 +37,19 @@ public class OauthLoginController {
         User user;
 
         switch (provider.toUpperCase()) {
-            case "GOOGLE"->{
+            case "GOOGLE" -> {
                 String accessToken = googleService.getAccessTokenFromGoogle(code).getAccessToken();
                 GoogleUserInfoResponse googleInfo = googleService.getUserInfo(accessToken);
 
                 user = userService.findOrCreateUser(new GoogleUserInfoAdapter(googleInfo));
             }
-            case "KAKAO" ->{
+            case "KAKAO" -> {
                 String accessToken = kakaoService.getAccessTokenFromKakao(code).getAccessToken();
                 KakaoUserInfoResponse kakaoInfo = kakaoService.getUserInfo(accessToken);
 
                 user = userService.findOrCreateUser(new KakaoUserInfoAdapter(kakaoInfo));
             }
-            case "GITHUB" ->{
+            case "GITHUB" -> {
                 String accesToken = githubService.getAccessTokenFromGithub(code).getAccessToken();
                 GithubUserInfoResponse githubInfo = githubService.getUserInfo(accesToken);
 
@@ -58,29 +58,34 @@ public class OauthLoginController {
             default -> throw new IllegalArgumentException("Unknown provider " + provider);
         }
 
-        // JWT 발급
-        String jwt = jwtProvider.createToken(user.getUserId(), user.getRole());
+        // Access 토큰 발급
+        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole());
+
+        String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
 
         // HttpOnly 쿠키에 담기
-        ResponseCookie cookie = ResponseCookie.from("access", jwt)
+        ResponseCookie cookie = ResponseCookie.from("refresh", refreshToken)
                 .httpOnly(true)
                 .secure(true)
-                .sameSite("Node")
+                .sameSite("None")
                 .path("/")
-                .maxAge(60 * 60)
+                .maxAge(60L * 60 * 24 * 14) // 2주
                 .build();
 
         // LoginResponse 생성
         LoginResponse response = LoginResponse.builder()
-                .accessToken(jwt)
+                .accessToken(accessToken)
                 .userId(user.getUserId())
                 .name(user.getName())
                 .role(user.getRole())
                 .phoneNumber(user.getPhoneNumber())
                 .build();
 
+        log.info("{} 로그인 성공: userId={}, provider={}", provider.toUpperCase(), user.getUserId(), provider.toUpperCase());
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .body(response);
     }
 }
