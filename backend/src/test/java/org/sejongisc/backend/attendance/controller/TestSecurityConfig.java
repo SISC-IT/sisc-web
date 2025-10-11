@@ -17,8 +17,8 @@ public class TestSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // 관리자 전용 엔드포인트들 (구체적인 패턴부터 먼저)
-                        .requestMatchers(HttpMethod.POST, "/api/attendance/sessions/*/attendees/*").hasAnyRole("PRESIDENT", "VICE_PRESIDENT")
-                        .requestMatchers(HttpMethod.GET, "/api/attendance/sessions/*/attendees").hasAnyRole("PRESIDENT", "VICE_PRESIDENT")
+                        .requestMatchers(HttpMethod.POST, "/api/attendance/sessions/*/attendances/*").hasAnyRole("PRESIDENT", "VICE_PRESIDENT")
+                        .requestMatchers(HttpMethod.GET, "/api/attendance/sessions/*/attendances").hasAnyRole("PRESIDENT", "VICE_PRESIDENT")
                         .requestMatchers(HttpMethod.POST, "/api/attendance/sessions").hasAnyRole("PRESIDENT", "VICE_PRESIDENT")
                         .requestMatchers(HttpMethod.PUT, "/api/attendance/sessions/*").hasAnyRole("PRESIDENT", "VICE_PRESIDENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/attendance/sessions/*").hasAnyRole("PRESIDENT", "VICE_PRESIDENT")
