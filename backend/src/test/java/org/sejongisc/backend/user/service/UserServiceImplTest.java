@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -17,18 +18,28 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.dto.SignupRequest;
-import org.sejongisc.backend.user.dto.SignupResponse;
+import org.sejongisc.backend.auth.dto.SignupRequest;
+import org.sejongisc.backend.auth.dto.SignupResponse;
+import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.auth.entity.UserOauthAccount;
+import org.sejongisc.backend.auth.oauth.OauthUserInfo;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
 
-    @Mock private UserRepository userRepository;
-    @Mock private PasswordEncoder passwordEncoder;
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private UserOauthAccountRepository oauthAccountRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks private UserServiceImpl userService;
 
@@ -191,6 +202,72 @@ class UserServiceImplTest {
 
         // then
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_USER);
+    }
+
+    @Test
+    @DisplayName("OAuth 로그인: 기존 계정이 있으면 해당 User 반환")
+    void findOrCreateUser_existingUser() {
+        // given
+        OauthUserInfo mockInfo = new OauthUserInfo() {
+            @Override public AuthProvider getProvider() { return AuthProvider.GOOGLE; }
+            @Override public String getProviderUid() { return "google-123"; }
+            @Override public String getName() { return "홍길동"; }
+        };
+
+        User existingUser = User.builder()
+                .userId(UUID.randomUUID())
+                .name("홍길동")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        UserOauthAccount account = UserOauthAccount.builder()
+                .user(existingUser)
+                .provider(AuthProvider.GOOGLE)
+                .providerUid("google-123")
+                .build();
+
+        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123"))
+                .thenReturn(Optional.of(account));
+
+        // when
+        User result = userService.findOrCreateUser(mockInfo);
+
+        // then
+        assertThat(result).isSameAs(existingUser);
+        verify(oauthAccountRepository).findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123");
+        verifyNoMoreInteractions(userRepository); // 새 저장 안 함
+    }
+
+    @Test
+    @DisplayName("OAuth 로그인: 기존 계정이 없으면 새 User + UserOauthAccount 생성")
+    void findOrCreateUser_newUser() {
+        // given
+        OauthUserInfo mockInfo = new OauthUserInfo() {
+            @Override public AuthProvider getProvider() { return AuthProvider.KAKAO; }
+            @Override public String getProviderUid() { return "kakao-999"; }
+            @Override public String getName() { return "카카오유저"; }
+        };
+
+        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.KAKAO, "kakao-999"))
+                .thenReturn(Optional.empty());
+
+        User newUser = User.builder()
+                .userId(UUID.randomUUID())
+                .name("카카오유저")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.save(any(User.class))).thenReturn(newUser);
+
+        // when
+        User result = userService.findOrCreateUser(mockInfo);
+
+        // then
+        assertThat(result.getName()).isEqualTo("카카오유저");
+        assertThat(result.getRole()).isEqualTo(Role.TEAM_MEMBER);
+
+        verify(userRepository).save(any(User.class));
+        verify(oauthAccountRepository).save(any(UserOauthAccount.class));
     }
 
 }

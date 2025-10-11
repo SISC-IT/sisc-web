@@ -1,4 +1,4 @@
-package org.sejongisc.backend.user.dto;
+package org.sejongisc.backend.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;

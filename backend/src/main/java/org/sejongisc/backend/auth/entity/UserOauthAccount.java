@@ -1,9 +1,9 @@
-package org.sejongisc.backend.user.entity;
+package org.sejongisc.backend.auth.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UuidGenerator;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
+import org.sejongisc.backend.user.entity.User;
 
 import java.util.UUID;
 

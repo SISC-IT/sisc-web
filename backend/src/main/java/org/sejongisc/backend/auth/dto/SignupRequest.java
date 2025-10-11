@@ -1,4 +1,4 @@
-package org.sejongisc.backend.user.dto;
+package org.sejongisc.backend.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
