@@ -10,8 +10,14 @@ const FindEmailResultModal = ({ onClose, result }) => {
       <div className={styles.modal}>
         <h1 className={styles.findEmailH1}>이메일 찾기</h1>
         <div className={styles.textbox}>
-          <p>등록된 회원님의 이메일은</p>
-          <p>{result}입니다.</p>
+          {result ? (
+            <>
+              <p>등록된 회원님의 이메일은</p>
+              <p>{result}입니다.</p>
+            </>
+          ) : (
+            <p>이메일 정보가 등록되어 있지 않습니다.</p>
+          )}
         </div>
 
         <div className={styles.buttonGroup}>
