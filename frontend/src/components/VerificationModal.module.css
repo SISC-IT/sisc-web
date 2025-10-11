@@ -1,0 +1,147 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: white;
+  padding: 56px;
+  border-radius: 16px;
+  width: 500px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 52px;
+}
+
+h1 {
+  color: #000;
+  font-family: Pretendard;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 100%;
+}
+
+h1.findEmailH1 {
+  margin-bottom: 33px;
+}
+
+.closeButton {
+  display: inline-block;
+  border: none;
+  background-color: #ffffff;
+  color: #171717;
+  font-weight: 400;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+.modal p {
+  margin: 0px;
+}
+.textbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.inputGroup {
+  margin-bottom: 21px;
+}
+.inputGroup label {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: #555;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.verificationContainer {
+  justify-content: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.codeInput {
+  flex: 1;
+  height: 48px;
+  padding: 0 12px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 0.4px solid #afafaf;
+  background: #fff;
+  box-sizing: border-box;
+}
+.newPassword {
+  display: flex;
+  width: 50%;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.button {
+  display: inline-flex;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+
+  width: 132px;
+  height: 48px;
+
+  color: white;
+  border: none;
+
+  color: #fff;
+  font-family: Pretendard;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 100%; /* 16px */
+  letter-spacing: -0.48px;
+}
+
+.sendButton {
+  background: #1d80f4;
+}
+.sendButton:disabled {
+  background: #bce5ff;
+}
+
+.submitButton {
+  background: #1d80f4;
+}
+.submitButton:disabled {
+  background: #bce5ff;
+}
+
+.resetPasswordButton {
+  background: #1d80f4;
+  width: 30%;
+}
+.resetPasswordButton:disabled {
+  background: #bce5ff;
+}
