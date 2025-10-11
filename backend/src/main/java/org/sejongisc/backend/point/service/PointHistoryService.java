@@ -12,8 +12,12 @@ import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.repository.PointHistoryRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,41 +57,46 @@ public class PointHistoryService {
 
   // 포인트 증감 기록 생성 및 유저 포인트 업데이트
   @Transactional
+  @Retryable(
+      // 어떤 예외가 발생했을 때 재시도할지 지정합니다.
+      include = {OptimisticLockingFailureException.class},
+      // 최대 재시도 횟수를 지정합니다 - 최초 1회 + 재시도 2회 = 총 3회
+      maxAttempts = 3,
+      // 재시도 사이의 지연 시간을 설정합니다 - 100ms
+      backoff = @Backoff(delay = 100)
+  )
   public PointHistory createPointHistory(UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
     if (amount == 0) {
       throw new CustomException(ErrorCode.INVALID_POINT_AMOUNT);
     }
 
-    int maxRetries = 3;
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (user.getPoint() + amount < 0) {
-          throw new CustomException(ErrorCode.NOT_ENOUGH_POINT_BALANCE);
-        }
-        user.updatePoint(amount);
-
-        PointHistory history = PointHistory.of(userId, amount, reason, origin, originId);
-        return pointHistoryRepository.save(history);
-      } catch (OptimisticLockException | ObjectOptimisticLockingFailureException e) {
-        log.warn("낙관적 락 충돌 발생 : 재시도 {}회차", attempt);
-        if (attempt == maxRetries) {
-          throw new CustomException(ErrorCode.CONCURRENT_UPDATE);
-        }
-        try {
-          Thread.sleep(100); // 백오프 - 직접 sleep
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-      }
+    if (user.getPoint() + amount < 0) {
+      throw new CustomException(ErrorCode.NOT_ENOUGH_POINT_BALANCE);
     }
-    return null;
+
+    log.info("포인트 업데이트 시도: userId={}, currentPoint={}, amount={}", userId, user.getPoint(), amount);
+    user.updatePoint(amount);
+
+    PointHistory history = PointHistory.of(userId, amount, reason, origin, originId);
+    return pointHistoryRepository.save(history);
+  }
+
+  /**
+   * @Retryable에서 모든 재시도를 실패했을 때 호출될 메서드입니다.
+   * @param e @Retryable에서 발생한 마지막 예외
+   * @param userId, ... 원본 메서드와 동일한 파라미터
+   */
+  @Recover
+  public PointHistory recover(OptimisticLockingFailureException e, UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
+    log.error("포인트 업데이트 최종 실패: userId={}, amount={}", userId, amount, e);
+    throw new CustomException(ErrorCode.CONCURRENT_UPDATE);
   }
 
   // 유저 탈퇴 시 특정 유저의 모든 포인트 기록 삭제
+  @Transactional
   public void deleteAllPointHistoryByUserId(UUID userId) {
     pointHistoryRepository.deleteAllByUserId(userId);
   }

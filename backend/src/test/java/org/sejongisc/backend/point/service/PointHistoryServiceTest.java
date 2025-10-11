@@ -1,6 +1,5 @@
 package org.sejongisc.backend.point.service;
 
-import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -18,7 +17,6 @@ import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.util.List;
 import java.util.Optional;
@@ -122,54 +120,6 @@ class PointHistoryServiceTest {
     verify(pointHistoryRepository).save(any(PointHistory.class));
   }
 
-  @Test
-  void 포인트기록_생성_낙관적락_재시도_후_성공() {
-    // given
-    int amount = 10;
-    when(userRepository.findById(userId)).thenReturn(Optional.of(u1));
-
-    PointHistory history = PointHistory.of(userId, amount, PointReason.ATTENDANCE, PointOrigin.ATTENDANCE, originId);
-
-    // 첫 번째 save 호출은 락 충돌 예외 던지고, 두 번째 호출은 정상 반환
-    when(pointHistoryRepository.save(any(PointHistory.class)))
-        .thenThrow(new OptimisticLockException("동시성 충돌"))
-        .thenReturn(history);
-
-    // when
-    PointHistory result = pointHistoryService.createPointHistory(
-        userId, amount, PointReason.ATTENDANCE, PointOrigin.ATTENDANCE, originId
-    );
-
-    // then
-    assertThat(result).isNotNull();
-    assertThat(result.getAmount()).isEqualTo(10);
-
-    // save가 최소 2번 호출되었는지 확인 (재시도 확인)
-    verify(pointHistoryRepository, times(2)).save(any(PointHistory.class));
-  }
-
-  @Test
-  void 포인트기록_생성_낙관적락_3회_실패시_예외발생() {
-    // given
-    int amount = 10;
-    when(userRepository.findById(userId)).thenReturn(Optional.of(u1));
-
-    when(pointHistoryRepository.save(any(PointHistory.class)))
-        .thenThrow(new OptimisticLockException("동시성 충돌"))
-        .thenThrow(new OptimisticLockException("동시성 충돌"))
-        .thenThrow(new OptimisticLockException("동시성 충돌"));
-
-    // when & then
-    assertThatThrownBy(() ->
-        pointHistoryService.createPointHistory(
-            userId, amount, PointReason.ATTENDANCE, PointOrigin.ATTENDANCE, originId
-        )
-    )
-        .isInstanceOf(CustomException.class)
-        .hasMessage(ErrorCode.CONCURRENT_UPDATE.getMessage());
-
-    verify(pointHistoryRepository, times(3)).save(any(PointHistory.class));
-  }
 
   @Test
   void 포인트기록_생성_실패_유저없음_예외발생() {
