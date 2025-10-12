@@ -69,6 +69,10 @@ public class GoogleServiceImpl implements Oauth2Service<GoogleTokenResponse, Goo
                 .bodyToMono(GoogleTokenResponse.class)
                 .block();
 
+        if (tokenResponse == null || tokenResponse.getAccessToken() == null) {
+            throw new RuntimeException("Token response is empty");
+        }
+
         Function<String, String> mask = token -> {
             if (token == null || token.length() < 8) return "****";
             return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
@@ -99,6 +103,10 @@ public class GoogleServiceImpl implements Oauth2Service<GoogleTokenResponse, Goo
                         clientResponse -> Mono.error(new RuntimeException("Internal Server Error")))
                 .bodyToMono(GoogleUserInfoResponse.class)
                 .block();
+
+        if(userInfo == null) {
+            throw new RuntimeException("UserInfo response is empty");
+        }
 
         log.info(" [Google Service] Sub(ID)   ------> {}", userInfo.getSub());
         log.info(" [Google Service] Email     ------> {}", userInfo.getEmail());
