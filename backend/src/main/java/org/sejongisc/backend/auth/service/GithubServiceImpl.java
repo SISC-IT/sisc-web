@@ -89,6 +89,10 @@ public class GithubServiceImpl implements Oauth2Service<GithubTokenResponse, Git
                 .bodyToMono(GithubUserInfoResponse.class)
                 .block();
 
+        if (userInfo == null) {
+            throw new RuntimeException("UserInfo response is empty");
+        }
+
         if (log.isDebugEnabled()) {
             log.debug(" [Github Service] ID    ------> {}", userInfo.getId());
             log.debug(" [Github Service] Login ------> {}", userInfo.getLogin());

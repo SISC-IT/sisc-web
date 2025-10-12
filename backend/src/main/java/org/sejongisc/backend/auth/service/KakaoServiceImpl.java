@@ -20,8 +20,8 @@ import java.util.function.Function;
 @Service("KAKAO")
 public class KakaoServiceImpl implements Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse> {
 
-    private String clientId;
-    private String redirectUri;
+    private final String clientId;
+    private final String redirectUri;
     private final String KAUTH_TOKEN_URL_HOST;
     private final String KAUTH_USER_URL_HOST;
 
