@@ -11,14 +11,13 @@ import org.sejongisc.backend.auth.dto.LoginRequest;
 import org.sejongisc.backend.auth.dto.LoginResponse;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class LoginServiceImpl implements LoginService, UserDetailsService {
+public class LoginServiceImpl implements LoginService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -47,13 +46,4 @@ public class LoginServiceImpl implements LoginService, UserDetailsService {
                 .point(user.getPoint())
                 .build();
     }
-
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findUserByEmail(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        return new CustomUserDetails(user);
-    }
-
 }

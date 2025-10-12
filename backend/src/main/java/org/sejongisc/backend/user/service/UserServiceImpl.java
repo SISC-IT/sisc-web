@@ -64,6 +64,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User findOrCreateUser(OauthUserInfo oauthInfo) {
         String providerUid = oauthInfo.getProviderUid();
 
@@ -75,7 +76,6 @@ public class UserServiceImpl implements UserService {
                     // 새로운 User 생성
                     User newUser = User.builder()
                             .name(oauthInfo.getName())
-                            // .email(kakaoInfo.getKakaoAccount().getEmail()) // Email을 받기 위해서는 Kakao에 신청
                             .role(Role.TEAM_MEMBER)
                             .build();
 

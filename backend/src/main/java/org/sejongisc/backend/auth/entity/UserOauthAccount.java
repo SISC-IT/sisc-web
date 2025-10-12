@@ -8,7 +8,10 @@ import org.sejongisc.backend.user.entity.User;
 import java.util.UUID;
 
 @Entity
-@Table(name = "user_oauth_account")
+@Table(name = "user_oauth_account",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"provider", "provider_uid"})
+        })
 @Getter
 @Setter
 @NoArgsConstructor

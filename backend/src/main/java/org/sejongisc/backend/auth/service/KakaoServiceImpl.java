@@ -9,52 +9,68 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserter;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.util.function.Function;
+
 @Slf4j
 @Service
-public class KakaoServiceImpl implements KakaoService{
+public class KakaoServiceImpl implements Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse> {
 
     private String clientId;
+    private String redirectUri;
     private final String KAUTH_TOKEN_URL_HOST;
     private final String KAUTH_USER_URL_HOST;
 
     @Autowired
-    public KakaoServiceImpl(@Value("${kakao.client.id}") String clientId) {
+    public KakaoServiceImpl(@Value("${kakao.client.id}") String clientId,
+                            @Value("${kakao.redirect.uri}") String redirectUri) {
         this.clientId = clientId;
+        this.redirectUri = redirectUri;
         KAUTH_TOKEN_URL_HOST = "https://kauth.kakao.com";
         KAUTH_USER_URL_HOST = "https://kapi.kakao.com";
     }
 
     // 테스트에서 MockwebServer 주소 주입할 수 있는 생성자
-    public KakaoServiceImpl(String clientId,  String KAUTH_TOKEN_URL_HOST, String KAUTH_USER_URL_HOST) {
+    public KakaoServiceImpl(String clientId, String redirectUri, String KAUTH_TOKEN_URL_HOST, String KAUTH_USER_URL_HOST) {
         this.clientId = clientId;
+        this.redirectUri = redirectUri;
         this.KAUTH_TOKEN_URL_HOST = KAUTH_TOKEN_URL_HOST.replace("https://", "http://");
         this.KAUTH_USER_URL_HOST = KAUTH_USER_URL_HOST.replace("https://", "http://");
     }
 
     @Override
-    public KakaoTokenResponse getAccessTokenFromKakao(String code) {
+    public KakaoTokenResponse getAccessToken(String code) {
 
         KakaoTokenResponse kakaoTokenResponse = WebClient.create(KAUTH_TOKEN_URL_HOST).post()
-                .uri(uriBuilder -> uriBuilder
-                        // .scheme("https")
-                        .path("/oauth/token")
-                        .queryParam("grant_type", "authorization_code")
-                        .queryParam("client_id", clientId)
-                        .queryParam("code", code)
-                        .build(true))
+                .uri(uriBuilder -> uriBuilder.path("/oauth/token").build(true))
                 .header(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())
+                .body(BodyInserters.fromFormData("grant_type", "authorization_code")
+                        .with("client_id", clientId)
+                        .with("redirect_uri", redirectUri)
+                        .with("code", code))
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> Mono.error(new RuntimeException("Invalid Parameter")))
                 .onStatus(HttpStatusCode::is5xxServerError, clientResponse -> Mono.error(new RuntimeException("Internal Server Error")))
                 .bodyToMono(KakaoTokenResponse.class)
                 .block();
 
-        log.info(" [Kakao Service] Access Token ------> {}", kakaoTokenResponse.getAccessToken());
-        log.info(" [Kakao Service] Refresh Token ------> {}", kakaoTokenResponse.getRefreshToken());
-        log.info(" [Kakao Service] Id Token ------> {}", kakaoTokenResponse.getIdToken());
+        String accessToken = kakaoTokenResponse.getAccessToken();
+        String refreshToken = kakaoTokenResponse.getRefreshToken();
+        String idToken = kakaoTokenResponse.getIdToken();
+
+
+        Function<String, String> mask = token -> {
+            if (token == null || token.length() < 8) return "****";
+            return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
+        };
+
+        log.debug(" [Kakao Service] Access Token ------> {}", mask.apply(accessToken));
+        log.info(" [Kakao Service] Refresh Token ------> {}", mask.apply(refreshToken));
+        log.info(" [Kakao Service] Id Token ------> {}", mask.apply(idToken));
         log.info(" [Kakao Service] Scope ------> {}", kakaoTokenResponse.getScope());
 
         return kakaoTokenResponse;
@@ -77,9 +93,11 @@ public class KakaoServiceImpl implements KakaoService{
                 .bodyToMono(KakaoUserInfoResponse.class)
                 .block();
 
-        log.info(" [Kakao Service] Auth ID ------> {}", userInfo.getId());
-        log.info(" [Kakao Service] NickName ------> {}", userInfo.getKakaoAccount().getProfile().getNickName());
-        log.info(" [Kakao Service] Id Token ------> {}", userInfo.getKakaoAccount().getProfile().getProfileImageUrl());
+        if (log.isDebugEnabled()) {
+            log.info(" [Kakao Service] Auth ID ------> {}", userInfo.getId());
+            log.info(" [Kakao Service] NickName ------> {}", userInfo.getKakaoAccount().getProfile().getNickName());
+            log.info(" [Kakao Service] Id Token ------> {}", userInfo.getKakaoAccount().getProfile().getProfileImageUrl());
+        }
 
         return userInfo;
     }

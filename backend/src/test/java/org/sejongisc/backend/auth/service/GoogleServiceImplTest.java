@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GoogleServiceImplTest {
 
     private MockWebServer mockWebServer;
-    private GoogleServiceImpl googleService;
+    private GoogleServiceImpl oauth2Service;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
@@ -25,7 +25,7 @@ class GoogleServiceImplTest {
         mockWebServer.start();
 
         // 테스트 대상 Service 초기화 (Mock 서버 주소로 주입)
-        googleService = new GoogleServiceImpl(
+        oauth2Service = new GoogleServiceImpl(
                 "test-client-id",
                 "test-client-secret",
                 "http://localhost:8080/callback",
@@ -61,7 +61,7 @@ class GoogleServiceImplTest {
                 .addHeader("Content-Type", "application/json"));
 
         // when
-        GoogleTokenResponse response = googleService.getAccessTokenFromGoogle("test-code");
+        GoogleTokenResponse response = oauth2Service.getAccessToken("test-code");
 
         // then
         assertThat(response).isNotNull();
@@ -87,7 +87,7 @@ class GoogleServiceImplTest {
                 .addHeader("Content-Type", "application/json"));
 
         // when
-        GoogleUserInfoResponse result = googleService.getUserInfo("mock-access-token");
+        GoogleUserInfoResponse result = oauth2Service.getUserInfo("mock-access-token");
 
         // then
         assertThat(result).isNotNull();

@@ -10,12 +10,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.util.function.Function;
+
 @Slf4j
 @Service
-public class GoogleServiceImpl implements GoogleService {
+public class GoogleServiceImpl implements Oauth2Service<GoogleTokenResponse, GoogleUserInfoResponse> {
 
     private final String GOOGLE_TOKEN_URL_HOST;
     private final String GOOGLE_USERINFO_URL_HOST;
@@ -39,7 +42,7 @@ public class GoogleServiceImpl implements GoogleService {
 
     // 테스트용 생성자 (MockWebServer 등)
     public GoogleServiceImpl(String clientId, String clientSecret, String redirectUri,
-                                String GOOGLE_TOKEN_URL_HOST, String GOOGLE_USERINFO_URL_HOST) {
+                             String GOOGLE_TOKEN_URL_HOST, String GOOGLE_USERINFO_URL_HOST) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
@@ -48,18 +51,16 @@ public class GoogleServiceImpl implements GoogleService {
     }
 
     @Override
-    public GoogleTokenResponse getAccessTokenFromGoogle(String code) {
+    public GoogleTokenResponse getAccessToken(String code) {
 
         GoogleTokenResponse tokenResponse = WebClient.create(GOOGLE_TOKEN_URL_HOST).post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/token")
-                        .queryParam("grant_type", "authorization_code")
-                        .queryParam("client_id", clientId)
-                        .queryParam("client_secret", clientSecret)
-                        .queryParam("redirect_uri", redirectUri)
-                        .queryParam("code", code)
-                        .build(true))
+                .uri(uriBuilder -> uriBuilder.path("/token").build(true))
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .body(BodyInserters.fromFormData("grant_type", "authorization_code")
+                        .with("client_id", clientId)
+                        .with("client_secret", clientSecret)
+                        .with("redirect_uri", redirectUri)
+                        .with("code", code))
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError,
                         clientResponse -> Mono.error(new RuntimeException("Invalid Parameter")))
@@ -68,9 +69,14 @@ public class GoogleServiceImpl implements GoogleService {
                 .bodyToMono(GoogleTokenResponse.class)
                 .block();
 
-        log.info(" [Google Service] Access Token  ------> {}", tokenResponse.getAccessToken());
-        log.info(" [Google Service] Refresh Token ------> {}", tokenResponse.getRefreshToken());
-        log.info(" [Google Service] Id Token      ------> {}", tokenResponse.getIdToken());
+        Function<String, String> mask = token -> {
+            if (token == null || token.length() < 8) return "****";
+            return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
+        };
+
+        log.info(" [Google Service] Access Token  ------> {}", mask.apply(tokenResponse.getAccessToken()));
+        log.info(" [Google Service] Refresh Token ------> {}", mask.apply(tokenResponse.getRefreshToken()));
+        log.info(" [Google Service] Id Token      ------> {}", mask.apply(tokenResponse.getIdToken()));
         log.info(" [Google Service] Scope         ------> {}", tokenResponse.getScope());
 
         return tokenResponse;

@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.Date;
 import java.util.HashMap;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class KakaoUserInfoResponse {
@@ -38,14 +40,10 @@ public class KakaoUserInfoResponse {
     @JsonProperty("kakao_account")
     public KakaoAccount kakaoAccount;
 
-    //uuid 등 추가 정보
-    @JsonProperty("for_partner")
-    public Partner partner;
-
     @Getter
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public class KakaoAccount {
+    public static class KakaoAccount {
 
         //프로필 정보 제공 동의 여부
         @JsonProperty("profile_needs_agreement")
@@ -151,7 +149,7 @@ public class KakaoUserInfoResponse {
         @Getter
         @NoArgsConstructor
         @JsonIgnoreProperties(ignoreUnknown = true)
-        public class Profile {
+        public static class Profile {
 
             //닉네임
             @JsonProperty("nickname")
@@ -168,22 +166,12 @@ public class KakaoUserInfoResponse {
             //프로필 사진 URL 기본 프로필인지 여부
             //true : 기본 프로필, false : 사용자 등록
             @JsonProperty("is_default_image")
-            public String isDefaultImage;
+            public boolean isDefaultImage;
 
             //닉네임이 기본 닉네임인지 여부
             //true : 기본 닉네임, false : 사용자 등록
             @JsonProperty("is_default_nickname")
             public Boolean isDefaultNickName;
-
         }
-    }
-
-    @Getter
-    @NoArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public class Partner {
-        //고유 ID
-        @JsonProperty("uuid")
-        public String uuid;
     }
 }

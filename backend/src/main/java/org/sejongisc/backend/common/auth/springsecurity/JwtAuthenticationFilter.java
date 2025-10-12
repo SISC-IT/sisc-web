@@ -54,11 +54,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (EXCLUDE_PATTERNS.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestURI))) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
             String token = resolveToken(request);
             if (token != null && jwtParser.validationToken(token)) {
@@ -74,8 +69,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (JwtException e) {
             ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.INVALID_ACCESS_TOKEN);
-            response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(toJson(errorResponse));
         }
     }

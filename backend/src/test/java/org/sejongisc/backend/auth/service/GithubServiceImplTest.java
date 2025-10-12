@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GithubServiceImplTest {
 
     private MockWebServer mockWebServer;
-    private GithubServiceImpl githubService;
+    private GithubServiceImpl oauth2Service;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
@@ -25,7 +25,7 @@ class GithubServiceImplTest {
         mockWebServer.start();
 
         // ✅ 테스트용 생성자 사용
-        githubService = new GithubServiceImpl(
+        oauth2Service = new GithubServiceImpl(
                 "test-client-id",
                 "test-client-secret",
                 mockWebServer.url("/").toString(),
@@ -52,7 +52,7 @@ class GithubServiceImplTest {
                 .setBody(mockJson)
                 .addHeader("Content-Type", "application/json"));
 
-        GithubTokenResponse response = githubService.getAccessTokenFromGithub("test-code");
+        GithubTokenResponse response = oauth2Service.getAccessToken("test-code");
 
         assertThat(response).isNotNull();
         assertThat(response.getAccessToken()).isEqualTo("mock-access-token");
@@ -74,7 +74,7 @@ class GithubServiceImplTest {
                 .setBody(mockJson)
                 .addHeader("Content-Type", "application/json"));
 
-        GithubUserInfoResponse userInfo = githubService.getUserInfo("mock-token");
+        GithubUserInfoResponse userInfo = oauth2Service.getUserInfo("mock-token");
 
         assertThat(userInfo).isNotNull();
         assertThat(userInfo.getLogin()).isEqualTo("testlogin");

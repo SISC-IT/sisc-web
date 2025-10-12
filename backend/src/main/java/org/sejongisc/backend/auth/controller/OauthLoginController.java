@@ -1,62 +1,145 @@
 package org.sejongisc.backend.auth.controller;
 
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.auth.dto.*;
+import org.sejongisc.backend.auth.service.*;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
-import org.sejongisc.backend.auth.dto.GithubUserInfoResponse;
-import org.sejongisc.backend.auth.dto.GoogleUserInfoResponse;
-import org.sejongisc.backend.auth.dto.KakaoUserInfoResponse;
-import org.sejongisc.backend.auth.dto.LoginResponse;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.oauth.GithubUserInfoAdapter;
 import org.sejongisc.backend.auth.oauth.GoogleUserInfoAdapter;
 import org.sejongisc.backend.auth.oauth.KakaoUserInfoAdapter;
-import org.sejongisc.backend.auth.service.GithubService;
-import org.sejongisc.backend.auth.service.GoogleService;
-import org.sejongisc.backend.auth.service.KakaoService;
 import org.sejongisc.backend.user.service.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Slf4j
 @RestController
-@RequestMapping("/auth/login")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class OauthLoginController {
 
-    private final GoogleService googleService;
-    private final KakaoService kakaoService;
-    private final GithubService githubService;
+    private final Map<String, Oauth2Service<?, ?>> oauth2Services;
+    private final LoginService loginService;
     private final UserService userService;
     private final JwtProvider jwtProvider;
+    private final OauthStateService oauthStateService;
 
-    @GetMapping("/{provider}")
-    public ResponseEntity<LoginResponse> OauthLogin(@PathVariable("provider") String provider, @RequestParam("code") String code) {
-        User user;
+    @Value("${google.client.id}")
+    private String googleClientId;
+
+    @Value("${google.redirect.uri}")
+    private String googleRedirectUri;
+
+    @Value("${kakao.client.id}")
+    private String kakaoClientId;
+
+    @Value("${kakao.redirect.uri}")
+    private String kakaoRedirectUri;
+
+    @Value("${github.client.id}")
+    private String githubClientId;
+
+    @Value("${github.redirect.uri}")
+    private String githubRedirectUri;
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+
+        LoginResponse response = loginService.login(request);
+
+        ResponseCookie cookie = ResponseCookie.from("refresh", response.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(60L * 60 * 24 * 14)
+                .build();
+
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + response.getAccessToken())
+                .body(response);
+    }
+
+    // OAuth 로그인 시작 (state 생성 + 각 provider별 인증 URL 반환)
+    @GetMapping("/oauth/{provider}/init")
+    public ResponseEntity<String> startOauthLogin(@PathVariable String provider, HttpSession session) {
+        String state = oauthStateService.generateAndSaveState(session);
+        String authUrl;
 
         switch (provider.toUpperCase()) {
-            case "GOOGLE" -> {
-                String accessToken = googleService.getAccessTokenFromGoogle(code).getAccessToken();
-                GoogleUserInfoResponse googleInfo = googleService.getUserInfo(accessToken);
-
-                user = userService.findOrCreateUser(new GoogleUserInfoAdapter(googleInfo));
-            }
-            case "KAKAO" -> {
-                String accessToken = kakaoService.getAccessTokenFromKakao(code).getAccessToken();
-                KakaoUserInfoResponse kakaoInfo = kakaoService.getUserInfo(accessToken);
-
-                user = userService.findOrCreateUser(new KakaoUserInfoAdapter(kakaoInfo));
-            }
-            case "GITHUB" -> {
-                String accesToken = githubService.getAccessTokenFromGithub(code).getAccessToken();
-                GithubUserInfoResponse githubInfo = githubService.getUserInfo(accesToken);
-
-                user = userService.findOrCreateUser(new GithubUserInfoAdapter(githubInfo));
-            }
+            case "GOOGLE" -> authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
+                    "?client_id=" + googleClientId +
+                    "&redirect_uri=" + googleRedirectUri +
+                    "&response_type=code" +
+                    "&scope=email%20profile" +
+                    "&state=" + state;
+            case "KAKAO" -> authUrl = "https://kauth.kakao.com/oauth/authorize" +
+                    "?client_id=" + kakaoClientId +
+                    "&redirect_uri=" + kakaoRedirectUri +
+                    "&response_type=code" +
+                    "&state=" + state;
+            case "GITHUB" -> authUrl = "https://github.com/login/oauth/authorize" +
+                    "?client_id=" + githubClientId +
+                    "&redirect_uri=" + githubRedirectUri +
+                    "&scope=user:email" +
+                    "&state=" + state;
             default -> throw new IllegalArgumentException("Unknown provider " + provider);
         }
+
+        log.debug("Generated OAuth URL for {}: {}", provider, authUrl);
+        return ResponseEntity.ok(authUrl);
+    }
+
+    // OAuth 인증 완료 후 Code + State 처리
+    @PostMapping("/login/{provider}")
+    public ResponseEntity<LoginResponse> OauthLogin(@PathVariable("provider") String provider, @RequestParam("code") String code, @RequestParam("state") String state, HttpSession session) {
+
+        //  서버에 저장된 state와 요청으로 받은 state 비교
+        String savedState = oauthStateService.getStateFromSession(session);
+
+        if(savedState == null || !savedState.equals(state)) {
+            log.warn("[{}] Invalid OAuth state detected. Expected={}, Received={}", provider, savedState, state);
+            return ResponseEntity.status(401).build();
+        }
+
+        oauthStateService.clearState(session);
+
+        Oauth2Service<?, ?> service = oauth2Services.get(provider.toUpperCase());
+        if (service == null) {
+            throw new IllegalArgumentException("Unknown provider " + provider);
+        }
+
+        User user = switch (provider.toUpperCase()) {
+            case "GOOGLE" -> {
+                var googleService = (Oauth2Service<GoogleTokenResponse, GoogleUserInfoResponse>) service;
+                var token = googleService.getAccessToken(code);
+                var info = googleService.getUserInfo(token.getAccessToken());
+                yield userService.findOrCreateUser(new GoogleUserInfoAdapter(info));
+            }
+            case "KAKAO" -> {
+                var kakaoService = (Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse>) service;
+                var token = kakaoService.getAccessToken(code);
+                var info = kakaoService.getUserInfo(token.getAccessToken());
+                yield userService.findOrCreateUser(new KakaoUserInfoAdapter(info));
+            }
+            case "GITHUB" -> {
+                var githubService = (Oauth2Service<GithubTokenResponse, GithubUserInfoResponse>) service;
+                var token = githubService.getAccessToken(code);
+                var info = githubService.getUserInfo(token.getAccessToken());
+                yield userService.findOrCreateUser(new GithubUserInfoAdapter(info));
+            }
+            default -> throw new IllegalArgumentException("Unknown provider " + provider);
+        };
 
         // Access 토큰 발급
         String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole());

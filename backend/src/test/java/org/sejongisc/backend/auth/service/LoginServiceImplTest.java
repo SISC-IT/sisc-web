@@ -129,43 +129,4 @@ class LoginServiceImplTest {
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
     }
-
-    @Test
-    @DisplayName("loadUserByUsername - 유저가 존재하면 CustomUserDetails 반환")
-    void loadUserByUsername_success() {
-        // given
-        User user = User.builder()
-                .userId(UUID.randomUUID())
-                .name("홍길동")
-                .email("hong@example.com")
-                .passwordHash("ENCODED")
-                .role(Role.TEAM_MEMBER)
-                .phoneNumber("01012345678")
-                .build();
-
-        when(userRepository.findUserByEmail("hong@example.com"))
-                .thenReturn(Optional.of(user));
-
-        // when
-        UserDetails userDetails = loginService.loadUserByUsername("hong@example.com");
-
-        // then
-        assertThat(userDetails.getUsername()).isEqualTo("hong@example.com");
-        assertThat(userDetails.getAuthorities())
-                .extracting(GrantedAuthority::getAuthority)
-                .containsExactly("TEAM_MEMBER");
-    }
-
-    @Test
-    @DisplayName("loadUserByUsername - 유저가 존재하지 않으면 CustomException(USER_NOT_FOUND) 발생")
-    void loadUserByUsername_userNotFound() {
-        // given
-        when(userRepository.findUserByEmail("notfound@example.com"))
-                .thenReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> loginService.loadUserByUsername("notfound@example.com"))
-                .isInstanceOf(CustomException.class)
-                .hasMessageContaining("유저를 찾을 수 없습니다.");
-    }
 }

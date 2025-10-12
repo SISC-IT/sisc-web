@@ -9,12 +9,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserter;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.util.function.Function;
+
 @Slf4j
 @Service
-public class GithubServiceImpl implements GithubService {
+public class GithubServiceImpl implements Oauth2Service<GithubTokenResponse, GithubUserInfoResponse> {
 
     private final String clientId;
     private final String clientSecret;
@@ -42,14 +46,14 @@ public class GithubServiceImpl implements GithubService {
     }
 
     @Override
-    public GithubTokenResponse getAccessTokenFromGithub(String code) {
+    public GithubTokenResponse getAccessToken(String code) {
         GithubTokenResponse tokenResponse = WebClient.create(TOKEN_URL).post()
-                .uri(uriBuilder -> uriBuilder
-                        .queryParam("client_id", clientId)
-                        .queryParam("client_secret", clientSecret)
-                        .queryParam("code", code)
-                        .build(true))
+                .uri(uriBuilder -> uriBuilder.build(true))
                 .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .body(BodyInserters.fromFormData("client_id", clientId)
+                        .with("client_secret", clientSecret)
+                        .with("code", code))
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError,
                         clientResponse -> Mono.error(new RuntimeException("Invalid Parameter")))
@@ -58,8 +62,13 @@ public class GithubServiceImpl implements GithubService {
                 .bodyToMono(GithubTokenResponse.class)
                 .block();
 
-        log.info(" [Github Service] Access Token ------> {}", tokenResponse.getAccessToken());
-        log.info(" [Github Service] Scope        ------> {}", tokenResponse.getScope());
+        Function<String, String> mask = token -> {
+            if(token == null || token.length() < 8) return "****";
+            return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
+        };
+
+        log.info(" [Github Service] Access Token ------> {}", mask.apply(tokenResponse.getAccessToken()));
+        log.info(" [Github Service] Scope        ------> {}", mask.apply(tokenResponse.getScope()));
 
         return tokenResponse;
     }
@@ -76,10 +85,11 @@ public class GithubServiceImpl implements GithubService {
                 .bodyToMono(GithubUserInfoResponse.class)
                 .block();
 
-        log.info(" [Github Service] ID    ------> {}", userInfo.getId());
-        log.info(" [Github Service] Login ------> {}", userInfo.getLogin());
-        log.info(" [Github Service] Email ------> {}", userInfo.getEmail());
-        log.info(" [Github Service] Name  ------> {}", userInfo.getName());
+        if (log.isDebugEnabled()) {
+            log.debug(" [Github Service] ID    ------> {}", userInfo.getId());
+            log.debug(" [Github Service] Login ------> {}", userInfo.getLogin());
+            log.debug(" [Github Service] Name  ------> {}", userInfo.getName());
+        }
 
         return userInfo;
     }

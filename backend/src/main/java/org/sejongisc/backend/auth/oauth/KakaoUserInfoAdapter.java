@@ -20,8 +20,11 @@ public class KakaoUserInfoAdapter implements OauthUserInfo {
 
     @Override
     public String getName() {
-        return Optional.ofNullable(kakaoInfo.getKakaoAccount().getName())
-                .orElse(kakaoInfo.getKakaoAccount().getProfile().getNickName());
+        return Optional.ofNullable(kakaoInfo.getKakaoAccount())
+                .flatMap(account -> Optional.ofNullable(account.getName())
+                        .or(() -> Optional.ofNullable(account.getProfile())
+                                .map(KakaoUserInfoResponse.KakaoAccount.Profile::getNickName)))
+                .orElse("Unknown");
     }
 
     @Override
