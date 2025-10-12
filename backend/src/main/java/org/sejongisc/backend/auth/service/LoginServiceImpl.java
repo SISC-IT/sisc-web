@@ -29,7 +29,7 @@ public class LoginServiceImpl implements LoginService {
         User user = userRepository.findUserByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 

@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 import java.util.function.Function;
 
 @Slf4j
-@Service
+@Service("GITHUB")
 public class GithubServiceImpl implements Oauth2Service<GithubTokenResponse, GithubUserInfoResponse> {
 
     private final String clientId;
@@ -62,13 +62,17 @@ public class GithubServiceImpl implements Oauth2Service<GithubTokenResponse, Git
                 .bodyToMono(GithubTokenResponse.class)
                 .block();
 
+        if (tokenResponse == null || tokenResponse.getAccessToken() == null) {
+            throw new RuntimeException("Token response is empty");
+        }
+
         Function<String, String> mask = token -> {
             if(token == null || token.length() < 8) return "****";
             return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
         };
 
-        log.info(" [Github Service] Access Token ------> {}", mask.apply(tokenResponse.getAccessToken()));
-        log.info(" [Github Service] Scope        ------> {}", mask.apply(tokenResponse.getScope()));
+        log.debug(" [Github Service] Access Token ------> {}", mask.apply(tokenResponse.getAccessToken()));
+        log.debug(" [Github Service] Scope        ------> {}", mask.apply(tokenResponse.getScope()));
 
         return tokenResponse;
     }

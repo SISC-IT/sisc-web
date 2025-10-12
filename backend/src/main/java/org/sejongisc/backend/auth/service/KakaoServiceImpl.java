@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 import java.util.function.Function;
 
 @Slf4j
-@Service
+@Service("KAKAO")
 public class KakaoServiceImpl implements Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse> {
 
     private String clientId;
@@ -58,6 +58,10 @@ public class KakaoServiceImpl implements Oauth2Service<KakaoTokenResponse, Kakao
                 .bodyToMono(KakaoTokenResponse.class)
                 .block();
 
+        if (kakaoTokenResponse == null || kakaoTokenResponse.getAccessToken() == null) {
+            throw new RuntimeException("Token response is empty");
+        }
+
         String accessToken = kakaoTokenResponse.getAccessToken();
         String refreshToken = kakaoTokenResponse.getRefreshToken();
         String idToken = kakaoTokenResponse.getIdToken();
@@ -69,9 +73,9 @@ public class KakaoServiceImpl implements Oauth2Service<KakaoTokenResponse, Kakao
         };
 
         log.debug(" [Kakao Service] Access Token ------> {}", mask.apply(accessToken));
-        log.info(" [Kakao Service] Refresh Token ------> {}", mask.apply(refreshToken));
-        log.info(" [Kakao Service] Id Token ------> {}", mask.apply(idToken));
-        log.info(" [Kakao Service] Scope ------> {}", kakaoTokenResponse.getScope());
+        log.debug(" [Kakao Service] Refresh Token ------> {}", mask.apply(refreshToken));
+        log.debug(" [Kakao Service] Id Token ------> {}", mask.apply(idToken));
+        log.debug(" [Kakao Service] Scope ------> {}", kakaoTokenResponse.getScope());
 
         return kakaoTokenResponse;
     }

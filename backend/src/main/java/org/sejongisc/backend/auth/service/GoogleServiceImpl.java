@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 import java.util.function.Function;
 
 @Slf4j
-@Service
+@Service("GOOGLE")
 public class GoogleServiceImpl implements Oauth2Service<GoogleTokenResponse, GoogleUserInfoResponse> {
 
     private final String GOOGLE_TOKEN_URL_HOST;
@@ -74,10 +74,10 @@ public class GoogleServiceImpl implements Oauth2Service<GoogleTokenResponse, Goo
             return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
         };
 
-        log.info(" [Google Service] Access Token  ------> {}", mask.apply(tokenResponse.getAccessToken()));
-        log.info(" [Google Service] Refresh Token ------> {}", mask.apply(tokenResponse.getRefreshToken()));
-        log.info(" [Google Service] Id Token      ------> {}", mask.apply(tokenResponse.getIdToken()));
-        log.info(" [Google Service] Scope         ------> {}", tokenResponse.getScope());
+        log.debug(" [Google Service] Access Token  ------> {}", mask.apply(tokenResponse.getAccessToken()));
+        log.debug(" [Google Service] Refresh Token ------> {}", mask.apply(tokenResponse.getRefreshToken()));
+        log.debug(" [Google Service] Id Token      ------> {}", mask.apply(tokenResponse.getIdToken()));
+        log.debug(" [Google Service] Scope         ------> {}", tokenResponse.getScope());
 
         return tokenResponse;
     }
