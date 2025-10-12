@@ -43,11 +43,14 @@ public class User extends BasePostgresEntity{
     @Column(columnDefinition = "integer default 0")
     private Integer point;
 
+    // 포인트 총량 업데이트를 위한 낙관적 락 버전 필드
+    @Version
+    private Long version;
+
     // User : OAuthAccounts = 1 : N(여러 OAuth를 연결 가능)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
-
 
     // 기본값 지정
     @PrePersist
@@ -55,5 +58,8 @@ public class User extends BasePostgresEntity{
         if (this.role == null) {
             this.role = Role.TEAM_MEMBER;
         }
+    }
+    public void updatePoint(int amount) {
+        this.point += amount;
     }
 }
