@@ -97,10 +97,16 @@ public class KakaoServiceImpl implements Oauth2Service<KakaoTokenResponse, Kakao
                 .bodyToMono(KakaoUserInfoResponse.class)
                 .block();
 
+        if (userInfo == null) {
+            throw new RuntimeException("UserInfo response is empty");
+        }
+
         if (log.isDebugEnabled()) {
-            log.info(" [Kakao Service] Auth ID ------> {}", userInfo.getId());
-            log.info(" [Kakao Service] NickName ------> {}", userInfo.getKakaoAccount().getProfile().getNickName());
-            log.info(" [Kakao Service] Id Token ------> {}", userInfo.getKakaoAccount().getProfile().getProfileImageUrl());
+            log.debug(" [Kakao Service] Auth ID ------> {}", userInfo.getId());
+            if (userInfo.getKakaoAccount() != null && userInfo.getKakaoAccount().getProfile() != null) {
+                log.debug(" [Kakao Service] NickName ------> {}", userInfo.getKakaoAccount().getProfile().getNickName());
+                log.debug(" [Kakao Service] Profile Image ------> {}", userInfo.getKakaoAccount().getProfile().getProfileImageUrl());
+            }
         }
 
         return userInfo;
