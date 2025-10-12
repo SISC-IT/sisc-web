@@ -95,7 +95,6 @@ public class GoogleServiceImpl implements Oauth2Service<GoogleTokenResponse, Goo
                         .path("/v1/userinfo")
                         .build(true))
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .header(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError,
                         clientResponse -> Mono.error(new RuntimeException("Invalid Parameter")))
