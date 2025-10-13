@@ -11,15 +11,9 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.service.PointHistoryService;
-import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.entity.User;
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -98,6 +92,8 @@ public class BettingService {
             throw new CustomException(ErrorCode.BET_TIME_INVALID);
         }
 
+        int stake = 0;
+
         if (!userBetRequest.isFree()) {
             pointHistoryService.createPointHistory(
                     userId,
@@ -106,16 +102,10 @@ public class BettingService {
                     PointOrigin.BETTING,
                     userBetRequest.getRoundId()
             );
-        }
-
-        int stake = userBetRequest.getStakePoints();
-
-        if (userBetRequest.isFree()){
-            stake = 0;
+            stake = userBetRequest.getStakePoints();
         }
 
         UserBet userBet = UserBet.builder()
-                .userBetId(UUID.randomUUID())
                 .round(betRound)
                 .userId(userId)
                 .option(userBetRequest.getOption())
