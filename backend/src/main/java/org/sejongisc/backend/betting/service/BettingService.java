@@ -1,19 +1,30 @@
 package org.sejongisc.backend.betting.service;
 
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.betting.entity.BetRound;
-import org.sejongisc.backend.betting.entity.Scope;
-import org.sejongisc.backend.betting.entity.Stock;
+import org.sejongisc.backend.betting.dto.UserBetRequest;
+import org.sejongisc.backend.betting.entity.*;
 import org.sejongisc.backend.betting.repository.BetRoundRepository;
 import org.sejongisc.backend.betting.repository.StockRepository;
+import org.sejongisc.backend.betting.repository.UserBetRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.point.entity.PointOrigin;
+import org.sejongisc.backend.point.entity.PointReason;
+import org.sejongisc.backend.point.service.PointHistoryService;
+import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.User;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +32,8 @@ public class BettingService {
 
     private final BetRoundRepository betRoundRepository;
     private final StockRepository stockRepository;
+    private final UserBetRepository userBetRepository;
+    private final PointHistoryService pointHistoryService;
 
     private final Random random = new Random();
 
@@ -70,4 +83,71 @@ public class BettingService {
         // TODO : status를 false로 바꿔야함, 정산 로직 구현하면서 같이 할 것
     }
 
+    @Transactional
+    public UserBet postUserBet(UUID userId, UserBetRequest userBetRequest) {
+        BetRound betRound = betRoundRepository.findById(userBetRequest.getRoundId())
+                .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
+
+        if (userBetRepository.existsByRoundAndUserId(betRound, userId)) {
+            throw new CustomException(ErrorCode.BET_DUPLICATE);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.isBefore(betRound.getOpenAt()) || now.isAfter(betRound.getLockAt())) {
+            throw new CustomException(ErrorCode.BET_TIME_INVALID);
+        }
+
+        if (!userBetRequest.isFree()) {
+            pointHistoryService.createPointHistory(
+                    userId,
+                    -userBetRequest.getStakePoints(),
+                    PointReason.BETTING,
+                    PointOrigin.BETTING,
+                    userBetRequest.getRoundId()
+            );
+        }
+
+        int stake = userBetRequest.getStakePoints();
+
+        if (userBetRequest.isFree()){
+            stake = 0;
+        }
+
+        UserBet userBet = UserBet.builder()
+                .userBetId(UUID.randomUUID())
+                .round(betRound)
+                .userId(userId)
+                .option(userBetRequest.getOption())
+                .isFree(userBetRequest.isFree())
+                .stakePoints(stake)
+                .betStatus(BetStatus.ACTIVE)
+                .build();
+
+        return userBetRepository.save(userBet);
+    }
+
+    @Transactional
+    public void cancelUserBet(UUID userId, UUID userBetId) {
+        UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
+
+        BetRound betRound = userBet.getRound();
+
+        if (LocalDateTime.now().isAfter(betRound.getLockAt())){
+            throw new CustomException(ErrorCode.BET_ROUND_CLOSED);
+        }
+
+        if (!userBet.isFree() && userBet.getStakePoints() > 0) {
+            pointHistoryService.createPointHistory(
+                    userId,
+                    userBet.getStakePoints(),
+                    PointReason.BETTING,
+                    PointOrigin.BETTING,
+                    userBet.getUserBetId()
+            );
+        }
+
+        userBetRepository.delete(userBet);
+    }
 }
