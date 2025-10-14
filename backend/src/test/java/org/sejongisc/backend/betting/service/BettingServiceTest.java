@@ -234,6 +234,51 @@ class BettingServiceTest {
         verify(betRoundRepository, times(1)).findByStatusTrueAndScope(Scope.WEEKLY);
     }
 
+    @Test
+    @DisplayName("getAllMyBets() - 유저 ID로 조회 시 Repository 호출 및 결과 반환 확인")
+    void getAllMyBets_Success() {
+        // given
+        UUID userId = UUID.randomUUID();
+        BetRound round = BetRound.builder()
+                .title("테스트 라운드")
+                .openAt(LocalDateTime.now().minusHours(2))
+                .lockAt(LocalDateTime.now().plusHours(1))
+                .settleAt(LocalDateTime.now().plusHours(2))
+                .build();
+
+        UserBet bet1 = UserBet.builder()
+                .userBetId(UUID.randomUUID())
+                .round(round)
+                .userId(userId)
+                .option(BetOption.RISE)
+                .stakePoints(100)
+                .isFree(false)
+                .build();
+
+        UserBet bet2 = UserBet.builder()
+                .userBetId(UUID.randomUUID())
+                .round(round)
+                .userId(userId)
+                .option(BetOption.FALL)
+                .stakePoints(50)
+                .isFree(true)
+                .build();
+
+        List<UserBet> mockResult = List.of(bet1, bet2);
+        when(userBetRepository.findAllByUserIdOrderByRound_SettleAtDesc(userId))
+                .thenReturn(mockResult);
+
+        // when
+        List<UserBet> result = bettingService.getAllMyBets(userId);
+
+        // then
+        verify(userBetRepository, times(1))
+                .findAllByUserIdOrderByRound_SettleAtDesc(userId);
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getUserId()).isEqualTo(userId);
+        assertThat(result.get(1).getRound().getTitle()).isEqualTo("테스트 라운드");
+    }
+
     private BetRound openRoundNow() {
         LocalDateTime now = LocalDateTime.now();
         return BetRound.builder()

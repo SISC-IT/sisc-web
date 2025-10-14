@@ -54,6 +54,11 @@ public class BettingService {
         return random.nextDouble() < 0.2;
     }
 
+    public List<UserBet> getAllMyBets(UUID userId) {
+        // TODO : 필요 시 필터링, 정렬, 검색 로직 추가
+        return userBetRepository.findAllByUserIdOrderByRound_SettleAtDesc(userId);
+    }
+
     public void createBetRound(Scope scope) {
         Stock stock = getStock();
         LocalDateTime now = LocalDateTime.now();
