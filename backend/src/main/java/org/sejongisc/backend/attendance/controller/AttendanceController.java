@@ -40,8 +40,7 @@ public class AttendanceController {
 
         log.info("출석 체크인 요청: 사용자={}, 코드={}", userDetails.getName(), request.getCode());
 
-        User user = convertToUser(userDetails);
-        AttendanceResponse response = attendanceService.checkIn(sessionId, request, user);
+        AttendanceResponse response = attendanceService.checkIn(sessionId, request, userDetails.getUserId());
 
         log.info("출석 체크인 완료: 사용자={}, 상태={}", userDetails.getName(), response.getAttendanceStatus());
 
@@ -58,7 +57,7 @@ public class AttendanceController {
     public ResponseEntity<List<AttendanceResponse>> getAttendancesBySession(@PathVariable UUID sessionId) {
         log.info("세션별 출석 목록 조회: 세션ID={}", sessionId);
 
-        List<AttendanceResponse> attendances = attendanceService.getAttendanceBySession(sessionId);
+        List<AttendanceResponse> attendances = attendanceService.getAttendancesBySession(sessionId);
 
         return ResponseEntity.ok(attendances);
     }
@@ -73,8 +72,7 @@ public class AttendanceController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("내 출석 기록 조회: 사용자={}", userDetails.getName());
 
-        User user = convertToUser(userDetails);
-        List<AttendanceResponse> attendances = attendanceService.getAttendancesByUser(user);
+        List<AttendanceResponse> attendances = attendanceService.getAttendancesByUser(userDetails.getUserId());
 
         return ResponseEntity.ok(attendances);
     }
@@ -95,24 +93,10 @@ public class AttendanceController {
 
         log.info("출석 상태 수정: 세션ID={}, 멤버ID={}, 새로운상태={}, 관리자={}", sessionId, memberId, status, userDetails.getName());
 
-        User user = convertToUser(userDetails);
-        AttendanceResponse response = attendanceService.updateAttendanceStatus(sessionId, memberId, status, reason, user);
+        AttendanceResponse response = attendanceService.updateAttendanceStatus(sessionId, memberId, status, reason, userDetails.getUserId());
 
         log.info("출석 상태 수정 완료: 세션ID={}, 멤버ID={}, 상태={}", sessionId, memberId, response.getAttendanceStatus());
 
         return ResponseEntity.ok(response);
-    }
-
-
-    private User convertToUser(CustomUserDetails userDetails) {
-        return User.builder()
-                .userId(userDetails.getUserId())
-                .name(userDetails.getName())
-                .email(userDetails.getEmail())
-                .passwordHash(userDetails.getPassword())
-                .phoneNumber(userDetails.getPhoneNumber())
-                .role(userDetails.getRole())
-                .point(userDetails.getPoint())
-                .build();
     }
 }
