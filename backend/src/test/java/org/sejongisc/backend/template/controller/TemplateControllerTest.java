@@ -206,15 +206,15 @@ class TemplateControllerTest {
 
   // ===== 삭제 =====
   @Test
-  @DisplayName("[DELETE] /api/backtest/templates/{id} : 인증 O → 200 & 삭제")
-  void 삭제_인증되어있으면_200을_반환한다() throws Exception {
+  @DisplayName("[DELETE] /api/backtest/templates/{id} : 인증 O → 204 & 삭제")
+  void 삭제_인증되어있으면_204을_반환한다() throws Exception {
     UUID uid = UUID.randomUUID();
     UUID tid = UUID.randomUUID();
     UserDetails principal = 인증_사용자(uid);
 
     mockMvc.perform(delete("/api/backtest/templates/{templateId}", tid)
             .with(user(principal)))
-        .andExpect(status().isOk());
+        .andExpect(status().isNoContent());
   }
 
   @Test

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -22,6 +23,16 @@ public class BettingService {
     private final StockRepository stockRepository;
 
     private final Random random = new Random();
+
+    public Optional<BetRound> getActiveRound(Scope type){
+        return betRoundRepository.findByStatusTrueAndScope(type);
+    }
+
+    // NULL일 시 빈 리스트 반환
+    public List<BetRound> getAllBetRounds() {
+        // TODO : 필요 시 필터링, 정렬, 검색 로직 추가
+        return betRoundRepository.findAllByOrderBySettleAtDesc();
+    }
 
     public Stock getStock(){
         List<Stock> stocks = stockRepository.findAll();
@@ -53,6 +64,10 @@ public class BettingService {
                 .build();
 
         betRoundRepository.save(betRound);
+    }
+
+    public void closeBetRound(){
+        // TODO : status를 false로 바꿔야함, 정산 로직 구현하면서 같이 할 것
     }
 
 }
