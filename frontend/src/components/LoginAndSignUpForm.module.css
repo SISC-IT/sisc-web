@@ -79,23 +79,30 @@
   cursor: not-allowed;
 }
 
-.findContainer {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #9ca3af;
-  align-self: flex-start;
-  padding-left: 12px;
-  padding-top: 10px;
-}
 .text {
-  color: inherit;
+  color: #9ca3af;
+  font-size: 14px;
   text-decoration: none;
   line-height: 1.5;
   padding: 2px 4px;
   border-radius: 6px;
   outline: none;
+}
+.textContainer {
+  display: flex;
+  width: 90%;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+}
+.textContainer .text {
+  cursor: pointer;
+}
+
+.divider {
+  color: #9ca3af;
+  font-size: 14px;
+  margin: 0 4px;
 }
 
 /* ------------------------ 회원가입 페이지 ------------------------ */
