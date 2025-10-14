@@ -20,6 +20,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // 테스트 편의를 위해 CSRF 비활성화
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/user/signup").permitAll()
+                        .requestMatchers( "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .build();
