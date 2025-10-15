@@ -1,5 +1,5 @@
 import styles from './StockGame.module.css';
-import DailyBetting from '../components/stockgame/DailyBetting';
+import Betting from '../components/stockgame/Betting';
 import BettingHistory from '../components/stockgame/BettingHistory';
 import { useState } from 'react';
 
@@ -27,9 +27,9 @@ const StockGame = () => {
       {active === 'progress' ? (
         <div className={styles['daily-betting']}>
           <span>일간</span>
-          <DailyBetting />
+          <Betting period={'daily'} />
           <span>주간</span>
-          <DailyBetting />
+          <Betting period={'weekly'} />
         </div>
       ) : (
         <div className={styles['betting-history']}>
