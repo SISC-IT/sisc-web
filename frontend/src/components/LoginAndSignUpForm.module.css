@@ -22,8 +22,9 @@
   text-align: center;
 }
 
-.loginForm h1 {
+.header h1 {
   margin-bottom: 16px;
+  margin-top: 9px;
   color: #142d56;
   font-family: 'DIN Condensed';
   font-size: 24px;
@@ -123,9 +124,10 @@
 }
 
 /* ------------------------ 회원가입 페이지 ------------------------ */
-.emailContainer {
+.phoneVerificationContainer {
   display: flex;
   align-items: center;
+  gap: 4px;
 }
 
 .emailInput {
@@ -134,16 +136,26 @@
 }
 
 .verifyButton {
-  padding: 12px 15px;
-  width: 60px;
-  background-color: #4caf50;
-  color: white;
+  display: flex;
+  height: 44px;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  background: #1d80f4;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+
+  color: #fff;
+  text-align: center;
+  font-family: Pretendard;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 100%; /* 16px */
+  letter-spacing: -0.48px;
+  white-space: nowrap;
 }
 .verifyButton:disabled {
-  background-color: #d5d5d5;
+  background-color: #bce5ff;
   cursor: not-allowed;
 }
