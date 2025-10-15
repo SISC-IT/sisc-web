@@ -1,4 +1,4 @@
-export const weekelyBettingHistory = [
+export const weeklyBettingHistory = [
   {
     date: '2025-08-24',
     symbol: 'AAPL',
