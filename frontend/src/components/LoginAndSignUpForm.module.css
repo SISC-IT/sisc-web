@@ -45,15 +45,21 @@
 }
 
 .inputGroup {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   text-align: left;
 }
 
 .inputGroup label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-weight: 500;
   color: #555;
+  color: #000;
+  font-family: Pretendard;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
 }
 
 .inputGroup input {
@@ -74,7 +80,7 @@
 .loginButton {
   width: 100%;
   padding: 12px;
-  margin-top: 30px;
+  margin-bottom: 18px;
   background-color: #0e1a2c;
   color: white;
   border: none;
@@ -91,20 +97,20 @@
 }
 
 .text {
-  color: #9ca3af;
-  font-size: 14px;
   text-decoration: none;
-  line-height: 1.5;
-  padding: 2px 4px;
-  border-radius: 6px;
-  outline: none;
+
+  color: #aaa;
+  font-family: Pretendard;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 146%; /* 17.52px */
 }
 .textContainer {
   display: flex;
-  width: 90%;
+  width: 330px;
   justify-content: space-between;
   align-items: center;
-  padding-top: 10px;
 }
 .textContainer .text {
   cursor: pointer;
@@ -113,7 +119,7 @@
 .divider {
   color: #9ca3af;
   font-size: 14px;
-  margin: 0 4px;
+  margin: 0 8px;
 }
 
 /* ------------------------ 회원가입 페이지 ------------------------ */
