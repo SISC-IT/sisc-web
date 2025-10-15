@@ -2,7 +2,7 @@ import styles from './BettingHistory.module.css';
 import icon1 from '../../assets/at_icon_1.png';
 import StockInfoItem from './StockInfoItem';
 import { dailyBettingHistory } from '../../utils/dailyBettingHistory';
-import { weekelyBettingHistory } from '../../utils/weeklyBettingHIstory';
+import { weeklyBettingHistory } from '../../utils/weeklyBettingHistory';
 
 const BettingHistory = ({ type }) => {
   const formatDate = (dateStr) => {
@@ -11,7 +11,7 @@ const BettingHistory = ({ type }) => {
   };
 
   const mockBetHistory =
-    type === 'weekly' ? weekelyBettingHistory : dailyBettingHistory;
+    type === 'weekly' ? weeklyBettingHistory : dailyBettingHistory;
 
   return (
     <>
