@@ -4,11 +4,11 @@ export const weeklyBettingHistory = [
     symbol: 'AAPL',
     closePrice: 76.4,
     nextClosePrice: 96.3,
-    changePercent: 20.7,
+    changePercent: 26.05,
     points: 300,
     participants: 200,
     result: 'UP',
-    isCorrect: false,
+    isCorrect: true,
   },
   {
     date: '2025-08-17',
