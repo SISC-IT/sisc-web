@@ -2,7 +2,7 @@ package org.sejongisc.backend.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UuidGenerator;
+import org.sejongisc.backend.auth.entity.UserOauthAccount;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.util.ArrayList;
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name="users") // user가 예약어라 users로 테이블명 지정
+@Table(name="users")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,7 +24,7 @@ public class User extends BasePostgresEntity{
     private UUID userId;
 
     //OAuth 전용 계정 대비 nullable 허용 가능
-    @Column(columnDefinition = "citext", unique = true)
+    @Column(columnDefinition = "citext", unique = true, nullable = true)
     private String email;
 
     @Column(name = "password_hash")
@@ -43,8 +43,23 @@ public class User extends BasePostgresEntity{
     @Column(columnDefinition = "integer default 0")
     private Integer point;
 
+    // 포인트 총량 업데이트를 위한 낙관적 락 버전 필드
+    @Version
+    private Long version;
+
     // User : OAuthAccounts = 1 : N(여러 OAuth를 연결 가능)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
+
+    // 기본값 지정
+    @PrePersist
+    public void prePersist() {
+        if (this.role == null) {
+            this.role = Role.TEAM_MEMBER;
+        }
+    }
+    public void updatePoint(int amount) {
+        this.point += amount;
+    }
 }

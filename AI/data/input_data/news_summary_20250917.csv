@@ -1,0 +1,326 @@
+date,summary
+2025-09-17 09:44,"{
+  ""Stock"": ""SOX"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and technological advancements in the semiconductor industry."",
+  ""Reason"": ""The growth in demand for AI infrastructure and large-scale contracts is driving the rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-17 08:48,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots"",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-17 08:41,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Regulatory investigation into Tesla's vehicles with faulty doors"",
+  ""Factor"": ""Expectations for AI and humanoid robots"",
+  ""Reason"": ""Tesla received multiple complaints about the faulty door mechanism in its Model Y vehicles, leading to a regulatory investigation by the NHTSA."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.5
+}"
+2025-09-17 08:31,"{
+  ""Stock"": """",
+  ""Event"": ""Donald Trump announces plans to increase tariffs on semiconductors and pharmaceuticals"",
+  ""Factor"": ""Trade agreements with Japan, EU, and Korea"",
+  ""Reason"": ""Trump suggests higher tariffs for these countries due to their trade practices"",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.8
+}"
+2025-09-17 08:31,"{
+  ""Stock"": """",
+  ""Event"": ""Dalder exchange rate decreased"",
+  ""Factor"": ""FOMC and dollar weakness"",
+  ""Reason"": ""FOMC policy decision expected to impact dollar value"",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.5
+}"
+2025-09-17 07:49,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-17 07:24,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Today's gains following Elon Musk's 10 billion dollar buyback announcement from yesterday."",
+  ""Factor"": None,
+  ""Reason"": ""Elon Musk's 10 billion dollar buyback announcement"",
+  ""Sentiment"": ""Positive"", 
+  ""Confidence"": 0.7
+}"
+2025-09-17 06:28,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-17 05:51,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-17 05:44,"{
+  ""Stock"": """",
+  ""Event"": ""FOMC conference ends with market uncertainty"",
+  ""Factor"": """",
+  ""Reason"": ""Market is waiting for FOMC chair Powell's speech and point spread results to gauge future rate cuts."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.5
+}"
+2025-09-17 05:35,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive""
+}"
+2025-09-17 05:10,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Decline of stock prices due to Fed rate decision announcement"",
+  ""Factor"": ""Tech stocks weakening after strong gains"",
+  ""Reason"": ""Investors selling stocks anticipating potential interest rate hikes by the Federal Reserve"",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.8
+}"
+2025-09-17 05:10,"{
+  ""Stock"": """",
+  ""Event"": ""Stocks in the NYSE closed at a low point"",
+  ""Factor"": """",
+  ""Reason"": """",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0
+}"
+2025-09-17 05:07,"{
+  ""Stock"": ""None"",
+  ""Event"": ""Indices fell for the second consecutive day"",
+  ""Factor"": ""None"",
+  ""Reason"": ""None"",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0
+}"
+2025-09-17 05:05,"{
+  ""Stock"": """",
+  ""Event"": ""Trump announces higher tariffs on semiconductors and medicines, citing potential for increased revenue"",
+  ""Factor"": ""Trade policies and economic interests"",
+  ""Reason"": ""The news explicitly mentions that Trump's announcement is driven by his desire to increase revenue from higher tariffs."",
+  ""Sentiment"": ""Positive"", # only ""Positive""|""Neutral""|""Negative""
+}"
+2025-09-17 03:03,"{
+  ""Stock"": ""PLTR"",
+  ""Event"": ""Second consecutive day of losses."",
+  ""Factor"": ""Overvaluation concerns and short-term correction possibilities."",
+  ""Reason"": ""Mizuho analyst's evaluation that Palantir's valuation is too high, as the stock price has already incorporated significant growth expectations."",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0.3"
+2025-09-17 02:17,"{
+  ""Stock"": ""MSFT"",
+  ""Event"": ""Investor optimism about AI and humanoid robot developments"",
+  ""Factor"": ""Microsoft's growth prospects, including its investment in OpenAI"",
+  ""Reason"": ""Analysts' positive outlook on Microsoft's future performance and its increasing investment in AI-related projects"",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-17 00:47,"{
+  ""Stock"": ""CRWD"",
+  ""Event"": ""Partnership with CRM at Falcon 2025 event"",
+  ""Factor"": ""Integration of security solutions and AI agents"",
+  ""Reason"": ""To enhance security and comply with increasing identity-based threats"",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-17 00:41,"{
+  ""Stock"": ""AMD"",
+  ""Event"": ""Decline in stock price despite expanding partnership with CWD"",
+  ""Factor"": ""AWS partnership"",
+  ""Reason"": ""Despite the expansion of AMD's partnership with CWD, the company's stock price declined slightly on Tuesday."",
+  ""Sentiment"": ""Negative""
+}"
+2025-09-17 00:37,"{
+  ""Stock"": ""LLY"",
+  ""Event"": ""Announcement of new manufacturing facility in Virginia, USA"",
+  ""Factor"": ""Expansion of production capacity to reduce import duties and strengthen export competitiveness"",
+  ""Reason"": ""To counter the risk of higher tariffs on imported pharmaceuticals under Donald Trump's administration"",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-17 00:34,"{
+  ""Stock"": ""META"",
+  ""Event"": ""Announcement of Hypernova at annual Connect conference"",
+  ""Factor"": ""Expectations for AR and XR technology advancements"",
+  ""Reason"": ""Market analysts expect strong buying pressure due to the product's features and potential military applications"",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-17 00:17,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Increased stock price after strong earnings reports."",
+  ""Factor"": ""Strong Q2 earnings report with revenue growth of 33% year-over-year."",
+  ""Reason"": Citigroup analyst Tyler Rysann mentioned that Tesla's Q2 earnings were better than expected, driving a positive sentiment around the stock."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-17 23:57,"{
+  ""Stock"": ""FERG"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Positive investor sentiment about the company's financial performance and future growth prospects."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about FERG's financial results and expectations for its future growth was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": null
+}"
+2025-09-17 23:49,"{
+  ""Stock"": ""AMD"",
+  ""Event"": ""Challenging NVIDIA's dominance with its Instinct MI450 chip"",
+  ""Factor"": ""Expectations for AI acceleration market growth and customer switch"",
+  ""Reason"": ""AMD is positioning itself as a complete solution provider with the Instinct MI450 chip, aiming to minimize customer switching risks."",
+  ""Sentiment"": ""Neutral""
+}"
+2025-09-17 23:25,"{
+  ""Stock"": """",
+  ""Event"": ""Dow Jones rose by 0.54% on the second consecutive day of gains."",
+  ""Factor"": ""No specific factor mentioned"",
+  ""Reason"": ""The news explicitly mentions that market participants are focusing on the upcoming Fed interest rate decision as a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.3
+}"
+2025-09-17 23:08,"{
+  ""Stock"": ""ALIBABA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Alibaba's advancements in AI and autonomous chip development"",
+  ""Reason"": ""Investor optimism about Alibaba's AI and autonomous chip developments is a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive""
+}"
+2025-09-17 22:38,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Decline in stock price."",
+  ""Factor"": """",
+  ""Reason"": """",
+  ""Sentiment"": ""Negative"",
+  ""Confidence"": 0
+}"
+2025-09-17 22:17,"{
+  ""Stock"": ""LLY"",
+  ""Event"": ""Opoglipron shows significant weight loss effect in 3rd phase trial"",
+  ""Factor"": ""Development of opoglipron for obesity treatment"",
+  ""Reason"": ""Positive results from ATTAIN-1 clinical trial demonstrate effectiveness of opoglipron"",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-17 21:52,"{
+  ""Stock"": ""GOOG"",
+  ""Event"": ""Alphabet's YouTube unveiled AI-based creation and protection tools"",
+  ""Factor"": ""Investor optimism about Alphabet's AI capabilities"",
+  ""Reason"": ""To strengthen its market position and competitiveness amidst fake media concerns"",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.7
+}"
+2025-09-17 18:05,"{
+  ""Stock"": ""FOMC"",
+  ""Event"": ""First day of the meeting"",
+  ""Factor"": ""Expectations for monetary policy decisions"",
+  ""Reason"": ""The news explicitly mentions that investor optimism about the FOMC's monetary policy decisions was a key driver behind the recent market rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-17 18:01,"{
+  ""Stock"": ""Not specified"",
+  ""Event"": ""Global market analysis for KIW 2025 and ongoing economic trends"",
+  ""Factor"": ""Artificial Intelligence (AI) industry, geopolitical tensions, consumer spending"",
+  ""Reason"": ""Experts discuss the growth of AI industries, potential investments in Asian markets, and the impact of US government policies on global defense industries."",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.6
+}"
+2025-09-17 17:59,"{
+  ""Stock"": ""ALIBABA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI development and cloud business growth"",
+  ""Reason"": ""Alibaba's AI chip development and cloud project expansion are driving the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-17 17:59,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Decline in stock price after initial surge."",
+  ""Factor"": ""Expectations for AI and humanoid robots not met."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally, which later declined."",
+  ""Sentiment"": ""Neutral""
+}"
+2025-09-17 17:59,"{
+  ""Stock"": ""PennyMac and Freddie Mac"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for Fannie Mae and Freddie Mac's IPO."",
+  ""Reason"": ""Investor optimism about the potential listing on New York Stock Exchange."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-17 17:24,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.8
+}"
+2025-09-17 17:14,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for AI and humanoid robots."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about Tesla's AI and humanoid robot developments was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive""
+}"
+2025-09-17 15:49,"{
+  ""Stock"": """",
+  ""Event"": ""Discussion on the future of global economy at 'Korea Invest Week 2025'"",
+  ""Factor"": ""Impact of AI and theme stocks on market volatility"",
+  ""Reason"": ""Expert warns about potential risks of AI sector on US stock market"",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": null
+}"
+2025-09-17 15:40,"{
+  ""Stock"": ""TSLA"",
+  ""Event"": ""Decline after rapid rise, followed by a brief recovery"",
+  ""Factor"": ""Market expectations and uncertainty about profitability"",
+  ""Reason"": ""The news explicitly mentions that investor optimism and market expectations were key drivers behind the initial rise, while also highlighting concerns about profitability and the company's competitive landscape."",
+  ""Sentiment"": ""Neutral""
+}"
+2025-09-17 15:22,"{
+  ""Stock"": ""PNM"",
+  ""Event"": ""Second consecutive day of gains."",
+  ""Factor"": ""Expectations for PennyMac and Freddie Mac's IPO."",
+  ""Reason"": ""The news explicitly mentions that investor optimism about the planned IPO of PennyMac and Freddie Mac was a key driver behind the recent stock rally."",
+  ""Sentiment"": ""Positive"",
+  ""Confidence"": 0.9
+}"
+2025-09-17 10:29,"{
+    ""Stock"": ""ROSE"",
+    ""Event"": ""Expectations for APEC and Chinese market optimism"",
+    ""Factor"": ""Chinese President Xi Jinping's visit to APEC and improved Sino-Korean relations"",
+    ""Reason"": ""Investors' optimism about the upcoming APEC meeting and potential improvements in Sino-Korean relations led to a rise in shares of related companies."",
+    ""Sentiment"": ""Positive""
+}"
+2025-09-17 10:25,"{
+  ""Stock"": ""None"",
+  ""Event"": ""Russia-Ukraine Conflict Impact on Oil Prices"",
+  ""Factor"": ""International geopolitical tensions and supply chain disruptions"",
+  ""Reason"": ""Increase in anxiety about oil supply due to Russian invasion of Ukraine's energy facilities"",
+  ""Sentiment"": ""Neutral"",
+  ""Confidence"": 0.5
+}"
+2025-09-17 09:53,"{
+  ""Stock"": """",
+  ""Event"": ""Federal Reserve Chairman nomination hearing"",
+  ""Factor"": ""Expectations for monetary policy decisions"",
+  ""Reason"": ""The White House is expecting the Fed to lower interest rates and has appointed a new chairman, Stephen Murnish."",
+  ""Sentiment"": ""Neutral""
+}"

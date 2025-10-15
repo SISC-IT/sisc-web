@@ -12,12 +12,22 @@ public class BettingScheduler {
     private final BettingService bettingService;
 
     @Scheduled(cron = "0 0 9 * * MON-FRI")
-    public void dailyScheduler() {
+    public void dailyOpenScheduler() {
         bettingService.createBetRound(Scope.DAILY);
     }
 
     @Scheduled(cron = "0 0 9 * * MON")
-    public void weeklyScheduler() {
+    public void weeklyOpenScheduler() {
         bettingService.createBetRound(Scope.WEEKLY);
+    }
+
+    @Scheduled(cron = "0 0 22 * * MON-FRI")
+    public void dailyCloseScheduler() {
+        bettingService.closeBetRound();
+    }
+
+    @Scheduled(cron = "0 0 22 * * FRI")
+    public void weeklyCloseScheduler() {
+        bettingService.closeBetRound();
     }
 }
