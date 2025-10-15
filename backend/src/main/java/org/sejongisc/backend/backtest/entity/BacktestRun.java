@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sejongisc.backend.template.entity.Template;
+import org.sejongisc.backend.user.entity.User;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,12 +24,14 @@ public class BacktestRun {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "template_id", nullable = false)
+  @JoinColumn(name = "template_id", nullable = true)
   private Template template;
 
-  //@ManyToOne(fetch = FetchType.LAZY)
-  //@JoinColumn(name = "user_id", nullable = false)
-  //private User user;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
+
+  private String title;
 
   // 조건/종목 등 파라미터(JSONB). 가장 단순하게 String으로 보관
   @Column(name = "params", columnDefinition = "jsonb")
@@ -44,4 +47,8 @@ public class BacktestRun {
   // 실행 시간들
   private LocalDateTime startedAt;
   private LocalDateTime finishedAt;
+
+  public void updateTemplate(Template template) {
+    this.template = template;
+  }
 }

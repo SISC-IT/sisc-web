@@ -13,24 +13,23 @@ const SocialLoginButtons = ({ onGoogle, onNaver, onKakao }) => {
           className={`${styles.btn} ${styles.google}`}
           onClick={onGoogle}
         >
-          {/* <span className={styles.label}>Google</span> */}
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
+            alt="구글로 로그인"
+          />
         </button>
 
         <button
           type="button"
           className={`${styles.btn} ${styles.naver}`}
           onClick={onNaver}
-        >
-          {/* <span className={styles.label}>네이버</span> */}
-        </button>
+        ></button>
 
         <button
           type="button"
           className={`${styles.btn} ${styles.kakao}`}
           onClick={onKakao}
-        >
-          {/* <span className={styles.label}>카카오</span> */}
-        </button>
+        ></button>
       </div>
     </div>
   );
