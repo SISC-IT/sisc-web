@@ -10,6 +10,7 @@ import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.entity.*;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
+import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 
@@ -28,6 +29,8 @@ public class AttendanceServiceTest {
     private AttendanceRepository attendanceRepository;
     @Mock
     private AttendanceSessionRepository attendanceSessionRepository;
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private AttendanceService attendanceService;
@@ -82,12 +85,13 @@ public class AttendanceServiceTest {
                 .deviceInfo("IPhone 14")
                 .build();
 
+        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
         when(attendanceRepository.existsByAttendanceSessionAndUser(session, user)).thenReturn(false);
         when(attendanceRepository.save(any(Attendance.class))).thenReturn(savedAttendance);
 
         //when
-        AttendanceResponse response = attendanceService.checkIn(sessionId, request, user);
+        AttendanceResponse response = attendanceService.checkIn(sessionId, request, user.getUserId());
 
         //then
         assertAll(
@@ -117,10 +121,11 @@ public class AttendanceServiceTest {
                 .build();
 
         UUID sessionId = UUID.randomUUID();
+        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.empty());
 
         // then
-        assertThatThrownBy(() -> attendanceService.checkIn(sessionId, request, user))
+        assertThatThrownBy(() -> attendanceService.checkIn(sessionId, request, user.getUserId()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("존재하지 않는 세션입니다: " + sessionId);
 
@@ -149,11 +154,12 @@ public class AttendanceServiceTest {
                 .code(code)
                 .build();
 
+        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
         when(attendanceRepository.existsByAttendanceSessionAndUser(session, user)).thenReturn(true);
 
         //then
-        assertThatThrownBy(() -> attendanceService.checkIn(sessionId, request, user))
+        assertThatThrownBy(() -> attendanceService.checkIn(sessionId, request, user.getUserId()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("이미 출석 체크인한 세션입니다");
 
@@ -188,11 +194,12 @@ public class AttendanceServiceTest {
                 .location(sessionLocation)
                 .build();
 
+        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
         when(attendanceRepository.existsByAttendanceSessionAndUser(session, user)).thenReturn(false);
 
         //then
-        assertThatThrownBy(() -> attendanceService.checkIn(sessionId, request, user))
+        assertThatThrownBy(() -> attendanceService.checkIn(sessionId, request, user.getUserId()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("출석 허용 범위를 벗어났습니다");
 
@@ -232,7 +239,7 @@ public class AttendanceServiceTest {
         when(attendanceRepository.findByAttendanceSessionOrderByCheckedAtAsc(session)).thenReturn(attendances);
 
         //when
-        List<AttendanceResponse> response = attendanceService.getAttendanceBySession(sessionId);
+        List<AttendanceResponse> response = attendanceService.getAttendancesBySession(sessionId);
 
         //then
         assertAll(
@@ -276,13 +283,14 @@ public class AttendanceServiceTest {
                 .checkedAt(LocalDateTime.now())
                 .build();
 
+        when(userRepository.findById(adminUser.getUserId())).thenReturn(Optional.of(adminUser));
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
         when(attendanceRepository.findByAttendanceSessionAndUser_UserId(session, memberId)).thenReturn(Optional.of(attendance));
         when(attendanceRepository.save(any(Attendance.class))).thenReturn(attendance);
 
         //when
         AttendanceResponse response = attendanceService.updateAttendanceStatus(
-                sessionId, memberId, newStatus, reason, adminUser);
+                sessionId, memberId, newStatus, reason, adminUser.getUserId());
 
         //then
         assertAll(
@@ -328,10 +336,11 @@ public class AttendanceServiceTest {
                         .build()
         );
 
+        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
         when(attendanceRepository.findByUserOrderByCheckedAtDesc(user)).thenReturn(attendances);
 
         //when
-        List<AttendanceResponse> responses = attendanceService.getAttendancesByUser(user);
+        List<AttendanceResponse> responses = attendanceService.getAttendancesByUser(user.getUserId());
 
         //then
         assertAll(

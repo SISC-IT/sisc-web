@@ -22,7 +22,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.lang.reflect.Array;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,7 +29,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -87,7 +85,7 @@ public class AttendanceControllerTest {
                 .isLate(false)
                 .build();
 
-        when(attendanceService.checkIn(any(UUID.class), any(AttendanceRequest.class), any(User.class))).thenReturn(response);
+        when(attendanceService.checkIn(any(UUID.class), any(AttendanceRequest.class), eq(user.getUserId()))).thenReturn(response);
 
         //then
         UUID sessionId = UUID.randomUUID();
@@ -168,7 +166,7 @@ public class AttendanceControllerTest {
                         .build()
         );
 
-        when(attendanceService.getAttendancesByUser(any(User.class))).thenReturn(responses);
+        when(attendanceService.getAttendancesByUser(eq(user.getUserId()))).thenReturn(responses);
 
         //then
         mockMvc.perform(get("/api/attendance/history")
@@ -208,7 +206,7 @@ public class AttendanceControllerTest {
                         .build()
         );
 
-        when(attendanceService.getAttendanceBySession(sessionId)).thenReturn(responses);
+        when(attendanceService.getAttendancesBySession(sessionId)).thenReturn(responses);
 
         //then
         mockMvc.perform(get("/api/attendance/sessions/{sessionId}/attendances", sessionId))
@@ -270,7 +268,7 @@ public class AttendanceControllerTest {
                 .build();
 
         when(attendanceService.updateAttendanceStatus(
-                any(UUID.class), eq(attendanceId), eq(status), eq(reason), any(User.class)
+                any(UUID.class), eq(attendanceId), eq(status), eq(reason), eq(adminUser.getUserId())
         )).thenReturn(response);
 
         //then

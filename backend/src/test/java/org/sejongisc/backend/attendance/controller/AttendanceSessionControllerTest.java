@@ -129,7 +129,7 @@ public class AttendanceSessionControllerTest {
         mockMvc.perform(post("/api/attendance/sessions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
