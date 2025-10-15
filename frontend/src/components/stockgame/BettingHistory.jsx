@@ -23,7 +23,7 @@ const BettingHistory = ({ type }) => {
           <button
             className={`${styles['result-icon']} ${history.isCorrect ? styles.correct : styles.incorrect}`}
           >
-            {history.isCorrect ? 'x' : 'v'}
+            {history.isCorrect ? 'v' : 'x'}
           </button>
           <span className={styles['date']}>
             {formatDate(history.date)} 베팅
