@@ -9,8 +9,8 @@
   align-items: center;
   justify-content: center;
   background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 40px;
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */
+  padding: 42px;
   width: 473px;
   box-sizing: border-box;
 }
@@ -22,15 +22,26 @@
   text-align: center;
 }
 
-.logo {
-  width: 60px;
+.loginForm h1 {
+  margin-bottom: 16px;
+  color: #142d56;
+  font-family: 'DIN Condensed';
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 146%;
 }
 
-.loginForm h1 {
-  margin-bottom: 72px;
-  color: #142d56;
-  font-size: 24px;
-  font-weight: 600;
+.header {
+  border-bottom: 1px solid #d6d6d6;
+  margin-bottom: 36px;
+  width: 333px;
+}
+.logo {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
 }
 
 .inputGroup {
