@@ -4,14 +4,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.sejongisc.backend.betting.entity.BetRound;
-import org.sejongisc.backend.betting.entity.Scope;
-import org.sejongisc.backend.betting.entity.Stock;
-import org.sejongisc.backend.betting.entity.MarketType;
+import org.sejongisc.backend.betting.dto.UserBetRequest;
+import org.sejongisc.backend.betting.entity.*;
 import org.sejongisc.backend.betting.repository.BetRoundRepository;
 import org.sejongisc.backend.betting.repository.StockRepository;
+import org.sejongisc.backend.betting.repository.UserBetRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.point.entity.PointOrigin;
+import org.sejongisc.backend.point.entity.PointReason;
+import org.sejongisc.backend.point.service.PointHistoryService;
+import org.sejongisc.backend.user.dao.UserRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,13 +31,31 @@ class BettingServiceTest {
 
     private BetRoundRepository betRoundRepository;
     private StockRepository stockRepository;
+    private UserBetRepository userBetRepository;
+    private PointHistoryService pointHistoryService;
+
     private BettingService bettingService;
+
+    private UUID userId;
+    private UUID roundId;
 
     @BeforeEach
     void setUp() {
         betRoundRepository = mock(BetRoundRepository.class);
         stockRepository = mock(StockRepository.class);
-        bettingService = new BettingService(betRoundRepository, stockRepository);
+        userBetRepository = mock(UserBetRepository.class);
+        pointHistoryService = mock(PointHistoryService.class);
+
+        // BettingService 생성자 시그니처에 맞춰 주입
+        bettingService = new BettingService(
+                betRoundRepository,
+                stockRepository,
+                userBetRepository,
+                pointHistoryService
+        );
+
+        userId = UUID.randomUUID();
+        roundId = UUID.randomUUID();
     }
 
     @Test
@@ -211,5 +232,204 @@ class BettingServiceTest {
         assertThat(result).isPresent();
         assertThat(result.get().getScope()).isEqualTo(Scope.WEEKLY);
         verify(betRoundRepository, times(1)).findByStatusTrueAndScope(Scope.WEEKLY);
+    }
+
+    private BetRound openRoundNow() {
+        LocalDateTime now = LocalDateTime.now();
+        return BetRound.builder()
+                .betRoundID(roundId)
+                .scope(Scope.DAILY)
+                .status(true)
+                .title("OPEN")
+                .openAt(now.minusMinutes(1))
+                .lockAt(now.plusMinutes(10))
+                .build();
+    }
+
+    private BetRound closedRoundNow() {
+        LocalDateTime now = LocalDateTime.now();
+        return BetRound.builder()
+                .betRoundID(roundId)
+                .scope(Scope.DAILY)
+                .status(true)
+                .title("CLOSED")
+                .openAt(now.minusMinutes(10))
+                .lockAt(now.minusMinutes(1))
+                .build();
+    }
+
+    private UserBetRequest paidReq(int stake) {
+        return UserBetRequest.builder()
+                .roundId(roundId)
+                .option(BetOption.RISE)
+                .free(false)
+                .stakePoints(stake)
+                .build();
+    }
+
+    private UserBetRequest freeReq() {
+        return UserBetRequest.builder()
+                .roundId(roundId)
+                .option(BetOption.FALL)
+                .free(true)
+                .stakePoints(999) // 무시되어야 함
+                .build();
+    }
+
+    @Test
+    @DisplayName("postUserBet: 유료 베팅 성공 → 포인트 차감 호출 + 저장")
+    void postUserBet_paid_success() {
+        BetRound round = openRoundNow();
+
+        when(betRoundRepository.findById(roundId)).thenReturn(Optional.of(round));
+        when(userBetRepository.existsByRoundAndUserId(round, userId)).thenReturn(false);
+        when(userBetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UserBetRequest req = paidReq(100);
+
+        UserBet result = bettingService.postUserBet(userId, req);
+
+        assertThat(result.getStakePoints()).isEqualTo(100);
+        assertThat(result.isFree()).isFalse();
+
+        verify(pointHistoryService).createPointHistory(
+                eq(userId), eq(-100),
+                eq(PointReason.BETTING),
+                eq(PointOrigin.BETTING),
+                eq(roundId)
+        );
+        verify(userBetRepository).save(any(UserBet.class));
+    }
+
+    @Test
+    @DisplayName("postUserBet: 무료 베팅 성공 → 포인트 차감 호출 안함, stake=0")
+    void postUserBet_free_success() {
+        BetRound round = openRoundNow();
+
+        when(betRoundRepository.findById(roundId)).thenReturn(Optional.of(round));
+        when(userBetRepository.existsByRoundAndUserId(round, userId)).thenReturn(false);
+        when(userBetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UserBetRequest req = freeReq();
+
+        UserBet result = bettingService.postUserBet(userId, req);
+
+        assertThat(result.isFree()).isTrue();
+        assertThat(result.getStakePoints()).isZero();
+
+        verify(pointHistoryService, never()).createPointHistory(any(), anyInt(), any(), any(), any());
+        verify(userBetRepository).save(any(UserBet.class));
+    }
+
+    @Test
+    @DisplayName("postUserBet: 라운드 없음 → BET_ROUND_NOT_FOUND")
+    void postUserBet_round_not_found() {
+        when(betRoundRepository.findById(roundId)).thenReturn(Optional.empty());
+
+        CustomException ex = assertThrows(CustomException.class,
+                () -> bettingService.postUserBet(userId, paidReq(100)));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_ROUND_NOT_FOUND);
+        verifyNoInteractions(pointHistoryService);
+    }
+
+    @Test
+    @DisplayName("postUserBet: 중복 베팅 → BET_DUPLICATE")
+    void postUserBet_duplicate() {
+        BetRound round = openRoundNow();
+        when(betRoundRepository.findById(roundId)).thenReturn(Optional.of(round));
+        when(userBetRepository.existsByRoundAndUserId(round, userId)).thenReturn(true);
+
+        CustomException ex = assertThrows(CustomException.class,
+                () -> bettingService.postUserBet(userId, paidReq(100)));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_DUPLICATE);
+        verifyNoInteractions(pointHistoryService);
+        verify(userBetRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("postUserBet: 베팅 시간 아님 → BET_TIME_INVALID")
+    void postUserBet_time_invalid() {
+        BetRound closed = closedRoundNow();
+        when(betRoundRepository.findById(roundId)).thenReturn(Optional.of(closed));
+        when(userBetRepository.existsByRoundAndUserId(closed, userId)).thenReturn(false);
+
+        CustomException ex = assertThrows(CustomException.class,
+                () -> bettingService.postUserBet(userId, paidReq(100)));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_TIME_INVALID);
+        verifyNoInteractions(pointHistoryService);
+        verify(userBetRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cancelUserBet: 유료 베팅 취소 → 환불 호출 + 삭제")
+    void cancelUserBet_paid_refund_and_delete() {
+        BetRound round = openRoundNow();
+        UUID userBetId = UUID.randomUUID();
+
+        UserBet bet = UserBet.builder()
+                .userBetId(userBetId)
+                .round(round)
+                .userId(userId)
+                .isFree(false)
+                .stakePoints(200)
+                .betStatus(BetStatus.ACTIVE)
+                .build();
+
+        when(userBetRepository.findByUserBetIdAndUserId(userBetId, userId))
+                .thenReturn(Optional.of(bet));
+
+        bettingService.cancelUserBet(userId, userBetId);
+
+        verify(pointHistoryService).createPointHistory(
+                eq(userId), eq(200),
+                eq(PointReason.BETTING),
+                eq(PointOrigin.BETTING),
+                eq(userBetId)
+        );
+        verify(userBetRepository).delete(bet);
+    }
+
+    @Test
+    @DisplayName("cancelUserBet: 본인 소유/존재 X → BET_NOT_FOUND")
+    void cancelUserBet_not_found() {
+        UUID userBetId = UUID.randomUUID();
+        when(userBetRepository.findByUserBetIdAndUserId(userBetId, userId))
+                .thenReturn(Optional.empty());
+
+        CustomException ex = assertThrows(CustomException.class,
+                () -> bettingService.cancelUserBet(userId, userBetId));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_NOT_FOUND);
+        verifyNoInteractions(pointHistoryService);
+        verify(userBetRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("cancelUserBet: 마감 이후 취소 → BET_ROUND_CLOSED")
+    void cancelUserBet_after_lock() {
+        BetRound closed = closedRoundNow();
+        UUID userBetId = UUID.randomUUID();
+
+        UserBet bet = UserBet.builder()
+                .userBetId(userBetId)
+                .round(closed)
+                .userId(userId)
+                .isFree(false)
+                .stakePoints(200)
+                .betStatus(BetStatus.ACTIVE)
+                .build();
+
+        when(userBetRepository.findByUserBetIdAndUserId(userBetId, userId))
+                .thenReturn(Optional.of(bet));
+
+        CustomException ex = assertThrows(CustomException.class,
+                () -> bettingService.cancelUserBet(userId, userBetId));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_ROUND_CLOSED);
+        verify(pointHistoryService, never()).createPointHistory(any(), anyInt(), any(), any(), any());
+        verify(userBetRepository, never()).delete(any());
     }
 }

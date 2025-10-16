@@ -1,11 +1,17 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.util.UUID;
 
 @Entity
+@Getter
+@Builder @NoArgsConstructor @AllArgsConstructor
 public class UserBet extends BasePostgresEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)
