@@ -5,12 +5,15 @@ import sejong_logo from '../../assets/sejong_logo.png';
 import EmailVerificationModal from './../VerificationModal';
 
 const SignUpForm = () => {
+  const [nickname, setNickname] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationNumber, setVerificationNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [confirmEmail, setConfirmEmail] = useState(false);
+
+  const [isVerificationNumberSent, setVerificationNumberSent] = useState(false);
+
   const nav = useNavigate();
 
   // 이메일 입력 형태가 맞는지 검사
@@ -21,18 +24,25 @@ const SignUpForm = () => {
 
   // 핸드폰 번호 유효성 검사
   const isPhoneNumberValid = () => {
-    const phoneRegex = /^\d{10,11}$/;
+    const phoneRegex = /^0\d{8,10}$/;
     return phoneRegex.test(phoneNumber);
   };
 
   // 회원가입 제출 유효성 검사
   const isFormValid =
+    nickname.trim() !== '' &&
     isEmailValid() &&
     isPhoneNumberValid() &&
     password.trim() !== '' &&
-    password === confirmPassword &&
-    confirmEmail;
+    password === confirmPassword;
 
+  const handleSendVerificationNumber = () => {
+    // 전송 state 변경
+    setVerificationNumberSent(true);
+
+    // 인증번호 발송 로직
+    alert('인증번호가 발송되었습니다.');
+  };
   const handleSignUp = (e) => {
     e.preventDefault();
 
@@ -42,55 +52,70 @@ const SignUpForm = () => {
     nav('/login'); // 회원가입 성공 시 로그인 페이지 이동
   };
 
-  // 이메일 인증 팝업
-  const openModal = () => {
-    setModalOpen(true);
-  };
-  const closeModal = () => {
-    setModalOpen(false);
-  };
-
-  const handleEmailVerified = () => {
-    setConfirmEmail(true);
-  };
-
   return (
     <>
       <div className={styles.formContainer}>
         <form className={styles.loginForm} onSubmit={handleSignUp}>
-          <div className={styles.logoBox}>
-            <img src={sejong_logo} alt="sejong_logo" className={styles.logo} />
+          <div className={styles.header}>
+            <div className={styles.logoBox}>
+              <img
+                src={sejong_logo}
+                alt="sejong_logo"
+                className={styles.logo}
+              />
+            </div>
+            <h1>Sejong Investment Scholars Club</h1>
           </div>
-          <h1>Sejong Investment Scholars Club</h1>
+
           <div className={styles.inputGroup}>
-            <label htmlFor="email">Email</label>
-            <div className={styles.emailContainer}>
+            <label htmlFor="nickname">닉네임</label>
+            <input
+              type="text"
+              id="nickname"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="닉네임을 입력해주세요"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="phoneNumber">휴대전화</label>
+            <div className={styles.phoneVerificationContainer}>
               <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="이메일을 입력하세요"
-                className={styles.emailInput}
+                type="phoneNumber"
+                id="text"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="ex) 01012345678"
+                className={styles.phoneNumberInput}
               />
               <button
                 type="button"
-                onClick={openModal}
                 className={styles.verifyButton}
-                disabled={!isEmailValid()}
+                onClick={handleSendVerificationNumber}
+                disabled={!isPhoneNumberValid()}
               >
-                인증
+                인증번호 발송
               </button>
             </div>
           </div>
           <div className={styles.inputGroup}>
-            <label htmlFor="phone-number">핸드폰 번호</label>
+            <label htmlFor="verificationNumber">인증번호</label>
             <input
               type="text"
-              id="phone-number"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="ex) 01012345678"
+              id="verificationNumber"
+              value={verificationNumber}
+              onChange={(e) => setVerificationNumber(e.target.value)}
+              placeholder="인증번호를 입력해주세요"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="이메일을 입력해주세요"
             />
           </div>
           <div className={styles.inputGroup}>
@@ -100,7 +125,7 @@ const SignUpForm = () => {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호를 입력하세요"
+              placeholder="비밀번호를 입력해주세요"
             />
           </div>
           <div className={styles.inputGroup}>
@@ -110,7 +135,7 @@ const SignUpForm = () => {
               id="confirm-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="비밀번호를 한번 더 입력하세요"
+              placeholder="비밀번호를 한번 더 입력해주세요"
             />
           </div>
           <button
@@ -122,12 +147,6 @@ const SignUpForm = () => {
           </button>
         </form>
       </div>
-      {isModalOpen && (
-        <EmailVerificationModal
-          onClose={closeModal}
-          onEmailVerified={handleEmailVerified}
-        />
-      )}
     </>
   );
 };
