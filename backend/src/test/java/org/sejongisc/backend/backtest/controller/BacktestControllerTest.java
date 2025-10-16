@@ -9,6 +9,7 @@ import org.sejongisc.backend.backtest.entity.BacktestRun;
 import org.sejongisc.backend.backtest.entity.BacktestRunMetrics;
 import org.sejongisc.backend.backtest.service.BacktestService;
 import org.sejongisc.backend.common.auth.config.SecurityConfig;
+import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
@@ -22,9 +23,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,16 +51,20 @@ class BacktestControllerTest {
   @MockBean private BacktestService backtestService;
   @MockBean JpaMetamodelMappingContext jpaMetamodelMappingContext;
   @MockBean AuditorAware<String> auditorAware;
+  @MockBean
+  JwtParser jwtParser;
 
-  private UserDetails 인증_사용자(UUID userId) {
-    User u = User.builder()
-        .userId(userId)
-        .name("tester")
-        .email("test@example.com")
-        .role(Role.TEAM_MEMBER)
-        .point(0)
-        .build();
-    return new CustomUserDetails(u);
+  private final static String TOKEN = "TEST_TOKEN";
+
+  private UsernamePasswordAuthenticationToken 인증토큰(UUID uid) {
+    User domainUser = User.builder()
+        .userId(uid).name("tester").email("test@example.com")
+        .role(Role.TEAM_MEMBER).point(0).build();
+
+    CustomUserDetails customUserDetails = new CustomUserDetails(domainUser);
+
+    // SecurityConfig 에서 hasRole("TEAM_MEMBER") 라면 ROLE_ 접두어 필요
+    return new UsernamePasswordAuthenticationToken(customUserDetails, "", List.of(new SimpleGrantedAuthority("ROLE_TEAM_MEMBER")));
   }
 
   // ===== 상태 조회 =====
@@ -64,14 +72,16 @@ class BacktestControllerTest {
   @DisplayName("[GET] /api/backtest/runs/{id}/status : 인증 O → 200 & 상태 반환")
   void 상태조회_인증되어있으면_200() throws Exception {
     UUID uid = UUID.randomUUID();
-    UserDetails principal = 인증_사용자(uid);
-
     BacktestRun run = new BacktestRun();
     BacktestResponse resp = BacktestResponse.builder().backtestRun(run).build();
 
+    // when
+    when(jwtParser.validationToken(TOKEN)).thenReturn(true);
+    when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
     when(backtestService.getBacktestStatus(1L, uid)).thenReturn(resp);
 
-    mockMvc.perform(get("/api/backtest/runs/{id}/status", 1L).with(user(principal)))
+    mockMvc.perform(get("/api/backtest/runs/{id}/status", 1L)
+            .header("Authorization", "Bearer " + TOKEN))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.backtestRun").exists());
   }
@@ -80,7 +90,7 @@ class BacktestControllerTest {
   @DisplayName("[GET] /api/backtest/runs/{id}/status : 인증 X → 403")
   void 상태조회_미인증이면_403() throws Exception {
     mockMvc.perform(get("/api/backtest/runs/{id}/status", 1L))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
   }
 
   // ===== 상세 조회 =====
@@ -88,18 +98,19 @@ class BacktestControllerTest {
   @DisplayName("[GET] /api/backtest/runs/{id} : 인증 O → 200 & 상세 반환")
   void 상세조회_인증되어있으면_200() throws Exception {
     UUID uid = UUID.randomUUID();
-    UserDetails principal = 인증_사용자(uid);
-
     BacktestRun run = new BacktestRun();
     BacktestRunMetrics metrics = new BacktestRunMetrics();
     BacktestResponse resp = BacktestResponse.builder()
         .backtestRun(run)
         .backtestRunMetrics(metrics)
         .build();
-
+    //when
+    when(jwtParser.validationToken(TOKEN)).thenReturn(true);
+    when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
     when(backtestService.getBackTestDetails(1L, uid)).thenReturn(resp);
 
-    mockMvc.perform(get("/api/backtest/runs/{id}", 1L).with(user(principal)))
+    mockMvc.perform(get("/api/backtest/runs/{id}", 1L)
+            .header("Authorization", "Bearer " + TOKEN))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.backtestRun").exists())
         .andExpect(jsonPath("$.backtestRunMetrics").exists());
@@ -110,19 +121,19 @@ class BacktestControllerTest {
   @DisplayName("[POST] /api/backtest/runs : 인증 O → 200 & 실행 시작")
   void 실행_인증되어있으면_200() throws Exception {
     UUID uid = UUID.randomUUID();
-    UserDetails principal = 인증_사용자(uid);
-
     BacktestRequest req = new BacktestRequest();
     req.setUserId(uid);
-
     BacktestResponse resp = BacktestResponse.builder()
         .backtestRun(new BacktestRun())
         .build();
 
+    // when
+    when(jwtParser.validationToken(TOKEN)).thenReturn(true);
+    when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
     when(backtestService.runBacktest(any(BacktestRequest.class))).thenReturn(resp);
 
     mockMvc.perform(post("/api/backtest/runs")
-            .with(user(principal))
+            .header("Authorization", "Bearer " + TOKEN)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(req)))
         .andExpect(status().isOk())
@@ -134,11 +145,12 @@ class BacktestControllerTest {
   @DisplayName("[DELETE] /api/backtest/runs/{id} : 인증 O → 204")
   void 삭제_인증되어있으면_204() throws Exception {
     UUID uid = UUID.randomUUID();
-    UserDetails principal = 인증_사용자(uid);
-
     doNothing().when(backtestService).deleteBacktest(1L, uid);
+    when(jwtParser.validationToken(TOKEN)).thenReturn(true);
+    when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
 
-    mockMvc.perform(delete("/api/backtest/runs/{id}", 1L).with(user(principal)))
+    mockMvc.perform(delete("/api/backtest/runs/{id}", 1L)
+            .header("Authorization", "Bearer " + TOKEN))
         .andExpect(status().isNoContent());
   }
 
@@ -148,16 +160,17 @@ class BacktestControllerTest {
   void 템플릿저장_인증되어있으면_200() throws Exception {
     UUID uid = UUID.randomUUID();
     UUID tid = UUID.randomUUID();
-    UserDetails principal = 인증_사용자(uid);
-
     BacktestRequest req = new BacktestRequest();
     req.setUserId(uid);
     req.setTemplateId(tid);
 
+    // when
     doNothing().when(backtestService).addBacktestTemplate(any(BacktestRequest.class));
+    when(jwtParser.validationToken(TOKEN)).thenReturn(true);
+    when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
 
     mockMvc.perform(patch("/api/backtest/runs/{tid}", tid)
-            .with(user(principal))
+            .header("Authorization", "Bearer " + TOKEN)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(req)))
         .andExpect(status().isOk());
@@ -169,15 +182,16 @@ class BacktestControllerTest {
   void 템플릿삭제_인증되어있으면_204() throws Exception {
     UUID uid = UUID.randomUUID();
     UUID tid = UUID.randomUUID();
-    UserDetails principal = 인증_사용자(uid);
-
     BacktestRequest req = new BacktestRequest();
     req.setUserId(uid);
 
+    //when
     doNothing().when(backtestService).deleteBacktestFromTemplate(eq(req), eq(tid));
+    when(jwtParser.validationToken(TOKEN)).thenReturn(true);
+    when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
 
     mockMvc.perform(delete("/api/backtest/templates/{tid}/runs", tid)
-            .with(user(principal))
+            .header("Authorization", "Bearer " + TOKEN)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(req)))
         .andExpect(status().isNoContent());

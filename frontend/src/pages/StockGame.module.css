@@ -3,7 +3,7 @@
   flex-direction: column;
   justify-content: center;
   padding: 45px;
-  gap: 30px;
+  gap: 25px;
 }
 
 .title {
@@ -15,9 +15,66 @@
   margin-bottom: 30px;
 }
 
+.content-tab {
+  display: flex;
+}
+
+.tab {
+  width: 140px;
+  height: 60px;
+  padding: 10px 10px;
+  cursor: pointer;
+  color: #9c9c9c;
+  font-weight: 700;
+  font-style: bold;
+  font-size: 26px;
+  border: none;
+  background: none;
+  border-bottom: 2px solid #c9c9c9;
+}
+
+.active {
+  color: #171717;
+  border-bottom: 2px solid #171717;
+}
+
 .last-game {
   font-weight: 600;
   font-style: Bold;
   font-size: 20px;
   margin-bottom: 15px;
+}
+
+.daily-betting {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.daily-betting span {
+  font-weight: 500;
+  font-style: medium;
+  font-size: 20px;
+  color: #616161;
+}
+
+.type {
+  margin: 20px 5px;
+  cursor: pointer;
+  border: 1px solid #d4d4d4;
+  width: 68px;
+  height: 39px;
+  border-radius: 8px;
+  background: none;
+
+  font-weight: 600;
+  font-style: semi-bold;
+  font-size: 16px;
+  color: #171717;
+}
+
+.selected {
+  color: #1d80f4;
+  background-color: #eef9ff;
+  border: none;
 }

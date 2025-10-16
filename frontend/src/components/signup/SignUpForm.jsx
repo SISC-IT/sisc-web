@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
-import EmailVerificationModal from './EmailVerificationModal';
+import EmailVerificationModal from './../VerificationModal';
 
 const SignUpForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isPopupOpen, setPopupOpen] = useState(false);
+  const [isModalOpen, setModalOpen] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState(false);
   const nav = useNavigate();
 
@@ -43,11 +43,11 @@ const SignUpForm = () => {
   };
 
   // 이메일 인증 팝업
-  const openPopup = () => {
-    setPopupOpen(true);
+  const openModal = () => {
+    setModalOpen(true);
   };
-  const closePopup = () => {
-    setPopupOpen(false);
+  const closeModal = () => {
+    setModalOpen(false);
   };
 
   const handleEmailVerified = () => {
@@ -75,7 +75,7 @@ const SignUpForm = () => {
               />
               <button
                 type="button"
-                onClick={openPopup}
+                onClick={openModal}
                 className={styles.verifyButton}
                 disabled={!isEmailValid()}
               >
@@ -122,9 +122,9 @@ const SignUpForm = () => {
           </button>
         </form>
       </div>
-      {isPopupOpen && (
+      {isModalOpen && (
         <EmailVerificationModal
-          onClose={closePopup}
+          onClose={closeModal}
           onEmailVerified={handleEmailVerified}
         />
       )}
