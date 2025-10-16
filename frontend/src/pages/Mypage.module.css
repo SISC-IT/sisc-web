@@ -1,0 +1,13 @@
+.container {
+  display: flex;
+  padding: 80px;
+  min-height: 100dvh;
+  flex-direction: column;
+  gap: 30px;
+  background-color: white;
+}
+
+.title {
+  font-size: 36px;
+  font-weight: 600;
+}
