@@ -121,7 +121,7 @@ public class AttendanceSessionService {
 
     /**
      * 상태별 세션 목록 조회
-     * - UPCOMING/OPEN/CLOSED 상태펼 필터링
+     * - UPCOMING/OPEN/CLOSED 상태별 필터링
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getSessionsByStatus(SessionStatus status) {
@@ -159,14 +159,14 @@ public class AttendanceSessionService {
 
         return allSessions.stream()
                  .filter(session -> {
-                 if (session.getStatus() != SessionStatus.OPEN) {
-                            return false;
-                        }
-                 LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
-                    return !now.isBefore(session.getStartsAt()) && now.isBefore(endTime);
-                })
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
+             if (session.getStatus() != SessionStatus.OPEN) {
+                        return false;
+                    }
+             LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
+                return !now.isBefore(session.getStartsAt()) && now.isBefore(endTime);
+            })
+            .map(this::convertToResponse)
+            .collect(Collectors.toList());
     }
 
     /**
@@ -237,6 +237,7 @@ public class AttendanceSessionService {
 
         session = session.toBuilder()
                 .status(SessionStatus.OPEN)
+                .startsAt(LocalDateTime.now())
                 .build();
 
         attendanceSessionRepository.save(session);
@@ -265,7 +266,7 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 중복되지 않은 6자리 코드 생성
+     * 중복되지 않는 6자리 코드 생성
      * - DB에서 중복 검사 후 유니크 코드 리턴
      */
     private String generateUniqueCode() {
