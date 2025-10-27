@@ -270,4 +270,94 @@ class UserServiceImplTest {
         verify(oauthAccountRepository).save(any(UserOauthAccount.class));
     }
 
+    @Test
+    @DisplayName("회원정보 수정 성공: 이름, 전화번호, 비밀번호 변경")
+    void updateUser_success() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User existingUser = User.builder()
+                .userId(userId)
+                .name("기존이름")
+                .phoneNumber("010-1111-1111")
+                .passwordHash("OLD_HASH")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.encode("newPassword123")).thenReturn("NEW_HASH");
+
+        // 수정 요청 DTO
+        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
+        request.setUsername("새이름");
+        request.setPhoneNumber("010-2222-3333");
+        request.setPassword("newPassword123");
+
+        // when
+        userService.updateUser(userId, request);
+
+        // then
+        assertAll(
+                () -> assertThat(existingUser.getName()).isEqualTo("새이름"),
+                () -> assertThat(existingUser.getPhoneNumber()).isEqualTo("010-2222-3333"),
+                () -> assertThat(existingUser.getPasswordHash()).isEqualTo("NEW_HASH")
+        );
+
+        verify(userRepository).findById(userId);
+        verify(passwordEncoder).encode("newPassword123");
+        verify(userRepository).save(existingUser);
+    }
+
+    @Test
+    @DisplayName("회원정보 수정 실패: 존재하지 않는 사용자일 경우 예외 발생")
+    void updateUser_notFound_throws() {
+        // given
+        UUID notExistId = UUID.randomUUID();
+        when(userRepository.findById(notExistId)).thenReturn(Optional.empty());
+
+        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
+        request.setUsername("새이름");
+
+        // when & then
+        assertThrows(IllegalArgumentException.class,
+                () -> userService.updateUser(notExistId, request));
+
+        verify(userRepository).findById(notExistId);
+        verifyNoInteractions(passwordEncoder);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("회원정보 수정: 모든 필드가 null이면 기존 정보 그대로 유지")
+    void updateUser_allFieldsNull_noChanges() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User existingUser = User.builder()
+                .userId(userId)
+                .name("원래이름")
+                .phoneNumber("010-1111-1111")
+                .passwordHash("OLD_HASH")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+
+        // 모든 필드가 null인 요청 DTO
+        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
+
+        // when
+        userService.updateUser(userId, request);
+
+        // then
+        assertAll(
+                () -> assertThat(existingUser.getName()).isEqualTo("원래이름"),
+                () -> assertThat(existingUser.getPhoneNumber()).isEqualTo("010-1111-1111"),
+                () -> assertThat(existingUser.getPasswordHash()).isEqualTo("OLD_HASH")
+        );
+
+        verify(userRepository).findById(userId);
+        verify(userRepository).save(existingUser);
+        verifyNoInteractions(passwordEncoder); // 비밀번호 인코더 안 씀
+    }
+
+
 }

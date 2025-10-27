@@ -1,7 +1,11 @@
 package org.sejongisc.backend.auth.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.auth.repository.RefreshTokenRepository;
+import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -15,6 +19,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.sql.Ref;
+import java.util.UUID;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LoginServiceImpl implements LoginService {
@@ -22,6 +30,8 @@ public class LoginServiceImpl implements LoginService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtParser jwtParser;
 
     @Override
     @Transactional
@@ -45,5 +55,12 @@ public class LoginServiceImpl implements LoginService {
                 .role(user.getRole())
                 .point(user.getPoint())
                 .build();
+    }
+
+    @Override
+    public void logout(String accessToken) {
+        UUID userId = jwtParser.getUserIdFromToken(accessToken);
+        refreshTokenRepository.deleteByUserId(userId);
+        log.info("로그아웃 완료: userId={}", userId);
     }
 }

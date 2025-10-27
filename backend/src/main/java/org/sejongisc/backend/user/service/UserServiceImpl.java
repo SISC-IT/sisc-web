@@ -9,6 +9,7 @@ import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.auth.dto.SignupRequest;
 import org.sejongisc.backend.auth.dto.SignupResponse;
+import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
@@ -16,6 +17,8 @@ import org.sejongisc.backend.auth.oauth.OauthUserInfo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -91,6 +94,19 @@ public class UserServiceImpl implements UserService {
 
                     return savedUser;
                 });
+    }
+
+    public void updateUser(UUID userId, UserUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        if(request.getUsername() != null) user.setName(request.getUsername());
+        if(request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
+        if(request.getPassword() != null){
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        }
+
+        userRepository.save(user);
     }
 
 }

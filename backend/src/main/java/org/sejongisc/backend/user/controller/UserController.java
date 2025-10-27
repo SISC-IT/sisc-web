@@ -7,11 +7,14 @@ import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.auth.dto.SignupRequest;
 import org.sejongisc.backend.auth.dto.SignupResponse;
 import org.sejongisc.backend.user.dto.UserInfoResponse;
+import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -42,5 +45,14 @@ public class UserController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{userId}")
+    public ResponseEntity<?> updateUser(
+            @PathVariable UUID userId,
+            @RequestBody UserUpdateRequest request
+    ) {
+        userService.updateUser(userId, request);
+        return ResponseEntity.ok("회원 정보가 수정되었습니다.");
     }
 }

@@ -32,6 +32,7 @@ public class OauthLoginController {
     private final JwtProvider jwtProvider;
     private final OauthStateService oauthStateService;
 
+
     @Value("${google.client.id}")
     private String googleClientId;
 
@@ -171,4 +172,29 @@ public class OauthLoginController {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .body(response);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "잘못된 Authorization 헤더 형식입니다."));
+        }
+
+        String token = authorizationHeader.substring(7);
+        loginService.logout(token);
+
+        // Refresh Token 쿠키 삭제
+        ResponseCookie deleteCookie = ResponseCookie.from("refresh", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(Map.of("message", "로그아웃 성공"));
+    }
+
 }
+
