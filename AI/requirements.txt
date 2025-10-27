@@ -9,3 +9,5 @@ scikit-learn
 tensorflow
 yfinance
 groq
+requests
+beautifulsoup4
