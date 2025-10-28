@@ -58,6 +58,7 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    @Transactional
     public void logout(String accessToken) {
         UUID userId = jwtParser.getUserIdFromToken(accessToken);
         refreshTokenRepository.deleteByUserId(userId);

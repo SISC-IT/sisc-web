@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -50,8 +51,19 @@ public class UserController {
     @PatchMapping("/{userId}")
     public ResponseEntity<?> updateUser(
             @PathVariable UUID userId,
-            @RequestBody UserUpdateRequest request
+            @RequestBody @Valid UserUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser
     ) {
+        if(authenticatedUser == null){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "인증 정보가 필요합니다."));
+        }
+
+        // 본인 허용
+        if (!authenticatedUser.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "본인의 정보만 수정할 수 있습니다."));
+        }
+
         userService.updateUser(userId, request);
         return ResponseEntity.ok("회원 정보가 수정되었습니다.");
     }

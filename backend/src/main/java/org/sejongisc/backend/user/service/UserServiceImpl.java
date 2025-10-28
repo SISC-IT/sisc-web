@@ -1,6 +1,7 @@
 package org.sejongisc.backend.user.service;
 
-import jakarta.transaction.Transactional;
+
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -96,16 +97,31 @@ public class UserServiceImpl implements UserService {
                 });
     }
 
+    @Override
+    @Transactional
     public void updateUser(UUID userId, UserUpdateRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if(request.getUsername() != null) user.setName(request.getUsername());
-        if(request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
-        if(request.getPassword() != null){
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        // 이름 업데이트
+        if (request.getName() != null && !request.getName().trim().isEmpty()) {
+            user.setName(request.getName().trim());
         }
 
+        // 전화번호 업데이트
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            user.setPhoneNumber(request.getPhoneNumber().trim());
+        }
+
+        if (request.getPassword() != null) {
+            String trimmedPassword = request.getPassword().trim();
+            if (trimmedPassword.isEmpty()) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
+            user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
+        }
+
+        log.info("회원 정보가 수정되었습니다. userId={}", userId);
         userRepository.save(user);
     }
 

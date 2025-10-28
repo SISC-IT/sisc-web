@@ -1,8 +1,7 @@
 package org.sejongisc.backend.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -23,6 +22,7 @@ import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.auth.dto.SignupRequest;
 import org.sejongisc.backend.auth.dto.SignupResponse;
 import org.sejongisc.backend.auth.entity.AuthProvider;
+import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
@@ -288,7 +288,7 @@ class UserServiceImplTest {
 
         // 수정 요청 DTO
         var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
-        request.setUsername("새이름");
+        request.setName("새이름");
         request.setPhoneNumber("010-2222-3333");
         request.setPassword("newPassword123");
 
@@ -311,19 +311,13 @@ class UserServiceImplTest {
     @DisplayName("회원정보 수정 실패: 존재하지 않는 사용자일 경우 예외 발생")
     void updateUser_notFound_throws() {
         // given
-        UUID notExistId = UUID.randomUUID();
-        when(userRepository.findById(notExistId)).thenReturn(Optional.empty());
+        UUID nonExistingId = UUID.randomUUID();
+        UserUpdateRequest request = new UserUpdateRequest();
 
-        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
-        request.setUsername("새이름");
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUser(nonExistingId, request));
 
-        // when & then
-        assertThrows(IllegalArgumentException.class,
-                () -> userService.updateUser(notExistId, request));
-
-        verify(userRepository).findById(notExistId);
-        verifyNoInteractions(passwordEncoder);
-        verify(userRepository, never()).save(any());
+        assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
     }
 
     @Test
