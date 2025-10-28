@@ -1,0 +1,38 @@
+.header {
+  margin: 10px 0;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.description {
+  margin: 5px 0 10px 0;
+  font-size: 14px;
+  color: #aaaaaa;
+}
+
+.button {
+  margin-top: 15px;
+  background-color: #f9f6ff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.buttonName {
+  line-height: 16px;
+  height: 16px;
+  display: inline-block;
+  color: #ad5fff;
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+}
