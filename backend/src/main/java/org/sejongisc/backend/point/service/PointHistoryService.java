@@ -19,6 +19,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -56,7 +57,7 @@ public class PointHistoryService {
   }
 
   // 포인트 증감 기록 생성 및 유저 포인트 업데이트
-  @Transactional
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   @Retryable(
       // 어떤 예외가 발생했을 때 재시도할지 지정합니다.
       include = {OptimisticLockingFailureException.class},
