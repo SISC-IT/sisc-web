@@ -10,7 +10,6 @@ import org.sejongisc.backend.betting.entity.Scope;
 import org.sejongisc.backend.betting.entity.UserBet;
 import org.sejongisc.backend.betting.service.BettingService;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
-import org.sejongisc.backend.user.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -67,4 +66,11 @@ public class BettingController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/user-bets/history")
+    public ResponseEntity<List<UserBet>> getAllUserBets(
+            @AuthenticationPrincipal CustomUserDetails principal){
+        List<UserBet> userBets = bettingService.getAllMyBets(principal.getUserId());
+
+        return ResponseEntity.ok(userBets);
+    }
 }
