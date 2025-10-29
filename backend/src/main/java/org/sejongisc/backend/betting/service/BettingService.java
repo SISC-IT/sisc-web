@@ -15,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -61,8 +62,10 @@ public class BettingService {
     }
 
     public void createBetRound(Scope scope) {
-        Stock stock = getStock();
+
         LocalDateTime now = LocalDateTime.now();
+
+        Stock stock = getStock();
 
         BetRound betRound = BetRound.builder()
                 .scope(scope)
@@ -97,7 +100,7 @@ public class BettingService {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
 
-        betRound.validateBettable();
+        betRound.validate();
 
         int stake = 0;
 
@@ -136,7 +139,7 @@ public class BettingService {
 
         BetRound betRound = userBet.getRound();
 
-        betRound.validateBettable();
+        betRound.validate();
 
         if (!userBet.isFree() && userBet.getStakePoints() > 0) {
             pointHistoryService.createPointHistory(
@@ -149,5 +152,44 @@ public class BettingService {
         }
 
         userBetRepository.delete(userBet);
+    }
+
+    @Transactional
+    public void settleUserBets() {
+        List<BetRound> activeRounds = betRoundRepository.findByStatusTrue();
+
+        for (BetRound round : activeRounds) {
+            Stock stock = stockRepository.findBySymbol(round.getSymbol())
+                    .orElseThrow(() -> new CustomException(ErrorCode.STOCK_NOT_FOUND));
+
+            BigDecimal finalPrice = stock.getSettleClosePrice();
+            round.settle(finalPrice);
+            betRoundRepository.save(round);
+
+            List<UserBet> userBets = userBetRepository.findAllByRound(round);
+
+            for (UserBet bet : userBets) {
+                if (bet.getOption() == round.getResultOption()) {
+                    int reward = calculateReward(bet);
+                    bet.win(reward);
+                    pointHistoryService.createPointHistory(
+                            bet.getUserId(),
+                            reward,
+                            PointReason.BETTING_WIN,
+                            PointOrigin.BETTING,
+                            round.getBetRoundID()
+                    );
+                } else {
+                    bet.lose();
+                }
+                bet.finish();
+            }
+            userBetRepository.saveAll(userBets);
+        }
+    }
+
+    // TODO : 비율을 바탕으로한 reward 계산 로직
+    private int calculateReward(UserBet bet) {
+        return 2;
     }
 }

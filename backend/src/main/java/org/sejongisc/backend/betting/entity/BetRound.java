@@ -39,7 +39,7 @@ public class BetRound extends BasePostgresEntity {
     private BigDecimal baseMultiplier;
 
     @Column(nullable = false)
-    private boolean status = false;
+    private boolean status = false; // Todo : Enum 클래스로 수정
 
     private LocalDateTime openAt;
 
@@ -74,14 +74,26 @@ public class BetRound extends BasePostgresEntity {
     }
 
     public void close() {
-        if (!this.status) throw new IllegalStateException("이미 종료된 라운드입니다.");
         this.status = false;
+    }
+
+    public void validate() {
+        if (isClosed()) {
+            throw new CustomException(ErrorCode.BET_ROUND_CLOSED);
+        }
+    }
+
+    public void settle(BigDecimal finalPrice) {
+        this.settleClosePrice = finalPrice;
+        this.resultOption = determineResult(finalPrice);
         this.settleAt = LocalDateTime.now();
     }
 
-    public void validateBettable() {
-        if (isClosed()) {
-            throw new CustomException(ErrorCode.BET_TIME_INVALID);
-        }
+    private BetOption determineResult(BigDecimal finalPrice) {
+        int compare = finalPrice.compareTo(previousClosePrice);
+
+        if (compare >= 0) return BetOption.RISE;
+        return BetOption.FALL;
     }
+
 }

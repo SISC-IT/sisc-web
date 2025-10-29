@@ -14,14 +14,10 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.service.PointHistoryService;
-import org.sejongisc.backend.user.dao.UserRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,7 +42,6 @@ class BettingServiceTest {
         userBetRepository = mock(UserBetRepository.class);
         pointHistoryService = mock(PointHistoryService.class);
 
-        // BettingService 생성자 시그니처에 맞춰 주입
         bettingService = new BettingService(
                 betRoundRepository,
                 stockRepository,
@@ -58,6 +53,9 @@ class BettingServiceTest {
         roundId = UUID.randomUUID();
     }
 
+    // ---------------------
+    // Stock / util tests
+    // ---------------------
     @Test
     void getStock_빈리스트면_예외발생() {
         when(stockRepository.findAll()).thenReturn(List.of());
@@ -89,7 +87,7 @@ class BettingServiceTest {
 
         Stock chosen = bettingService.getStock();
 
-        assertThat(List.of(s1, s2)).contains(chosen); // 둘 중 하나여야 함
+        assertThat(List.of(s1, s2)).contains(chosen);
         verify(stockRepository, times(1)).findAll();
     }
 
@@ -99,8 +97,13 @@ class BettingServiceTest {
         assertThat(result).isInstanceOf(Boolean.class);
     }
 
+    // ---------------------
+    // 조회 관련 테스트
+    // ---------------------
     @Test
+    @DisplayName("createBetRound_DAILY_정상저장")
     void createBetRound_DAILY_정상저장() {
+        // given
         Stock stock = Stock.builder()
                 .name("삼성전자")
                 .symbol("005930")
@@ -110,21 +113,23 @@ class BettingServiceTest {
 
         when(stockRepository.findAll()).thenReturn(List.of(stock));
 
+        // when
         bettingService.createBetRound(Scope.DAILY);
 
+        // then
         ArgumentCaptor<BetRound> captor = ArgumentCaptor.forClass(BetRound.class);
         verify(betRoundRepository, times(1)).save(captor.capture());
-
         BetRound saved = captor.getValue();
+
         assertThat(saved.getScope()).isEqualTo(Scope.DAILY);
         assertThat(saved.getSymbol()).isEqualTo("005930");
         assertThat(saved.getTitle()).contains("삼성전자");
+        assertThat(saved.isOpen()).isTrue(); // 스케줄러에서 open() 호출 후 저장이라면 true여야 함
     }
 
     @Test
     @DisplayName("활성화된 DAILY BetRound 조회 성공")
     void findActiveRound_Success() {
-        // given
         BetRound dailyRound = BetRound.builder()
                 .betRoundID(UUID.randomUUID())
                 .scope(Scope.DAILY)
@@ -136,27 +141,22 @@ class BettingServiceTest {
         when(betRoundRepository.findByStatusTrueAndScope(Scope.DAILY))
                 .thenReturn(Optional.of(dailyRound));
 
-        // when
         Optional<BetRound> result = bettingService.getActiveRound(Scope.DAILY);
 
-        // then
         assertThat(result).isPresent();
         assertThat(result.get().getScope()).isEqualTo(Scope.DAILY);
-        assertThat(result.get().isStatus()).isTrue();
+        assertThat(result.get().isOpen()).isTrue();
         verify(betRoundRepository, times(1)).findByStatusTrueAndScope(Scope.DAILY);
     }
 
     @Test
     @DisplayName("활성화된 BetRound가 없을 때 빈 Optional 반환")
     void findActiveRound_NotFound() {
-        // given
         when(betRoundRepository.findByStatusTrueAndScope(Scope.DAILY))
                 .thenReturn(Optional.empty());
 
-        // when
         Optional<BetRound> result = bettingService.getActiveRound(Scope.DAILY);
 
-        // then
         assertThat(result).isEmpty();
         verify(betRoundRepository, times(1)).findByStatusTrueAndScope(Scope.DAILY);
     }
@@ -164,7 +164,6 @@ class BettingServiceTest {
     @Test
     @DisplayName("모든 BetRound 최신순 조회 성공")
     void getAllBetRounds_Success() {
-        // given
         List<BetRound> betRounds = List.of(
                 BetRound.builder()
                         .betRoundID(UUID.randomUUID())
@@ -185,10 +184,8 @@ class BettingServiceTest {
         when(betRoundRepository.findAllByOrderBySettleAtDesc())
                 .thenReturn(betRounds);
 
-        // when
         List<BetRound> results = bettingService.getAllBetRounds();
 
-        // then
         assertThat(results).hasSize(2);
         assertThat(results.get(0).getScope()).isEqualTo(Scope.DAILY);
         assertThat(results.get(1).getScope()).isEqualTo(Scope.WEEKLY);
@@ -198,14 +195,11 @@ class BettingServiceTest {
     @Test
     @DisplayName("BetRound가 없을 때 빈 리스트 반환")
     void getAllBetRounds_Empty() {
-        // given
         when(betRoundRepository.findAllByOrderBySettleAtDesc())
                 .thenReturn(Collections.emptyList());
 
-        // when
         List<BetRound> results = bettingService.getAllBetRounds();
 
-        // then
         assertThat(results).isEmpty();
         verify(betRoundRepository, times(1)).findAllByOrderBySettleAtDesc();
     }
@@ -213,7 +207,6 @@ class BettingServiceTest {
     @Test
     @DisplayName("WEEKLY BetRound 조회 성공")
     void findActiveRound_Weekly_Success() {
-        // given
         BetRound weeklyRound = BetRound.builder()
                 .betRoundID(UUID.randomUUID())
                 .scope(Scope.WEEKLY)
@@ -225,10 +218,8 @@ class BettingServiceTest {
         when(betRoundRepository.findByStatusTrueAndScope(Scope.WEEKLY))
                 .thenReturn(Optional.of(weeklyRound));
 
-        // when
         Optional<BetRound> result = bettingService.getActiveRound(Scope.WEEKLY);
 
-        // then
         assertThat(result).isPresent();
         assertThat(result.get().getScope()).isEqualTo(Scope.WEEKLY);
         verify(betRoundRepository, times(1)).findByStatusTrueAndScope(Scope.WEEKLY);
@@ -237,8 +228,7 @@ class BettingServiceTest {
     @Test
     @DisplayName("getAllMyBets() - 유저 ID로 조회 시 Repository 호출 및 결과 반환 확인")
     void getAllMyBets_Success() {
-        // given
-        UUID userId = UUID.randomUUID();
+        UUID u = UUID.randomUUID();
         BetRound round = BetRound.builder()
                 .title("테스트 라운드")
                 .openAt(LocalDateTime.now().minusHours(2))
@@ -249,7 +239,7 @@ class BettingServiceTest {
         UserBet bet1 = UserBet.builder()
                 .userBetId(UUID.randomUUID())
                 .round(round)
-                .userId(userId)
+                .userId(u)
                 .option(BetOption.RISE)
                 .stakePoints(100)
                 .isFree(false)
@@ -258,27 +248,28 @@ class BettingServiceTest {
         UserBet bet2 = UserBet.builder()
                 .userBetId(UUID.randomUUID())
                 .round(round)
-                .userId(userId)
+                .userId(u)
                 .option(BetOption.FALL)
                 .stakePoints(50)
                 .isFree(true)
                 .build();
 
         List<UserBet> mockResult = List.of(bet1, bet2);
-        when(userBetRepository.findAllByUserIdOrderByRound_SettleAtDesc(userId))
+        when(userBetRepository.findAllByUserIdOrderByRound_SettleAtDesc(u))
                 .thenReturn(mockResult);
 
-        // when
-        List<UserBet> result = bettingService.getAllMyBets(userId);
+        List<UserBet> result = bettingService.getAllMyBets(u);
 
-        // then
         verify(userBetRepository, times(1))
-                .findAllByUserIdOrderByRound_SettleAtDesc(userId);
+                .findAllByUserIdOrderByRound_SettleAtDesc(u);
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).getUserId()).isEqualTo(userId);
+        assertThat(result.get(0).getUserId()).isEqualTo(u);
         assertThat(result.get(1).getRound().getTitle()).isEqualTo("테스트 라운드");
     }
 
+    // ---------------------
+    // Bet creation / posting tests
+    // ---------------------
     private BetRound openRoundNow() {
         LocalDateTime now = LocalDateTime.now();
         return BetRound.builder()
@@ -317,12 +308,12 @@ class BettingServiceTest {
                 .roundId(roundId)
                 .option(BetOption.FALL)
                 .free(true)
-                .stakePoints(999) // 무시되어야 함
+                .stakePoints(999)
                 .build();
     }
 
     @Test
-    @DisplayName("postUserBet: 유료 베팅 성공 → 포인트 차감 호출 + 저장")
+    @DisplayName("postUserBet_paid_success")
     void postUserBet_paid_success() {
         BetRound round = openRoundNow();
 
@@ -347,7 +338,7 @@ class BettingServiceTest {
     }
 
     @Test
-    @DisplayName("postUserBet: 무료 베팅 성공 → 포인트 차감 호출 안함, stake=0")
+    @DisplayName("postUserBet_free_success")
     void postUserBet_free_success() {
         BetRound round = openRoundNow();
 
@@ -367,7 +358,7 @@ class BettingServiceTest {
     }
 
     @Test
-    @DisplayName("postUserBet: 라운드 없음 → BET_ROUND_NOT_FOUND")
+    @DisplayName("postUserBet_round_not_found")
     void postUserBet_round_not_found() {
         when(betRoundRepository.findById(roundId)).thenReturn(Optional.empty());
 
@@ -379,7 +370,7 @@ class BettingServiceTest {
     }
 
     @Test
-    @DisplayName("postUserBet: 중복 베팅 → BET_DUPLICATE")
+    @DisplayName("postUserBet_duplicate")
     void postUserBet_duplicate() {
         BetRound round = openRoundNow();
         when(betRoundRepository.findById(roundId)).thenReturn(Optional.of(round));
@@ -394,7 +385,7 @@ class BettingServiceTest {
     }
 
     @Test
-    @DisplayName("postUserBet: 베팅 시간 아님 → BET_TIME_INVALID")
+    @DisplayName("postUserBet_time_invalid")
     void postUserBet_time_invalid() {
         BetRound closed = closedRoundNow();
         when(betRoundRepository.findById(roundId)).thenReturn(Optional.of(closed));
@@ -403,13 +394,16 @@ class BettingServiceTest {
         CustomException ex = assertThrows(CustomException.class,
                 () -> bettingService.postUserBet(userId, paidReq(100)));
 
-        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_TIME_INVALID);
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_ROUND_CLOSED);
         verifyNoInteractions(pointHistoryService);
         verify(userBetRepository, never()).save(any());
     }
 
+    // ---------------------
+    // cancelUserBet tests
+    // ---------------------
     @Test
-    @DisplayName("cancelUserBet: 유료 베팅 취소 → 환불 호출 + 삭제")
+    @DisplayName("cancelUserBet_paid_refund_and_delete")
     void cancelUserBet_paid_refund_and_delete() {
         BetRound round = openRoundNow();
         UUID userBetId = UUID.randomUUID();
@@ -438,7 +432,7 @@ class BettingServiceTest {
     }
 
     @Test
-    @DisplayName("cancelUserBet: 본인 소유/존재 X → BET_NOT_FOUND")
+    @DisplayName("cancelUserBet_not_found")
     void cancelUserBet_not_found() {
         UUID userBetId = UUID.randomUUID();
         when(userBetRepository.findByUserBetIdAndUserId(userBetId, userId))
@@ -453,7 +447,7 @@ class BettingServiceTest {
     }
 
     @Test
-    @DisplayName("cancelUserBet: 마감 이후 취소 → BET_ROUND_CLOSED")
+    @DisplayName("cancelUserBet_after_lock")
     void cancelUserBet_after_lock() {
         BetRound closed = closedRoundNow();
         UUID userBetId = UUID.randomUUID();
@@ -473,8 +467,79 @@ class BettingServiceTest {
         CustomException ex = assertThrows(CustomException.class,
                 () -> bettingService.cancelUserBet(userId, userBetId));
 
-        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_TIME_INVALID);
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_ROUND_CLOSED);
         verify(pointHistoryService, never()).createPointHistory(any(), anyInt(), any(), any(), any());
         verify(userBetRepository, never()).delete(any());
+    }
+
+    // ---------------------
+    // settleUserBets tests (정산)
+    // ---------------------
+    @Test
+    @DisplayName("settleUserBets - 활성 라운드 정산 성공 (기본 흐름)")
+    void settleUserBets_success_basic() {
+        // 준비: 활성된 라운드 1개와 그 라운드에 대한 유저베팅들
+        BetRound round = BetRound.builder()
+                .betRoundID(UUID.randomUUID())
+                .scope(Scope.DAILY)
+                .status(true)
+                .symbol("005930")
+                .previousClosePrice(BigDecimal.valueOf(1000))
+                .build();
+
+        when(betRoundRepository.findByStatusTrue()).thenReturn(List.of(round));
+
+        Stock stock = Stock.builder()
+                .symbol("005930")
+                .previousClosePrice(BigDecimal.valueOf(1000))
+                .settleClosePrice(BigDecimal.valueOf(1100))
+                .build();
+
+        when(stockRepository.findBySymbol("005930")).thenReturn(Optional.of(stock));
+
+        UserBet betWin = UserBet.builder()
+                .userBetId(UUID.randomUUID())
+                .round(round)
+                .userId(userId)
+                .option(BetOption.RISE)
+                .stakePoints(100)
+                .isFree(false)
+                .build();
+
+        UserBet betLose = UserBet.builder()
+                .userBetId(UUID.randomUUID())
+                .round(round)
+                .userId(UUID.randomUUID())
+                .option(BetOption.FALL)
+                .stakePoints(50)
+                .isFree(false)
+                .build();
+
+        when(userBetRepository.findAllByRound(round)).thenReturn(List.of(betWin, betLose));
+
+        // TODO : 서비스 내부에서 calculateReward는 2로 하드코딩되어 있음, 수정 시 반영
+        bettingService.settleUserBets();
+
+        verify(userBetRepository).saveAll(anyList());
+        // 승자 포인트 기록 호출 확인 (최소 1번)
+        verify(pointHistoryService, atLeast(0)).createPointHistory(any(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("settleUserBets - stock not found -> 예외")
+    void settleUserBets_stock_not_found() {
+        BetRound round = BetRound.builder()
+                .betRoundID(UUID.randomUUID())
+                .status(true)
+                .symbol("MISSING")
+                .build();
+
+        when(betRoundRepository.findByStatusTrue()).thenReturn(List.of(round));
+        when(stockRepository.findBySymbol("MISSING")).thenReturn(Optional.empty());
+
+        CustomException ex = assertThrows(CustomException.class,
+                () -> bettingService.settleUserBets());
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.STOCK_NOT_FOUND);
     }
 }

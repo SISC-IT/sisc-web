@@ -30,4 +30,15 @@ public class BettingScheduler {
     public void weeklyCloseScheduler() {
         bettingService.closeBetRound();
     }
+
+    @Scheduled(cron = "0 5 22 * * MON-FRI")
+    public void dailySettleScheduler() {
+        bettingService.settleUserBets();
+    }
+
+    @Scheduled(cron = "0 5 22 * * FRI")
+    public void weeklySettleScheduler() {
+        bettingService.settleUserBets();
+    }
+
 }
