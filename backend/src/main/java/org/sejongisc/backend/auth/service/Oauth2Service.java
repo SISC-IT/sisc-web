@@ -7,4 +7,6 @@ public interface Oauth2Service<TToken, TUserInfo> {
 
     TToken getAccessToken(String code);
     TUserInfo getUserInfo(String accessToken);
+
+
 }

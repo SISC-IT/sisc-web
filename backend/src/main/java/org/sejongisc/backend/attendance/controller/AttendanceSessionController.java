@@ -3,7 +3,6 @@ package org.sejongisc.backend.attendance.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.AttendanceRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
@@ -50,7 +49,7 @@ public class AttendanceSessionController {
      */
     @GetMapping("/{sessionId}")
     public ResponseEntity<AttendanceSessionResponse> getSession(@PathVariable UUID sessionId) {
-        log.info("춣석 세션 조회: 세션ID={}", sessionId);
+        log.info("출석 세션 조회: 세션ID={}", sessionId);
 
         AttendanceSessionResponse response = attendanceSessionService.getSessionById(sessionId);
 
@@ -189,7 +188,7 @@ public class AttendanceSessionController {
 
         attendanceSessionService.closeSession(sessionId);
 
-        log.info("출석 세션 종료 오나료: 세션ID={}", sessionId);
+        log.info("출석 세션 종료 완료: 세션ID={}", sessionId);
 
         return ResponseEntity.ok().build();
     }

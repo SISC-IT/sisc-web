@@ -5,10 +5,11 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-import tensorflow as tf
 from tensorflow.keras import layers, Model
+import tensorflow as tf
 
-from AI.libs.utils.io import _log
+# from AI.libs.utils.io import _log
+_log = print  # TODO: 추후 io._log 구현 시 복구
 from .models import build_transformer_classifier  # <-- 모델 분리됨
 
 # ===== 공개 상수 =====

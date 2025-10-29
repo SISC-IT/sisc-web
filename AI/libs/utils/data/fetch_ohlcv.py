@@ -38,15 +38,14 @@ def fetch_ohlcv(
 
     query = """
         SELECT date, open, high, low, close, volume
-        FROM stock_prices
+        FROM public.price_data
         WHERE ticker = %s
-          AND interval = %s
           AND date BETWEEN %s AND %s
         ORDER BY date;
     """
 
     # 파라미터 바인딩 (%s) 사용 → SQL injection 방지
-    df = pd.read_sql(query, conn, params=(ticker, interval, start, end))
+    df = pd.read_sql(query, conn, params=(ticker, start, end))
 
     conn.close()
     return df

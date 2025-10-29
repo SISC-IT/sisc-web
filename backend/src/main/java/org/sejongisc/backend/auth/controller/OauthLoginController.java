@@ -1,5 +1,6 @@
 package org.sejongisc.backend.auth.controller;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class OauthLoginController {
     private final UserService userService;
     private final JwtProvider jwtProvider;
     private final OauthStateService oauthStateService;
+
 
     @Value("${google.client.id}")
     private String googleClientId;
@@ -171,4 +173,42 @@ public class OauthLoginController {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .body(response);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        // 1️⃣ 헤더 유효성 검사
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "잘못된 Authorization 헤더 형식입니다."));
+        }
+
+        String token = authorizationHeader.substring(7);
+
+        // 2️⃣ 예외 처리 및 멱등성 보장
+        try {
+            loginService.logout(token);
+        } catch (JwtException | IllegalArgumentException e) {
+            // 이미 만료되었거나 잘못된 토큰이라도 200 OK로 응답 (멱등성 보장)
+            log.warn("Invalid or expired JWT during logout: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error during logout", e);
+            // 내부 예외는 500으로 보내지 않고 안전하게 처리
+        }
+
+        // 3️⃣ Refresh Token 쿠키 삭제
+        ResponseCookie deleteCookie = ResponseCookie.from("refresh", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(Map.of("message", "로그아웃 성공"));
+    }
+
+
 }
+
