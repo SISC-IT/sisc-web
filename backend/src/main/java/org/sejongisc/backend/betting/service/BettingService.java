@@ -75,6 +75,8 @@ public class BettingService {
                 .previousClosePrice(stock.getPreviousClosePrice())
                 .build();
 
+        betRound.open();
+
         betRoundRepository.save(betRound);
     }
 
