@@ -40,13 +40,13 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	runtimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
+	
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
 	testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
-
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	// spring-retry
 	implementation 'org.springframework.retry:spring-retry'
 
@@ -57,6 +57,9 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.3'
 
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// backtesting library
+	implementation 'org.ta4j:ta4j-core:0.15'
 }
 
 jacoco {

@@ -10,7 +10,13 @@ public enum ErrorCode {
 
   INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에 문제가 발생했습니다."),
 
+  // PRICE DATA
+
+  PRICE_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 주식의 가격 데이터가 존재하지 않습니다."),
+
   // BACKTEST
+
+  INVALID_BACKTEST_JSON_PARAMS(HttpStatus.BAD_REQUEST, "유효하지 않은 paramsJson 요청값 입니다."),
 
   BACKTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 백테스트가 존재하지 않습니다."),
 

@@ -10,6 +10,8 @@ import jakarta.annotation.PostConstruct;
 import java.util.*;
 import javax.crypto.SecretKey;
 
+import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetailsService;
 import org.sejongisc.backend.user.entity.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,7 +22,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class JwtParser {
+    private final CustomUserDetailsService customUserDetailsService;
     @Value("${jwt.secret}")
     private String rawSecretKey;
 
@@ -87,7 +91,7 @@ public class JwtParser {
         Collection<? extends GrantedAuthority> authorities =
                 List.of(new SimpleGrantedAuthority("ROLE_" + role.name())); // "ROLE_TEAM_MEMBER"
 
-        UserDetails userDetails = new User(claims.getSubject(), "", authorities);
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(claims.getSubject());
         return new UsernamePasswordAuthenticationToken(userDetails, "", authorities);
     }
 
