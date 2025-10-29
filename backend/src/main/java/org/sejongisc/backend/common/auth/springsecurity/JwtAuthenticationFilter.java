@@ -34,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private static final List<String> EXCLUDE_PATTERNS = List.of(
+            "/user/signup",
             "/auth/login",
             "/auth/login/kakao",
             "/auth/login/google",
