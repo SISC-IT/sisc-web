@@ -69,7 +69,6 @@ public class BettingService {
                 .title(now.toLocalDate() + " " + stock.getName() + " " + scope.name() + " 라운드")
                 .symbol(stock.getSymbol())
                 .allowFree(setAllowFree())
-                .status(true)
                 .openAt(scope.getOpenAt(now))
                 .lockAt(scope.getLockAt(now))
                 .market(stock.getMarket())
@@ -80,7 +79,11 @@ public class BettingService {
     }
 
     public void closeBetRound(){
-        // TODO : status를 false로 바꿔야함, 정산 로직 구현하면서 같이 할 것
+        List<BetRound> needToCloseBet = betRoundRepository.findByStatusTrueAndLockAtLessThanEqual(LocalDateTime.now());
+
+        for (BetRound betRound : needToCloseBet) {
+            betRound.close();
+        }
     }
 
     @Transactional
