@@ -296,7 +296,7 @@ class BettingServiceTest {
         return BetRound.builder()
                 .betRoundID(roundId)
                 .scope(Scope.DAILY)
-                .status(true)
+                .status(false)
                 .title("CLOSED")
                 .openAt(now.minusMinutes(10))
                 .lockAt(now.minusMinutes(1))
@@ -473,7 +473,7 @@ class BettingServiceTest {
         CustomException ex = assertThrows(CustomException.class,
                 () -> bettingService.cancelUserBet(userId, userBetId));
 
-        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_ROUND_CLOSED);
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BET_TIME_INVALID);
         verify(pointHistoryService, never()).createPointHistory(any(), anyInt(), any(), any(), any());
         verify(userBetRepository, never()).delete(any());
     }
