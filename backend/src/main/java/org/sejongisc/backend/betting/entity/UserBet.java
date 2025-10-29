@@ -10,6 +10,16 @@ import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import java.util.UUID;
 
 @Entity
+@Table(
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_user_bet_round_user",
+        columnNames = {"round_id", "user_id"}
+    ),
+    indexes = {
+        @Index(name = "idx_user_bet_user", columnList = "user_id"),
+        @Index(name = "idx_user_bet_round", columnList = "round_id")
+    }
+)
 @Getter
 @Builder @NoArgsConstructor @AllArgsConstructor
 public class UserBet extends BasePostgresEntity {

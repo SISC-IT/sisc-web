@@ -11,6 +11,7 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.service.PointHistoryService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,7 +94,8 @@ public class BettingService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (now.isBefore(betRound.getOpenAt()) || now.isAfter(betRound.getLockAt())) {
+        // 허용 구간: [openAt, lockAt)
+        if (now.isBefore(betRound.getOpenAt()) || !now.isBefore(betRound.getLockAt())) {
             throw new CustomException(ErrorCode.BET_TIME_INVALID);
         }
 
@@ -119,7 +121,12 @@ public class BettingService {
                 .betStatus(BetStatus.ACTIVE)
                 .build();
 
-        return userBetRepository.save(userBet);
+        try {
+            return userBetRepository.save(userBet);
+        } catch (DataIntegrityViolationException e) {
+            // DB 유니크 제약(중복 베팅) 위반 시
+            throw new CustomException(ErrorCode.BET_DUPLICATE);
+        }
     }
 
     @Transactional
@@ -129,7 +136,7 @@ public class BettingService {
 
         BetRound betRound = userBet.getRound();
 
-        if (LocalDateTime.now().isAfter(betRound.getLockAt())){
+        if (!LocalDateTime.now().isBefore(betRound.getLockAt())){
             throw new CustomException(ErrorCode.BET_ROUND_CLOSED);
         }
 
