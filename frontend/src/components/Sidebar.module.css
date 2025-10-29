@@ -2,6 +2,29 @@
   height: 100vh;
   padding: 0 32px;
   background-color: #02040d;
+  position: relative;
+}
+
+.homeSidebarMenu {
+  position: fixed;
+  top: 90px;
+  left: 0;
+  width: 200px;
+  height: calc(100vh - 90px);
+  padding: 0 32px;
+  background-color: #02040d;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.open {
+  transform: translateX(0);
+}
+
+.closed {
+  transform: translateX(-100%);
 }
 
 .sidebar-header {
@@ -84,4 +107,56 @@
 .inactive-link {
   background-color: transparent;
   padding: 10px 8px;
+}
+
+.left {
+  display: flex;
+  gap: 30px;
+  position: fixed;
+  align-items: center;
+  z-index: 999;
+  top: 32px;
+  left: 32px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  font-weight: 600;
+  font-style: SemiBold;
+  font-size: 18.53px;
+  line-height: 120%;
+  letter-spacing: -3%;
+}
+
+.menuButton {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 22px;
+  height: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.menuButton span {
+  display: block;
+  height: 2px;
+  background: white;
+  border-radius: 2px;
+}
+
+.logo {
+  width: 19px;
+  height: 19px;
+}
+
+.title {
+  color: white;
 }
