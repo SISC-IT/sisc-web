@@ -1,11 +1,27 @@
 package org.sejongisc.backend.betting.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.util.UUID;
 
 @Entity
+@Table(
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_user_bet_round_user",
+        columnNames = {"round_id", "user_id"}
+    ),
+    indexes = {
+        @Index(name = "idx_user_bet_user", columnList = "user_id"),
+        @Index(name = "idx_user_bet_round", columnList = "round_id")
+    }
+)
+@Getter
+@Builder @NoArgsConstructor @AllArgsConstructor
 public class UserBet extends BasePostgresEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)

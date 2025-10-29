@@ -1,4 +1,0 @@
-pandas
-yfinance
-numpy
-groq

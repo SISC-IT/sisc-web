@@ -6,6 +6,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sejongisc.backend.auth.repository.RefreshTokenRepository;
+import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
@@ -21,12 +23,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.when;
+
 
 @ExtendWith(MockitoExtension.class)
 class LoginServiceImplTest {
@@ -40,7 +42,15 @@ class LoginServiceImplTest {
     @Mock
     private JwtProvider jwtProvider;
 
-    @InjectMocks private LoginServiceImpl loginService;
+    @Mock
+    private JwtParser jwtParser;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+
+    @InjectMocks
+    private LoginServiceImpl loginService;
 
     @Test
     @DisplayName("정상 로그인 시 LoginResponse 반환")
@@ -129,4 +139,51 @@ class LoginServiceImplTest {
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
     }
+
+    @Test
+    @DisplayName("비밀번호가 null인 경우 UNAUTHORIZED 예외 발생")
+    void login_nullPassword() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User user = User.builder()
+                .userId(userId)
+                .email("test@example.com")
+                .name("홍길동")
+                .passwordHash(null) // <-- 핵심
+                .role(Role.TEAM_MEMBER)
+                .point(0)
+                .build();
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("somePassword");
+
+        given(userRepository.findUserByEmail("test@example.com"))
+                .willReturn(Optional.of(user));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> loginService.login(request));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+    }
+
+
+    @Test
+    @DisplayName("로그아웃 시 RefreshTokenRepository.deleteByUserId()가 호출된다")
+    void logout_success() {
+
+        UUID userId = UUID.randomUUID();
+        String fakeToken = "fake.jwt.token";
+
+        when(jwtParser.getUserIdFromToken(fakeToken)).thenReturn(userId);
+
+
+        loginService.logout(fakeToken);
+
+
+        verify(jwtParser, times(1)).getUserIdFromToken(fakeToken);
+        verify(refreshTokenRepository, times(1)).deleteByUserId(userId);
+    }
+
 }
