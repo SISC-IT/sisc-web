@@ -1,18 +1,25 @@
 package org.sejongisc.backend.user.service;
 
-import jakarta.transaction.Transactional;
+
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.dto.SignupRequest;
-import org.sejongisc.backend.user.dto.SignupResponse;
+import org.sejongisc.backend.auth.dto.SignupRequest;
+import org.sejongisc.backend.auth.dto.SignupResponse;
+import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.auth.entity.UserOauthAccount;
+import org.sejongisc.backend.auth.oauth.OauthUserInfo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -20,6 +27,8 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserOauthAccountRepository oauthAccountRepository;
+
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -56,6 +65,64 @@ public class UserServiceImpl implements UserService {
             throw new CustomException(ErrorCode.DUPLICATE_USER);
         }
 
+    }
+
+    @Override
+    @Transactional
+    public User findOrCreateUser(OauthUserInfo oauthInfo) {
+        String providerUid = oauthInfo.getProviderUid();
+
+        // 기존 OAuth 계정 찾기
+        return oauthAccountRepository
+                .findByProviderAndProviderUid(oauthInfo.getProvider(), providerUid)
+                .map(UserOauthAccount::getUser)
+                .orElseGet(() -> {
+                    // 새로운 User 생성
+                    User newUser = User.builder()
+                            .name(oauthInfo.getName())
+                            .role(Role.TEAM_MEMBER)
+                            .build();
+
+                    User savedUser = userRepository.save(newUser);
+
+                    UserOauthAccount newOauth = UserOauthAccount.builder()
+                            .user(savedUser)
+                            .provider(oauthInfo.getProvider())
+                            .providerUid(providerUid)
+                            .build();
+
+                    oauthAccountRepository.save(newOauth);
+
+                    return savedUser;
+                });
+    }
+
+    @Override
+    @Transactional
+    public void updateUser(UUID userId, UserUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 이름 업데이트
+        if (request.getName() != null && !request.getName().trim().isEmpty()) {
+            user.setName(request.getName().trim());
+        }
+
+        // 전화번호 업데이트
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            user.setPhoneNumber(request.getPhoneNumber().trim());
+        }
+
+        if (request.getPassword() != null) {
+            String trimmedPassword = request.getPassword().trim();
+            if (trimmedPassword.isEmpty()) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
+            user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
+        }
+
+        log.info("회원 정보가 수정되었습니다. userId={}", userId);
+        userRepository.save(user);
     }
 
 }

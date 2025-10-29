@@ -1,12 +1,12 @@
 package org.sejongisc.backend.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -17,18 +17,29 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.dto.SignupRequest;
-import org.sejongisc.backend.user.dto.SignupResponse;
+import org.sejongisc.backend.auth.dto.SignupRequest;
+import org.sejongisc.backend.auth.dto.SignupResponse;
+import org.sejongisc.backend.auth.entity.AuthProvider;
+import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.auth.entity.UserOauthAccount;
+import org.sejongisc.backend.auth.oauth.OauthUserInfo;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
 
-    @Mock private UserRepository userRepository;
-    @Mock private PasswordEncoder passwordEncoder;
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private UserOauthAccountRepository oauthAccountRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks private UserServiceImpl userService;
 
@@ -192,5 +203,155 @@ class UserServiceImplTest {
         // then
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_USER);
     }
+
+    @Test
+    @DisplayName("OAuth 로그인: 기존 계정이 있으면 해당 User 반환")
+    void findOrCreateUser_existingUser() {
+        // given
+        OauthUserInfo mockInfo = new OauthUserInfo() {
+            @Override public AuthProvider getProvider() { return AuthProvider.GOOGLE; }
+            @Override public String getProviderUid() { return "google-123"; }
+            @Override public String getName() { return "홍길동"; }
+        };
+
+        User existingUser = User.builder()
+                .userId(UUID.randomUUID())
+                .name("홍길동")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        UserOauthAccount account = UserOauthAccount.builder()
+                .user(existingUser)
+                .provider(AuthProvider.GOOGLE)
+                .providerUid("google-123")
+                .build();
+
+        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123"))
+                .thenReturn(Optional.of(account));
+
+        // when
+        User result = userService.findOrCreateUser(mockInfo);
+
+        // then
+        assertThat(result).isSameAs(existingUser);
+        verify(oauthAccountRepository).findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123");
+        verifyNoMoreInteractions(userRepository); // 새 저장 안 함
+    }
+
+    @Test
+    @DisplayName("OAuth 로그인: 기존 계정이 없으면 새 User + UserOauthAccount 생성")
+    void findOrCreateUser_newUser() {
+        // given
+        OauthUserInfo mockInfo = new OauthUserInfo() {
+            @Override public AuthProvider getProvider() { return AuthProvider.KAKAO; }
+            @Override public String getProviderUid() { return "kakao-999"; }
+            @Override public String getName() { return "카카오유저"; }
+        };
+
+        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.KAKAO, "kakao-999"))
+                .thenReturn(Optional.empty());
+
+        User newUser = User.builder()
+                .userId(UUID.randomUUID())
+                .name("카카오유저")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.save(any(User.class))).thenReturn(newUser);
+
+        // when
+        User result = userService.findOrCreateUser(mockInfo);
+
+        // then
+        assertThat(result.getName()).isEqualTo("카카오유저");
+        assertThat(result.getRole()).isEqualTo(Role.TEAM_MEMBER);
+
+        verify(userRepository).save(any(User.class));
+        verify(oauthAccountRepository).save(any(UserOauthAccount.class));
+    }
+
+    @Test
+    @DisplayName("회원정보 수정 성공: 이름, 전화번호, 비밀번호 변경")
+    void updateUser_success() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User existingUser = User.builder()
+                .userId(userId)
+                .name("기존이름")
+                .phoneNumber("010-1111-1111")
+                .passwordHash("OLD_HASH")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.encode("newPassword123")).thenReturn("NEW_HASH");
+
+        // 수정 요청 DTO
+        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
+        request.setName("새이름");
+        request.setPhoneNumber("010-2222-3333");
+        request.setPassword("newPassword123");
+
+        // when
+        userService.updateUser(userId, request);
+
+        // then
+        assertAll(
+                () -> assertThat(existingUser.getName()).isEqualTo("새이름"),
+                () -> assertThat(existingUser.getPhoneNumber()).isEqualTo("010-2222-3333"),
+                () -> assertThat(existingUser.getPasswordHash()).isEqualTo("NEW_HASH")
+        );
+
+        verify(userRepository).findById(userId);
+        verify(passwordEncoder).encode("newPassword123");
+        verify(userRepository).save(existingUser);
+    }
+
+    @Test
+    @DisplayName("회원정보 수정 실패: 존재하지 않는 사용자일 경우 예외 발생")
+    void updateUser_notFound_throws() {
+        // given
+        UUID nonExistingId = UUID.randomUUID();
+        UserUpdateRequest request = new UserUpdateRequest();
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUser(nonExistingId, request));
+
+        assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("회원정보 수정: 모든 필드가 null이면 기존 정보 그대로 유지")
+    void updateUser_allFieldsNull_noChanges() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User existingUser = User.builder()
+                .userId(userId)
+                .name("원래이름")
+                .phoneNumber("010-1111-1111")
+                .passwordHash("OLD_HASH")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+
+        // 모든 필드가 null인 요청 DTO
+        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
+
+        // when
+        userService.updateUser(userId, request);
+
+        // then
+        assertAll(
+                () -> assertThat(existingUser.getName()).isEqualTo("원래이름"),
+                () -> assertThat(existingUser.getPhoneNumber()).isEqualTo("010-1111-1111"),
+                () -> assertThat(existingUser.getPasswordHash()).isEqualTo("OLD_HASH")
+        );
+
+        verify(userRepository).findById(userId);
+        verify(userRepository).save(existingUser);
+        verifyNoInteractions(passwordEncoder); // 비밀번호 인코더 안 씀
+    }
+
 
 }
