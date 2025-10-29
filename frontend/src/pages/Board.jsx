@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState } from 'react';
 import PostItem from '../components/Board/PostItem';
 import Modal from '../components/Board/Modal';

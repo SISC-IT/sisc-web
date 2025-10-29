@@ -37,7 +37,6 @@
 }
 
 .title {
-  font-family: 'Pretendard';
   font-weight: 700;
   font-size: 24px;
   line-height: 146%;
@@ -73,7 +72,6 @@
 .label {
   width: 40px;
   height: 29px;
-  font-family: 'Pretendard';
   font-weight: 700;
   font-size: 20px;
   line-height: 146%;
@@ -93,7 +91,6 @@
   padding: 16px 24px;
   box-sizing: border-box;
   opacity: 1;
-  font-family: 'Pretendard';
   font-size: 16px;
   outline: none;
 }
@@ -132,7 +129,6 @@
 .fileText {
   width: 52px;
   height: 14px;
-  font-family: 'Pretendard';
   font-weight: 500;
   font-size: 14px;
   line-height: 100%;
@@ -156,7 +152,6 @@
   outline: none;
   resize: none;
   flex: 1;
-  font-family: 'Pretendard';
   font-weight: 500;
   font-size: 16px;
   line-height: 100%;
@@ -167,7 +162,6 @@
 }
 
 .textarea::placeholder {
-  font-family: 'Pretendard';
   font-weight: 500;
   font-size: 16px;
   line-height: 100%;
@@ -183,7 +177,6 @@
 .accessLabel {
   width: 74px;
   height: 29px;
-  font-family: 'Pretendard';
   font-weight: 700;
   font-size: 20px;
   line-height: 146%;
@@ -211,7 +204,6 @@
   padding-right: 40px;
   box-sizing: border-box;
   opacity: 1;
-  font-family: 'Pretendard';
   font-weight: 400;
   font-size: 16px;
   line-height: 100%;
@@ -237,7 +229,6 @@
 }
 
 .select option {
-  font-family: 'Pretendard';
   font-weight: 400;
   font-size: 16px;
   color: rgba(23, 23, 23, 1);
@@ -248,7 +239,6 @@
   padding: 12px 24px;
   border: none;
   border-radius: 8px;
-  font-family: 'Pretendard';
   font-weight: 500;
   font-size: 16px;
   cursor: pointer;

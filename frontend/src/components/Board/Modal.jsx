@@ -1,4 +1,3 @@
-import React from 'react';
 import styles from './Modal.module.css';
 import FolderIcon from '../../assets/boardFolder.svg';
 import CloseIcon from '../../assets/boardCloseIcon.svg';

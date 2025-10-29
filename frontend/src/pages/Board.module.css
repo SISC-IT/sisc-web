@@ -6,11 +6,6 @@
   padding: 32px 40px;
   margin-top: 80px;
   margin-left: 100px;
-  font-family:
-    'Pretendard',
-    -apple-system,
-    system-ui,
-    sans-serif;
   box-sizing: border-box;
 }
 
@@ -21,11 +16,6 @@
 .boardTitle {
   width: 94px;
   height: 36px;
-  font-family:
-    'Pretendard',
-    -apple-system,
-    system-ui,
-    sans-serif;
   font-weight: 600;
   font-size: 36px;
   line-height: 100%;
@@ -79,7 +69,6 @@
   border: none;
   outline: none;
   background: transparent;
-  font-family: 'Pretendard';
   font-size: 20px;
   color: rgba(23, 23, 23, 1);
   padding: 0;
@@ -87,11 +76,6 @@
 }
 
 .searchInput::placeholder {
-  font-family:
-    'Pretendard',
-    -apple-system,
-    system-ui,
-    sans-serif;
   font-weight: 400;
   font-size: 20px;
   line-height: 100%;
@@ -140,18 +124,12 @@
   height: 35px;
   border-radius: 4px;
   padding: 8px 12px;
-  padding-right: 32px;
   gap: 12px;
   opacity: 1;
   border: 0.6px solid rgba(0, 0, 0, 1);
   background: #ffffff;
   cursor: pointer;
   box-sizing: border-box;
-  font-family:
-    'Pretendard',
-    -apple-system,
-    system-ui,
-    sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 100%;
@@ -202,11 +180,6 @@
 .writeButton span {
   width: 74px;
   height: 19px;
-  font-family:
-    'Pretendard',
-    -apple-system,
-    system-ui,
-    sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 100%;
