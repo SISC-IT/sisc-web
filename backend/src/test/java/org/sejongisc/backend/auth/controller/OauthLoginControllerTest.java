@@ -27,9 +27,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -75,6 +79,8 @@ class OauthLoginControllerTest {
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
+
+
 
     // ✅ 일반 로그인 테스트
     @Test
@@ -232,4 +238,98 @@ class OauthLoginControllerTest {
                 .andExpect(jsonPath("$.accessToken").value("mock-jwt-token"))
                 .andExpect(jsonPath("$.name").value("깃허브유저"));
     }
+
+    @DisplayName("startOauthLogin - 각 provider별 정상 응답 확인")
+    @Test
+    void startOauthLogin_success() throws Exception {
+        // given
+        when(oauthStateService.generateAndSaveState(any(HttpSession.class))).thenReturn("state123");
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth/google/init"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("accounts.google.com")));
+
+        mockMvc.perform(get("/auth/oauth/kakao/init"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("kauth.kakao.com")));
+
+        mockMvc.perform(get("/auth/oauth/github/init"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("github.com")));
+    }
+
+    @DisplayName("startOauthLogin - 존재하지 않는 provider 요청 시 IllegalArgumentException 발생")
+    @Test
+    void startOauthLogin_invalidProvider() throws Exception {
+        when(oauthStateService.generateAndSaveState(any(HttpSession.class))).thenReturn("state123");
+
+        mockMvc.perform(get("/auth/oauth/unknown/init"))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @DisplayName("OauthLogin - 저장된 state와 불일치 시 401 반환")
+    @Test
+    void oauthLogin_invalidState() throws Exception {
+        when(oauthStateService.getStateFromSession(any(HttpSession.class))).thenReturn("expected_state");
+
+        mockMvc.perform(post("/auth/login/google")
+                        .param("code", "valid_code")
+                        .param("state", "wrong_state"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @DisplayName("OauthLogin - provider가 잘못된 경우 500 반환")
+    @Test
+    void oauthLogin_invalidProvider() throws Exception {
+        when(oauthStateService.getStateFromSession(any(HttpSession.class))).thenReturn("valid_state");
+
+        mockMvc.perform(post("/auth/login/unknown")
+                        .param("code", "valid_code")
+                        .param("state", "valid_state"))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    @DisplayName("POST /auth/login/{provider} - 지원하지 않는 provider 요청 시 500 반환")
+    void oauthLogin_unknownProvider() throws Exception {
+        when(oauthStateService.getStateFromSession(any(HttpSession.class))).thenReturn("valid_state");
+
+        mockMvc.perform(post("/auth/login/UNSUPPORTED")
+                        .param("code", "valid_code")
+                        .param("state", "valid_state"))
+                .andExpect(status().is5xxServerError())
+                .andExpect(result ->
+                        assertTrue(result.getResolvedException() instanceof IllegalArgumentException))
+                .andExpect(result ->
+                        assertTrue(result.getResolvedException().getMessage().contains("Unknown provider")));
+    }
+
+
+    @Test
+    @DisplayName("POST /auth/logout - 정상 로그아웃 시 200 반환")
+    void logout_success() throws Exception {
+        String token = "fake.jwt.token";
+        String bearerToken = "Bearer " + token;
+
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", bearerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("로그아웃 성공"));
+
+        verify(loginService, times(1)).logout(token);
+    }
+
+    @Test
+    @DisplayName("POST /auth/logout - Authorization 헤더가 없으면 400 반환")
+    void logout_missingHeader() throws Exception {
+        mockMvc.perform(post("/auth/logout"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("잘못된 Authorization 헤더 형식입니다."));
+
+
+        verify(loginService, times(0)).logout(anyString());
+    }
+
+
 }

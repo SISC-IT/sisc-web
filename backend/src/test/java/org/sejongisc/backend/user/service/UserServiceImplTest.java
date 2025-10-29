@@ -1,8 +1,7 @@
 package org.sejongisc.backend.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -23,6 +22,7 @@ import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.auth.dto.SignupRequest;
 import org.sejongisc.backend.auth.dto.SignupResponse;
 import org.sejongisc.backend.auth.entity.AuthProvider;
+import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
@@ -269,5 +269,89 @@ class UserServiceImplTest {
         verify(userRepository).save(any(User.class));
         verify(oauthAccountRepository).save(any(UserOauthAccount.class));
     }
+
+    @Test
+    @DisplayName("회원정보 수정 성공: 이름, 전화번호, 비밀번호 변경")
+    void updateUser_success() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User existingUser = User.builder()
+                .userId(userId)
+                .name("기존이름")
+                .phoneNumber("010-1111-1111")
+                .passwordHash("OLD_HASH")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.encode("newPassword123")).thenReturn("NEW_HASH");
+
+        // 수정 요청 DTO
+        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
+        request.setName("새이름");
+        request.setPhoneNumber("010-2222-3333");
+        request.setPassword("newPassword123");
+
+        // when
+        userService.updateUser(userId, request);
+
+        // then
+        assertAll(
+                () -> assertThat(existingUser.getName()).isEqualTo("새이름"),
+                () -> assertThat(existingUser.getPhoneNumber()).isEqualTo("010-2222-3333"),
+                () -> assertThat(existingUser.getPasswordHash()).isEqualTo("NEW_HASH")
+        );
+
+        verify(userRepository).findById(userId);
+        verify(passwordEncoder).encode("newPassword123");
+        verify(userRepository).save(existingUser);
+    }
+
+    @Test
+    @DisplayName("회원정보 수정 실패: 존재하지 않는 사용자일 경우 예외 발생")
+    void updateUser_notFound_throws() {
+        // given
+        UUID nonExistingId = UUID.randomUUID();
+        UserUpdateRequest request = new UserUpdateRequest();
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.updateUser(nonExistingId, request));
+
+        assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("회원정보 수정: 모든 필드가 null이면 기존 정보 그대로 유지")
+    void updateUser_allFieldsNull_noChanges() {
+        // given
+        UUID userId = UUID.randomUUID();
+        User existingUser = User.builder()
+                .userId(userId)
+                .name("원래이름")
+                .phoneNumber("010-1111-1111")
+                .passwordHash("OLD_HASH")
+                .role(Role.TEAM_MEMBER)
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+
+        // 모든 필드가 null인 요청 DTO
+        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
+
+        // when
+        userService.updateUser(userId, request);
+
+        // then
+        assertAll(
+                () -> assertThat(existingUser.getName()).isEqualTo("원래이름"),
+                () -> assertThat(existingUser.getPhoneNumber()).isEqualTo("010-1111-1111"),
+                () -> assertThat(existingUser.getPasswordHash()).isEqualTo("OLD_HASH")
+        );
+
+        verify(userRepository).findById(userId);
+        verify(userRepository).save(existingUser);
+        verifyNoInteractions(passwordEncoder); // 비밀번호 인코더 안 씀
+    }
+
 
 }
