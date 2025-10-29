@@ -19,21 +19,23 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/user")
+@RequestMapping("/api/user")
 @Slf4j
 public class UserController {
 
     private final UserService userService;
 
-    @PostMapping("/signup")
-    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
-        SignupResponse response = userService.signUp(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+
 
     @GetMapping("/details")
     public ResponseEntity<UserInfoResponse> getUserInfo(@AuthenticationPrincipal CustomUserDetails user) {
-        log.info("email : " + user.getEmail() + " 권한: " + user.getAuthorities());
+        if (user == null) {
+            log.warn("인증되지 않은 사용자 접근 시도");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(null);
+        }
+
+        log.info("email: {} 권한: {}", user.getUsername(), user.getAuthorities());
 
         UserInfoResponse response = new UserInfoResponse(
                 user.getUserId(),

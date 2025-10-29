@@ -43,8 +43,21 @@ public class LoginServiceImpl implements LoginService {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole());
+        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
+
+        // 기존 토큰 삭제 후 새로 저장
+        refreshTokenRepository.findByUserId(user.getUserId())
+                .ifPresent(refreshTokenRepository::delete);
+
+        refreshTokenRepository.save(
+                org.sejongisc.backend.auth.entity.RefreshToken.builder()
+                        .userId(user.getUserId())
+                        .token(refreshToken)
+                        .build()
+        );
+
+        log.info("RefreshToken 저장 완료: userId={}", user.getUserId());
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
