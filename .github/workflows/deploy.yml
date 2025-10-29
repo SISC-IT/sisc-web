@@ -14,8 +14,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  REPO: SISC-IT/sisc-web
-  IMAGE_BACK: ghcr.io/SISC-IT/sisc-web-back
+  REPO: sisc-it/sisc-web
+  IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
 
 jobs:
   changes:
