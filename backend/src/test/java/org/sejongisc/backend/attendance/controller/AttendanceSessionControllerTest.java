@@ -114,7 +114,7 @@ public class AttendanceSessionControllerTest {
     }
 
     @Test
-    @DisplayName("출석 세션 생성 실패: 유혀성 검증 오류")
+    @DisplayName("출석 세션 생성 실패: 유효성 검증 오류")
     @WithMockUser(roles = "PRESIDENT")
     void createSession_fail_validation() throws Exception {
         //given
