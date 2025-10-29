@@ -76,7 +76,7 @@ class LoginServiceImplTest {
         given(userRepository.findUserByEmail("test@example.com"))
                 .willReturn(Optional.of(user));
         given(passwordEncoder.matches(rawPassword, encodedPassword)).willReturn(true);
-        given(jwtProvider.createToken(any(UUID.class), any(Role.class)))
+        given(jwtProvider.createToken(any(UUID.class), any(Role.class), anyString()))
                 .willReturn("mocked-jwt-token");
 
         // when

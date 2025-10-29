@@ -171,7 +171,8 @@ class OauthLoginControllerTest {
         when(googleService.getAccessToken("test-code")).thenReturn(tokenResponse);
         when(googleService.getUserInfo("mock-google-access-token")).thenReturn(userInfo);
         when(userService.findOrCreateUser(any())).thenReturn(user);
-        when(jwtProvider.createToken(user.getUserId(), user.getRole())).thenReturn("jwt-token");
+        when(jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail()))
+                .thenReturn("jwt-token");
         when(jwtProvider.createRefreshToken(user.getUserId())).thenReturn("refresh-token");
 
         mockMvc.perform(post("/api/auth/login/GOOGLE")
@@ -313,7 +314,7 @@ class OauthLoginControllerTest {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
-                .andExpect(status().isInternalServerError()) // ✅ 400 → 500 으로 수정
+                .andExpect(status().isBadRequest())
                 .andExpect(result ->
                         assertTrue(result.getResolvedException() instanceof org.springframework.web.bind.MethodArgumentNotValidException));
     }
@@ -333,7 +334,7 @@ class OauthLoginControllerTest {
                 User.builder().userId(UUID.randomUUID()).name("NullInfoUser").role(Role.TEAM_MEMBER).build()
         );
 
-        when(jwtProvider.createToken(any(), any())).thenReturn("access-token");
+        when(jwtProvider.createToken(any(), any(), any())).thenReturn("access-token");
         when(jwtProvider.createRefreshToken(any())).thenReturn("refresh-token");
 
         mockMvc.perform(post("/api/auth/login/KAKAO")
@@ -356,7 +357,7 @@ class OauthLoginControllerTest {
                 User.builder().userId(UUID.randomUUID()).name("GH-NullUser").role(Role.TEAM_MEMBER).build()
         );
 
-        when(jwtProvider.createToken(any(), any())).thenReturn("gh-token");
+        when(jwtProvider.createToken(any(), any(), any())).thenReturn("gh-token");
         when(jwtProvider.createRefreshToken(any())).thenReturn("gh-refresh");
 
         mockMvc.perform(post("/api/auth/login/GITHUB")

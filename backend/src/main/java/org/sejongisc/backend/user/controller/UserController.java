@@ -28,11 +28,11 @@ public class UserController {
 
 
     @GetMapping("/details")
-    public ResponseEntity<UserInfoResponse> getUserInfo(@AuthenticationPrincipal CustomUserDetails user) {
+    public ResponseEntity<?> getUserInfo(@AuthenticationPrincipal CustomUserDetails user) {
         if (user == null) {
             log.warn("인증되지 않은 사용자 접근 시도");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(null);
+                    .body(Map.of("message", "인증이 필요합니다."));
         }
 
         log.info("email: {} 권한: {}", user.getUsername(), user.getAuthorities());

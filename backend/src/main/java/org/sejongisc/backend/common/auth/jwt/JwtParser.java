@@ -51,14 +51,26 @@ public class JwtParser {
         Claims claims = parseClaims(token);
         String userId = claims.get("uid", String.class);
 
+        String roleStr = claims.get("role", String.class);
+        if (roleStr == null) {
+            throw new JwtException("JWT에 role 클레임이 없습니다.");
+        }
+
+        Role role;
+        try {
+            role = Role.valueOf(roleStr);
+        } catch (IllegalArgumentException e) {
+            throw new JwtException("JWT의 role 클레임이 잘못되었습니다.: " + roleStr);
+        }
+
         if (userId == null) {
-            throw new JwtException("JWT에 userId(subject)가 없습니다.");
+                      throw new JwtException("JWT에 userId(uid)가 없습니다.");
         }
 
         // DB에서 다시 유저를 불러오기 (CustomUserDetailsService 사용)
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(userId);
 
-        log.info("인증 객체 생성 완료: {}", userDetails.getUsername());
+        log.debug("인증 객체 생성 완료");
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 
@@ -78,9 +90,20 @@ public class JwtParser {
     public UUID getUserIdFromToken(String token) {
         Claims claims = parseClaims(token);
         String userIdStr = claims.get("uid", String.class);
+
+        // uid 클레임이 없을 경우 subject로 대체 (RefreshToken 호환)
+        if (userIdStr == null || userIdStr.isBlank()) {
+            userIdStr = claims.getSubject();
+        }
+
+        // 여전히 없거나 비어 있으면 명시적 예외 처리
+        if (userIdStr == null || userIdStr.isBlank()) {
+            throw new JwtException("JWT에 userId(uid/subject)가 없습니다.");
+        }
+
         try {
             return UUID.fromString(userIdStr);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | NullPointerException e) {
             throw new JwtException("잘못된 userId 형식의 JWT입니다.");
         }
     }

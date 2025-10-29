@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public SignupResponse signUp(SignupRequest dto) {
-        log.info("[SIGNUP] request: {}", dto.getEmail());
+        log.debug("[SIGNUP] request: {}", dto.getEmail());
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
