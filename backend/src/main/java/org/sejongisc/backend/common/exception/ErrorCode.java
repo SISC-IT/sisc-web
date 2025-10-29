@@ -50,10 +50,16 @@ public enum ErrorCode {
   DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 가입된 이메일입니다."),
   DUPLICATE_PHONE(HttpStatus.CONFLICT, "이미 사용 중인 전화번호입니다."),
   DUPLICATE_USER(HttpStatus.CONFLICT, "이미 가입된 사용자입니다."),
+  INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
   
   // BETTING
 
-  STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "주식 종목이 존재하지 않습니다.");
+  STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "주식 종목이 존재하지 않습니다."),
+  BET_ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 라운드입니다."),
+  BET_DUPLICATE(HttpStatus.CONFLICT, "이미 이 라운드에 베팅했습니다."),
+  BET_TIME_INVALID(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다."),
+  BET_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 베팅을 찾을 수 없습니다."),
+  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "이미 마감된 라운드입니다.");
 
   private final HttpStatus status;
   private final String message;
