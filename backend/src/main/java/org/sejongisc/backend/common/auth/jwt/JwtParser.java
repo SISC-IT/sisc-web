@@ -20,9 +20,7 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 public class JwtParser {
-
     private final CustomUserDetailsService customUserDetailsService;
-
     @Value("${jwt.secret}")
     private String rawSecretKey;
 
@@ -72,6 +70,7 @@ public class JwtParser {
 
         log.debug("인증 객체 생성 완료");
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
     }
 
     // Claims 파싱
