@@ -92,12 +92,7 @@ public class BettingService {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-
-        // 허용 구간: [openAt, lockAt)
-        if (now.isBefore(betRound.getOpenAt()) || !now.isBefore(betRound.getLockAt())) {
-            throw new CustomException(ErrorCode.BET_TIME_INVALID);
-        }
+        betRound.validateBettable();
 
         int stake = 0;
 
@@ -136,9 +131,7 @@ public class BettingService {
 
         BetRound betRound = userBet.getRound();
 
-        if (!LocalDateTime.now().isBefore(betRound.getLockAt())){
-            throw new CustomException(ErrorCode.BET_ROUND_CLOSED);
-        }
+        betRound.validateBettable();
 
         if (!userBet.isFree() && userBet.getStakePoints() > 0) {
             pointHistoryService.createPointHistory(

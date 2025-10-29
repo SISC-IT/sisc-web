@@ -3,6 +3,8 @@ package org.sejongisc.backend.betting.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,10 +13,12 @@ import java.util.UUID;
 @Entity
 @Builder
 @Getter
-@NoArgsConstructor @AllArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 public class BetRound extends BasePostgresEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "uuid")
     private UUID betRoundID;
 
@@ -35,7 +39,7 @@ public class BetRound extends BasePostgresEntity {
     private BigDecimal baseMultiplier;
 
     @Column(nullable = false)
-    private boolean status; // enum 고려할 것
+    private boolean status = false;
 
     private LocalDateTime openAt;
 
@@ -56,4 +60,28 @@ public class BetRound extends BasePostgresEntity {
 
     @Column(precision = 15, scale = 2)
     private BigDecimal settleClosePrice;
+
+    public boolean isOpen() {
+        return this.status;
+    }
+
+    public boolean isClosed() {
+        return !this.status;
+    }
+
+    public void open() {
+        this.status = true;
+    }
+
+    public void close() {
+        if (!this.status) throw new IllegalStateException("이미 종료된 라운드입니다.");
+        this.status = false;
+        this.settleAt = LocalDateTime.now();
+    }
+
+    public void validateBettable() {
+        if (isClosed()) {
+            throw new CustomException(ErrorCode.BET_TIME_INVALID);
+        }
+    }
 }
