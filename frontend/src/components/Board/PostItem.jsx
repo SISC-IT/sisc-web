@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './PostItem.module.css';
 import ProfileIcon from '../../assets/board_profile.svg';
-import { getTimeAgo } from './TimeUtils';
+import { getTimeAgo } from '../../utils/TimeUtils';
 
 const PostItem = ({ post }) => {
   return (
