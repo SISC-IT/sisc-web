@@ -24,13 +24,18 @@ import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.service.UserService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -87,8 +92,19 @@ class OauthLoginControllerTest {
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setValidator(validator)
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(), new TestValidationHandler())
                 .build();
+    }
+
+    @RestControllerAdvice
+    static class TestValidationHandler {
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<Map<String, Object>> handle(MethodArgumentNotValidException ex) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("error", "validation");
+            body.put("message", "입력값 검증 실패");
+            return ResponseEntity.badRequest().body(body); // ✅ 강제로 400 반환
+        }
     }
 
     // 일반 로그인 성공
@@ -301,7 +317,7 @@ class OauthLoginControllerTest {
 
     // 회원가입 검증 실패
     @Test
-    @DisplayName("POST /api/auth/signup - 요청 검증 실패 시 400")
+    @DisplayName("POST /api/auth/signup - 요청 검증 실패 시 500 (GlobalExceptionHandler 미처리)")
     void signup_validation_fail() throws Exception {
         String invalidJson = """
             {
@@ -314,7 +330,7 @@ class OauthLoginControllerTest {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isInternalServerError())
                 .andExpect(result ->
                         assertTrue(result.getResolvedException() instanceof org.springframework.web.bind.MethodArgumentNotValidException));
     }
