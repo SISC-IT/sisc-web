@@ -81,8 +81,8 @@ const SignUpForm = () => {
             <label htmlFor="phoneNumber">휴대전화</label>
             <div className={styles.phoneVerificationContainer}>
               <input
-                type="phoneNumber"
-                id="text"
+                type="text"
+                id="phoneNumber"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="ex) 01012345678"
