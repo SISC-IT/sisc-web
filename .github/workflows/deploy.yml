@@ -1,0 +1,101 @@
+name: Build & Deploy (main)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "BACK/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  REPO: SISC-IT/sisc-web
+  IMAGE_BACK: ghcr.io/SISC-IT/sisc-web-back
+  IMAGE_FRONT: ghcr.io/SISC-IT/sisc-web-front
+
+jobs:
+  build-back:
+    if: contains(toJson(github.event.commits.*.modified) + toJson(github.event.commits.*.added) + toJson(github.event.commits.*.removed), 'BACK/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        working-directory: BACK
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Meta (tags/labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BACK }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build & Push (BACK)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./BACK
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [build-back]
+    if: always() && (needs.build-back.result == 'success'|| github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 2222 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd ~/apps/sisc-web
+
+            # GHCR private pull 로그인 (조직/레포 접근 권한 필요)
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
+
+            docker compose pull
+            docker compose up -d --remove-orphans
+
+            # (옵션) 헬스체크 대기 - api/web 컨테이너 이름 기준
+            for c in api web; do
+              if docker ps --format '{{.Names}}' | grep -q "^$c$"; then
+                echo "Waiting for $c to be healthy..."
+                for i in {1..30}; do
+                  status=$(docker inspect --format='{{json .State.Health.Status}}' "$c" 2>/dev/null || echo '"none"')
+                  if echo "$status" | grep -q healthy; then
+                    echo "✅ $c healthy"; break
+                  fi
+                  sleep 2
+                done
+              fi
+            done
