@@ -36,11 +36,13 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> {
                     auth
-                            .requestMatchers("/user/signup",
-                                    "/auth/login",
-                                    "/auth/login/kakao",
-                                    "/auth/login/google",
-                                    "/auth/login/github",
+                            .requestMatchers("/api/auth/signup",
+                                    "/api/auth/login",
+                                    "/api/auth/login/kakao",
+                                    "/api/auth/login/google",
+                                    "/api/auth/login/github",
+                                    "/api/auth/oauth/**",
+//                                    "/api/auth/refresh",
                                     "/v3/api-docs/**",
                                     "/swagger-ui/**",
                                     "/swagger-resources/**",

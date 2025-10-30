@@ -10,11 +10,12 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class RefreshToken {
 
     @Id
     @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
-    private UUID userid;
+    private UUID userId;
 
     @Column(nullable = false, length = 500)
     private String token;

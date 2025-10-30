@@ -35,12 +35,13 @@ public class JwtProvider {
     }
 
     // JWT 토큰 생성
-    public String createToken(UUID userId, Role role) {
+    public String createToken(UUID userId, Role role, String email) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenValidityInMillis);
 
         return Jwts.builder()
-                .setSubject(userId.toString())
+                .setSubject(email)
+                .claim("uid", userId.toString())
                 .claim("role", role.name())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
@@ -82,6 +83,8 @@ public class JwtProvider {
 
         return claims.get("role", String.class);
     }
+
+
 
     // 토큰 유효성 검증
     public boolean validationToken(String token) {
