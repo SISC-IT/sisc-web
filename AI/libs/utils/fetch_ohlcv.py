@@ -2,16 +2,7 @@ import psycopg2
 import pandas as pd
 
 # DB 접속 커넥션 생성
-def get_db_conn(config: dict):
-    """config에서 DB 접속 정보 가져와 psycopg2 Connection 생성"""
-    conn = psycopg2.connect(
-        host=config["db"]["host"],
-        user=config["db"]["user"],
-        password=config["db"]["password"],
-        dbname=config["db"]["dbname"],
-        port=config["db"].get("port", 5432),
-    )
-    return conn
+from AI.libs.utils.get_db_conn import get_db_conn
 
 # OHLCV 데이터 불러오기
 def fetch_ohlcv(

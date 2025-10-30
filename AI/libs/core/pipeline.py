@@ -12,9 +12,10 @@ sys.path.append(project_root)
 
 # --- 모듈 import ---
 from finder.main import run_finder
-from transform.modules.main import run_transform
-from libs.utils.data.fetch_ohlcv import fetch_ohlcv
+from AI.transformer.main import run_transformer
+from AI.libs.utils.fetch_ohlcv import fetch_ohlcv
 from xai.run_xai import run_xai
+from AI.libs.utils.get_db_conn import get_db_conn
 # ---------------------------------
 
 def run_weekly_finder() -> List[str]:
@@ -27,13 +28,21 @@ def run_weekly_finder() -> List[str]:
     print(f"--- [PIPELINE-STEP 1] Finder 모듈 실행 완료 ---")
     return top_tickers
 
-def run_signal_transform(tickers: List[str], config: Dict) -> pd.DataFrame:
+def run_signal_transformer(tickers: List[str], config: Dict) -> pd.DataFrame:
     """
-    종목 리스트를 받아 Transform 모듈을 실행하고, 신호(결정 로그)를 반환합니다.
+    종목 리스트를 받아 Transformer 모듈을 실행하고, 신호(결정 로그)를 반환합니다.
     """
-    print("--- [PIPELINE-STEP 2] Transform 모듈 실행 시작 ---")
+    try:
+        with open(os.path.join(project_root, 'configs', 'config.json'), 'r') as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        print("Config file not found")
+    except json.JSONDecodeError:
+        print("Invalid JSON format in config file")
+    db_config = (config or {}).get("db", {})   # ★ db 섹션만 추출
+    print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 시작 ---")
     
-    # --- 실제 Transform 모듈 호출 ---
+    # --- 실제 Transformer 모듈 호출 ---
     end_date = datetime.now()
     start_date = end_date - timedelta(days=600)
     all_ohlcv_df = []
@@ -42,7 +51,7 @@ def run_signal_transform(tickers: List[str], config: Dict) -> pd.DataFrame:
             ticker=ticker,
             start=start_date.strftime('%Y-%m-%d'),
             end=end_date.strftime('%Y-%m-%d'),
-            config=config
+            config=db_config
         )
         ohlcv_df['ticker'] = ticker
         all_ohlcv_df.append(ohlcv_df)
@@ -51,14 +60,14 @@ def run_signal_transform(tickers: List[str], config: Dict) -> pd.DataFrame:
         return pd.DataFrame()
     raw_data = pd.concat(all_ohlcv_df, ignore_index=True)
     finder_df = pd.DataFrame(tickers, columns=['ticker'])
-    transform_result = run_transform(
+    transformer_result = run_transformer(
         finder_df=finder_df,
         seq_len=60,
         pred_h=1,
         raw_data=raw_data,
         config=config
     )
-    logs_df = transform_result.get("logs", pd.DataFrame())
+    logs_df = transformer_result.get("logs", pd.DataFrame())
 
     # --- 임시 결정 로그 데이터 (주석 처리) ---
     # data = {
@@ -76,7 +85,7 @@ def run_signal_transform(tickers: List[str], config: Dict) -> pd.DataFrame:
     # }
     # logs_df = pd.DataFrame(data)
     
-    print(f"--- [PIPELINE-STEP 2] Transform 모듈 실행 완료 ---")
+    print(f"--- [PIPELINE-STEP 2] Transformer 모듈 실행 완료 ---")
     return logs_df
 
 def run_xai_report(decision_log: pd.DataFrame) -> List[str]:
@@ -113,12 +122,30 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[str]:
     print(f"--- [PIPELINE-STEP 3] XAI 리포트 생성 완료 ---")
     return reports
 
+def save_reports_to_db(reports: List[str], config: Dict):
+    """
+    생성된 XAI 리포트를 데이터베이스에 저장합니다.
+    """
+    db_config = config.get("report_DB", {})
+    conn = get_db_conn(db_config)
+    cursor = conn.cursor()
+    insert_query = """
+        INSERT INTO xai_reports (report_text, created_at)
+        VALUES (%s, %s);
+    """
+    for report in reports:
+        cursor.execute(insert_query, (report, datetime.now()))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print(f"--- {len(reports)}개의 XAI 리포트가 데이터베이스에 저장되었습니다. ---")
+
 # --- 전체 파이프라인 실행 ---
 def run_pipeline():
     """
-    전체 파이프라인(Finder -> Transform -> XAI)을 실행합니다.
+    전체 파이프라인(Finder -> Transformer -> XAI)을 실행합니다.
     """
-    config = None
+    config : Dict = {}
     try:
         with open(os.path.join(project_root, 'configs', 'config.json'), 'r') as f:
             config = json.load(f)
@@ -128,16 +155,20 @@ def run_pipeline():
     if not top_tickers:
         print("Finder에서 종목을 찾지 못해 파이프라인을 중단합니다.")
         return None
-    decision_log = run_signal_transform(top_tickers, config)
+    decision_log = run_signal_transformer(top_tickers, config)
     if decision_log.empty:
-        print("Transform에서 신호를 생성하지 못해 파이프라인을 중단합니다.")
+        print("Transformer에서 신호를 생성하지 못해 파이프라인을 중단합니다.")
         return None
     xai_reports = run_xai_report(decision_log)
+    
+    save_reports_to_db(xai_reports, config)
+
     return xai_reports
+
 
 # --- 테스트를 위한 실행 코드 ---
 if __name__ == "__main__":
-    print(">>> 파이프라인 (Finder -> Transform -> XAI) 테스트를 시작합니다.")
+    print(">>> 파이프라인 (Finder -> Transformer -> XAI) 테스트를 시작합니다.")
     final_reports = run_pipeline()
     print("\n>>> 최종 반환 결과 (XAI Reports):")
     if final_reports:
