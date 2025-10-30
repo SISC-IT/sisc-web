@@ -15,4 +15,6 @@ public interface BetRoundRepository extends JpaRepository<BetRound, UUID> {
     List<BetRound> findAllByOrderBySettleAtDesc();
 
     List<BetRound> findByStatusTrueAndLockAtLessThanEqual(LocalDateTime now);
+
+    List<BetRound> findByStatusTrue();
 }
