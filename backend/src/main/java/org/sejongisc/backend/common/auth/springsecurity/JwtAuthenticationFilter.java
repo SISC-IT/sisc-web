@@ -42,8 +42,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/login/google",
             "/api/auth/login/github",
             "/api/auth/oauth/**",
-            "/actuator",
-            "/actuator/**",
 //            "/api/auth/refresh",
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -99,6 +97,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+
+        // 1) /actuator 전체 무조건 스킵
+        if ("/actuator".equals(path) || path.startsWith("/actuator/")) {
+            log.info("JwtFilter skip actuator: {}", path);
+            return true;
+        }
 
         boolean excluded = EXCLUDE_PATTERNS.stream()
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
