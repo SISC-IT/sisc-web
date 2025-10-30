@@ -38,7 +38,6 @@
 
 .textBox h1 {
   font-weight: 600;
-  font-style: SemiBold;
   font-size: 64px;
   line-height: 120%;
   letter-spacing: -3%;
@@ -51,7 +50,6 @@
 
 .textBox h2 {
   font-weight: 700;
-  font-style: Bold;
   font-size: 36px;
   line-height: 110%;
   letter-spacing: -1%;
@@ -77,7 +75,6 @@
   color: #ffffff;
   cursor: pointer;
   font-weight: 500;
-  font-style: Medium;
   font-size: 16px;
   line-height: 120%;
   letter-spacing: -3%;
@@ -91,7 +88,6 @@
   color: #ffffff;
   cursor: pointer;
   font-weight: 500;
-  font-style: Medium;
   font-size: 16px;
   line-height: 120%;
   letter-spacing: -3%;
@@ -104,7 +100,6 @@
   height: 186px;
   top: 205px;
   left: 978px;
-  opacity: 1;
   z-index: 3;
 }
 
@@ -113,8 +108,6 @@
   width: 200px;
   height: 235px;
   top: 468px;
-  left: 1016px;
-  opacity: 1;
 }
 
 .coin5 {
@@ -123,6 +116,5 @@
   height: 232px;
   top: 285px;
   left: 1091px;
-  opacity: 1;
   z-index: 1;
 }

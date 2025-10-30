@@ -25,6 +25,7 @@
 
 .closed {
   transform: translateX(-100%);
+  pointer-events: none;
 }
 
 .sidebar-header {
@@ -106,6 +107,7 @@
 
 .inactive-link {
   background-color: transparent;
+  width: 100%;
   padding: 10px 8px;
 }
 
@@ -123,6 +125,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  cursor: pointer;
 }
 
 .title {

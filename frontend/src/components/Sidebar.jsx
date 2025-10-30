@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import Logo from '../assets/logo.png';
 import { useState } from 'react';
@@ -8,6 +8,7 @@ const Sidebar = () => {
   const isRoot = location.pathname === '/';
   const [isOpen, setIsOpen] = useState(false);
   const toggleSidebar = () => setIsOpen(!isOpen);
+  const nav = useNavigate();
 
   const menuSections = (
     <>
@@ -124,12 +125,17 @@ const Sidebar = () => {
       <div>
         {/* 홈에서는 버튼만 고정 */}
         <div className={styles.left}>
-          <button className={styles.menuButton} onClick={toggleSidebar}>
+          <button
+            className={styles.menuButton}
+            onClick={toggleSidebar}
+            aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
+            aria-expanded={isOpen}
+          >
             <span></span>
             <span></span>
             <span></span>
           </button>
-          <div className={styles.brand}>
+          <div className={styles.brand} onClick={() => nav('/')}>
             <img className={styles.logo} src={Logo} alt="세종투자연구회 로고" />
             <span className={styles.title}>세종투자연구회</span>
           </div>
@@ -140,6 +146,7 @@ const Sidebar = () => {
           className={`${styles.homeSidebarMenu} ${
             isOpen ? styles.open : styles.closed
           }`}
+          aria-hidden={!isOpen}
         >
           {menuSections}
         </div>
