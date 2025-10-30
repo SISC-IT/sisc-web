@@ -130,10 +130,10 @@
 
 .title {
   font-weight: 600;
-  font-style: SemiBold;
   font-size: 18.53px;
   line-height: 120%;
   letter-spacing: -3%;
+  color: white;
 }
 
 .menuButton {
@@ -158,8 +158,4 @@
 .logo {
   width: 19px;
   height: 19px;
-}
-
-.title {
-  color: white;
 }
