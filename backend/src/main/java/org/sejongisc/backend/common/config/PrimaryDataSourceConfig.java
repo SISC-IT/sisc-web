@@ -16,6 +16,9 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 import com.zaxxer.hikari.HikariDataSource;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
@@ -48,6 +51,11 @@ public class PrimaryDataSourceConfig {
     public LocalContainerEntityManagerFactoryBean primaryEntityManagerFactory(
         EntityManagerFactoryBuilder builder,
         @Qualifier("primaryDataSource") DataSource dataSource) {
+
+        Map<String, String> jpaProperties = new HashMap<>();
+        jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
+        jpaProperties.put("hibernate.hbm2ddl.auto", "update");
+
         return builder
             .dataSource(dataSource)
             .packages(
@@ -62,6 +70,7 @@ public class PrimaryDataSourceConfig {
                 "org.sejongisc.backend.user.entity"
             )
             .persistenceUnit("primary")
+            .properties(jpaProperties)
             .build();
     }
 

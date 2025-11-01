@@ -1,5 +1,6 @@
 package org.sejongisc.backend.backtest.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,19 +14,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class StrategyCondition {
 
-    // 좌항
+    @Schema(description = "좌향")
     private StrategyOperand leftOperand;
 
-    // 연산자 (예: "GT", "LT", "CROSSES_ABOVE")
+    @Schema(description = "연산자 (예: \"GT\", \"LT\", \"CROSSES_ABOVE\")")
     private String operator;
 
-    // 우항
+    @Schema(description = "우향")
     private StrategyOperand rightOperand;
 
-    /**
-     * "무조건 행동" 조건인지 여부
-     * true = 이 조건이 맞으면 다른 '일반' 조건 무시
-     * false = '일반' 조건
-     */
+    @Schema(description = "\"무조건 행동\" 조건인지 여부 (true = 이 조건이 맞으면 다른 '일반' 조건 무시, false = 이 조건은 일반 조건)")
     private boolean isAbsolute;
 }

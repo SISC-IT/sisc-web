@@ -2,9 +2,9 @@ package org.sejongisc.backend.template.service;
 
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.backtest.repository.BacktestRunRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.template.dto.TemplateRequest;
@@ -22,6 +22,7 @@ import java.util.UUID;
 public class TemplateService {
 
   private final TemplateRepository templateRepository;
+  private final BacktestRunRepository backtestRunRepository;
   private final EntityManager em;
 
   // 유저 ID로 템플릿 목록 조회
@@ -31,14 +32,13 @@ public class TemplateService {
         .build();
   }
 
-  // 템플릿 ID로 템플릿 조회
-  public TemplateResponse findById(UUID templateId) {
-    // TODO : 백테스트 기록도 같이 조회
+  // 템플릿 ID로 템플릿 상세 및 백테스트 리스트 조회
+  public TemplateResponse findById(UUID templateId, UUID userId) {
+    Template template = authorizeTemplateOwner(templateId, userId);
+    // TODO : 공개 템플릿 접근 허용 로직 추가 필요
     return TemplateResponse.builder()
-        .template(
-            templateRepository.findById(templateId)
-            .orElseThrow(() -> new CustomException(ErrorCode.TEMPLATE_NOT_FOUND))
-        )
+        .template(template)
+        .backtestRuns(backtestRunRepository.findByTemplate_TemplateIdWithTemplate(templateId))
         .build();
   }
 
@@ -60,9 +60,7 @@ public class TemplateService {
   // 템플릿 수정
   public TemplateResponse updateTemplate(TemplateRequest request) {
     Template template = authorizeTemplateOwner(request.getTemplateId(), request.getUserId());
-
     template.update(request.getTitle(), request.getDescription(), request.getIsPublic());
-
     templateRepository.save(template);
 
     return TemplateResponse.builder()

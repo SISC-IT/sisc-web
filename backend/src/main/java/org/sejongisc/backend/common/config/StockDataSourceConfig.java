@@ -45,10 +45,16 @@ public class StockDataSourceConfig {
         EntityManagerFactoryBuilder builder,
         @Qualifier("stockDataSource") DataSource dataSource) {
 
+        Map<String, String> jpaProperties = new HashMap<>();
+        jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
+        jpaProperties.put("hibernate.default_schema", "public");
+        jpaProperties.put("hibernate.hbm2ddl.auto", "none");
+
         return builder
             .dataSource(dataSource)
             .packages("org.sejongisc.backend.stock.entity")     // PriceData 엔티티가 있는 패키지 지정
             .persistenceUnit("stock")           // Persistence Unit 이름
+            .properties(jpaProperties)
             .build();
     }
 

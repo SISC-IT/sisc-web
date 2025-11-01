@@ -11,4 +11,5 @@ import java.util.List;
 @Repository
 public interface PriceDataRepository extends JpaRepository<PriceData, PriceDataId> {
     List<PriceData> findByTickerAndDateBetweenOrderByDateAsc(String ticker, LocalDate startDate, LocalDate endDate);
+    List<PriceData> findByTicker(String ticker);
 }
