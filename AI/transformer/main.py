@@ -19,7 +19,7 @@ def run_transformer(
     pred_h: int,
     raw_data: pd.DataFrame,
     run_date: Optional[str] = None,
-    config: Optional[dict] = None,
+    weights_path: Optional[dict] = None,
     interval: str = "1d",
 ) -> Dict[str, pd.DataFrame]:
     """

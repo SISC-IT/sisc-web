@@ -9,7 +9,7 @@ def fetch_ohlcv(
     start: str,
     end: str,
     interval: str = "1d",
-    config: dict = None,  # type: ignore
+    db_name: dict = None,
 ) -> pd.DataFrame:
     """
     특정 티커, 날짜 범위의 OHLCV 데이터를 DB에서 불러오기
@@ -24,7 +24,7 @@ def fetch_ohlcv(
     Returns:
         DataFrame: 컬럼 = [ticker, date, open, high, low, close, volume, adjusted_close]
     """
-    conn = get_db_conn(config)
+    conn = get_db_conn(db_name)
 
     query = """
         SELECT ticker, date, open, high, low, close, adjusted_close, volume

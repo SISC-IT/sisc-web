@@ -1,8 +1,7 @@
 ﻿import os
 import sys
-from typing import List, Dict
-import json
-from datetime import datetime, timedelta
+from typing import List, Dict, Optional
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 # --- 프로젝트 루트 경로 설정 ---
@@ -18,74 +17,86 @@ from xai.run_xai import run_xai
 from libs.utils.get_db_conn import get_db_conn
 # ---------------------------------
 
+# DB 이름 상수(실제 등록된 키와 반드시 일치해야 함)
+MARKET_DB_NAME = "db"          # 시세/원천 데이터 DB
+REPORT_DB_NAME = "report_DB"   # 리포트 저장 DB
+
+REQUIRED_LOG_COLS = {
+    "ticker", "date", "action", "price",
+    "feature1", "feature2", "feature3",
+    "prob1", "prob2", "prob3"
+}
+
 def run_weekly_finder() -> List[str]:
     """
     주간 종목 발굴(Finder)을 실행하고 결과(종목 리스트)를 반환합니다.
     """
     print("--- [PIPELINE-STEP 1] Finder 모듈 실행 시작 ---")
-    #top_tickers = run_finder()
-    top_tickers = ['AAPL', 'MSFT', 'GOOGL'] # 임시 데이터
-    print(f"--- [PIPELINE-STEP 1] Finder 모듈 실행 완료 ---")
+    # top_tickers = run_finder()
+    top_tickers = ["AAPL", "MSFT", "GOOGL"]  # 임시 데이터
+    print("--- [PIPELINE-STEP 1] Finder 모듈 실행 완료 ---")
     return top_tickers
 
-def run_signal_transformer(tickers: List[str], config: Dict) -> pd.DataFrame:
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
     """
     종목 리스트를 받아 Transformer 모듈을 실행하고, 신호(결정 로그)를 반환합니다.
     """
-    try:
-        with open(os.path.join(project_root, 'configs', 'config.json'), 'r') as f:
-            config = json.load(f)
-    except FileNotFoundError:
-        print("Config file not found")
-    except json.JSONDecodeError:
-        print("Invalid JSON format in config file")
-    db_config = (config or {}).get("db", {})   # ★ db 섹션만 추출
     print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 시작 ---")
-    
-    # --- 실제 Transformer 모듈 호출 ---
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=600)
-    all_ohlcv_df = []
-    for ticker in tickers:
-        ohlcv_df = fetch_ohlcv(
-            ticker=ticker,
-            start=start_date.strftime('%Y-%m-%d'),
-            end=end_date.strftime('%Y-%m-%d'),
-            config=db_config
-        )
-        ohlcv_df['ticker'] = ticker
-        all_ohlcv_df.append(ohlcv_df)
-    if not all_ohlcv_df:
-        print("OHLCV 데이터를 가져오지 못했습니다.")
+
+    if not tickers:
+        print("[WARN] 빈 종목 리스트가 입력되어 Transformer를 건너뜁니다.")
         return pd.DataFrame()
+
+    end_date = _utcnow()
+    start_date = end_date - timedelta(days=600)
+
+    all_ohlcv_df: List[pd.DataFrame] = []
+    for ticker in tickers:
+        try:
+            ohlcv_df = fetch_ohlcv(
+                ticker=ticker,
+                start=start_date.strftime("%Y-%m-%d"),
+                end=end_date.strftime("%Y-%m-%d"),
+                db_name=db_name
+            )
+            if ohlcv_df is None or ohlcv_df.empty:
+                print(f"[WARN] OHLCV 미수집: {ticker}")
+                continue
+            ohlcv_df = ohlcv_df.copy()
+            ohlcv_df["ticker"] = ticker
+            all_ohlcv_df.append(ohlcv_df)
+        except Exception as e:
+            print(f"[ERROR] OHLCV 수집 실패({ticker}): {e}")
+
+    if not all_ohlcv_df:
+        print("[ERROR] 어떤 티커에서도 OHLCV 데이터를 가져오지 못했습니다.")
+        return pd.DataFrame()
+
     raw_data = pd.concat(all_ohlcv_df, ignore_index=True)
-    finder_df = pd.DataFrame(tickers, columns=['ticker'])
-    transformer_result = run_transformer(
+
+    finder_df = pd.DataFrame(tickers, columns=["ticker"])
+    transformer_result: Dict = run_transformer(
         finder_df=finder_df,
         seq_len=60,
         pred_h=1,
-        raw_data=raw_data,
-        config=config
-    )
-    logs_df = transformer_result.get("logs", pd.DataFrame())
+        raw_data=raw_data
+    ) or {}
 
-    # --- 임시 결정 로그 데이터 (주석 처리) ---
-    # data = {
-    #     'ticker': ['AAPL', 'GOOGL', 'MSFT'],
-    #     'date': ['2025-09-17', '2025-09-17', '2025-09-17'],
-    #     'action': ['SELL', 'BUY', 'SELL'],
-    #     'price': [238.99, 249.52, 510.01],
-    #     'weight': [0.16, 0.14, 0.15],
-    #     'feature1': ['RSI', 'Stochastic', 'MACD'],
-    #     'feature2': ['MACD', 'MA_5', 'ATR'],
-    #     'feature3': ['Bollinger_Bands_lower', 'RSI', 'MA_200'],
-    #     'prob1': [0.5, 0.4, 0.6],
-    #     'prob2': [0.3, 0.25, 0.2],
-    #     'prob3': [0.1, 0.15, 0.1]
-    # }
-    # logs_df = pd.DataFrame(data)
-    
-    print(f"--- [PIPELINE-STEP 2] Transformer 모듈 실행 완료 ---")
+    logs_df: pd.DataFrame = transformer_result.get("logs", pd.DataFrame())
+    if logs_df is None or logs_df.empty:
+        print("[WARN] Transformer 결과 로그가 비어 있습니다.")
+        return pd.DataFrame()
+
+    # 필수 컬럼 검증
+    missing_cols = REQUIRED_LOG_COLS - set(logs_df.columns)
+    if missing_cols:
+        print(f"[ERROR] 결정 로그에 필수 컬럼 누락: {sorted(missing_cols)}")
+        return pd.DataFrame()
+
+    print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 완료 ---")
     return logs_df
 
 def run_xai_report(decision_log: pd.DataFrame) -> List[str]:
@@ -96,80 +107,88 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[str]:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise ValueError("XAI 리포트 생성을 위해 GROQ_API_KEY 환경 변수를 설정해주세요.")
-    reports = []
-    if decision_log.empty:
-        return reports
+
+    if decision_log is None or decision_log.empty:
+        print("[WARN] 비어있는 결정 로그가 입력되어 XAI 리포트를 생성하지 않습니다.")
+        return []
+
+    reports: List[str] = []
     for _, row in decision_log.iterrows():
-        decision = {
-            "ticker": row['ticker'],
-            "date": row['date'],
-            "signal": row['action'],
-            "price": row['price'],
-            "evidence": [
-                {"feature_name": row['feature1'], "contribution": row['prob1']},
-                {"feature_name": row['feature2'], "contribution": row['prob2']},
-                {"feature_name": row['feature3'], "contribution": row['prob3']},
-            ]
-        }
         try:
+            decision = {
+                "ticker": row["ticker"],
+                "date": row["date"],
+                "signal": row["action"],
+                "price": float(row["price"]),
+                "evidence": [
+                    {"feature_name": row["feature1"], "contribution": float(row["prob1"])},
+                    {"feature_name": row["feature2"], "contribution": float(row["prob2"])},
+                    {"feature_name": row["feature3"], "contribution": float(row["prob3"])},
+                ],
+            }
             report = run_xai(decision, api_key)
-            reports.append(report)
+            reports.append(str(report))
             print(f"--- {row['ticker']} XAI 리포트 생성 완료 ---")
         except Exception as e:
-            error_message = f"--- {row['ticker']} XAI 리포트 생성 중 오류 발생: {e} ---"
+            error_message = f"--- {row.get('ticker', 'UNKNOWN')} XAI 리포트 생성 중 오류 발생: {e} ---"
             print(error_message)
             reports.append(error_message)
-    print(f"--- [PIPELINE-STEP 3] XAI 리포트 생성 완료 ---")
+
+    print("--- [PIPELINE-STEP 3] XAI 리포트 생성 완료 ---")
     return reports
 
-def save_reports_to_db(reports: List[str], config: Dict):
+def save_reports_to_db(reports: List[str], db_name: str) -> None:
     """
     생성된 XAI 리포트를 데이터베이스에 저장합니다.
     """
-    db_config = config.get("report_DB", {})
-    conn = get_db_conn(db_config)
-    cursor = conn.cursor()
+    if not reports:
+        print("[INFO] 저장할 리포트가 없습니다.")
+        return
+
     insert_query = """
         INSERT INTO xai_reports (report_text, created_at)
         VALUES (%s, %s);
     """
-    for report in reports:
-        cursor.execute(insert_query, (report, datetime.now()))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print(f"--- {len(reports)}개의 XAI 리포트가 데이터베이스에 저장되었습니다. ---")
 
-# --- 전체 파이프라인 실행 ---
-def run_pipeline():
+    # 컨텍스트 매니저 사용으로 누수 방지
+    try:
+        with get_db_conn(db_name) as conn:
+            with conn.cursor() as cur:
+                # 배치 insert (성능)
+                created_at = _utcnow()
+                params = [(r, created_at) for r in reports]
+                cur.executemany(insert_query, params)
+            conn.commit()
+        print(f"--- {len(reports)}개의 XAI 리포트가 데이터베이스에 저장되었습니다. ---")
+    except Exception as e:
+        print(f"[ERROR] 리포트 저장 실패: {e}")
+        raise
+
+def run_pipeline() -> Optional[List[str]]:
     """
     전체 파이프라인(Finder -> Transformer -> XAI)을 실행합니다.
     """
-    #--- 설정 파일 로드 ---
-    config : Dict = {}
-    try:
-        with open(os.path.join(project_root, 'configs', 'config.json'), 'r') as f:
-            config = json.load(f)
-    except FileNotFoundError:
-        print("[WARN] configs/config.json 파일을 찾을 수 없어 DB 연결이 필요 없는 기능만 작동합니다.")
-
-    #--- 파이프라인 단계별 실행 ---
-    top_tickers = run_weekly_finder()
-    if not top_tickers:
-        print("Finder에서 종목을 찾지 못해 파이프라인을 중단합니다.")
+    # 1) Finder
+    tickers = run_weekly_finder()
+    if not tickers:
+        print("[STOP] Finder에서 종목을 찾지 못해 파이프라인을 중단합니다.")
         return None
-    decision_log = run_signal_transformer(top_tickers, config)
-    if decision_log.empty:
-        print("Transformer에서 신호를 생성하지 못해 파이프라인을 중단합니다.")
+
+    # 2) Transformer
+    logs_df = run_signal_transformer(tickers, MARKET_DB_NAME)
+    if logs_df is None or logs_df.empty:
+        print("[STOP] Transformer에서 신호를 생성하지 못해 파이프라인을 중단합니다.")
         return None
-    xai_reports = run_xai_report(decision_log)
-    
-    save_reports_to_db(xai_reports, config)
 
-    return xai_reports
+    # 3) XAI
+    reports = run_xai_report(logs_df)
 
+    # 4) 저장
+    save_reports_to_db(reports, REPORT_DB_NAME)
 
-# --- 테스트를 위한 실행 코드 ---
+    return reports
+
+# --- 테스트 실행 ---
 if __name__ == "__main__":
     print(">>> 파이프라인 (Finder -> Transformer -> XAI) 테스트를 시작합니다.")
     final_reports = run_pipeline()
