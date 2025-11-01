@@ -1,4 +1,4 @@
-pandas
+﻿pandas
 psycopg2-binary
 langchain-community
 tqdm
@@ -11,3 +11,4 @@ yfinance
 groq
 requests
 beautifulsoup4
+pathlib
