@@ -1,0 +1,9 @@
+.gradle
+build
+out
+!gradle/wrapper/**
+.idea
+.vscode
+*.iml
+.DS_Store
+Thumbs.db

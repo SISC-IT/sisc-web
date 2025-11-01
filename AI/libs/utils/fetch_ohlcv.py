@@ -1,0 +1,41 @@
+﻿import pandas as pd
+
+# DB 접속 커넥션 생성
+from .get_db_conn import get_db_conn
+
+# OHLCV 데이터 불러오기
+def fetch_ohlcv(
+    ticker: str,
+    start: str,
+    end: str,
+    interval: str = "1d",
+    config: dict = None,  # type: ignore
+) -> pd.DataFrame:
+    """
+    특정 티커, 날짜 범위의 OHLCV 데이터를 DB에서 불러오기
+
+    Args:
+        ticker (str): 종목 코드
+        start (str): 시작일자 'YYYY-MM-DD'
+        end (str): 종료일자 'YYYY-MM-DD'
+        interval (str): 데이터 간격 ('1d' 등)
+        config (dict): DB 접속 정보 포함한 설정
+
+    Returns:
+        DataFrame: 컬럼 = [ticker, date, open, high, low, close, volume, adjusted_close]
+    """
+    conn = get_db_conn(config)
+
+    query = """
+        SELECT ticker, date, open, high, low, close, adjusted_close, volume
+        FROM public.price_data
+        WHERE ticker = %s
+          AND date BETWEEN %s AND %s
+        ORDER BY date;
+    """
+
+    # 파라미터 바인딩 (%s) 사용 → SQL injection 방지
+    df = pd.read_sql(query, conn, params=(ticker, start, end))
+
+    conn.close()
+    return df

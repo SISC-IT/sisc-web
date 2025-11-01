@@ -49,11 +49,18 @@ const LoginForm = () => {
     <>
       <div className={styles.formContainer}>
         <form className={styles.loginForm} onSubmit={handleLogin}>
-          <div className={styles.logoBox}>
-            <img src={sejong_logo} alt="sejong_logo" className={styles.logo} />
+          <div className={styles.header}>
+            <div className={styles.logoBox}>
+              <img
+                src={sejong_logo}
+                alt="sejong_logo"
+                className={styles.logo}
+              />
+            </div>
+
+            <h1>Sejong Investment Scholars Club</h1>
           </div>
 
-          <h1>Sejong Investment Scholars Club</h1>
           <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>
             <input

@@ -1,0 +1,112 @@
+name: Build & Deploy (backend only)
+
+on:
+  workflow_dispatch: {}
+  # push:
+  #   branches: ["main"]
+  #   paths:
+  #     - "backend/**"
+  #     - ".github/workflows/deploy.yml"
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  REPO: sisc-it/sisc-web
+  IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      back: ${{ steps.filter.outputs.back }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect path changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            back:
+              - 'backend/**'
+
+  build-back:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Meta (tags/labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BACK }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build & Push (backend)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [changes, build-back]
+    if: ${{ always() && (needs.build-back.result == 'success' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd ~/apps/sisc-web
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans
+            if docker ps --format '{{.Names}}' | grep -q "^api$"; then
+              echo "Waiting for api to be healthy..."
+              for i in {1..30}; do
+                status=$(docker inspect --format='{{json .State.Health.Status}}' api 2>/dev/null || echo '"none"')
+                if echo "$status" | grep -q healthy; then
+                  echo "✅ api healthy"; break
+                fi
+                sleep 2
+              done
+            fi

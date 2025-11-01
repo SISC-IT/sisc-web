@@ -10,6 +10,7 @@ import org.sejongisc.backend.attendance.entity.AttendanceStatus;
 import org.sejongisc.backend.attendance.entity.Location;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
+import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,16 +28,20 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
+    private final UserRepository userRepository;
 
 
     /**
      * 출석 체크인 처리
-     * - 코드 유효성 및 중복 춣석 방지
+     * - 코드 유효성 및 중복 출석 방지
      * - GPS 위치 및 반경 검증
      * - 시간 윈도우 검증 및 지각 판별
      */
-    public AttendanceResponse checkIn(UUID sessionId, AttendanceRequest request, User user) {
+    public AttendanceResponse checkIn(UUID sessionId, AttendanceRequest request, UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다: " + userId));
         log.info("출석 체크인 시작: 사용자={}, 세션ID={}, 코드={}", user.getName(), sessionId, request.getCode());
+
 
         // 세션ID로 세션 조회
         AttendanceSession session = attendanceSessionRepository.findById(sessionId)
@@ -54,9 +59,9 @@ public class AttendanceService {
         // 위치 정보가 있는 세션에 대해서만 사용자 위치 생성 및 검증
         Location userLocation = null;
         if (session.getLocation() != null) {
-              if (request.getLatitude() == null || request.getLongitude() == null) {
+            if (request.getLatitude() == null || request.getLongitude() == null) {
                     throw new IllegalArgumentException("위치 기반 출석에는 위도와 경도가 필요합니다");
-              }
+            }
 
             userLocation = Location.builder()
                     .lat(request.getLatitude())
@@ -79,7 +84,9 @@ public class AttendanceService {
             throw new IllegalStateException("출석 시간이 종료되었습니다");
         }
 
-        AttendanceStatus status = now.isAfter(session.getStartsAt()) ?
+        // 시작 후 5분 이내는 정상 출석, 이후는 지각
+        LocalDateTime lateThreshold = session.getStartsAt().plusMinutes(5);
+        AttendanceStatus status = now.isAfter(lateThreshold) ?
                 AttendanceStatus.LATE : AttendanceStatus.PRESENT;
 
         Attendance attendance = Attendance.builder()
@@ -106,7 +113,7 @@ public class AttendanceService {
      * - 출석 시간 순으로 정렬
      */
     @Transactional(readOnly = true)
-    public List<AttendanceResponse> getAttendanceBySession(UUID sessionId) {
+    public List<AttendanceResponse> getAttendancesBySession(UUID sessionId) {
         AttendanceSession session = attendanceSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 세션입니다: " + sessionId));
 
@@ -123,7 +130,9 @@ public class AttendanceService {
      * - 최신 순으로 정렬
      */
     @Transactional(readOnly = true)
-    public List<AttendanceResponse> getAttendancesByUser(User user) {
+    public List<AttendanceResponse> getAttendancesByUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다: " + userId));
         List<Attendance> attendances = attendanceRepository.findByUserOrderByCheckedAtDesc(user);
 
         return attendances.stream()
@@ -136,7 +145,9 @@ public class AttendanceService {
      * - PRESENT/LATE/ABSENT 등으로 상태 변경
      * - 수정 사유 기록 및 로그 남기기
      */
-    public AttendanceResponse updateAttendanceStatus(UUID sessionId, UUID memberId, String status, String reason, User adminUser) {
+    public AttendanceResponse updateAttendanceStatus(UUID sessionId, UUID memberId, String status, String reason, UUID adminId) {
+        User adminUser = userRepository.findById(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다: " + adminId));
         log.info("출석 상태 수정 시작: 세션ID={}, 멤버ID={}, 새로운상태={}, 관리자={}", sessionId, memberId, status, adminUser.getName());
 
         // 세션 존재 확인

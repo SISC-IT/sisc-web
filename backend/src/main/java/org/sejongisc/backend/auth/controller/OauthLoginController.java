@@ -1,5 +1,6 @@
 package org.sejongisc.backend.auth.controller;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.sejongisc.backend.auth.oauth.KakaoUserInfoAdapter;
 import org.sejongisc.backend.user.service.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +24,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class OauthLoginController {
 
@@ -31,6 +33,7 @@ public class OauthLoginController {
     private final UserService userService;
     private final JwtProvider jwtProvider;
     private final OauthStateService oauthStateService;
+
 
     @Value("${google.client.id}")
     private String googleClientId;
@@ -49,6 +52,16 @@ public class OauthLoginController {
 
     @Value("${github.redirect.uri}")
     private String githubRedirectUri;
+
+
+
+
+    @PostMapping("/signup")
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        log.info("[SIGNUP] request: {}", request.getEmail());
+        SignupResponse response = userService.signUp(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -142,7 +155,7 @@ public class OauthLoginController {
         };
 
         // Access 토큰 발급
-        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole());
+        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
 
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
 
@@ -171,4 +184,42 @@ public class OauthLoginController {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .body(response);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        //  헤더 유효성 검사
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "잘못된 Authorization 헤더 형식입니다."));
+        }
+
+        String token = authorizationHeader.substring(7);
+
+        // 예외 처리 및 멱등성 보장
+        try {
+            loginService.logout(token);
+        } catch (JwtException | IllegalArgumentException e) {
+            // 이미 만료되었거나 잘못된 토큰이라도 200 OK로 응답 (멱등성 보장)
+            log.warn("Invalid or expired JWT during logout: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error during logout", e);
+            // 내부 예외는 500으로 보내지 않고 안전하게 처리
+        }
+
+        // Refresh Token 쿠키 삭제
+        ResponseCookie deleteCookie = ResponseCookie.from("refresh", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(Map.of("message", "로그아웃 성공"));
+    }
+
+
 }
+

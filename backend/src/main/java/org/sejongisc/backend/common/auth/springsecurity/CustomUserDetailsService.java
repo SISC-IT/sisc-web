@@ -20,8 +20,14 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User findUser = userRepository.findById(UUID.fromString(email)).orElseThrow(
+    public UserDetails loadUserByUsername(String userId) throws UsernameNotFoundException {
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN);
+        }
+        User findUser = userRepository.findById(uuid).orElseThrow(
                 () -> new CustomException(ErrorCode.USER_NOT_FOUND)
         );
 

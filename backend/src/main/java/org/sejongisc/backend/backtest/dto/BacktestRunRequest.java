@@ -17,6 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BacktestRunRequest {
+
     @Schema(description = "초기 자본금", defaultValue = "골든크로스 + RSI 필터 (AAPL)")
     private BigDecimal initialCapital;
 
