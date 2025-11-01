@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 from typing import List, Dict
 import json
@@ -12,10 +12,10 @@ sys.path.append(project_root)
 
 # --- 모듈 import ---
 from finder.main import run_finder
-from AI.transformer.main import run_transformer
-from AI.libs.utils.fetch_ohlcv import fetch_ohlcv
+from transformer.main import run_transformer
+from libs.utils.fetch_ohlcv import fetch_ohlcv
 from xai.run_xai import run_xai
-from AI.libs.utils.get_db_conn import get_db_conn
+from libs.utils.get_db_conn import get_db_conn
 # ---------------------------------
 
 def run_weekly_finder() -> List[str]:
@@ -23,8 +23,8 @@ def run_weekly_finder() -> List[str]:
     주간 종목 발굴(Finder)을 실행하고 결과(종목 리스트)를 반환합니다.
     """
     print("--- [PIPELINE-STEP 1] Finder 모듈 실행 시작 ---")
-    top_tickers = run_finder()
-    # top_tickers = ['AAPL', 'MSFT', 'GOOGL'] # 임시 데이터
+    #top_tickers = run_finder()
+    top_tickers = ['AAPL', 'MSFT', 'GOOGL'] # 임시 데이터
     print(f"--- [PIPELINE-STEP 1] Finder 모듈 실행 완료 ---")
     return top_tickers
 
@@ -145,12 +145,15 @@ def run_pipeline():
     """
     전체 파이프라인(Finder -> Transformer -> XAI)을 실행합니다.
     """
+    #--- 설정 파일 로드 ---
     config : Dict = {}
     try:
         with open(os.path.join(project_root, 'configs', 'config.json'), 'r') as f:
             config = json.load(f)
     except FileNotFoundError:
         print("[WARN] configs/config.json 파일을 찾을 수 없어 DB 연결이 필요 없는 기능만 작동합니다.")
+
+    #--- 파이프라인 단계별 실행 ---
     top_tickers = run_weekly_finder()
     if not top_tickers:
         print("Finder에서 종목을 찾지 못해 파이프라인을 중단합니다.")
