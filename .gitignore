@@ -1,6 +1,29 @@
-﻿################################################################################
-# 이 .gitignore 파일은 Microsoft(R) Visual Studio에서 자동으로 만들어졌습니다.
-################################################################################
+# ===== 공통 =====
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+# 환경 변수 & 민감 정보
+.env
+*.secret
+*.key
+*.pem
 
+# 로그
+*.log
+
+# ===== Java (Spring Boot) =====
+/target/
+
+# ===== Node.js (React / Vite) =====
+node_modules/
+dist/
+
+# ===== Python (AI / Data) =====
+__pycache__/
+.ipynb_checkpoints/
+*.pyc
+/venv/
 /env
 /.vs
