@@ -25,12 +25,13 @@ else:
 db_cfg: Union[str, Dict] = (config or {}).get("db", {})
 
 # --- DB 연결 테스트 ------------------------------------------------------------
+conn = None
 try:
-    # db 설정이 dict면 키워드 인자로, 문자열(DSN)이면 그대로 사용
-    if isinstance(db_cfg, dict):
-        conn = psycopg2.connect(**db_cfg)  # 예: {"host": "...", "port": 5432, "dbname": "...", "user": "...", "password": "..."}
-    else:
-        conn = psycopg2.connect(dsn=str(db_cfg))
+     # db 설정이 dict면 키워드 인자로, 문자열(DSN)이면 그대로 사용
+     if isinstance(db_cfg, dict):
+         conn = psycopg2.connect(**db_cfg)  # 예: {"host": "...", ...}
+     else:
+         conn = psycopg2.connect(dsn=str(db_cfg))
 
     with conn:
         with conn.cursor() as cur:
@@ -40,6 +41,9 @@ try:
             cur.execute("SELECT current_database(), current_user;")
             db, user = cur.fetchone()
             print(f"ℹ️ DB/USER: {db} / {user}")
-
 except Exception as e:
     print("❌ 연결 실패:", repr(e))
+finally:
+    if conn is not None:
+        conn.close()
+
