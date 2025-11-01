@@ -138,7 +138,7 @@ def train_transformer_classifier(
     pred_h : int
         미래 라벨링 지평(일수/캔들수)
     model_out_path : str
-        최종 가중치 저장 경로(.h5 권장): 예) 'artifacts/transformer_cls.h5'
+        최종 가중치 저장 경로(.h5 권장):
     scaler_out_path : str, optional
         스케일러 저장 경로(.pkl). 추론 시 동일 스케일 사용을 원할 때 권장.
     tickers : list, optional
