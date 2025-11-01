@@ -1,0 +1,116 @@
+:root {
+  --color-border: 0.6px solid rgba(0, 0, 0, 1);
+  --color-text: rgba(0, 0, 0, 1);
+  --color-bg-light: #fafafa;
+  --color-primary: #1d80f4;
+  --color-button-gradient: linear-gradient(
+    92.89deg,
+    #d8e8ff 6.95%,
+    #d1d8ff 74.81%,
+    #dddeff 107.39%
+  );
+  --font-regular: 400;
+  --font-size: 16px;
+  --line-height: 100%;
+  --letter-spacing: 0%;
+  --gap: 12px;
+  --radius: 4px;
+  --transition: all 0.2s;
+}
+
+.boardActions {
+  width: 100%;
+  max-width: calc(100% - 20px);
+  padding-right: 20px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap);
+  margin-bottom: 32px;
+}
+
+.selectWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sortSelect {
+  width: 90px;
+  height: 35px;
+  padding: 8px 12px;
+  padding-right: 36px;
+  border: var(--color-border);
+  border-radius: var(--radius);
+  background: #fff;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: var(--transition);
+  box-sizing: border-box;
+  font-family: var(--font-family);
+  font-weight: var(--font-regular);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+  letter-spacing: var(--letter-spacing);
+  color: var(--color-text);
+}
+
+.sortSelect:hover {
+  background: var(--color-bg-light);
+}
+
+.sortSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(29, 128, 244, 0.1);
+}
+
+.selectArrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+}
+
+.writeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+  width: 122px;
+  height: 35px;
+  padding: 8px 12px;
+  background: var(--color-button-gradient);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  font-family: var(--font-family);
+  font-weight: var(--font-regular);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+  letter-spacing: var(--letter-spacing);
+  color: var(--color-text);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.writeButton:hover {
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(29, 128, 244, 0.15);
+}
+
+.writeButton:active {
+  opacity: 0.8;
+}
+
+.writeButton img {
+  width: 9.67px;
+  height: 9.67px;
+}
