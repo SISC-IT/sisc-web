@@ -3,6 +3,7 @@ package org.sejongisc.backend.backtest.repository;
 import org.sejongisc.backend.backtest.entity.BacktestRun;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,5 +15,5 @@ public interface BacktestRunRepository extends JpaRepository<BacktestRun, Long> 
          "JOIN FETCH br.template t " +
          "WHERE t.templateId = :templateTemplateId " +
          "ORDER BY br.startedAt DESC")
-  List<BacktestRun> findByTemplate_TemplateIdWithTemplate(UUID templateTemplateId);
+  List<BacktestRun> findByTemplate_TemplateIdWithTemplate(@Param("templateTemplateId") UUID templateTemplateId);
 }
