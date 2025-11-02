@@ -16,11 +16,13 @@ public class TokenEncryptor {
 
     private static SecretKeySpec loadKey() {
         String key = System.getenv(SECRET_KEY_ENV);
+        byte[] keyBytes = (key != null) ? key.getBytes(StandardCharsets.UTF_8) : null;
+
         if (key == null || key.length() != 16) {
             throw new IllegalStateException(
                     "유효한 16바이트 토큰 암호화 키가 설정되지 않았습니다. 환경변수 TOKEN_ENCRYPTION_KEY를 확인하세요.");
         }
-        return new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), ALGORITHM);
+        return new SecretKeySpec(keyBytes, ALGORITHM);
     }
 
     public static String encrypt(String token) {
