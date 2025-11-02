@@ -15,6 +15,7 @@ import org.sejongisc.backend.auth.oauth.KakaoUserInfoAdapter;
 import org.sejongisc.backend.user.service.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class OauthLoginController {
 
@@ -51,6 +52,16 @@ public class OauthLoginController {
 
     @Value("${github.redirect.uri}")
     private String githubRedirectUri;
+
+
+
+
+    @PostMapping("/signup")
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        log.info("[SIGNUP] request: {}", request.getEmail());
+        SignupResponse response = userService.signUp(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -144,7 +155,7 @@ public class OauthLoginController {
         };
 
         // Access 토큰 발급
-        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole());
+        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
 
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
 
@@ -176,7 +187,7 @@ public class OauthLoginController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-        // 1️⃣ 헤더 유효성 검사
+        //  헤더 유효성 검사
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "잘못된 Authorization 헤더 형식입니다."));
@@ -184,7 +195,7 @@ public class OauthLoginController {
 
         String token = authorizationHeader.substring(7);
 
-        // 2️⃣ 예외 처리 및 멱등성 보장
+        // 예외 처리 및 멱등성 보장
         try {
             loginService.logout(token);
         } catch (JwtException | IllegalArgumentException e) {
@@ -195,7 +206,7 @@ public class OauthLoginController {
             // 내부 예외는 500으로 보내지 않고 안전하게 처리
         }
 
-        // 3️⃣ Refresh Token 쿠키 삭제
+        // Refresh Token 쿠키 삭제
         ResponseCookie deleteCookie = ResponseCookie.from("refresh", "")
                 .httpOnly(true)
                 .secure(true)

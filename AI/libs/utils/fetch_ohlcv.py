@@ -1,17 +1,7 @@
-import psycopg2
-import pandas as pd
+﻿import pandas as pd
 
 # DB 접속 커넥션 생성
-def get_db_conn(config: dict):
-    """config에서 DB 접속 정보 가져와 psycopg2 Connection 생성"""
-    conn = psycopg2.connect(
-        host=config["db"]["host"],
-        user=config["db"]["user"],
-        password=config["db"]["password"],
-        dbname=config["db"]["dbname"],
-        port=config["db"].get("port", 5432),
-    )
-    return conn
+from .get_db_conn import get_db_conn
 
 # OHLCV 데이터 불러오기
 def fetch_ohlcv(
@@ -32,12 +22,12 @@ def fetch_ohlcv(
         config (dict): DB 접속 정보 포함한 설정
 
     Returns:
-        DataFrame: 컬럼 = [date, open, high, low, close, volume]
+        DataFrame: 컬럼 = [ticker, date, open, high, low, close, volume, adjusted_close]
     """
     conn = get_db_conn(config)
 
     query = """
-        SELECT date, open, high, low, close, volume
+        SELECT ticker, date, open, high, low, close, adjusted_close, volume
         FROM public.price_data
         WHERE ticker = %s
           AND date BETWEEN %s AND %s

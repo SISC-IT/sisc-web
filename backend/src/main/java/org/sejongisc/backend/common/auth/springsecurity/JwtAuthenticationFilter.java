@@ -25,20 +25,24 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final Optional<JwtParser> jwtParser;
+    private final JwtParser jwtParser;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private static final List<String> EXCLUDE_PATTERNS = List.of(
-            "/user/signup",
-            "/auth/login",
-            "/auth/login/kakao",
-            "/auth/login/google",
-            "/auth/login/github",
+            "/api/auth/signup",
+            "/api/auth/login",
+            "/api/auth/login/kakao",
+            "/api/auth/login/google",
+            "/api/auth/login/github",
+            "/api/auth/oauth/**",
+//            "/api/auth/refresh",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui/index.html",
@@ -47,51 +51,66 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     );
 
     @Override
-    protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response,
+    protected void doFilterInternal(@NotNull HttpServletRequest request,
+                                    @NotNull HttpServletResponse response,
                                     @NotNull FilterChain filterChain)
             throws ServletException, IOException {
+
         String requestURI = request.getRequestURI();
+
+        // 인증 제외 경로
+        if (shouldNotFilter(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 테스트 환경에서는 JwtParser가 없어도 그냥 통과시킴
-        if (jwtParser.isEmpty()) {
-            log.debug("JwtParser not found (likely test environment) → skipping JWT validation");
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
             String token = resolveToken(request);
-            JwtParser parser = jwtParser.get();
 
-            if (token != null && parser.validationToken(token)) {
-                UsernamePasswordAuthenticationToken authentication = parser.getAuthentication(token);
+            if (token != null && jwtParser.validationToken(token)) {
+                UsernamePasswordAuthenticationToken authentication = jwtParser.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                log.debug("Valid JWT token found for request: {}", request.getRequestURI());
-
-                filterChain.doFilter(request, response);
+                log.info("SecurityContext에 인증 저장됨: {}", authentication.getName());
             } else {
-                throw new JwtException("Token is null or invalid");
+                log.warn("토큰이 없거나 유효하지 않음");
             }
 
         } catch (JwtException e) {
+            log.error("JWT validation failed: {}", e.getMessage(), e);
             ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.INVALID_ACCESS_TOKEN);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(toJson(errorResponse));
+            return; //  예외 시 여기서 중단
         }
+
+        //  필터 체인은 항상 마지막에 한 번만 호출
+        filterChain.doFilter(request, response);
     }
+
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return EXCLUDE_PATTERNS.stream()
+
+        // 1) /actuator 전체 무조건 스킵
+        if ("/actuator".equals(path) || path.startsWith("/actuator/")) {
+            log.info("JwtFilter skip actuator: {}", path);
+            return true;
+        }
+
+        boolean excluded = EXCLUDE_PATTERNS.stream()
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
+
+        // 어떤 요청이 필터 예외로 분류됐는지 콘솔에 표시
+        log.info("JwtFilter check path: {} → excluded={}", path, excluded);
+
+        return excluded;
     }
 
     private String resolveToken(HttpServletRequest request) {

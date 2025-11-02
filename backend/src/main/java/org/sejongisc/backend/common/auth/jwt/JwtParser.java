@@ -1,26 +1,22 @@
 package org.sejongisc.backend.common.auth.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-
-import java.util.*;
-import javax.crypto.SecretKey;
-
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetailsService;
 import org.sejongisc.backend.user.entity.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.util.*;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtParser {
@@ -30,54 +26,31 @@ public class JwtParser {
 
     private SecretKey secretKey;
 
-    @Value("${jwt.expireDate.accessToken}")
-    private long accessTokenValidityInMillis;
-
-    @Value("${jwt.expireDate.refreshToken}")
-    private long refreshTokenValidityInMillis;
-
     @PostConstruct
     public void init() {
         byte[] keyBytes = Base64.getDecoder().decode(rawSecretKey);
         this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // 토큰에서 사용자 ID 추출
-    public UUID getUserIdFromToken(String token) {
-        Claims claims = parseClaims(token);
-        return UUID.fromString(claims.getSubject());
-    }
-
-    // 토큰에서 사용자 role 추출
-    public Role getRoleFromToken(String token) {
-        Claims claims = parseClaims(token);
-        String roleStr = claims.get("role", String.class);
-        if (roleStr == null) {
-            throw new JwtException("JWT에 role 클레임이 없습니다."); // 명확한 인증 실패 예외
-        }
-        try {
-            return Role.valueOf(roleStr);
-        } catch (IllegalArgumentException e) {
-            throw new JwtException("JWT의 role 클레임이 잘못되었습니다: " + roleStr);
-        }
-    }
-
-    // 토큰 유효성 검증
+    // 토큰 유효성 검사
     public boolean validationToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            log.info("Token validation success");
             return true;
         } catch (JwtException | IllegalArgumentException e) {
+            log.error("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
 
-    // Authentication 객체 생성
+    // Authentication 생성
     public UsernamePasswordAuthenticationToken getAuthentication(String token) {
         Claims claims = parseClaims(token);
+        String userId = claims.get("uid", String.class);
 
         String roleStr = claims.get("role", String.class);
-        if(roleStr == null) {
+        if (roleStr == null) {
             throw new JwtException("JWT에 role 클레임이 없습니다.");
         }
 
@@ -88,23 +61,49 @@ public class JwtParser {
             throw new JwtException("JWT의 role 클레임이 잘못되었습니다.: " + roleStr);
         }
 
-        Collection<? extends GrantedAuthority> authorities =
-                List.of(new SimpleGrantedAuthority("ROLE_" + role.name())); // "ROLE_TEAM_MEMBER"
+        if (userId == null) {
+                      throw new JwtException("JWT에 userId(uid)가 없습니다.");
+        }
 
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(claims.getSubject());
-        return new UsernamePasswordAuthenticationToken(userDetails, "", authorities);
+        // DB에서 다시 유저를 불러오기 (CustomUserDetailsService 사용)
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(userId);
+
+        log.debug("인증 객체 생성 완료");
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
     }
 
     // Claims 파싱
     private Claims parseClaims(String token) {
-        try{
+        try {
             return Jwts.parserBuilder()
                     .setSigningKey(secretKey)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-        } catch(ExpiredJwtException e) {
+        } catch (ExpiredJwtException e) {
             return e.getClaims();
+        }
+    }
+
+    public UUID getUserIdFromToken(String token) {
+        Claims claims = parseClaims(token);
+        String userIdStr = claims.get("uid", String.class);
+
+        // uid 클레임이 없을 경우 subject로 대체 (RefreshToken 호환)
+        if (userIdStr == null || userIdStr.isBlank()) {
+            userIdStr = claims.getSubject();
+        }
+
+        // 여전히 없거나 비어 있으면 명시적 예외 처리
+        if (userIdStr == null || userIdStr.isBlank()) {
+            throw new JwtException("JWT에 userId(uid/subject)가 없습니다.");
+        }
+
+        try {
+            return UUID.fromString(userIdStr);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new JwtException("잘못된 userId 형식의 JWT입니다.");
         }
     }
 }
