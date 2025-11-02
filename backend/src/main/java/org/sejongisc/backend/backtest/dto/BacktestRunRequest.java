@@ -17,10 +17,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BacktestRunRequest {
-    @Schema(description = "초기 자본금")
+
+    @Schema(description = "초기 자본금", defaultValue = "10000000")
     private BigDecimal initialCapital;
 
-    @Schema(description = "대상 종목 티커")
+    @Schema(description = "대상 종목 티커", defaultValue = "AAPL")
     private String ticker;
 
     @Schema(description = "매수 조건 그룹")
@@ -29,7 +30,7 @@ public class BacktestRunRequest {
     @Schema(description = "매도 조건 그룹")
     private List<StrategyCondition> sellConditions;
 
-    @Schema(description = "노트")
+    @Schema(description = "노트", defaultValue = "골든크로스 + RSI 필터 전략 테스트")
     private String note;
 
     /*
