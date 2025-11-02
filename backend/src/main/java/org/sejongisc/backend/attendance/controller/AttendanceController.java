@@ -1,5 +1,7 @@
 package org.sejongisc.backend.attendance.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/attendance")
 @Slf4j
+@Tag(
+    name = "출석(Attendance) API",
+    description = "학생 출석 체크인 및 관리자 출석 현황 조회 관련 API"
+)
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
@@ -30,6 +36,12 @@ public class AttendanceController {
      * - 위치 범위, 시간 위도우 검증 포함
      * - 중복 출석 방지
      */
+    @Operation(
+            summary = "출석 체크인",
+            description = "학생이 출석 코드와 GPS 위치를 제시하여 출석 체크인을 진행합니다. " +
+                    "세션의 지정된 위치 범위 내에 있어야 하며, 시간 윈도우 내에만 체크인이 가능합니다. " +
+                    "시작 시간 5분 이내는 PRESENT, 이후는 LATE로 자동 판별됩니다."
+    )
     @PostMapping("/sessions/{sessionId}/check-in")
     public ResponseEntity<AttendanceResponse> checkIn(
             @PathVariable UUID sessionId,
@@ -50,6 +62,11 @@ public class AttendanceController {
      * - 특정 세션의 모든 출석 기록 조회
      * - 출석 시간 순으로 정렬
      */
+    @Operation(
+            summary = "세션별 출석 목록 조회",
+            description = "특정 세션에 참가한 모든 학생의 출석 기록을 조회합니다. (관리자 전용) " +
+                    "출석 시간 순으로 정렬되며, 각 학생의 상태, 체크인 시간, 포인트 등이 포함됩니다."
+    )
     @GetMapping("/sessions/{sessionId}/attendances")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<List<AttendanceResponse>> getAttendancesBySession(@PathVariable UUID sessionId) {
@@ -65,6 +82,11 @@ public class AttendanceController {
      * - 로그인한 사용자의 모든 출석 기록 조회
      * - 최신 순으로 정렬
      */
+    @Operation(
+            summary = "내 출석 기록 조회",
+            description = "로그인한 사용자의 모든 출석 기록을 최신 순으로 조회합니다. " +
+                    "각 출석 기록에는 세션 정보, 출석 상태, 체크인 시간, 획득 포인트 등이 포함됩니다."
+    )
     @GetMapping("/history")
     public ResponseEntity<List<AttendanceResponse>> getMyAttendances(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -80,6 +102,12 @@ public class AttendanceController {
      * - PRESENT/LATE/ABSENT 등으로 상태 변경
      * - 수정 사유 기록 가능
      */
+    @Operation(
+            summary = "출석 상태 수정",
+            description = "특정 학생의 출석 상태를 변경합니다. (관리자 전용) " +
+                    "PRESENT(출석), LATE(지각), ABSENT(결석), EXCUSED(사유결석) 등의 상태로 변경 가능하며, " +
+                    "변경 사유를 함께 기록할 수 있습니다."
+    )
     @PostMapping("/sessions/{sessionId}/attendances/{memberId}")
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<AttendanceResponse> updateAttendanceStatus(
