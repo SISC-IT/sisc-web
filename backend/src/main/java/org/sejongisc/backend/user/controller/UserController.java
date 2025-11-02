@@ -25,8 +25,6 @@ public class UserController {
 
     private final UserService userService;
 
-
-
     @GetMapping("/details")
     public ResponseEntity<?> getUserInfo(@AuthenticationPrincipal CustomUserDetails user) {
         if (user == null) {
@@ -56,9 +54,11 @@ public class UserController {
             @RequestBody @Valid UserUpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails authenticatedUser
     ) {
-        if(authenticatedUser == null){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "인증 정보가 필요합니다."));
-        }
+//        if(authenticatedUser == null){
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "인증 정보가 필요합니다."));
+//        }
+
+        log.info("인증된 사용자 ID={}, 요청한 userId={}", authenticatedUser.getUserId(), userId);
 
         // 본인 허용
         if (!authenticatedUser.getUserId().equals(userId)) {

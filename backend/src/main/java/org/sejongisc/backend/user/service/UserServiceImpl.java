@@ -1,6 +1,7 @@
 package org.sejongisc.backend.user.service;
 
 
+import org.sejongisc.backend.auth.service.OauthUnlinkService;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +29,10 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserOauthAccountRepository oauthAccountRepository;
-
+    private final OauthUnlinkService oauthUnlinkService;
     private final PasswordEncoder passwordEncoder;
+
+
 
     @Override
     @Transactional
@@ -90,6 +93,7 @@ public class UserServiceImpl implements UserService {
                             .user(savedUser)
                             .provider(oauthInfo.getProvider())
                             .providerUid(providerUid)
+                            .accessToken(oauthInfo.getAccessToken())
                             .build();
 
                     oauthAccountRepository.save(newOauth);
@@ -125,5 +129,46 @@ public class UserServiceImpl implements UserService {
         log.info("회원 정보가 수정되었습니다. userId={}", userId);
         userRepository.save(user);
     }
+
+    @Override
+    @Transactional
+    public User getUserById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+
+    @Override
+    @Transactional
+    public void deleteUserWithOauth(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 연동된 OAuth 계정이 있을 경우 모두 해제
+        if (!user.getOauthAccounts().isEmpty()) {
+            for (UserOauthAccount account : user.getOauthAccounts()) {
+                String provider = account.getProvider().name();
+                String providerUid = account.getProviderUid();
+                String accessToken = account.getAccessToken();
+                log.info("연결된 OAuth 계정 해제 중: provider={}, userId={}", provider, userId);
+
+                // Kakao / Google / GitHub 연동 해제 서비스 연결
+                switch (provider.toLowerCase()) {
+                    case "kakao" -> oauthUnlinkService.unlinkKakao(accessToken);
+                    case "google" -> oauthUnlinkService.unlinkGoogle(accessToken);
+                    case "github" -> oauthUnlinkService.unlinkGithub(accessToken);
+                    default -> log.warn("지원하지 않는 provider: {}", provider);
+                }
+            }
+        }
+
+        // Refresh Token (추후 구현 시 삭제)
+        //refreshTokenRepository.deleteByUserId(userId);
+
+        // User 삭제 (연관된 OAuthAccount는 Cascade로 자동 삭제)
+        userRepository.delete(user);
+        log.info("회원 탈퇴 완료: userId={}", userId);
+    }
+
 
 }

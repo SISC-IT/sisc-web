@@ -34,4 +34,7 @@ public class UserOauthAccount extends BasePostgresEntity {
 
     @Column(name = "provider_uid", nullable = false)
     private String providerUid;
+
+    @Column(length = 512)
+    private String accessToken;
 }

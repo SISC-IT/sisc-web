@@ -6,8 +6,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.auth.dto.*;
+import org.sejongisc.backend.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.auth.service.*;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.oauth.GithubUserInfoAdapter;
 import org.sejongisc.backend.auth.oauth.GoogleUserInfoAdapter;
@@ -18,6 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -26,14 +30,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-public class OauthLoginController {
+public class AuthController {
 
     private final Map<String, Oauth2Service<?, ?>> oauth2Services;
     private final LoginService loginService;
     private final UserService userService;
     private final JwtProvider jwtProvider;
     private final OauthStateService oauthStateService;
-
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${google.client.id}")
     private String googleClientId;
@@ -113,6 +117,18 @@ public class OauthLoginController {
         return ResponseEntity.ok(authUrl);
     }
 
+    //redirection api
+    @GetMapping("/login/{provider}")
+    public ResponseEntity<LoginResponse> handleOauthRedirect(
+            @PathVariable("provider") String provider,
+            @RequestParam("code") String code,
+            @RequestParam("state") String state,
+            HttpSession session) {
+        log.info("[{}] OAuth GET redirect received: code={}, state={}", provider, code, state);
+        return OauthLogin(provider, code, state, session);
+    }
+
+
     // OAuth 인증 완료 후 Code + State 처리
     @PostMapping("/login/{provider}")
     public ResponseEntity<LoginResponse> OauthLogin(@PathVariable("provider") String provider, @RequestParam("code") String code, @RequestParam("state") String state, HttpSession session) {
@@ -137,19 +153,19 @@ public class OauthLoginController {
                 var googleService = (Oauth2Service<GoogleTokenResponse, GoogleUserInfoResponse>) service;
                 var token = googleService.getAccessToken(code);
                 var info = googleService.getUserInfo(token.getAccessToken());
-                yield userService.findOrCreateUser(new GoogleUserInfoAdapter(info));
+                yield userService.findOrCreateUser(new GoogleUserInfoAdapter(info, token.getAccessToken()));
             }
             case "KAKAO" -> {
                 var kakaoService = (Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse>) service;
                 var token = kakaoService.getAccessToken(code);
                 var info = kakaoService.getUserInfo(token.getAccessToken());
-                yield userService.findOrCreateUser(new KakaoUserInfoAdapter(info));
+                yield userService.findOrCreateUser(new KakaoUserInfoAdapter(info, token.getAccessToken()));
             }
             case "GITHUB" -> {
                 var githubService = (Oauth2Service<GithubTokenResponse, GithubUserInfoResponse>) service;
                 var token = githubService.getAccessToken(code);
                 var info = githubService.getUserInfo(token.getAccessToken());
-                yield userService.findOrCreateUser(new GithubUserInfoAdapter(info));
+                yield userService.findOrCreateUser(new GithubUserInfoAdapter(info, token.getAccessToken()));
             }
             default -> throw new IllegalArgumentException("Unknown provider " + provider);
         };
@@ -184,6 +200,48 @@ public class OauthLoginController {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .body(response);
     }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<?> reissue(@CookieValue(value = "refresh", required = false) String refreshToken) {
+
+        // ⃣ 쿠키에 refreshToken이 없으면 401
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Refresh Token이 없습니다."));
+        }
+
+        try {
+            // 서비스 호출 → accessToken / refreshToken 갱신
+            Map<String, String> tokens = refreshTokenService.reissueTokens(refreshToken);
+
+            // accessToken을 Authorization 헤더로 전달
+            ResponseEntity.BodyBuilder response = ResponseEntity.ok()
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.get("accessToken"));
+
+            // refreshToken이 새로 발급된 경우 쿠키 교체
+            if (tokens.containsKey("refreshToken")) {
+                ResponseCookie cookie = ResponseCookie.from("refresh", tokens.get("refreshToken"))
+                        .httpOnly(true)
+                        .secure(true)  // Swagger/Postman 테스트 중일 땐 false
+                        .sameSite("None")
+                        .path("/")
+                        .maxAge(60L * 60 * 24 * 14) // 2주
+                        .build();
+
+                response.header(HttpHeaders.SET_COOKIE, cookie.toString());
+            }
+
+            // 응답 반환
+            return response.body(Map.of("accessToken", tokens.get("accessToken")));
+
+        } catch (Exception e) {
+            log.warn("토큰 재발급 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Refresh Token이 유효하지 않거나 만료되었습니다."));
+        }
+    }
+
+
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
@@ -220,6 +278,33 @@ public class OauthLoginController {
                 .body(Map.of("message", "로그아웃 성공"));
     }
 
+    @DeleteMapping("/withdraw")
+    public ResponseEntity<?> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "인증이 필요합니다."));
+        }
+
+        // DB에서 사용자 정보 삭제
+        userService.deleteUserWithOauth(user.getUserId());
+        log.info("회원 탈퇴 완료: {}", user.getEmail());
+
+        //Refresh Token DB에서도 삭제
+        refreshTokenService.deleteByUserId(user.getUserId());
+
+        // 브라우저 쿠키 삭제
+        ResponseCookie deleteCookie = ResponseCookie.from("refresh", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.ok()
+                // .header(HttpHeaders.SET_COOKIE, deleteCookie.toString()) // 나중에 추가
+                .body(Map.of("message", "회원 탈퇴가 완료되었습니다."));
+    }
 
 }
 

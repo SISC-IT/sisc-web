@@ -63,6 +63,15 @@ public class JwtProvider {
 
     }
 
+    public Date getExpiration(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+    }
+
     // 토큰에서 사용자 ID 추출
     public String getUserIdFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
