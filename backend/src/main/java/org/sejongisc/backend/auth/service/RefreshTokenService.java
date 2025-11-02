@@ -17,4 +17,5 @@ public interface RefreshTokenService {
      */
     Map<String, String> reissueTokens(String refreshToken);
     void deleteByUserId(UUID userId);
+    void saveOrUpdateToken(UUID userId, String refreshToken);
 }

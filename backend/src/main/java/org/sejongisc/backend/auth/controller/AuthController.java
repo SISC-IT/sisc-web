@@ -283,6 +283,8 @@ public class AuthController {
 
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
 
+        refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
+
         // HttpOnly 쿠키에 담기
         ResponseCookie cookie = ResponseCookie.from("refresh", refreshToken)
                 .httpOnly(true)

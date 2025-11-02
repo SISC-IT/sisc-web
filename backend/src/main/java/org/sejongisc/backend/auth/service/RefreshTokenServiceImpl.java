@@ -27,6 +27,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final JwtProvider jwtProvider;
 
     @Override
+    @Transactional
     public Map<String, String> reissueTokens(String refreshToken) {
         try {
             // refreshToken에서 userId 추출
@@ -82,6 +83,17 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     public void deleteByUserId(UUID userId) {
         refreshTokenRepository.deleteByUserId(userId);
         log.info("RefreshToken deleted for userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void saveOrUpdateToken(UUID userId, String refreshToken) {
+        refreshTokenRepository.findByUserId(userId)
+                .ifPresentOrElse(
+                        existing -> existing.setToken(refreshToken),
+                        () -> refreshTokenRepository.save(new RefreshToken(userId, refreshToken))
+                );
+        log.info("RefreshToken 저장 또는 갱신 완료: userId={}", userId);
     }
 
 }

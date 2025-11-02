@@ -2,10 +2,14 @@ package org.sejongisc.backend.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.auth.exception.OauthUnlinkException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -32,6 +36,10 @@ public class OauthUnlinkServiceImpl implements OauthUnlinkService {
     // 카카오 연결 끊기
     @Override
     public void unlinkKakao(String accessToken) {
+        if (accessToken == null || accessToken.trim().isEmpty()) {
+            throw new IllegalArgumentException("Access token은 필수입니다.");
+        }
+
         try{
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
@@ -42,30 +50,44 @@ public class OauthUnlinkServiceImpl implements OauthUnlinkService {
             log.info("Kakao Unlink 성공: {}", response.getBody());
         }catch (Exception e){
             log.warn("Kakao Unlink 실패: {}", e.getMessage());
+            throw new OauthUnlinkException("Kakao 연동 해제 실패", e);
         }
     }
 
     @Override
-    public void unlinkGoogle(String accessToken) {
+    public void unlinkGoogle(String accessToken) throws OauthUnlinkException{
+        if (accessToken == null || accessToken.trim().isEmpty()) {
+            throw new IllegalArgumentException("Access token은 필수입니다.");
+        }
+
         try{
-            String url = googleUnlinkUrl + "?token=" + accessToken;
+            String url = UriComponentsBuilder.fromHttpUrl(googleUnlinkUrl)
+                    .queryParam("token", accessToken)
+                    .build()
+                    .toUriString();
+
             ResponseEntity<String> response =
                     restTemplate.postForEntity(url, null, String.class);
             log.info("Google unlink 성공: {}", response.getBody());
         } catch (Exception e) {
             log.warn("Google unlink 실패: {}", e.getMessage());
+            throw new OauthUnlinkException("Kakao 연동 해제 실패", e);
         }
     }
 
     @Override
     public void unlinkGithub(String accessToken) {
+        if (accessToken == null || accessToken.trim().isEmpty()) {
+            throw new IllegalArgumentException("Access token은 필수입니다.");
+        }
+
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setBasicAuth(githubClientId, githubClientSecret);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            String body = "{\"access_token\":\"" + accessToken + "\"}";
-            HttpEntity<String> request = new HttpEntity<>(body, headers);
+            Map<String, String> requestBody = Map.of("access_token", accessToken);
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(requestBody, headers);
 
             ResponseEntity<String> response = restTemplate.exchange(
                     githubUnlinkUrl.replace("{client_id}", githubClientId),
@@ -76,6 +98,7 @@ public class OauthUnlinkServiceImpl implements OauthUnlinkService {
             log.info("GitHub unlink 성공: {}", response.getBody());
         } catch (Exception e) {
             log.warn("GitHub unlink 실패: {}", e.getMessage());
+            throw new OauthUnlinkException("Kakao 연동 해제 실패", e);
         }
     }
 }
