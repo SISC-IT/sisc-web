@@ -71,7 +71,7 @@ public class OauthUnlinkServiceImpl implements OauthUnlinkService {
             log.info("Google unlink 성공: {}", response.getBody());
         } catch (Exception e) {
             log.warn("Google unlink 실패: {}", e.getMessage());
-            throw new OauthUnlinkException("Kakao 연동 해제 실패", e);
+            throw new OauthUnlinkException("Google 연동 해제 실패", e);
         }
     }
 
@@ -98,7 +98,7 @@ public class OauthUnlinkServiceImpl implements OauthUnlinkService {
             log.info("GitHub unlink 성공: {}", response.getBody());
         } catch (Exception e) {
             log.warn("GitHub unlink 실패: {}", e.getMessage());
-            throw new OauthUnlinkException("Kakao 연동 해제 실패", e);
+            throw new OauthUnlinkException("GitHub 연동 해제 실패", e);
         }
     }
 }

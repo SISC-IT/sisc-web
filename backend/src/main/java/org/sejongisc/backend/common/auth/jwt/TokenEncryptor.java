@@ -24,6 +24,10 @@ public class TokenEncryptor {
     }
 
     public static String encrypt(String token) {
+        if (token == null || token.isEmpty()) {
+            throw new IllegalArgumentException("암호화할 토큰이 null이거나 비어있습니다.");
+        }
+
         try {
             SecretKeySpec key = loadKey();
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
@@ -46,15 +50,26 @@ public class TokenEncryptor {
             bb.put(iv);
             bb.put(ciphertext);
             return Base64.getEncoder().encodeToString(bb.array());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            // 키 로드 실패나 입력 검증 오류
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Token encryption failed", e);
+            throw new RuntimeException("토큰 암호화에 실패했습니다.", e);
         }
     }
 
     public static String decrypt(String encryptedToken) {
+        if (encryptedToken == null || encryptedToken.isEmpty()) {
+            throw new IllegalArgumentException("복호화할 토큰이 null이거나 비어있습니다.");
+        }
+
         try {
             SecretKeySpec key = loadKey();
             byte[] decoded = Base64.getDecoder().decode(encryptedToken);
+
+            if (decoded.length < GCM_IV_LENGTH) {
+                throw new IllegalArgumentException("암호화된 토큰의 길이가 올바르지 않습니다.");
+            }
 
             // IV(앞 GCM_IV_LENGTH 바이트) 분리
             ByteBuffer bb = ByteBuffer.wrap(decoded);
@@ -69,8 +84,15 @@ public class TokenEncryptor {
 
             byte[] plaintext = cipher.doFinal(ciphertext);
             return new String(plaintext, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new RuntimeException("Token decryption failed", e);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            // 입력 검증 또는 키 로드 실패 시 그대로 전파
+            throw e;
+        } catch (javax.crypto.AEADBadTagException e) {
+            // GCM 인증 실패 → 변조 가능성
+            throw new SecurityException("토큰 인증에 실패했습니다. 데이터가 변조되었을 수 있습니다.", e);
+        }
+        catch (Exception e) {
+            throw new RuntimeException("토큰 복호화에 실패했습니다.", e);
         }
     }
 }
