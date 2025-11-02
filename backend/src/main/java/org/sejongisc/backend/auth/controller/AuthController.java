@@ -1,6 +1,13 @@
 package org.sejongisc.backend.auth.controller;
 
 import io.jsonwebtoken.JwtException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +37,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(
+        name = "인증 API",
+        description = "회원 인증 및 소셜 로그인 관련 API를 제공합니다."
+)
 public class AuthController {
 
     private final Map<String, Oauth2Service<?, ?>> oauth2Services;
@@ -58,8 +69,27 @@ public class AuthController {
     private String githubRedirectUri;
 
 
-
-
+    @Operation(
+            summary = "회원가입 API",
+            description = "회원 이메일, 비밀번호, 이름, 전화번호 정보를 입력받아 새로운 사용자를 생성합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "회원가입 성공",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "userId": "1c54b9f3-8234-4e8f-b001-11cc4d9012ab",
+                                              "email": "testuser@example.com",
+                                              "name": "홍길동",
+                                              "phoneNumber": "01012345678",
+                                              "role": "USER"
+                                            }
+                                            """))
+                    ),
+                    @ApiResponse(responseCode = "400", description = "요청 데이터 유효성 검증 실패")
+            }
+    )
     @PostMapping("/signup")
     public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
         log.info("[SIGNUP] request: {}", request.getEmail());
@@ -67,6 +97,28 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(
+            summary = "일반 로그인 API",
+            description = "이메일과 비밀번호로 로그인하고 Access Token과 Refresh Token을 발급합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "로그인 성공",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+                                              "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
+                                              "userId": "1c54b9f3-8234-4e8f-b001-11cc4d9012ab",
+                                              "name": "홍길동",
+                                              "role": "USER",
+                                              "phoneNumber": "01012345678"
+                                            }
+                                            """))
+                    ),
+                    @ApiResponse(responseCode = "401", description = "이메일 또는 비밀번호 불일치")
+            }
+    )
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
 
@@ -88,8 +140,24 @@ public class AuthController {
     }
 
     // OAuth 로그인 시작 (state 생성 + 각 provider별 인증 URL 반환)
+    @Operation(
+            summary = "OAuth 로그인 시작 (INIT)",
+            description = "소셜 로그인 시작 시 각 Provider(GOOGLE, KAKAO, GITHUB)의 인증 URL을 반환합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "OAuth 인증 URL 반환 성공",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = "\"https://accounts.google.com/o/oauth2/v2/auth?...\""))
+                    ),
+                    @ApiResponse(responseCode = "400", description = "지원하지 않는 Provider 요청")
+            }
+    )
     @GetMapping("/oauth/{provider}/init")
-    public ResponseEntity<String> startOauthLogin(@PathVariable String provider, HttpSession session) {
+    public ResponseEntity<String> startOauthLogin(
+            @Parameter(description = "소셜 로그인 제공자 (GOOGLE, KAKAO, GITHUB)", example = "GOOGLE")
+            @PathVariable String provider,
+            HttpSession session) {
         String state = oauthStateService.generateAndSaveState(session);
         String authUrl;
 
@@ -118,11 +186,17 @@ public class AuthController {
     }
 
     //redirection api
+    @Operation(
+            summary = "OAuth 로그인 리다이렉트 (GET)",
+            description = "소셜 로그인 후 리다이렉션 시 호출되는 엔드포인트입니다. "
+                    + "code와 state 값을 받아 실제 로그인 과정을 처리하며 일반적으로 프론트엔드에서 이 요청을 자동으로 POST로 전달합니다."
+
+    )
     @GetMapping("/login/{provider}")
     public ResponseEntity<LoginResponse> handleOauthRedirect(
-            @PathVariable("provider") String provider,
-            @RequestParam("code") String code,
-            @RequestParam("state") String state,
+            @Parameter(description = "소셜 로그인 제공자", example = "GOOGLE") @PathVariable("provider") String provider,
+            @Parameter(description = "OAuth 인증 코드", example = "4/0AbCdEfG...") @RequestParam("code") String code,
+            @Parameter(description = "CSRF 방지용 state 값", example = "a1b2c3d4") @RequestParam("state") String state,
             HttpSession session) {
         log.info("[{}] OAuth GET redirect received: code={}, state={}", provider, code, state);
         return OauthLogin(provider, code, state, session);
@@ -130,8 +204,42 @@ public class AuthController {
 
 
     // OAuth 인증 완료 후 Code + State 처리
+    @Operation(
+            summary = "OAuth 로그인 완료 (POST)",
+            description = "OAuth 인증 후 전달된 code와 state를 이용해 토큰을 발급받고 사용자 로그인 처리합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "OAuth 로그인 성공",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+                                              "userId": "3a93f8c2-412b-4d9c-84a2-52bdfec91d11",
+                                              "name": "카카오홍길동",
+                                              "role": "USER",
+                                              "phoneNumber": "01099998888"
+                                            }
+                                            """))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "잘못된 state 값 또는 만료된 인증 코드",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "message": "Invalid OAuth state or expired authorization code"
+                                            }
+                                            """))
+                    )
+            }
+    )
     @PostMapping("/login/{provider}")
-    public ResponseEntity<LoginResponse> OauthLogin(@PathVariable("provider") String provider, @RequestParam("code") String code, @RequestParam("state") String state, HttpSession session) {
+    public ResponseEntity<LoginResponse> OauthLogin(
+            @Parameter(description = "소셜 로그인 제공자", example = "KAKAO") @PathVariable("provider") String provider,
+            @Parameter(description = "OAuth 인증 코드", example = "4/0AbCdEfG...") @RequestParam("code") String code,
+            @Parameter(description = "CSRF 방지용 state 값", example = "a1b2c3d4") @RequestParam("state") String state,
+            HttpSession session) {
 
         //  서버에 저장된 state와 요청으로 받은 state 비교
         String savedState = oauthStateService.getStateFromSession(session);
@@ -201,8 +309,37 @@ public class AuthController {
                 .body(response);
     }
 
+    @Operation(
+            summary = "Access Token 재발급 API",
+            description = "만료된 Access Token을 Refresh Token으로 재발급받습니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Access Token 재발급 성공",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "accessToken": "eyJhbGciOiJIUzI1NiJ9..."
+                                            }
+                                            """))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Refresh Token이 없거나 만료됨",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "message": "Refresh Token이 유효하지 않거나 만료되었습니다."
+                                            }
+                                            """))
+                    )
+            }
+    )
     @PostMapping("/reissue")
-    public ResponseEntity<?> reissue(@CookieValue(value = "refresh", required = false) String refreshToken) {
+    public ResponseEntity<?> reissue(
+            @Parameter(description = "Refresh Token 쿠키", example = "refresh=abc123")
+            @CookieValue(value = "refresh", required = false) String refreshToken
+    ) {
 
         // ⃣ 쿠키에 refreshToken이 없으면 401
         if (refreshToken == null || refreshToken.isEmpty()) {
@@ -241,10 +378,37 @@ public class AuthController {
         }
     }
 
-
-
+    @Operation(
+            summary = "로그아웃 API",
+            description = "Access Token을 무효화하고 Refresh Token 쿠키를 삭제합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "로그아웃 성공",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "message": "로그아웃 성공"
+                                            }
+                                            """))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Authorization 헤더 형식이 잘못됨",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "message": "잘못된 Authorization 헤더 형식입니다."
+                                            }
+                                            """))
+                    )
+            }
+    )
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+    public ResponseEntity<?> logout(
+            @Parameter(description = "Bearer 토큰", example = "Bearer eyJhbGciOiJIUzI1NiJ9...")
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
         //  헤더 유효성 검사
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest()
@@ -278,8 +442,37 @@ public class AuthController {
                 .body(Map.of("message", "로그아웃 성공"));
     }
 
+    @Operation(
+            summary = "회원 탈퇴 API",
+            description = "현재 로그인한 사용자의 계정을 삭제합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "회원 탈퇴 완료",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "message": "회원 탈퇴가 완료되었습니다."
+                                            }
+                                            """))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "인증되지 않은 사용자",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "message": "인증이 필요합니다."
+                                            }
+                                            """))
+                    )
+            }
+    )
     @DeleteMapping("/withdraw")
-    public ResponseEntity<?> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
+    public ResponseEntity<?> withdraw(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "인증이 필요합니다."));
