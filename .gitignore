@@ -27,3 +27,4 @@ __pycache__/
 /venv/
 /env
 /.vs
+backend/src/main/java/org/sejongisc/backend/stock/TestController.java
