@@ -35,7 +35,7 @@ public class OauthUnlinkServiceImpl implements OauthUnlinkService {
         try{
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
-            HttpEntity<?> request = new HttpEntity<>(headers);
+            HttpEntity<Void> request = new HttpEntity<>(headers);
 
             ResponseEntity<String> response =
                     restTemplate.exchange(kakaoUnlinkUrl, HttpMethod.POST, request, String.class);

@@ -1,5 +1,6 @@
 package org.sejongisc.backend.auth.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.auth.entity.RefreshToken;
@@ -77,6 +78,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
+    @Transactional
     public void deleteByUserId(UUID userId) {
         refreshTokenRepository.deleteByUserId(userId);
         log.info("RefreshToken deleted for userId={}", userId);

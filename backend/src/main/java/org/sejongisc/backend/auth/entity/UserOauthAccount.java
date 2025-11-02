@@ -5,6 +5,7 @@ import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.sejongisc.backend.user.entity.User;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -35,6 +36,13 @@ public class UserOauthAccount extends BasePostgresEntity {
     @Column(name = "provider_uid", nullable = false)
     private String providerUid;
 
-    @Column(length = 512)
+    @Column(name = "access_token", length = 2048)
     private String accessToken;
+
+    @Column(name = "token_expires_at")
+    private LocalDateTime tokenExpiresAt;
+
+    public boolean isTokenExpired() {
+        return tokenExpiresAt != null && tokenExpiresAt.isBefore(LocalDateTime.now());
+    }
 }

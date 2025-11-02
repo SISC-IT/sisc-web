@@ -2,6 +2,7 @@ package org.sejongisc.backend.user.service;
 
 
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
+import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
@@ -89,11 +91,13 @@ public class UserServiceImpl implements UserService {
 
                     User savedUser = userRepository.save(newUser);
 
+                    String encryptedToken = TokenEncryptor.encrypt(oauthInfo.getAccessToken());
+
                     UserOauthAccount newOauth = UserOauthAccount.builder()
                             .user(savedUser)
                             .provider(oauthInfo.getProvider())
                             .providerUid(providerUid)
-                            .accessToken(oauthInfo.getAccessToken())
+                            .accessToken(encryptedToken)
                             .build();
 
                     oauthAccountRepository.save(newOauth);
@@ -144,12 +148,16 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // Lazy 로딩 강제 초기화 (안정성 보강)
+        user.getOauthAccounts().size();
+
         // 연동된 OAuth 계정이 있을 경우 모두 해제
         if (!user.getOauthAccounts().isEmpty()) {
             for (UserOauthAccount account : user.getOauthAccounts()) {
                 String provider = account.getProvider().name();
                 String providerUid = account.getProviderUid();
-                String accessToken = account.getAccessToken();
+                String accessToken = TokenEncryptor.decrypt(account.getAccessToken());
+
                 log.info("연결된 OAuth 계정 해제 중: provider={}, userId={}", provider, userId);
 
                 // Kakao / Google / GitHub 연동 해제 서비스 연결

@@ -495,7 +495,7 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                // .header(HttpHeaders.SET_COOKIE, deleteCookie.toString()) // 나중에 추가
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString()) // 나중에 추가
                 .body(Map.of("message", "회원 탈퇴가 완료되었습니다."));
     }
 
