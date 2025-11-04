@@ -27,3 +27,4 @@ __pycache__/
 /venv/
 /env
 /.vs
+/.venv/

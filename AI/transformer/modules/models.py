@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import layers, Model
+from tensorflow.keras import layers, Model # type: ignore[reportMissingImports]
 
 # 위치 인코딩
-def positional_encoding(maxlen: int, d_model: int) -> tf.Tensor:
+def positional_encoding(maxlen: int, d_model: int):
     angles = np.arange(maxlen)[:, None] / np.power(
         10000, (2 * (np.arange(d_model)[None, :] // 2)) / d_model
     )

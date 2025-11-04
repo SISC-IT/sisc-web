@@ -1,10 +1,10 @@
-﻿# transformer/modules/inference.py
+# transformer/modules/inference.py
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras import Model
+from tensorflow.keras import Model 
 
 # from AI.libs.utils.io import _log
 _log = print  # TODO: 추후 io._log 로 교체

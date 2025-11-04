@@ -19,7 +19,7 @@ def run_transformer(
     pred_h: int,
     raw_data: pd.DataFrame,
     run_date: Optional[str] = None,
-    weights_path: Optional[dict] = None,
+    weights_path: Optional[str] = None,
     interval: str = "1d",
 ) -> Dict[str, pd.DataFrame]:
     """
@@ -60,10 +60,15 @@ def run_transformer(
     """
 
     # 1) weights_path 경로지정
-    base_dir = Path("/transformer/weights")
-    candidate = base_dir / "initial.weights.h5"
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-    weights_path = str(candidate) if candidate.exists() else None
+    weights_dir = PROJECT_ROOT / "weights"
+    candidate = weights_dir / "initial.weights.h5"
+
+    weights_path = str(candidate)
+    if candidate.exists():
+            
+            _log(f"[TRANSFORMER] weights_path 설정됨: {weights_path}")
 
     if not weights_path:
         _log("[TRANSFORMER][WARN] weights_path 미설정 → 가중치 없이 랜덤 초기화로 추론될 수 있음(품질 저하).")

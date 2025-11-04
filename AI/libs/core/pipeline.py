@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta, timezone
@@ -15,6 +15,7 @@ from transformer.main import run_transformer
 from libs.utils.fetch_ohlcv import fetch_ohlcv
 from xai.run_xai import run_xai
 from libs.utils.get_db_conn import get_db_conn
+from libs.utils.save_reports_to_db import save_reports_to_db
 # ---------------------------------
 
 # DB 이름 상수(실제 등록된 키와 반드시 일치해야 함)
@@ -50,7 +51,8 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
         print("[WARN] 빈 종목 리스트가 입력되어 Transformer를 건너뜁니다.")
         return pd.DataFrame()
 
-    end_date = _utcnow()
+    #end_date = _utcnow() # 한국 시간 기준 당일 종가까지 사용, 서버 사용시 주석 해제
+    end_date = datetime.strptime("2024-10-30", "%Y-%m-%d") #임시 고정 날짜
     start_date = end_date - timedelta(days=600)
 
     all_ohlcv_df: List[pd.DataFrame] = []
@@ -137,32 +139,7 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[str]:
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 완료 ---")
     return reports
 
-def save_reports_to_db(reports: List[str], db_name: str) -> None:
-    """
-    생성된 XAI 리포트를 데이터베이스에 저장합니다.
-    """
-    if not reports:
-        print("[INFO] 저장할 리포트가 없습니다.")
-        return
 
-    insert_query = """
-        INSERT INTO xai_reports (report_text, created_at)
-        VALUES (%s, %s);
-    """
-
-    # 컨텍스트 매니저 사용으로 누수 방지
-    try:
-        with get_db_conn(db_name) as conn:
-            with conn.cursor() as cur:
-                # 배치 insert (성능)
-                created_at = _utcnow()
-                params = [(r, created_at) for r in reports]
-                cur.executemany(insert_query, params)
-            conn.commit()
-        print(f"--- {len(reports)}개의 XAI 리포트가 데이터베이스에 저장되었습니다. ---")
-    except Exception as e:
-        print(f"[ERROR] 리포트 저장 실패: {e}")
-        raise
 
 def run_pipeline() -> Optional[List[str]]:
     """
