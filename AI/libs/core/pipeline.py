@@ -101,43 +101,75 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
     print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 완료 ---")
     return logs_df
 
-def run_xai_report(decision_log: pd.DataFrame) -> List[str]:
+# --- 안전 변환 유틸 ---
+def _to_iso_date(v) -> str:
+    import pandas as pd
+    from datetime import datetime
+    try:
+        if isinstance(v, (pd.Timestamp, datetime)):
+            return v.strftime("%Y-%m-%d")
+        return str(v)
+    except Exception:
+        return str(v)
+
+def _to_float(v, fallback=0.0) -> float:
+    try:
+        return float(v)
+    except Exception:
+        return float(fallback)
+
+# --- XAI 리포트: 5-튜플(rows)로 반환 ---
+from typing import List, Tuple
+
+def run_xai_report(decision_log: pd.DataFrame) -> List[Tuple[str, str, float, str, str]]:
     """
-    결정 로그를 바탕으로 실제 XAI 리포트를 생성합니다.
+    save_reports_to_db()가 기대하는 형식:
+      rows = List[ (ticker, signal, price, date_str, report_text) ]
     """
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 시작 ---")
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        raise ValueError("XAI 리포트 생성을 위해 GROQ_API_KEY 환경 변수를 설정해주세요.")
+        print("[STOP] GROQ_API_KEY 미설정: XAI 리포트 단계를 건너뜁니다.")
+        return []
 
     if decision_log is None or decision_log.empty:
         print("[WARN] 비어있는 결정 로그가 입력되어 XAI 리포트를 생성하지 않습니다.")
         return []
 
-    reports: List[str] = []
+    rows: List[Tuple[str, str, float, str, str]] = []
+
     for _, row in decision_log.iterrows():
+        ticker = str(row.get("ticker", "UNKNOWN"))
+        date_s = _to_iso_date(row.get("date", ""))
+        signal = str(row.get("action", ""))
+        price  = _to_float(row.get("price", 0.0))
+
+        # evidence 등은 DB에 안 넣는 설계로 보이므로 내부 호출에만 사용
+        decision_payload = {
+            "ticker": ticker,
+            "date": date_s,
+            "signal": signal,
+            "price": price,
+            "evidence": [
+                {"feature_name": str(row.get("feature1", "")), "contribution": _to_float(row.get("prob1", 0.0))},
+                {"feature_name": str(row.get("feature2", "")), "contribution": _to_float(row.get("prob2", 0.0))},
+                {"feature_name": str(row.get("feature3", "")), "contribution": _to_float(row.get("prob3", 0.0))},
+            ],
+        }
+
         try:
-            decision = {
-                "ticker": row["ticker"],
-                "date": row["date"],
-                "signal": row["action"],
-                "price": float(row["price"]),
-                "evidence": [
-                    {"feature_name": row["feature1"], "contribution": float(row["prob1"])},
-                    {"feature_name": row["feature2"], "contribution": float(row["prob2"])},
-                    {"feature_name": row["feature3"], "contribution": float(row["prob3"])},
-                ],
-            }
-            report = run_xai(decision, api_key)
-            reports.append(str(report))
-            print(f"--- {row['ticker']} XAI 리포트 생성 완료 ---")
+            report_text = run_xai(decision_payload, api_key)
+            report_text = str(report_text)  # 혹시 모를 비문자 타입 대비
+            print(f"--- {ticker} XAI 리포트 생성 완료 ---")
         except Exception as e:
-            error_message = f"--- {row.get('ticker', 'UNKNOWN')} XAI 리포트 생성 중 오류 발생: {e} ---"
-            print(error_message)
-            reports.append(error_message)
+            report_text = f"[ERROR] XAI 리포트 생성 실패: {e}"
+            print(f"--- {ticker} XAI 리포트 생성 중 오류: {e} ---")
+
+        rows.append((ticker, signal, price, date_s, report_text))
 
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 완료 ---")
-    return reports
+    return rows
+
 
 
 

@@ -1,4 +1,4 @@
-﻿# AI/libs/utils/get_db_conn.py
+# AI/libs/utils/get_db_conn.py
 # 한국어 주석: JSON 설정에서 DB 접속정보를 읽어
 # 1) psycopg2 Connection (로우 커넥션)
 # 2) SQLAlchemy Engine (권장, 커넥션 풀/프리핑)
