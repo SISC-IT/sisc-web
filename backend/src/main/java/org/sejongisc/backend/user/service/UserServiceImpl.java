@@ -33,6 +33,7 @@ public class UserServiceImpl implements UserService {
     private final UserOauthAccountRepository oauthAccountRepository;
     private final OauthUnlinkService oauthUnlinkService;
     private final PasswordEncoder passwordEncoder;
+    private final TokenEncryptor tokenEncryptor;
 
 
 
@@ -91,7 +92,7 @@ public class UserServiceImpl implements UserService {
 
                     User savedUser = userRepository.save(newUser);
 
-                    String encryptedToken = TokenEncryptor.encrypt(oauthInfo.getAccessToken());
+                    String encryptedToken = tokenEncryptor.encrypt(oauthInfo.getAccessToken());
 
                     UserOauthAccount newOauth = UserOauthAccount.builder()
                             .user(savedUser)
@@ -156,7 +157,7 @@ public class UserServiceImpl implements UserService {
             for (UserOauthAccount account : user.getOauthAccounts()) {
                 String provider = account.getProvider().name();
                 String providerUid = account.getProviderUid();
-                String accessToken = TokenEncryptor.decrypt(account.getAccessToken());
+                String accessToken = tokenEncryptor.decrypt(account.getAccessToken());
 
                 log.info("연결된 OAuth 계정 해제 중: provider={}, userId={}", provider, userId);
 

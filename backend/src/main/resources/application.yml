@@ -4,7 +4,7 @@ spring:
 
   jpa:
     generate-ddl: true
-    hibernate:
+#    hibernate:
 #      ddl-auto: update
     properties:
       hibernate:

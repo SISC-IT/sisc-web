@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.auth.entity.RefreshToken;
 import org.sejongisc.backend.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
@@ -25,19 +26,23 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
+    private final TokenEncryptor tokenEncryptor;
 
     @Override
     @Transactional
-    public Map<String, String> reissueTokens(String refreshToken) {
+    public Map<String, String> reissueTokens(String encryptedRefreshToken) {
         try {
+
+            String rawRefreshToken = tokenEncryptor.decrypt(encryptedRefreshToken);
             // refreshToken에서 userId 추출
-            UUID userId = UUID.fromString(jwtProvider.getUserIdFromToken(refreshToken));
+            UUID userId = UUID.fromString(jwtProvider.getUserIdFromToken(rawRefreshToken));
 
             // DB에서 저장된 refreshToken 확인
-            RefreshToken savedRefreshToken = refreshTokenRepository.findByUserId(userId)
+            RefreshToken saved = refreshTokenRepository.findByUserId(userId)
                     .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
-            if (!savedRefreshToken.getToken().equals(refreshToken)) {
+            String savedRawToken = tokenEncryptor.decrypt(saved.getToken());
+            if (!rawRefreshToken.equals(rawRefreshToken)) {
                 throw new CustomException(ErrorCode.UNAUTHORIZED);
             }
 
@@ -50,15 +55,15 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                     user.getUserId(), user.getRole(), user.getEmail());
 
             // Refresh Token 만료 임박 시 새로 발급
-            Date expiration = jwtProvider.getExpiration(refreshToken);
+            Date expiration = jwtProvider.getExpiration(rawRefreshToken);
             long remainingMillis = expiration.getTime() - System.currentTimeMillis();
             String newRefreshToken = null;
 
             // 예: 남은 기간이 3일 미만이면 refreshToken도 갱신
             if (remainingMillis < (3L * 24 * 60 * 60 * 1000)) {
                 newRefreshToken = jwtProvider.createRefreshToken(user.getUserId());
-                savedRefreshToken.setToken(newRefreshToken);
-                refreshTokenRepository.save(savedRefreshToken);
+                saved.setToken(newRefreshToken);
+                refreshTokenRepository.save(saved);
                 log.info("RefreshToken 재발급 완료: userId={}", userId);
             }
 
