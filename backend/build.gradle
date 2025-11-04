@@ -46,6 +46,18 @@ dependencies {
 
 	testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// Mockito + AssertJ
+	testImplementation "org.mockito:mockito-junit-jupiter:5.12.0"
+	testImplementation "org.assertj:assertj-core:3.26.3"
+
+	// GreenMail: SMTP 가짜 서버
+	testImplementation "com.icegreen:greenmail:1.6.14"
+
+//	// Testcontainers (Redis)
+//	testImplementation "org.testcontainers:junit-jupiter:1.20.3"
+//	testImplementation "org.testcontainers:redis:1.20.3"
+
 	// spring-retry
 	implementation 'org.springframework.retry:spring-retry'
 
@@ -59,6 +71,18 @@ dependencies {
 
 	// backtesting library
 	implementation 'org.ta4j:ta4j-core:0.15'
+
+	// mail
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+	//validation
+	implementation 'commons-validator:commons-validator:1.7'
+
+	// Redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// Thymleaf
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 }
 
 jacoco {
