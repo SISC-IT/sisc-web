@@ -50,8 +50,11 @@ public enum ErrorCode {
 
   INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 엑세스 토큰입니다."),
 
-  EXPIRED_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "엑세스 토큰이 만료되었습니다. 재발급이 필요합니다."),
-
+  // EMAIL
+  EMAIL_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "이메일 인증 코드를 찾을 수 없습니다"),
+  EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "인증 코드가 일치하지 않습니다."),
+  EMAIL_INVALID_EMAIL(HttpStatus.BAD_REQUEST, "유효하지 않은 이메일입니다"),
+  EMAIL_ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "24시간 이내에 이미 인증된 이메일입니다."),
 
   // USER
 
