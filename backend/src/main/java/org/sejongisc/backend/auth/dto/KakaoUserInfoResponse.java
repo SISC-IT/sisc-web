@@ -2,6 +2,7 @@ package org.sejongisc.backend.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,163 +14,155 @@ import java.util.HashMap;
 @Setter
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Schema(
+        name = "KakaoUserInfoResponse",
+        description = "카카오 OAuth 로그인 후 사용자 정보 응답 객체"
+)
 public class KakaoUserInfoResponse {
 
-    //회원 번호
+    @Schema(description = "카카오 회원 고유 번호", example = "2834928349")
     @JsonProperty("id")
     public Long id;
 
-    //자동 연결 설정을 비활성화한 경우만 존재.
-    //true : 연결 상태, false : 연결 대기 상태
+    @Schema(description = "카카오 계정이 서비스에 연결되어 있는지 여부", example = "true")
     @JsonProperty("has_signed_up")
     public Boolean hasSignedUp;
 
-    //서비스에 연결 완료된 시각. UTC
+    @Schema(description = "서비스에 연결 완료된 시각 (UTC)", example = "2024-11-02T04:11:00Z")
     @JsonProperty("connected_at")
     public Date connectedAt;
 
-    //카카오싱크 간편가입을 통해 로그인한 시각. UTC
+    @Schema(description = "카카오싱크 간편가입을 통해 로그인한 시각 (UTC)", example = "2024-11-02T04:12:00Z")
     @JsonProperty("synched_at")
     public Date synchedAt;
 
-    //사용자 프로퍼티
+    @Schema(description = "사용자 프로퍼티 (커스텀 속성 key-value)", example = "{\"nickname\": \"홍길동\"}")
     @JsonProperty("properties")
     public HashMap<String, String> properties;
 
-    //카카오 계정 정보
+    @Schema(description = "카카오 계정 관련 정보 객체")
     @JsonProperty("kakao_account")
     public KakaoAccount kakaoAccount;
 
+    /* ============================ 내부 클래스: KakaoAccount ============================ */
     @Getter
     @NoArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
+    @Schema(description = "카카오 계정 정보")
     public static class KakaoAccount {
 
-        //프로필 정보 제공 동의 여부
+        @Schema(description = "프로필 정보 제공 동의 여부", example = "true")
         @JsonProperty("profile_needs_agreement")
         public Boolean isProfileAgree;
 
-        //닉네임 제공 동의 여부
-        @JsonProperty("profile_nickname_needs_agreement")
-        public Boolean isNickNameAgree;
-
-        //프로필 사진 제공 동의 여부
-        @JsonProperty("profile_image_needs_agreement")
-        public Boolean isProfileImageAgree;
-
-        //사용자 프로필 정보
+        @Schema(description = "프로필 정보 객체")
         @JsonProperty("profile")
         public Profile profile;
 
-        //이름 제공 동의 여부
+        @Schema(description = "이름 제공 동의 여부", example = "false")
         @JsonProperty("name_needs_agreement")
         public Boolean isNameAgree;
 
-        //카카오계정 이름
+        @Schema(description = "카카오 계정 이름", example = "홍길동")
         @JsonProperty("name")
         public String name;
 
-        //이메일 제공 동의 여부
+        @Schema(description = "이메일 제공 동의 여부", example = "true")
         @JsonProperty("email_needs_agreement")
         public Boolean isEmailAgree;
 
-        //이메일이 유효 여부
-        // true : 유효한 이메일, false : 이메일이 다른 카카오 계정에 사용돼 만료
+        @Schema(description = "이메일 유효 여부", example = "true")
         @JsonProperty("is_email_valid")
         public Boolean isEmailValid;
 
-        //이메일이 인증 여부
-        //true : 인증된 이메일, false : 인증되지 않은 이메일
+        @Schema(description = "이메일 인증 여부", example = "true")
         @JsonProperty("is_email_verified")
         public Boolean isEmailVerified;
 
-        //카카오계정 대표 이메일
+        @Schema(description = "대표 이메일", example = "honggildong@kakao.com")
         @JsonProperty("email")
         public String email;
 
-        //연령대 제공 동의 여부
+        @Schema(description = "연령대 제공 동의 여부", example = "false")
         @JsonProperty("age_range_needs_agreement")
         public Boolean isAgeAgree;
 
-        //연령대
-        //참고 https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api#req-user-info
+        @Schema(description = "연령대", example = "20~29")
         @JsonProperty("age_range")
         public String ageRange;
 
-        //출생 연도 제공 동의 여부
+        @Schema(description = "출생 연도 제공 동의 여부", example = "false")
         @JsonProperty("birthyear_needs_agreement")
         public Boolean isBirthYearAgree;
 
-        //출생 연도 (YYYY 형식)
+        @Schema(description = "출생 연도 (YYYY)", example = "1998")
         @JsonProperty("birthyear")
         public String birthYear;
 
-        //생일 제공 동의 여부
+        @Schema(description = "생일 제공 동의 여부", example = "false")
         @JsonProperty("birthday_needs_agreement")
         public Boolean isBirthDayAgree;
 
-        //생일 (MMDD 형식)
+        @Schema(description = "생일 (MMDD)", example = "0815")
         @JsonProperty("birthday")
         public String birthDay;
 
-        //생일 타입
-        // SOLAR(양력) 혹은 LUNAR(음력)
+        @Schema(description = "생일 타입 (SOLAR: 양력, LUNAR: 음력)", example = "SOLAR")
         @JsonProperty("birthday_type")
         public String birthDayType;
 
-        //성별 제공 동의 여부
+        @Schema(description = "성별 제공 동의 여부", example = "true")
         @JsonProperty("gender_needs_agreement")
         public Boolean isGenderAgree;
 
-        //성별
+        @Schema(description = "성별 (male 또는 female)", example = "male")
         @JsonProperty("gender")
         public String gender;
 
-        //전화번호 제공 동의 여부
+        @Schema(description = "전화번호 제공 동의 여부", example = "true")
         @JsonProperty("phone_number_needs_agreement")
         public Boolean isPhoneNumberAgree;
 
-        //전화번호
-        //국내 번호인 경우 +82 00-0000-0000 형식
+        @Schema(description = "전화번호 (+82 형식)", example = "+82 10-1234-5678")
         @JsonProperty("phone_number")
         public String phoneNumber;
 
-        //CI 동의 여부
+        @Schema(description = "CI 제공 동의 여부", example = "false")
         @JsonProperty("ci_needs_agreement")
         public Boolean isCIAgree;
 
-        //CI, 연계 정보
+        @Schema(description = "CI (연계 정보)", example = "EXAMPLECI1234567890")
         @JsonProperty("ci")
         public String ci;
 
-        //CI 발급 시각, UTC
+        @Schema(description = "CI 인증 시각 (UTC)", example = "2024-11-02T04:15:00Z")
         @JsonProperty("ci_authenticated_at")
         public Date ciCreatedAt;
 
+        /* ============================ 내부 클래스: Profile ============================ */
         @Getter
         @NoArgsConstructor
         @JsonIgnoreProperties(ignoreUnknown = true)
+        @Schema(description = "사용자 프로필 정보")
         public static class Profile {
 
-            //닉네임
+            @Schema(description = "사용자 닉네임", example = "길동이")
             @JsonProperty("nickname")
             public String nickName;
 
-            //프로필 미리보기 이미지 URL
+            @Schema(description = "프로필 미리보기 이미지 URL", example = "http://k.kakaocdn.net/dn/abc123/img_110x110.jpg")
             @JsonProperty("thumbnail_image_url")
             public String thumbnailImageUrl;
 
-            //프로필 사진 URL
+            @Schema(description = "프로필 이미지 URL", example = "http://k.kakaocdn.net/dn/xyz123/img_640x640.jpg")
             @JsonProperty("profile_image_url")
             public String profileImageUrl;
 
-            //프로필 사진 URL 기본 프로필인지 여부
-            //true : 기본 프로필, false : 사용자 등록
+            @Schema(description = "기본 프로필 이미지 여부", example = "false")
             @JsonProperty("is_default_image")
             public boolean isDefaultImage;
 
-            //닉네임이 기본 닉네임인지 여부
-            //true : 기본 닉네임, false : 사용자 등록
+            @Schema(description = "기본 닉네임 여부", example = "false")
             @JsonProperty("is_default_nickname")
             public Boolean isDefaultNickName;
         }

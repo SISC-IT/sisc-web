@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.user.entity.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,11 @@ import java.util.Date;
 import java.util.UUID;
 
 @Component
+@RequiredArgsConstructor
 public class JwtProvider {
+
+    private final TokenEncryptor tokenEncryptor;
+
     @Value("${jwt.secret}")
     private String rawSecretKey;
 
@@ -54,13 +59,23 @@ public class JwtProvider {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + refreshTokenValidityInMillis);
 
-        return Jwts.builder()
+        String rawRefreshToken = Jwts.builder()
                 .setSubject(userId.toString())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
 
+        return tokenEncryptor.encrypt(rawRefreshToken);
+    }
+
+    public Date getExpiration(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
     }
 
     // 토큰에서 사용자 ID 추출
