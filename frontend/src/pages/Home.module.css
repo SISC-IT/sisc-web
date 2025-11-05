@@ -1,0 +1,121 @@
+.container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 위쪽 어두운 부분 */
+.upper {
+  height: 50%;
+  background: linear-gradient(to bottom, #000000, #060d2a);
+}
+
+/* 아래쪽 타원형 빛 부분 */
+.lower {
+  height: 50%;
+  background: radial-gradient(
+    100% 60% at 50% 100%,
+    #ade6ff 4%,
+    #6893ff 11%,
+    #3256c9 24%,
+    #1c348b 38%,
+    #091138 83%,
+    #081033 100%,
+    #060d2a 100%
+  );
+}
+
+.header {
+  position: absolute;
+  top: 0;
+  right: 60px;
+  width: 100%;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.textBox h1 {
+  font-weight: 600;
+  font-size: 64px;
+  line-height: 120%;
+  letter-spacing: -3%;
+  position: absolute;
+  top: 180px;
+  left: 300px;
+  color: #ffffff;
+  width: 600px;
+}
+
+.textBox h2 {
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 110%;
+  letter-spacing: -1%;
+  position: absolute;
+  top: 370px;
+  left: 300px;
+  background: linear-gradient(
+    290.46deg,
+    #5b93ed 19.78%,
+    #78b4f3 51.79%,
+    #b2f4ff 62.83%,
+    #fcffff 105.89%
+  );
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  width: 650px;
+}
+
+.login {
+  border: none;
+  border-right: 1px solid #a3a3a3;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 120%;
+  letter-spacing: -3%;
+  width: 90px;
+}
+
+.signUp {
+  border: none;
+  border-left: 1px solid #a3a3a3;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 120%;
+  letter-spacing: -3%;
+  width: 100px;
+}
+
+.coin3 {
+  position: absolute;
+  width: 269px;
+  height: 186px;
+  top: 205px;
+  left: 978px;
+  z-index: 3;
+}
+
+.coin4 {
+  position: absolute;
+  width: 200px;
+  height: 235px;
+  left: 1016px;
+  top: 468px;
+}
+
+.coin5 {
+  position: absolute;
+  width: 241px;
+  height: 232px;
+  top: 285px;
+  left: 1091px;
+  z-index: 1;
+}

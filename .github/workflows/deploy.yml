@@ -1,12 +1,12 @@
 name: Build & Deploy (backend only)
 
 on:
+  workflow_dispatch: {}
   push:
     branches: ["main"]
     paths:
       - "backend/**"
       - ".github/workflows/deploy.yml"
-  workflow_dispatch: {}
 
 concurrency:
   group: deploy-main

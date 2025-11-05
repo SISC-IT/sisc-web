@@ -50,6 +50,9 @@ public enum ErrorCode {
 
   INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 엑세스 토큰입니다."),
 
+  EXPIRED_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "엑세스 토큰이 만료되었습니다. 재발급이 필요합니다."),
+
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
@@ -65,7 +68,9 @@ public enum ErrorCode {
   BET_DUPLICATE(HttpStatus.CONFLICT, "이미 이 라운드에 베팅했습니다."),
   BET_ROUND_CLOSED(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다."),
   BET_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 베팅을 찾을 수 없습니다."),
-  BET_ROUND_NOT_CLOSED(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다.");
+  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "이미 마감된 라운드입니다."),
+  BET_POINT_TOO_LOW(HttpStatus.CONFLICT, "베팅 포인트는 10 이상이어야 합니다.");
+
 
   private final HttpStatus status;
   private final String message;

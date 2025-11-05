@@ -1,6 +1,7 @@
 package org.sejongisc.backend.betting.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,10 @@ public class UserBetRequest {
     @JsonProperty("isFree")
     private boolean free;
 
-    @Min(value = 10, message = "베팅 포인트는 10 이상이어야 합니다.")
     private Integer stakePoints;
+
+    @AssertTrue(message = "베팅 시 포인트는 10 이상이어야 합니다.")
+    public boolean isStakePointsValid() {
+        return free || (stakePoints != null && stakePoints >= 10);
+    }
 }

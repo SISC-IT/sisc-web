@@ -4,7 +4,6 @@
 .vscode/
 *.iml
 .DS_Store
-
 # 환경 변수 & 민감 정보
 .env
 *.secret
@@ -26,3 +25,6 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 /venv/
+/env
+/.vs
+backend/src/main/java/org/sejongisc/backend/stock/TestController.java
