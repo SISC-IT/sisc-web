@@ -28,3 +28,6 @@ __pycache__/
 /env
 /.vs
 /.venv/
+
+# ===== Backend =====
+backend/src/main/java/org/sejongisc/backend/stock/TestController.java
