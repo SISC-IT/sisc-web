@@ -7,6 +7,7 @@ import org.sejongisc.backend.board.repository.*;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -205,10 +206,15 @@ public class PostServiceImpl implements PostService {
 
   // 댓글 삭제
   @Override
-  public void deleteComment(UUID commentId, UUID userId, boolean isAdmin) {
+  public void deleteComment(UUID commentId, UUID userId) {
     // comment 조회
     Comment comment = commentRepository.findById(commentId)
         .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+
+    // 관리자 확인
+    boolean isAdmin = userRepository.findById(userId)
+        .map(user -> user.getRole() == Role.PRESIDENT || user.getRole() == Role.VICE_PRESIDENT)
+        .orElse(false);
 
     // 작성자 확인 (관리자는 통과)
     if (!comment.getUser().getUserId().equals(userId) && !isAdmin) {

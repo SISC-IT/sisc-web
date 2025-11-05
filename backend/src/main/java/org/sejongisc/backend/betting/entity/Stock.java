@@ -21,7 +21,7 @@ public class Stock {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 50, unique = true)
     private String symbol;
 
     @Enumerated(EnumType.STRING)
@@ -30,4 +30,7 @@ public class Stock {
 
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal previousClosePrice;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal settleClosePrice;
 }

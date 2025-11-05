@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface PostLikeRepository extends JpaRepository<PostLike, UUID> {
 
@@ -15,5 +16,6 @@ public interface PostLikeRepository extends JpaRepository<PostLike, UUID> {
 
   List<PostLike> findAllByPostId(UUID postId);
 
+  @Transactional
   void deleteAllByPostId(UUID postId);
 }

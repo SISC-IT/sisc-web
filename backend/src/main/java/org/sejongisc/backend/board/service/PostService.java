@@ -35,7 +35,7 @@ public interface PostService {
   void updateComment(CommentRequest request, UUID commentId, UUID userId);
 
   // 댓글 삭제
-  void deleteComment(UUID commentId, UUID userId, boolean isAdmin);
+  void deleteComment(UUID commentId, UUID userId);
 
   // 좋아요
   void toggleLike(UUID postId, UUID userId);

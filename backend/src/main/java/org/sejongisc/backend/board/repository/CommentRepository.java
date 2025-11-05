@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
@@ -18,5 +19,6 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
   List<Comment> findByParentId(UUID parentId);
 
+  @Transactional
   void deleteAllByPostId(UUID postId);
 }

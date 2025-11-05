@@ -123,9 +123,8 @@ public class PostController {
   @DeleteMapping("/comment/{commentId}")
   public void deleteComment(
       @PathVariable UUID commentId,
-      @RequestParam(defaultValue = "false") boolean isAdmin,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     UUID userId = customUserDetails.getUserId();
-    postService.deleteComment(commentId, userId, isAdmin);
+    postService.deleteComment(commentId, userId);
   }
 }

@@ -212,6 +212,7 @@ class UserServiceImplTest {
             @Override public AuthProvider getProvider() { return AuthProvider.GOOGLE; }
             @Override public String getProviderUid() { return "google-123"; }
             @Override public String getName() { return "홍길동"; }
+            @Override public String getAccessToken() { return "mock-access-token"; }
         };
 
         User existingUser = User.builder()
@@ -246,6 +247,7 @@ class UserServiceImplTest {
             @Override public AuthProvider getProvider() { return AuthProvider.KAKAO; }
             @Override public String getProviderUid() { return "kakao-999"; }
             @Override public String getName() { return "카카오유저"; }
+            @Override public String getAccessToken() { return "mock-access-token"; }
         };
 
         when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.KAKAO, "kakao-999"))
