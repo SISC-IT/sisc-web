@@ -91,17 +91,18 @@ public class PostServiceImpl implements PostService {
     postRepository.delete(post);
   }
 
-  // 게시물 조회 (전체)
+  // 게시물 조회 (전체 | 금융 IT | 자산 운용)
   @Override
   @Transactional(readOnly = true)
-  public Page<PostResponse> getPosts(int pageNumber, int pageSize) {
+  public Page<PostResponse> getPosts(BoardType boardType, int pageNumber, int pageSize) {
     Pageable pageable = PageRequest.of(
         pageNumber,
         pageSize,
         Sort.by(Direction.DESC, "createdDate")
     );
 
-    Page<Post> posts = postRepository.findAll(pageable);
+    // 게시판 타입에 따른 게시물 조회
+    Page<Post> posts = postRepository.findAllByBoardType(boardType, pageable);
 
     return posts.map(this::mapToPostResponse);
   }

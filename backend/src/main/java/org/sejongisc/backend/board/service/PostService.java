@@ -3,6 +3,7 @@ package org.sejongisc.backend.board.service;
 import org.sejongisc.backend.board.dto.CommentRequest;
 import org.sejongisc.backend.board.dto.PostRequest;
 import org.sejongisc.backend.board.dto.PostResponse;
+import org.sejongisc.backend.board.entity.BoardType;
 import org.springframework.data.domain.Page;
 
 import java.util.UUID;
@@ -19,7 +20,7 @@ public interface PostService {
   void deletePost(UUID postId, UUID userId);
 
   // 게시물 조회 (전체)
-  Page<PostResponse> getPosts(int pageNumber, int pageSize);
+  Page<PostResponse> getPosts(BoardType boardType, int pageNumber, int pageSize);
 
   // 게시물 검색 (제목/내용)
   Page<PostResponse> searchPosts(String keyword, int pageNumber, int pageSize);
