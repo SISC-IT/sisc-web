@@ -2,36 +2,67 @@ package org.sejongisc.backend.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.stereotype.Service;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Schema(
+        name = "KakaoTokenResponse",
+        description = "Kakao OAuth 로그인 후 토큰 발급 응답 객체"
+)
 public class KakaoTokenResponse {
 
-    // 역직렬화를 위해 JsonProperty를 사용
+    @Schema(
+            description = "토큰 타입 (일반적으로 'bearer')",
+            example = "bearer"
+    )
     @JsonProperty("token_type")
     private String tokenType;
 
-    @JsonProperty("access_token")   // 사용자 엑세스 토큰 값
+    @Schema(
+            description = "카카오에서 발급한 Access Token (사용자 인증용)",
+            example = "vNnM9Examp1eAcc3ssT0ken12345678"
+    )
+    @JsonProperty("access_token")
     private String accessToken;
 
-    @JsonProperty("id_token")   // ID 토큰 값
+    @Schema(
+            description = "OpenID Connect 인증 시 함께 발급되는 ID Token (JWT 형식)",
+            example = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjAifQ.eyJhdWQiOiI..."
+    )
+    @JsonProperty("id_token")
     private String idToken;
 
-    @JsonProperty("expires_in") // 엑세스 토큰과 ID 토큰의 만료 시간(초)
+    @Schema(
+            description = "Access Token 및 ID Token의 만료 시간(초 단위)",
+            example = "21599"
+    )
+    @JsonProperty("expires_in")
     private String expiresIn;
 
-    @JsonProperty("refresh_token")  // 사용자 리프레시 토큰 값
+    @Schema(
+            description = "Access Token 재발급용 Refresh Token",
+            example = "o9vF9Refr3shTok3nExample987654321"
+    )
+    @JsonProperty("refresh_token")
     private String refreshToken;
 
-    @JsonProperty("refresh_token_expires_in")   // 리프레시 토큰 만료 시간(초)
+    @Schema(
+            description = "Refresh Token의 만료 시간(초 단위)",
+            example = "5183999"
+    )
+    @JsonProperty("refresh_token_expires_in")
     private String refreshTokenExpiresIn;
 
-    @JsonProperty("scope")  // 인증된 사용자의 정보 조회 권한 범위
+    @Schema(
+            description = "인가 시 부여된 사용자 정보 접근 권한 범위 (공백으로 구분)",
+            example = "account_email profile_image profile_nickname"
+    )
+    @JsonProperty("scope")
     private String scope;
 }

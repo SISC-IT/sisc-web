@@ -8,9 +8,11 @@ import java.util.Optional;
 public class GithubUserInfoAdapter implements OauthUserInfo {
 
     private final GithubUserInfoResponse githubInfo;
+    private final String accessToken;
 
-    public GithubUserInfoAdapter(GithubUserInfoResponse githubInfo) {
+    public GithubUserInfoAdapter(GithubUserInfoResponse githubInfo,  String accessToken) {
         this.githubInfo = githubInfo;
+        this.accessToken = accessToken;
     }
 
     @Override
@@ -27,5 +29,10 @@ public class GithubUserInfoAdapter implements OauthUserInfo {
     @Override
     public AuthProvider getProvider() {
         return AuthProvider.GITHUB;
+    }
+
+    @Override
+    public String getAccessToken() {
+        return accessToken;
     }
 }

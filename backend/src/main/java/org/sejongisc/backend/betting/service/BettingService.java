@@ -105,6 +105,9 @@ public class BettingService {
         int stake = 0;
 
         if (!userBetRequest.isFree()) {
+            if (!userBetRequest.isStakePointsValid()) {
+                throw new CustomException(ErrorCode.BET_POINT_TOO_LOW);
+            }
             pointHistoryService.createPointHistory(
                     userId,
                     -userBetRequest.getStakePoints(),
