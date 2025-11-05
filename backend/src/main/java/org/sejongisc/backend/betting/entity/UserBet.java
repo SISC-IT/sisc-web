@@ -52,21 +52,18 @@ public class UserBet extends BasePostgresEntity {
     @Column(nullable = false)
     private BetStatus betStatus;
 
-    @Column(nullable = true)
     private boolean isCollect;
-
-    public void finish() {
-        this.betStatus = BetStatus.CLOSED;
-    }
 
     public void win(int reward) {
         this.payoutPoints = reward;
         this.isCollect = true;
+        this.betStatus = BetStatus.CLOSED;
     }
 
     public void lose() {
         this.payoutPoints = 0;
         this.isCollect = false;
+        this.betStatus = BetStatus.CLOSED;
     }
 
 }

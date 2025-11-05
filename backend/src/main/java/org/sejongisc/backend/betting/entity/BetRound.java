@@ -78,12 +78,21 @@ public class BetRound extends BasePostgresEntity {
     }
 
     public void validate() {
-        if (isClosed()) {
+        if (isClosed() || (lockAt != null && LocalDateTime.now().isAfter(lockAt))) {
             throw new CustomException(ErrorCode.BET_ROUND_CLOSED);
         }
     }
 
     public void settle(BigDecimal finalPrice) {
+        if (isOpen()) {
+            throw new CustomException(ErrorCode.BET_ROUND_NOT_CLOSED);
+        }
+        if (this.settleAt != null) {
+            return;
+        }
+        if (finalPrice == null) {
+            throw new IllegalArgumentException("finalPrice must not be null");
+        }
         this.settleClosePrice = finalPrice;
         this.resultOption = determineResult(finalPrice);
         this.settleAt = LocalDateTime.now();

@@ -33,7 +33,7 @@ public class BettingService {
 
     private final Random random = new Random();
 
-    public Optional<BetRound> getActiveRound(Scope type){
+    public Optional<BetRound> getActiveRound(Scope type) {
         return betRoundRepository.findByStatusTrueAndScope(type);
     }
 
@@ -43,7 +43,7 @@ public class BettingService {
         return betRoundRepository.findAllByOrderBySettleAtDesc();
     }
 
-    public Stock getStock(){
+    public Stock getStock() {
         List<Stock> stocks = stockRepository.findAll();
         if (stocks.isEmpty()) {
             throw new CustomException(ErrorCode.STOCK_NOT_FOUND);
@@ -52,7 +52,7 @@ public class BettingService {
         return stocks.get(random.nextInt(stocks.size()));
     }
 
-    public boolean setAllowFree(){
+    public boolean setAllowFree() {
         return random.nextDouble() < 0.2;
     }
 
@@ -83,13 +83,14 @@ public class BettingService {
         betRoundRepository.save(betRound);
     }
 
-    public void closeBetRound(){
-        List<BetRound> needToCloseBet = betRoundRepository.findByStatusTrueAndLockAtLessThanEqual(LocalDateTime.now());
-
-        for (BetRound betRound : needToCloseBet) {
-            betRound.close();
-        }
+    public void closeBetRound() {
+        LocalDateTime now = LocalDateTime.now();
+        List<BetRound> toClose = betRoundRepository.findByStatusTrueAndLockAtLessThanEqual(now);
+        if (toClose.isEmpty()) return;
+        toClose.forEach(BetRound::close);
+        betRoundRepository.saveAll(toClose);
     }
+
 
     @Transactional
     public UserBet postUserBet(UUID userId, UserBetRequest userBetRequest) {
@@ -156,19 +157,26 @@ public class BettingService {
 
     @Transactional
     public void settleUserBets() {
-        List<BetRound> activeRounds = betRoundRepository.findByStatusTrue();
+        LocalDateTime now = LocalDateTime.now();
+
+        List<BetRound> activeRounds =
+                betRoundRepository.findByStatusFalseAndSettleAtIsNullAndLockAtLessThanEqual(now);
 
         for (BetRound round : activeRounds) {
             Stock stock = stockRepository.findBySymbol(round.getSymbol())
                     .orElseThrow(() -> new CustomException(ErrorCode.STOCK_NOT_FOUND));
 
             BigDecimal finalPrice = stock.getSettleClosePrice();
+            if (finalPrice == null) {
+                continue;
+            }
             round.settle(finalPrice);
             betRoundRepository.save(round);
 
             List<UserBet> userBets = userBetRepository.findAllByRound(round);
 
             for (UserBet bet : userBets) {
+                if (bet.getBetStatus() != BetStatus.ACTIVE) continue;
                 if (bet.getOption() == round.getResultOption()) {
                     int reward = calculateReward(bet);
                     bet.win(reward);
@@ -182,7 +190,6 @@ public class BettingService {
                 } else {
                     bet.lose();
                 }
-                bet.finish();
             }
             userBetRepository.saveAll(userBets);
         }
