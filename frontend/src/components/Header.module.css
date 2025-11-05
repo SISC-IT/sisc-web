@@ -1,0 +1,91 @@
+.header {
+  width: 100vw;
+  height: 90px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  background-color: #02040d;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px;
+}
+
+.left {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  z-index: 999;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 18.53px;
+  line-height: 120%;
+  letter-spacing: -3%;
+  color: white;
+}
+
+.menuButton {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 22px;
+  height: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.menuButton span {
+  display: block;
+  height: 2px;
+  background: white;
+  border-radius: 2px;
+}
+
+.logo {
+  width: 19px;
+  height: 19px;
+}
+
+.login {
+  border: none;
+  border-right: 1px solid #a3a3a3;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 120%;
+  letter-spacing: -3%;
+  width: 90px;
+}
+
+.signUp {
+  border: none;
+  border-left: 1px solid #a3a3a3;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 120%;
+  letter-spacing: -3%;
+  width: 100px;
+}

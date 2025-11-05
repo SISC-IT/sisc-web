@@ -25,17 +25,6 @@
   );
 }
 
-.header {
-  position: absolute;
-  top: 0;
-  right: 60px;
-  width: 100%;
-  height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .textBox h1 {
   font-weight: 600;
   font-size: 64px;
@@ -66,32 +55,6 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   width: 650px;
-}
-
-.login {
-  border: none;
-  border-right: 1px solid #a3a3a3;
-  background: none;
-  color: #ffffff;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 120%;
-  letter-spacing: -3%;
-  width: 90px;
-}
-
-.signUp {
-  border: none;
-  border-left: 1px solid #a3a3a3;
-  background: none;
-  color: #ffffff;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 120%;
-  letter-spacing: -3%;
-  width: 100px;
 }
 
 .coin3 {
