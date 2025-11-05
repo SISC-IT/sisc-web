@@ -51,7 +51,8 @@ public class SecurityConfig {
                                     "/swagger-resources/**",
                                     "/webjars/**").permitAll()
                             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                            .anyRequest().authenticated();
+//                            .anyRequest().authenticated();
+                            .anyRequest().permitAll();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -64,10 +65,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:8082" // 허용할 프론트 주소
-        ));
-
+//        config.setAllowedOrigins(List.of(
+//                "http://localhost:5173" // 허용할 프론트 주소
+//        ));
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

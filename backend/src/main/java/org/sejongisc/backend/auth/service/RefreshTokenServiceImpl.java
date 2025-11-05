@@ -13,6 +13,8 @@ import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,8 +34,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Transactional
     public Map<String, String> reissueTokens(String encryptedRefreshToken) {
         try {
-
+            // 전달받은 refreshToken 복호화
             String rawRefreshToken = tokenEncryptor.decrypt(encryptedRefreshToken);
+
             // refreshToken에서 userId 추출
             UUID userId = UUID.fromString(jwtProvider.getUserIdFromToken(rawRefreshToken));
 
@@ -42,7 +45,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                     .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
             String savedRawToken = tokenEncryptor.decrypt(saved.getToken());
-            if (!rawRefreshToken.equals(rawRefreshToken)) {
+            if (!MessageDigest.isEqual(
+                    rawRefreshToken.getBytes(StandardCharsets.UTF_8),
+                    savedRawToken.getBytes(StandardCharsets.UTF_8))) {
                 throw new CustomException(ErrorCode.UNAUTHORIZED);
             }
 
