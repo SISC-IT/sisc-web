@@ -65,7 +65,17 @@ public enum ErrorCode {
   BET_DUPLICATE(HttpStatus.CONFLICT, "이미 이 라운드에 베팅했습니다."),
   BET_TIME_INVALID(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다."),
   BET_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 베팅을 찾을 수 없습니다."),
-  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "이미 마감된 라운드입니다.");
+  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "이미 마감된 라운드입니다."),
+
+  // BOARD
+
+  POST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 게시물을 찾을 수 없습니다."),
+
+  INVALID_POST_OWNER(HttpStatus.FORBIDDEN, "게시물 수정/삭제 권한이 없습니다."),
+
+  COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 댓글을 찾을 수 없습니다."),
+
+  INVALID_COMMENT_OWNER(HttpStatus.FORBIDDEN, "댓글 수정/삭제 권한이 없습니다.");
 
   private final HttpStatus status;
   private final String message;

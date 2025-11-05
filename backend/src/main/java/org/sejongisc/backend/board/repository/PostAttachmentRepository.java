@@ -1,6 +1,6 @@
 package org.sejongisc.backend.board.repository;
 
-import org.sejongisc.backend.board.domain.PostAttachment;
+import org.sejongisc.backend.board.entity.PostAttachment;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

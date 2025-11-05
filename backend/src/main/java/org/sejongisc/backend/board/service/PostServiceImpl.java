@@ -1,9 +1,18 @@
 package org.sejongisc.backend.board.service;
 
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.board.domain.*;
+import org.sejongisc.backend.board.entity.*;
 import org.sejongisc.backend.board.dto.*;
 import org.sejongisc.backend.board.repository.*;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,193 +24,271 @@ import java.util.stream.Collectors;
 @Transactional
 public class PostServiceImpl implements PostService {
 
-    private final BoardRepository boardRepository;
-    private final PostRepository postRepository;
-    private final CommentRepository commentRepository;
-    private final PostAttachmentRepository postAttachmentRepository;
+  private final UserRepository userRepository;
+  private final PostRepository postRepository;
+  private final CommentRepository commentRepository;
+  private final PostLikeRepository postLikeRepository;
+  private final PostBookmarkRepository postBookmarkRepository;
+  private final PostAttachmentRepository postAttachmentRepository;
 
-    // 1. 게시물 생성 (첨부파일 포함)
-    @Override
-    public UUID createPost(PostCreateRequest request, UUID userId) {
-        if (request == null) throw new IllegalArgumentException("요청이 존재하지 않습니다.");
-        if (request.getBoardId() == null) throw new IllegalArgumentException("boardId 가 필요합니다.");
-        if (isBlank(request.getTitle())) throw new IllegalArgumentException("제목이 필요합니다.");
-        if (isBlank(request.getContent())) throw new IllegalArgumentException("내용이 필요합니다.");
-        if (request.getPostType() == null) throw new IllegalArgumentException("postType 이 필요합니다.");
+  // 게시물 작성
+  @Override
+  @Transactional
+  public void savePost(PostRequest request, UUID userId) {
+    Post post = Post.builder()
+        .user(userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND)))
+        .boardType(request.getBoardType())
+        .title(request.getTitle())
+        .content(request.getContent())
+        .postType(request.getPostType())
+        .build();
 
-        Board board = boardRepository.findById(request.getBoardId())
-                .orElseThrow(() -> new NoSuchElementException("게시판을 찾을 수 없습니다. id=" + request.getBoardId()));
+    postRepository.save(post);
 
-        Post post = Post.builder()
-                .board(board)
-                .title(request.getTitle())
-                .content(request.getContent())
-                .postType(request.getPostType())
-                .build();
+    // todo : 첨부파일 저장
+  }
 
-        Post saved = postRepository.save(post);
+  // 게시물 수정
+  @Override
+  @Transactional
+  public void updatePost(PostRequest request, UUID postId, UUID userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        // 첨부파일 저장
-        List<PostAttachmentDto> files = request.getAttachments();
-        if (files != null && !files.isEmpty()) {
-            List<PostAttachment> entities = files.stream()
-                    .map(a -> PostAttachment.builder()
-                            .postId(saved.getId())
-                            .filename(a.getFilename())
-                            .mimeType(a.getMimeType())
-                            .url(a.getUrl())
-                            .build())
-                    .collect(Collectors.toList());
-            postAttachmentRepository.saveAll(entities);
-        }
-
-        return saved.getId();
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new CustomException(ErrorCode.INVALID_POST_OWNER);
     }
 
-    // 2. 게시물 수정 (첨부파일 전체 교체)
-    @Override
-    public void updatePost(UUID postId, PostUpdateRequest request) {
-        if (postId == null) throw new IllegalArgumentException("postId 가 필요합니다.");
-        if (request == null) throw new IllegalArgumentException("요청이 존재하지 않습니다.");
+    post.setTitle(request.getTitle());
+    post.setContent(request.getContent());
+    post.setPostType(request.getPostType());
 
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new NoSuchElementException("게시글을 찾을 수 없습니다. id=" + postId));
+    // todo : 첨부파일 삭제 후 저장
+  }
 
-        post.update(request.getTitle(), request.getContent(), request.getPostType()); // 변경감지
+  // 게시물 삭제
+  @Override
+  @Transactional
+  public void deletePost(UUID postId, UUID userId) {
+    // 게시물 조회
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        // 첨부파일 교체: 기존 삭제 → 새로 저장
-        List<PostAttachment> existing = postAttachmentRepository.findByPostId(postId);
-        if (!existing.isEmpty()) postAttachmentRepository.deleteAll(existing);
-
-        List<PostAttachmentDto> newFiles = request.getAttachments();
-        if (newFiles != null && !newFiles.isEmpty()) {
-            List<PostAttachment> toSave = newFiles.stream()
-                    .map(a -> PostAttachment.builder()
-                            .postId(postId)
-                            .filename(a.getFilename())
-                            .mimeType(a.getMimeType())
-                            .url(a.getUrl())
-                            .build())
-                    .collect(Collectors.toList());
-            postAttachmentRepository.saveAll(toSave);
-        }
+    // 작성자 확인
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new CustomException(ErrorCode.INVALID_POST_OWNER);
     }
 
-    // 3. 게시물 삭제 (댓글/첨부 정리 후 본문 삭제)
-    @Override
-    public void deletePost(UUID postId) {
-        if (postId == null) throw new IllegalArgumentException("postId 가 필요합니다.");
+    // todo : 첨부파일 삭제
 
-        List<PostAttachment> attachments = postAttachmentRepository.findByPostId(postId);
-        if (!attachments.isEmpty()) postAttachmentRepository.deleteAll(attachments);
+    // 댓글 삭제
+    commentRepository.deleteAllByPostId(post.getPostId());
+    postLikeRepository.deleteAllByPostId(post.getPostId());
+    postBookmarkRepository.deleteAllByPostId(post.getPostId());
 
-        List<Comment> comments = commentRepository.findByPostId(postId);
-        if (!comments.isEmpty()) commentRepository.deleteAll(comments);
+    // 게시물 삭제
+    postRepository.delete(post);
+  }
 
-        postRepository.deleteById(postId);
+  // 게시물 조회 (전체)
+  @Override
+  @Transactional(readOnly = true)
+  public Page<PostResponse> getPosts(int pageNumber, int pageSize) {
+    Pageable pageable = PageRequest.of(
+        pageNumber,
+        pageSize,
+        Sort.by(Direction.DESC, "createdDate")
+    );
+
+    Page<Post> posts = postRepository.findAll(pageable);
+
+    return posts.map(this::mapToPostResponse);
+  }
+
+  // 게시물 검색 (제목/내용)
+  @Transactional(readOnly = true)
+  @Override
+  public Page<PostResponse> searchPosts(String keyword, int pageNumber, int pageSize) {
+    Pageable pageable = PageRequest.of(
+        pageNumber,
+        pageSize,
+        Sort.by(Direction.DESC, "createdDate")
+    );
+
+    // 해당 키워드가 들어간 게시물 검색
+    Page<Post> posts = postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+        keyword, keyword, pageable);
+
+    return posts.map(this::mapToPostResponse);
+  }
+
+  // 게시물 상세 조회
+  @Override
+  @Transactional(readOnly = true)
+  public PostResponse getPostDetail(UUID postId, int pageNumber, int pageSize) {
+    // 게시물 조회
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+    // 댓글 페이징을 위한 Pageable 객체 생성
+    Pageable pageable = PageRequest.of(
+        pageNumber,
+        pageSize,
+        Sort.by(Sort.Direction.ASC, "createdDate")
+    );
+
+    // 해당 게시물의 댓글 목록을 '페이징'하여 조회
+    Page<Comment> comments = commentRepository.findAllByPostId(postId, pageable);
+
+    // Page<Comment> -> Page<CommentResponse> DTO로 변환
+    Page<CommentResponse> commentResponses = comments.map(CommentResponse::of);
+
+    // PostResponse DTO를 직접 빌드하여 반환
+    return PostResponse.builder()
+        .postId(post.getPostId())
+        .boardType(post.getBoardType())
+        .user(post.getUser())
+        .title(post.getTitle())
+        .content(post.getContent())
+        .postType(post.getPostType())
+        .bookmarkCount(post.getBookmarkCount())
+        .likeCount(post.getLikeCount())
+        .commentCount(post.getCommentCount())
+        .createdDate(post.getCreatedDate())
+        .updatedDate(post.getUpdatedDate())
+        .comments(commentResponses)
+        .build();
+  }
+
+  // 댓글 작성
+  @Override
+  @Transactional
+  public void createComment(CommentRequest request, UUID userId) {
+    // 게시글 조회
+    Post post = postRepository.findById(request.getPostId())
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+    // 작성자 조회
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+    // comment 엔티티 저장
+    Comment comment = Comment.builder()
+        .postId(request.getPostId())
+        .user(user)
+        .content(request.getContent())
+        .build();
+
+    commentRepository.save(comment);
+
+    // 게시글의 댓글 수 1 증가
+    post.setCommentCount(post.getCommentCount() + 1);
+  }
+
+  // 댓글 수정
+  @Override
+  public void updateComment(CommentRequest request, UUID commentId, UUID userId) {
+    // comment 조회
+    Comment comment = commentRepository.findById(commentId)
+        .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+
+    // 작성자 확인
+    if (!comment.getUser().getUserId().equals(userId)) {
+      throw new CustomException(ErrorCode.INVALID_COMMENT_OWNER);
     }
 
-    // 4 + 8. 게시물 조회(공지/일반 분리)
-    @Transactional(readOnly = true)
-    @Override
-    public List<PostSummaryResponse> getPosts(UUID boardId, PostType type) {
-        if (boardId == null) throw new IllegalArgumentException("boardId 가 필요합니다.");
+    // 내용 업데이트
+    comment.setContent(request.getContent());
+  }
 
-        List<Post> posts = (type == null)
-                ? postRepository.findByBoardId(boardId)
-                : postRepository.findByBoardIdAndPostType(boardId, type);
+  // 댓글 삭제
+  @Override
+  public void deleteComment(UUID commentId, UUID userId, boolean isAdmin) {
+    // comment 조회
+    Comment comment = commentRepository.findById(commentId)
+        .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
 
-        return posts.stream().map(this::toSummary).collect(Collectors.toList());
+    // 작성자 확인 (관리자는 통과)
+    if (!comment.getUser().getUserId().equals(userId) && !isAdmin) {
+      throw new CustomException(ErrorCode.INVALID_COMMENT_OWNER);
     }
 
-    // 4. 게시물 검색(제목/내용)
-    @Transactional(readOnly = true)
-    @Override
-    public List<PostSummaryResponse> searchPosts(String keyword) {
-        if (isBlank(keyword)) return Collections.emptyList();
+    // 게시글의 댓글 수 1 감소
+    Post post = postRepository.findById(comment.getPostId())
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        List<Post> posts = postRepository
-                .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(keyword, keyword);
+    post.setCommentCount(post.getCommentCount() - 1);
 
-        return posts.stream().map(this::toSummary).collect(Collectors.toList());
+    // comment 삭제
+    commentRepository.delete(comment);
+  }
+
+  // 좋아요 등록/삭제
+  @Override
+  @Transactional
+  public void toggleLike(UUID postId, UUID userId) {
+    // 게시물 조회
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+    // 이미 좋아요를 눌렀는지 확인
+    Optional<PostLike> existingLike = postLikeRepository.findByPostIdAndUserId(postId, userId);
+
+    if (existingLike.isPresent()) {
+      // 좋아요가 이미 있으면 -> 삭제 (좋아요 취소)
+      postLikeRepository.delete(existingLike.get());
+      post.setLikeCount(post.getLikeCount() - 1); // Post 엔티티 카운트 감소
+    } else {
+      // 좋아요가 없으면 -> 생성 (좋아요)
+      PostLike newLike = PostLike.builder()
+          .postId(postId)
+          .userId(userId)
+          .build();
+      postLikeRepository.save(newLike);
+      post.setLikeCount(post.getLikeCount() + 1); // Post 엔티티 카운트 증가
     }
+  }
 
-    // 5. 댓글 생성
-    @Override
-    public UUID createComment(CommentCreateRequest request, UUID userId) {
-        if (request == null) throw new IllegalArgumentException("요청이 존재하지 않습니다.");
-        if (userId == null) throw new IllegalArgumentException("userId 가 필요합니다.");
-        if (request.getPostId() == null) throw new IllegalArgumentException("postId 가 필요합니다.");
-        if (isBlank(request.getContent())) throw new IllegalArgumentException("댓글 내용이 비어 있습니다.");
+  // 북마크 등록/삭제
+  @Override
+  @Transactional
+  public void toggleBookmark(UUID postId, UUID userId) {
+    // 게시물 조회
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        // 게시글 존재 확인
-        postRepository.findById(request.getPostId())
-                .orElseThrow(() -> new NoSuchElementException("게시글을 찾을 수 없습니다. id=" + request.getPostId()));
+    // 이미 북마크를 했는지 확인
+    Optional<PostBookmark> existingBookmark = postBookmarkRepository.findByPostIdAndUserId(postId, userId);
 
-        Comment comment = Comment.builder()
-                .postId(request.getPostId())
-                .userId(userId)
-                .content(request.getContent())
-                .parentId(request.getParentId())
-                .build();
-
-        return commentRepository.save(comment).getId();
+    if (existingBookmark.isPresent()) {
+      // 북마크가 이미 있으면 -> 삭제 (북마크 취소)
+      postBookmarkRepository.delete(existingBookmark.get());
+      post.setBookmarkCount(post.getBookmarkCount() - 1); // Post 엔티티 카운트 감소
+    } else {
+      // 북마크가 없으면 -> 생성 (북마크)
+      PostBookmark newBookmark = PostBookmark.builder()
+          .postId(postId)
+          .userId(userId)
+          .build();
+      postBookmarkRepository.save(newBookmark);
+      post.setBookmarkCount(post.getBookmarkCount() + 1); // Post 엔티티 카운트 증가
     }
+  }
 
-    // 6. 댓글 수정(작성자만)
-    @Override
-    public void updateComment(UUID commentId, UUID userId, CommentUpdateRequest request) {
-        if (commentId == null) throw new IllegalArgumentException("commentId 가 필요합니다.");
-        if (userId == null) throw new IllegalArgumentException("userId 가 필요합니다.");
-        if (request == null) throw new IllegalArgumentException("요청이 존재하지 않습니다.");
-        if (isBlank(request.getContent())) throw new IllegalArgumentException("수정 내용이 비어 있습니다.");
-
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new NoSuchElementException("댓글을 찾을 수 없습니다. id=" + commentId));
-
-        if (!comment.getUserId().equals(userId)) {
-            throw new SecurityException("본인 댓글만 수정할 수 있습니다.");
-        }
-
-        comment.setContent(request.getContent()); // 변경감지
-    }
-
-    // 7. 댓글 삭제(작성자 또는 관리자)
-    @Override
-    public void deleteComment(UUID commentId, UUID userId, boolean isAdmin) {
-        if (commentId == null) throw new IllegalArgumentException("commentId 가 필요합니다.");
-        if (userId == null) throw new IllegalArgumentException("userId 가 필요합니다.");
-
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new NoSuchElementException("댓글을 찾을 수 없습니다. id=" + commentId));
-
-        if (!isAdmin && !comment.getUserId().equals(userId)) {
-            throw new SecurityException("작성자 또는 관리자만 삭제할 수 있습니다.");
-        }
-
-        // 자식 댓글 먼저 삭제(정책)
-        List<Comment> children = commentRepository.findByParentId(commentId);
-        if (!children.isEmpty()) commentRepository.deleteAll(children);
-
-        commentRepository.delete(comment);
-    }
-
-    // ==== 내부 유틸 ====
-    private PostSummaryResponse toSummary(Post p) {
-        int likeCount = 0; // PostLikeRepository에 count가 없어 0 처리
-        int commentCount = commentRepository.findByPostId(p.getId()).size();
-
-        // Post 엔티티에 createdAt 필드가 없어 null 반환 (필드 추가 시 매핑)
-        return new PostSummaryResponse(
-                p.getId(),
-                p.getTitle(),
-                likeCount,
-                commentCount,
-                null
-        );
-    }
-
-    private boolean isBlank(String s) {
-        return s == null || s.isBlank();
-    }
+  private PostResponse mapToPostResponse(Post post) {
+    return PostResponse.builder()
+        .postId(post.getPostId())
+        .user(post.getUser())
+        .boardType(post.getBoardType())
+        .title(post.getTitle())
+        .content(post.getContent())
+        .postType(post.getPostType())
+        .bookmarkCount(post.getBookmarkCount())
+        .likeCount(post.getLikeCount())
+        .commentCount(post.getCommentCount())
+        .createdDate(post.getCreatedDate())
+        .updatedDate(post.getUpdatedDate())
+        .build();
+  }
 }

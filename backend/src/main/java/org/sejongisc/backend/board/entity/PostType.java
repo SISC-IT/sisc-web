@@ -1,4 +1,4 @@
-package org.sejongisc.backend.board.domain;
+package org.sejongisc.backend.board.entity;
 
 public enum PostType {
     NOTICE, NORMAL

@@ -63,6 +63,7 @@ public class PrimaryDataSourceConfig {
                 "org.sejongisc.backend.auth.entity",
                 "org.sejongisc.backend.backtest.entity",
                 "org.sejongisc.backend.betting.entity",
+                "org.sejongisc.backend.board.entity",
                 "org.sejongisc.backend.common.entity.postgres",
                 "org.sejongisc.backend.point.entity",
                 "org.sejongisc.backend.stock.entity",
