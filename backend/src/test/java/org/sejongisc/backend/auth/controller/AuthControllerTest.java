@@ -15,7 +15,9 @@ import org.sejongisc.backend.auth.dto.*;
 import org.sejongisc.backend.auth.service.LoginService;
 import org.sejongisc.backend.auth.service.Oauth2Service;
 import org.sejongisc.backend.auth.service.OauthStateService;
+import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
@@ -26,6 +28,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -34,7 +38,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -49,7 +52,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
-class OauthLoginControllerTest {
+class AuthControllerTest {
 
     @Mock Oauth2Service<GoogleTokenResponse, GoogleUserInfoResponse> googleService;
     @Mock Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse> kakaoService;
@@ -59,10 +62,10 @@ class OauthLoginControllerTest {
     @Mock UserService userService;
     @Mock JwtProvider jwtProvider;
     @Mock OauthStateService oauthStateService;
-    @Mock HttpSession session;
+    @Mock RefreshTokenService refreshTokenService;
 
     @InjectMocks
-    OauthLoginController oauthLoginController;
+    AuthController authController;
 
     MockMvc mockMvc;
     ObjectMapper objectMapper;
@@ -75,12 +78,13 @@ class OauthLoginControllerTest {
                 "GITHUB", githubService
         );
 
-        oauthLoginController = new OauthLoginController(
+        authController = new AuthController(
                 oauth2Services,
                 loginService,
                 userService,
                 jwtProvider,
-                oauthStateService
+                oauthStateService,
+                refreshTokenService
         );
 
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -88,7 +92,7 @@ class OauthLoginControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(oauthLoginController)
+        mockMvc = MockMvcBuilders.standaloneSetup(authController)
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setValidator(validator)
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
@@ -103,7 +107,7 @@ class OauthLoginControllerTest {
             Map<String, Object> body = new HashMap<>();
             body.put("error", "validation");
             body.put("message", "입력값 검증 실패");
-            return ResponseEntity.badRequest().body(body); // ✅ 강제로 400 반환
+            return ResponseEntity.badRequest().body(body); // 강제로 400 반환
         }
     }
 
@@ -391,6 +395,84 @@ class OauthLoginControllerTest {
                         .param("code", "dummy")
                         .param("state", "state123"))
                 .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/reissue - refreshToken 존재 시 AccessToken 재발급 성공")
+    void reissue_success() throws Exception {
+        String refreshToken = "valid.refresh.token";
+        Map<String, String> tokens = Map.of("accessToken", "newAccessToken");
+
+        when(refreshTokenService.reissueTokens(refreshToken)).thenReturn(tokens);
+
+        mockMvc.perform(post("/api/auth/reissue")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh", refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("newAccessToken"));
+
+        verify(refreshTokenService, times(1)).reissueTokens(refreshToken);
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/reissue - Refresh Token이 없으면 401 반환")
+    void reissue_noToken() throws Exception {
+        mockMvc.perform(post("/api/auth/reissue"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Refresh Token이 없습니다."));
+
+        verify(refreshTokenService, never()).reissueTokens(anyString());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/reissue - Refresh Token이 유효하지 않으면 401 반환")
+    void reissue_invalidToken() throws Exception {
+        String invalidToken = "expired.refresh.token";
+
+        when(refreshTokenService.reissueTokens(invalidToken))
+                .thenThrow(new CustomException(ErrorCode.UNAUTHORIZED));
+
+        mockMvc.perform(post("/api/auth/reissue")
+                        .cookie(new jakarta.servlet.http.Cookie("refresh", invalidToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Refresh Token이 유효하지 않거나 만료되었습니다."));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/auth/withdraw - 인증된 사용자가 회원 탈퇴 성공 시 200 OK")
+    void withdraw_success() throws Exception {
+        // given
+        UUID userId = UUID.randomUUID();
+        CustomUserDetails userDetails = new CustomUserDetails(
+                User.builder()
+                        .userId(userId)
+                        .email("test@example.com")
+                        .name("홍길동")
+                        .role(Role.TEAM_MEMBER)
+                        .build()
+        );
+
+        var auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        doNothing().when(userService).deleteUserWithOauth(userId);
+        doNothing().when(refreshTokenService).deleteByUserId(userId);
+
+        mockMvc.perform(delete("/api/auth/withdraw")
+                        .requestAttr("user", userDetails)
+                        .flashAttr("user", userDetails))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("회원 탈퇴가 완료되었습니다."));
+
+        verify(userService, times(1)).deleteUserWithOauth(userId);
+        verify(refreshTokenService, times(1)).deleteByUserId(userId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/auth/withdraw - 인증되지 않은 사용자는 401 반환")
+    void withdraw_unauthorized() throws Exception {
+        mockMvc.perform(delete("/api/auth/withdraw"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
     }
 
 }

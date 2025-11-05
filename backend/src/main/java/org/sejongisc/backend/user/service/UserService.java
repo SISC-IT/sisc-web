@@ -14,4 +14,8 @@ public interface UserService {
     User findOrCreateUser(OauthUserInfo oauthInfo);
 
     void updateUser(UUID userId, UserUpdateRequest request);
+
+    User getUserById(UUID userId);
+
+    void deleteUserWithOauth(UUID userId);
 }
