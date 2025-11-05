@@ -1,5 +1,6 @@
 package org.sejongisc.backend.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
@@ -28,6 +29,7 @@ public class User extends BasePostgresEntity{
     private String email;
 
     @Column(name = "password_hash")
+    @JsonIgnore // 응답 직렬화 시 패스워드 해시 값 제외
     private String passwordHash;
 
     @Column(nullable = false)

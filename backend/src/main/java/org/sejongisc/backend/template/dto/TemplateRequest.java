@@ -1,5 +1,6 @@
 package org.sejongisc.backend.template.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 import org.sejongisc.backend.user.entity.User;
@@ -11,18 +12,18 @@ import java.util.UUID;
 @Setter
 public class TemplateRequest {
 
-  //@Schema(hidden = true, description = "유저")
-  private UUID userId;
+  @Schema(hidden = true, description = "유저")
+  private User user;
 
-  //@Schema(hidden = true, description = "템플릿 ID")
+  @Schema(hidden = true, description = "템플릿 ID")
   private UUID templateId;  // 템플릿 ID
 
-  //@Schema(description = "템플릿 제목", defaultValue = "기술주 템플릿")
+  @Schema(description = "템플릿 제목", defaultValue = "기술주 템플릿")
   private String title;
 
-  //@Schema(description = "템플릿 설명", defaultValue = "기술주 템플릿입니다.")
+  @Schema(description = "템플릿 설명", defaultValue = "기술주 템플릿입니다.")
   private String description;
 
-  //@Schema(description = "템플릿 공개 여부", defaultValue = "false")
+  @Schema(description = "템플릿 공개 여부", defaultValue = "false")
   private Boolean isPublic;
 }

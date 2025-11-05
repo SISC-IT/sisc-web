@@ -23,7 +23,6 @@ public class TemplateService {
 
   private final TemplateRepository templateRepository;
   private final BacktestRunRepository backtestRunRepository;
-  private final EntityManager em;
 
   // 유저 ID로 템플릿 목록 조회
   public TemplateResponse findAllByUserId(UUID userId) {
@@ -33,8 +32,8 @@ public class TemplateService {
   }
 
   // 템플릿 ID로 템플릿 상세 및 백테스트 리스트 조회
-  public TemplateResponse findById(UUID templateId, UUID userId) {
-    Template template = authorizeTemplateOwner(templateId, userId);
+  public TemplateResponse findById(UUID templateId, User user) {
+    Template template = authorizeTemplateOwner(templateId, user);
     // TODO : 공개 템플릿 접근 허용 로직 추가 필요
     return TemplateResponse.builder()
         .template(template)
@@ -44,10 +43,7 @@ public class TemplateService {
 
   // 템플릿 생성
   public TemplateResponse createTemplate(TemplateRequest request) {
-    // userId 만을 가진 FK 전용 프록시 객체 생성
-    User userRef = em.getReference(User.class, request.getUserId());
-
-    Template template = Template.of(userRef, request.getTitle(),
+    Template template = Template.of(request.getUser(), request.getTitle(),
         request.getDescription(), request.getIsPublic());
 
     templateRepository.save(template);
@@ -59,7 +55,7 @@ public class TemplateService {
 
   // 템플릿 수정
   public TemplateResponse updateTemplate(TemplateRequest request) {
-    Template template = authorizeTemplateOwner(request.getTemplateId(), request.getUserId());
+    Template template = authorizeTemplateOwner(request.getTemplateId(), request.getUser());
     template.update(request.getTitle(), request.getDescription(), request.getIsPublic());
     templateRepository.save(template);
 
@@ -69,16 +65,16 @@ public class TemplateService {
   }
 
   // 템플릿 삭제
-  public void deleteTemplate(UUID templateId, UUID userId) {
-    Template template = authorizeTemplateOwner(templateId, userId);
+  public void deleteTemplate(UUID templateId, User user) {
+    Template template = authorizeTemplateOwner(templateId, user);
     // TODO : 좋아요 / 북마크 삭제
     templateRepository.delete(template);
   }
 
-  private Template authorizeTemplateOwner(UUID templateId, UUID userId) {
+  private Template authorizeTemplateOwner(UUID templateId, User user) {
     Template template = templateRepository.findById(templateId)
             .orElseThrow(() -> new CustomException(ErrorCode.TEMPLATE_NOT_FOUND));
-    if (!template.getUser().getUserId().equals(userId)) {
+    if (!template.getUser().getUserId().equals(user.getUserId())) {
       throw new CustomException(ErrorCode.TEMPLATE_OWNER_MISMATCH);
     }
     return template;
