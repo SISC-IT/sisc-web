@@ -1,4 +1,4 @@
-﻿# transformer/modules/inference.py
+# transformer/modules/inference.py
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 import numpy as np
@@ -36,7 +36,7 @@ def _load_or_build_model(seq_len: int, n_features: int, weights_path: Optional[s
     if weights_path:
         try:
             model.load_weights(weights_path)
-            print(f"[INFER] Transformer weights loaded: {weights_path}")
+            print(f"[INFER] 가중치 로드 완료 : {weights_path}")
         except Exception as e:
             print(f"[INFER][WARN] 가중치 로드 실패 → 랜덤 초기화: {e}")
     else:
