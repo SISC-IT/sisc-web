@@ -66,10 +66,10 @@ public enum ErrorCode {
   STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "주식 종목이 존재하지 않습니다."),
   BET_ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 라운드입니다."),
   BET_DUPLICATE(HttpStatus.CONFLICT, "이미 이 라운드에 베팅했습니다."),
-  BET_TIME_INVALID(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다."),
+  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다."),
   BET_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 베팅을 찾을 수 없습니다."),
-  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "이미 마감된 라운드입니다."),
-  BET_POINT_TOO_LOW(HttpStatus.CONFLICT, "베팅 포인트는 10 이상이어야 합니다.");
+  BET_POINT_TOO_LOW(HttpStatus.CONFLICT, "베팅 포인트는 10 이상이어야 합니다."),
+  BET_ROUND_NOT_CLOSED(HttpStatus.CONFLICT, "닫히지 않은 배팅입니다.");
 
   private final HttpStatus status;
   private final String message;

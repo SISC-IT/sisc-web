@@ -10,8 +10,10 @@ import java.util.UUID;
 
 public interface UserBetRepository extends JpaRepository<UserBet, UUID> {
     boolean existsByRoundAndUserId(BetRound round, UUID userId);
+
     Optional<UserBet> findByUserBetIdAndUserId(UUID userBetId, UUID userId);
 
-
     List<UserBet> findAllByUserIdOrderByRound_SettleAtDesc(UUID userId);
+
+    List<UserBet> findAllByRound(BetRound round);
 }
