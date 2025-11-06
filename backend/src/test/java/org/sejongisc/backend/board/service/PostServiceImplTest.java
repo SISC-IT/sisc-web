@@ -3,252 +3,286 @@ package org.sejongisc.backend.board.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
-import org.sejongisc.backend.board.domain.*;
-import org.sejongisc.backend.board.dto.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
+import org.sejongisc.backend.board.dto.CommentRequest;
+import org.sejongisc.backend.board.dto.PostRequest;
+import org.sejongisc.backend.board.dto.PostResponse;
+import org.sejongisc.backend.board.entity.*;
 import org.sejongisc.backend.board.repository.*;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.Role;
+import org.sejongisc.backend.user.entity.User;
+import org.springframework.data.domain.*;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class PostServiceImplTest {
 
-    @Mock private BoardRepository boardRepository;
-    @Mock private PostRepository postRepository;
-    @Mock private CommentRepository commentRepository;
-    @Mock private PostAttachmentRepository postAttachmentRepository;
+  @Mock UserRepository userRepository;
+  @Mock PostRepository postRepository;
+  @Mock CommentRepository commentRepository;
+  @Mock PostLikeRepository postLikeRepository;
+  @Mock PostBookmarkRepository postBookmarkRepository;
+  @Mock PostAttachmentRepository postAttachmentRepository;
+  @Mock FileUploadService fileUploadService;
 
-    @InjectMocks private PostServiceImpl postService;
+  @InjectMocks
+  PostServiceImpl postService;
 
-    private UUID boardId;
-    private UUID postId;
-    private UUID userId;
-    private Board board;
-    private Post post;
+  UUID userId;
+  User user;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        boardId = UUID.randomUUID();
-        postId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+  @BeforeEach
+  void setUp() {
+    userId = UUID.randomUUID();
+    user = User.builder().userId(userId).role(Role.TEAM_MEMBER).build();
+  }
 
-        board = Board.builder()
-                .id(boardId)
-                .name("테스트 게시판")
-                .isPrivate(false)
-                .build();
+  private PostRequest samplePostRequestWithFiles() {
+    MockMultipartFile f = new MockMultipartFile("files", "note.txt", "text/plain",
+        "hello".getBytes(StandardCharsets.UTF_8));
+    PostRequest req = new PostRequest();
+    req.setBoardType(BoardType.GENERAL);
+    req.setPostType(PostType.NORMAL);
+    req.setTitle("제목");
+    req.setContent("내용");
+    req.setFiles(List.of(f));
+    return req;
+  }
 
-        post = Post.builder()
-                .id(postId)
-                .board(board)
-                .title("제목")
-                .content("내용")
-                .postType(PostType.NORMAL)
-                .build();
-    }
+  @Test
+  @DisplayName("게시글 저장 - 첨부파일 저장까지")
+  void savePost_withFiles() {
+    PostRequest req = samplePostRequestWithFiles();
 
-    // ---------- helper ----------
-    private static <T> void setField(T instance, String field, Object value) {
-        try {
-            Field f = instance.getClass().getDeclaredField(field);
-            f.setAccessible(true);
-            f.set(instance, value);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+    UUID postId = UUID.randomUUID();
+    Answer<Post> saveAnswer = inv -> {
+      Post p = inv.getArgument(0);
+      return Post.builder()
+          .postId(postId)
+          .user(p.getUser())
+          .boardType(p.getBoardType())
+          .title(p.getTitle())
+          .content(p.getContent())
+          .postType(p.getPostType())
+          .build();
+    };
+    when(postRepository.save(any(Post.class))).thenAnswer(saveAnswer);
 
-    private PostUpdateRequest mkPostUpdateReq(String title, String content, PostType type, List<PostAttachmentDto> atts) {
-        PostUpdateRequest req = new PostUpdateRequest();
-        setField(req, "title", title);
-        setField(req, "content", content);
-        setField(req, "postType", type);
-        setField(req, "attachments", atts);
-        return req;
-    }
+    when(fileUploadService.store(any(MultipartFile.class))).thenReturn("stored-note.txt");
+    when(fileUploadService.getRootLocation()).thenReturn(java.nio.file.Path.of("/data/upload"));
 
-    private CommentUpdateRequest mkCommentUpdateReq(String content) {
-        CommentUpdateRequest req = new CommentUpdateRequest();
-        setField(req, "content", content);
-        return req;
-    }
+    postService.savePost(req, userId);
 
-    // =========================
-    // 1) 게시물 생성
-    // =========================
-    @Test
-    @DisplayName("게시물 생성 - 첨부 포함")
-    void createPost_success() {
-        PostCreateRequest req = new PostCreateRequest(
-                boardId,
-                "새 글",
-                "본문",
-                PostType.NOTICE,
-                List.of(
-                        new PostAttachmentDto("a.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","/files/a.xlsx"),
-                        new PostAttachmentDto("b.jpg","image/jpeg","/files/b.jpg")
-                )
-        );
+    verify(postRepository, times(1)).save(any(Post.class));
+    verify(postAttachmentRepository, times(1)).save(argThat(att ->
+        "stored-note.txt".equals(att.getSavedFilename())
+        && "note.txt".equals(att.getOriginalFilename())
+    ));
+  }
 
-        given(boardRepository.findById(boardId)).willReturn(Optional.of(board));
-        given(postRepository.save(any(Post.class))).willAnswer(inv -> {
-            Post p = inv.getArgument(0);
-            return Post.builder()
-                    .id(postId)
-                    .board(p.getBoard())
-                    .title(p.getTitle())
-                    .content(p.getContent())
-                    .postType(p.getPostType())
-                    .build();
-        });
+  @Test
+  @DisplayName("게시글 수정 - 기존 첨부 삭제 후 신규 저장")
+  void updatePost_replaceFiles() {
+    UUID postId = UUID.randomUUID();
+    PostRequest req = samplePostRequestWithFiles();
 
-        UUID savedId = postService.createPost(req, userId);
+    Post existing = Post.builder()
+        .postId(postId).user(user)
+        .title("old").content("old").postType(PostType.NORMAL)
+        .boardType(BoardType.GENERAL).build();
 
-        assertThat(savedId).isEqualTo(postId);
-        verify(boardRepository, times(1)).findById(boardId);
-        verify(postRepository, times(1)).save(any(Post.class));
-        verify(postAttachmentRepository, times(1)).saveAll(anyList());
-    }
+    when(postRepository.findById(postId)).thenReturn(Optional.of(existing));
+    when(fileUploadService.store(any(MultipartFile.class))).thenReturn("new.txt");
+    when(fileUploadService.getRootLocation()).thenReturn(java.nio.file.Path.of("/data/upload"));
+    when(postAttachmentRepository.findAllByPostId(postId))
+        .thenReturn(List.of(PostAttachment.builder()
+            .postId(postId).savedFilename("old.txt").build()));
 
-    // =========================
-    // 2) 게시물 수정
-    // =========================
-    @Test
-    @DisplayName("게시물 수정 - 첨부 전체 교체")
-    void updatePost_replaceAttachments() {
-        given(postRepository.findById(postId)).willReturn(Optional.of(post));
-        given(postAttachmentRepository.findByPostId(postId)).willReturn(
-                List.of(PostAttachment.builder().id(UUID.randomUUID()).postId(postId).filename("old.png").mimeType("image/png").url("/old.png").build())
-        );
+    postService.updatePost(req, postId, userId);
 
-        PostUpdateRequest req = mkPostUpdateReq(
-                "수정 제목", "수정 내용", PostType.NORMAL,
-                List.of(new PostAttachmentDto("n.pptx","application/vnd.openxmlformats-officedocument.presentationml.presentation","/n.pptx"))
-        );
+    verify(fileUploadService).delete("old.txt");
+    verify(postAttachmentRepository).deleteAllByPostId(postId);
+    verify(postAttachmentRepository).save(argThat(a ->
+        a.getPostId().equals(postId) && a.getSavedFilename().equals("new.txt")));
+  }
 
-        assertThatCode(() -> postService.updatePost(postId, req)).doesNotThrowAnyException();
-        verify(postAttachmentRepository, times(1)).deleteAll(anyList());
-        verify(postAttachmentRepository, times(1)).saveAll(anyList());
-    }
+  @Test
+  @DisplayName("게시글 수정 - 소유자 아님 -> 예외")
+  void updatePost_notOwner_throws() {
+    UUID postId = UUID.randomUUID();
+    User other = User.builder().userId(UUID.randomUUID()).build();
+    Post existing = Post.builder().postId(postId).user(other).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(existing));
 
-    // =========================
-    // 3) 게시물 삭제
-    // =========================
-    @Test
-    @DisplayName("게시물 삭제 - 댓글/첨부 정리 후 본문 삭제")
-    void deletePost_success() {
-        given(postAttachmentRepository.findByPostId(postId))
-                .willReturn(List.of(PostAttachment.builder().id(UUID.randomUUID()).postId(postId).filename("f").mimeType("m").url("u").build()));
-        given(commentRepository.findByPostId(postId))
-                .willReturn(List.of(Comment.builder().id(UUID.randomUUID()).postId(postId).userId(userId).content("c").build()));
+    assertThatThrownBy(() -> postService.updatePost(new PostRequest(), postId, userId))
+        .isInstanceOf(CustomException.class)
+        .hasMessage("게시물 수정/삭제 권한이 없습니다.");
+  }
 
-        postService.deletePost(postId);
+  @Test
+  @DisplayName("게시글 삭제 - 첨부/댓글/좋아요/북마크 삭제 포함")
+  void deletePost_allRelated() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).build();
 
-        verify(postAttachmentRepository, times(1)).deleteAll(anyList());
-        verify(commentRepository, times(1)).deleteAll(anyList());
-        verify(postRepository, times(1)).deleteById(postId);
-    }
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    when(postAttachmentRepository.findAllByPostId(postId))
+        .thenReturn(List.of(
+            PostAttachment.builder().postId(postId).savedFilename("a.txt").build(),
+            PostAttachment.builder().postId(postId).savedFilename("b.txt").build()
+        ));
 
-    // =========================
-    // 4) 목록 조회 + 8) 공지/일반 분리
-    // =========================
-    @Test
-    @DisplayName("게시물 목록 - 전체/유형별")
-    void getPosts_byType() {
-        given(postRepository.findByBoardId(boardId)).willReturn(List.of(post));
-        given(postRepository.findByBoardIdAndPostType(boardId, PostType.NORMAL)).willReturn(List.of(post));
-        given(commentRepository.findByPostId(postId)).willReturn(Collections.emptyList());
+    postService.deletePost(postId, userId);
 
-        assertThat(postService.getPosts(boardId, null)).hasSize(1);
-        assertThat(postService.getPosts(boardId, PostType.NORMAL)).hasSize(1);
-    }
+    verify(fileUploadService).delete("a.txt");
+    verify(fileUploadService).delete("b.txt");
+    verify(postAttachmentRepository).deleteAllByPostId(postId);
+    verify(commentRepository).deleteAllByPostId(postId);
+    verify(postLikeRepository).deleteAllByPostId(postId);
+    verify(postBookmarkRepository).deleteAllByPostId(postId);
+    verify(postRepository).delete(post);
+  }
 
-    // =========================
-    // 4) 검색
-    // =========================
-    @Test
-    @DisplayName("게시물 검색 - 제목/내용 키워드")
-    void searchPosts_keyword() {
-        given(postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase("키워드","키워드"))
-                .willReturn(List.of(post));
-        given(commentRepository.findByPostId(postId)).willReturn(Collections.emptyList());
+  @Test
+  @DisplayName("좋아요 토글 - 새로 추가")
+  void toggleLike_add() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).likeCount(0).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    when(postLikeRepository.findByPostIdAndUserId(postId, userId)).thenReturn(Optional.empty());
 
-        List<PostSummaryResponse> result = postService.searchPosts("키워드");
-        assertThat(result).hasSize(1);
-    }
+    postService.toggleLike(postId, userId);
 
-    // =========================
-    // 5) 댓글 생성
-    // =========================
-    @Test
-    @DisplayName("댓글 생성 - 정상")
-    void createComment_success() {
-        given(postRepository.findById(postId)).willReturn(Optional.of(post));
-        given(commentRepository.save(any(Comment.class))).willAnswer(inv -> {
-            Comment c = inv.getArgument(0);
-            setField(c, "id", UUID.randomUUID());
-            return c;
-        });
+    verify(postLikeRepository).save(argThat(l ->
+        l.getPostId().equals(postId) && l.getUserId().equals(userId)));
+    assertThat(post.getLikeCount()).isEqualTo(1);
+  }
 
-        CommentCreateRequest req = new CommentCreateRequest();
-        setField(req, "postId", postId);
-        setField(req, "content", "댓글입니다");
-        setField(req, "parentId", null);
+  @Test
+  @DisplayName("좋아요 토글 - 취소")
+  void toggleLike_remove() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).likeCount(2).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    PostLike like = PostLike.builder().postId(postId).userId(userId).build();
+    when(postLikeRepository.findByPostIdAndUserId(postId, userId)).thenReturn(Optional.of(like));
 
-        UUID cid = postService.createComment(req, userId);
+    postService.toggleLike(postId, userId);
 
-        assertThat(cid).isNotNull();
-        verify(commentRepository, times(1)).save(any(Comment.class));
-    }
+    verify(postLikeRepository).delete(like);
+    assertThat(post.getLikeCount()).isEqualTo(1);
+  }
 
-    // =========================
-    // 6) 댓글 수정
-    // =========================
-    @Test
-    @DisplayName("댓글 수정 - 작성자만 가능")
-    void updateComment_onlyAuthor() {
-        UUID cid = UUID.randomUUID();
-        Comment mine = Comment.builder().id(cid).postId(postId).userId(userId).content("old").build();
-        given(commentRepository.findById(cid)).willReturn(Optional.of(mine));
+  @Test
+  @DisplayName("북마크 토글 - 추가/취소")
+  void toggleBookmark_add_and_remove() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).bookmarkCount(0).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
-        assertThatCode(() -> postService.updateComment(cid, userId, mkCommentUpdateReq("new")))
-                .doesNotThrowAnyException();
+    when(postBookmarkRepository.findByPostIdAndUserId(postId, userId)).thenReturn(Optional.empty());
+    postService.toggleBookmark(postId, userId);
+    verify(postBookmarkRepository).save(argThat(b ->
+        b.getPostId().equals(postId) && b.getUserId().equals(userId)));
+    assertThat(post.getBookmarkCount()).isEqualTo(1);
 
-        Comment others = Comment.builder().id(cid).postId(postId).userId(UUID.randomUUID()).content("old").build();
-        given(commentRepository.findById(cid)).willReturn(Optional.of(others));
+    reset(postBookmarkRepository);
+    when(postBookmarkRepository.findByPostIdAndUserId(postId, userId))
+        .thenReturn(Optional.of(PostBookmark.builder().postId(postId).userId(userId).build()));
+    postService.toggleBookmark(postId, userId);
+    verify(postBookmarkRepository).delete(any(PostBookmark.class));
+    assertThat(post.getBookmarkCount()).isEqualTo(0);
+  }
 
-        assertThatThrownBy(() -> postService.updateComment(cid, userId, mkCommentUpdateReq("new")))
-                .isInstanceOf(SecurityException.class);
-    }
+  @Test
+  @DisplayName("댓글 생성 - 댓글수 증가")
+  void createComment_increaseCount() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).commentCount(0).build();
 
-    // =========================
-    // 7) 댓글 삭제
-    // =========================
-    @Test
-    @DisplayName("댓글 삭제 - 작성자 또는 관리자")
-    void deleteComment_authorOrAdmin() {
-        UUID cid = UUID.randomUUID();
-        Comment mine = Comment.builder().id(cid).postId(postId).userId(userId).content("c").build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        given(commentRepository.findById(cid)).willReturn(Optional.of(mine));
-        given(commentRepository.findByParentId(cid)).willReturn(Collections.emptyList());
+    CommentRequest req = new CommentRequest();
+    req.setPostId(postId);
+    req.setContent("hi");
 
-        // 작성자
-        assertThatCode(() -> postService.deleteComment(cid, userId, false)).doesNotThrowAnyException();
-        verify(commentRepository, times(1)).delete(any(Comment.class));
+    postService.createComment(req, userId);
 
-        // 관리자
-        given(commentRepository.findById(cid)).willReturn(Optional.of(mine));
-        assertThatCode(() -> postService.deleteComment(cid, UUID.randomUUID(), true)).doesNotThrowAnyException();
+    verify(commentRepository).save(any(Comment.class));
+    assertThat(post.getCommentCount()).isEqualTo(1);
+  }
 
-        // 타인 & 비관리자
-        given(commentRepository.findById(cid)).willReturn(Optional.of(mine));
-        assertThatThrownBy(() -> postService.deleteComment(cid, UUID.randomUUID(), false))
-                .isInstanceOf(SecurityException.class);
-    }
+  @Test
+  @DisplayName("댓글 삭제 - 작성자 또는 관리자만 가능, 댓글수 감소")
+  void deleteComment_ownerOrAdmin() {
+    UUID commentId = UUID.randomUUID();
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).commentCount(3).build();
+    Comment comment = Comment.builder().commentId(commentId).postId(postId).user(user).content("c").build();
+
+    when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+
+    postService.deleteComment(commentId, userId);
+    verify(commentRepository).delete(comment);
+    assertThat(post.getCommentCount()).isEqualTo(2);
+
+    reset(commentRepository, userRepository, postRepository);
+    User admin = User.builder().userId(UUID.randomUUID()).role(Role.PRESIDENT).build();
+    Comment others = Comment.builder().commentId(commentId).postId(postId)
+        .user(User.builder().userId(UUID.randomUUID()).role(Role.TEAM_MEMBER).build())
+        .content("c").build();
+
+    when(commentRepository.findById(commentId)).thenReturn(Optional.of(others));
+    when(userRepository.findById(admin.getUserId())).thenReturn(Optional.of(admin));
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+
+    post.setCommentCount(5);
+    postService.deleteComment(commentId, admin.getUserId());
+    verify(commentRepository).delete(others);
+    assertThat(post.getCommentCount()).isEqualTo(4);
+  }
+
+  @Test
+  @DisplayName("게시글 목록 조회 - 매핑 검사")
+  void getPosts_mapping() {
+    Post p = Post.builder()
+        .postId(UUID.randomUUID())
+        .user(user)
+        .boardType(BoardType.GENERAL)
+        .title("t")
+        .content("c")
+        .postType(PostType.NORMAL)
+        .bookmarkCount(1)
+        .likeCount(2)
+        .commentCount(3)
+        .build();
+
+    when(postRepository.findAllByBoardType(eq(BoardType.GENERAL), any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of(p)));
+
+    Page<PostResponse> page = postService.getPosts(BoardType.GENERAL, 0, 20);
+
+    assertThat(page.getContent()).hasSize(1);
+    PostResponse pr = page.getContent().get(0);
+    assertThat(pr.getTitle()).isEqualTo("t");
+    assertThat(pr.getLikeCount()).isEqualTo(2);
+  }
 }

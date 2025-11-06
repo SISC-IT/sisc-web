@@ -26,7 +26,6 @@ public class Comment extends BasePostgresEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   private User user;
 
-  @Lob
-  @Column(nullable = false)
+  @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
 }

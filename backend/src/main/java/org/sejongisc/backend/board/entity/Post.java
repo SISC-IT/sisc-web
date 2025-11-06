@@ -16,7 +16,6 @@ import org.sejongisc.backend.user.entity.User;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-
 public class Post extends BasePostgresEntity {
 
   @Id
@@ -37,8 +36,7 @@ public class Post extends BasePostgresEntity {
   private String title;
 
   // 내용
-  @Lob
-  @Column(nullable = false)
+  @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
 
   // 게시글 타입
