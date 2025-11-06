@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class PostServiceImpl implements PostService {
   private final PostLikeRepository postLikeRepository;
   private final PostBookmarkRepository postBookmarkRepository;
   private final PostAttachmentRepository postAttachmentRepository;
+  private final FileUploadService fileUploadService;
 
   // 게시물 작성
   @Override
@@ -47,7 +49,24 @@ public class PostServiceImpl implements PostService {
 
     postRepository.save(post);
 
-    // todo : 첨부파일 저장
+    // 첨부파일 저장
+    List<MultipartFile> files = request.getFiles();
+    if (files != null && !files.isEmpty()) {
+      for (MultipartFile file : files) {
+        if (file != null && !file.isEmpty()) {
+          String savedFilename = fileUploadService.store(file);
+          String filePath = fileUploadService.getRootLocation().resolve(savedFilename).toString();
+
+          PostAttachment attachment = PostAttachment.builder()
+              .postId(post.getPostId())
+              .savedFilename(savedFilename)
+              .originalFilename(file.getOriginalFilename())
+              .filePath(filePath)
+              .build();
+          postAttachmentRepository.save(attachment);
+        }
+      }
+    }
   }
 
   // 게시물 수정
@@ -65,7 +84,32 @@ public class PostServiceImpl implements PostService {
     post.setContent(request.getContent());
     post.setPostType(request.getPostType());
 
-    // todo : 첨부파일 삭제 후 저장
+    // 기존 파일 조회 및 삭제
+    List<PostAttachment> existingAttachments = postAttachmentRepository.findAllByPostId(postId);
+    for (PostAttachment attachment : existingAttachments) {
+      fileUploadService.delete(attachment.getSavedFilename());
+    }
+    // DB에서 첨부파일 정보 일괄 삭제
+    postAttachmentRepository.deleteAllByPostId(postId);
+
+    // 새 파일 저장
+    List<MultipartFile> files = request.getFiles();
+    if (files != null && !files.isEmpty()) {
+      for (MultipartFile file : files) {
+        if (file != null && !file.isEmpty()) {
+          String savedFilename = fileUploadService.store(file);
+          String filePath = fileUploadService.getRootLocation().resolve(savedFilename).toString();
+
+          PostAttachment attachment = PostAttachment.builder()
+              .postId(post.getPostId())
+              .savedFilename(savedFilename)
+              .originalFilename(file.getOriginalFilename())
+              .filePath(filePath)
+              .build();
+          postAttachmentRepository.save(attachment);
+        }
+      }
+    }
   }
 
   // 게시물 삭제
@@ -81,7 +125,16 @@ public class PostServiceImpl implements PostService {
       throw new CustomException(ErrorCode.INVALID_POST_OWNER);
     }
 
-    // todo : 첨부파일 삭제
+    // DB에서 첨부파일 정보 조회
+    List<PostAttachment> attachments = postAttachmentRepository.findAllByPostId(postId);
+
+    // 물리적 파일 삭제
+    for (PostAttachment attachment : attachments) {
+      fileUploadService.delete(attachment.getSavedFilename());
+    }
+
+    // DB에서 첨부파일 정보 삭제
+    postAttachmentRepository.deleteAllByPostId(postId);
 
     // 댓글 삭제
     commentRepository.deleteAllByPostId(post.getPostId());
@@ -146,6 +199,12 @@ public class PostServiceImpl implements PostService {
     // Page<Comment> -> Page<CommentResponse> DTO로 변환
     Page<CommentResponse> commentResponses = comments.map(CommentResponse::of);
 
+    // 첨부 파일 조회
+    List<PostAttachmentResponse> attachmentResponses = postAttachmentRepository.findAllByPostId(postId)
+        .stream()
+        .map(PostAttachmentResponse::of)
+        .toList();
+
     // PostResponse DTO를 직접 빌드하여 반환
     return PostResponse.builder()
         .postId(post.getPostId())
@@ -160,6 +219,7 @@ public class PostServiceImpl implements PostService {
         .createdDate(post.getCreatedDate())
         .updatedDate(post.getUpdatedDate())
         .comments(commentResponses)
+        .attachments(attachmentResponses)
         .build();
   }
 
@@ -284,6 +344,12 @@ public class PostServiceImpl implements PostService {
   }
 
   private PostResponse mapToPostResponse(Post post) {
+    // 첨부파일 목록 조회
+    List<PostAttachmentResponse> attachmentResponses = postAttachmentRepository.findAllByPostId(post.getPostId())
+        .stream()
+        .map(PostAttachmentResponse::of)
+        .toList();
+
     return PostResponse.builder()
         .postId(post.getPostId())
         .user(post.getUser())
@@ -296,6 +362,7 @@ public class PostServiceImpl implements PostService {
         .commentCount(post.getCommentCount())
         .createdDate(post.getCreatedDate())
         .updatedDate(post.getUpdatedDate())
+        .attachments(attachmentResponses)
         .build();
   }
 }

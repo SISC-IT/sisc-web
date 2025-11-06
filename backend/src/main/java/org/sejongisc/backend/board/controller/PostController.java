@@ -1,5 +1,7 @@
 package org.sejongisc.backend.board.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.board.entity.BoardType;
 import org.sejongisc.backend.board.entity.PostType;
@@ -7,6 +9,7 @@ import org.sejongisc.backend.board.dto.*;
 import org.sejongisc.backend.board.service.PostService;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -17,14 +20,18 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/post")
+@Tag(
+    name = "게시글 및 댓글 API",
+    description = "게시글 및 댓글 작성, 수정, 삭제 관련 API 제공"
+)
 public class PostController {
 
   private final PostService postService;
 
   // 게시글 작성
-  @PostMapping
+  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> createPost(
-      @RequestBody PostRequest request,
+      @Valid @ModelAttribute PostRequest request,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     UUID userId = customUserDetails.getUserId();
     postService.savePost(request, userId);
@@ -32,9 +39,9 @@ public class PostController {
   }
 
   // 게시글 수정
-  @PutMapping("/{postId}")
+  @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> updatePost(
-      @RequestBody PostRequest request,
+      @Valid @ModelAttribute PostRequest request,
       @PathVariable UUID postId,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     UUID userId = customUserDetails.getUserId();

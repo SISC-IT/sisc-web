@@ -23,11 +23,11 @@ public class PostAttachment {
   private UUID postId;
 
   @Column(nullable = false)
-  private String filename;
+  private String savedFilename;
 
   @Column(nullable = false)
-  private String mimeType;
+  private String originalFilename;
 
   @Column(nullable = false)
-  private String url;
+  private String filePath;
 }

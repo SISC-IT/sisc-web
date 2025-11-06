@@ -36,4 +36,5 @@ public class PostResponse {
   private LocalDateTime createdDate;
   private LocalDateTime updatedDate;
   private Page<CommentResponse> comments;
+  private List<PostAttachmentResponse> attachments;
 }
