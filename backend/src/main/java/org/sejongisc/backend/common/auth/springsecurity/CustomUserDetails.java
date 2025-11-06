@@ -14,6 +14,7 @@ import java.util.UUID;
 @Getter
 public class CustomUserDetails implements UserDetails {
 
+    private final User user;
     private final UUID userId;
     private final String name;
     private final String email;
@@ -23,6 +24,7 @@ public class CustomUserDetails implements UserDetails {
     private final Integer point;
 
     public CustomUserDetails(User user) {
+        this.user = user;
         this.userId = user.getUserId();
         this.name = user.getName();
         this.email = user.getEmail();
