@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
@@ -22,10 +22,13 @@ from libs.utils.save_reports_to_db import save_reports_to_db
 MARKET_DB_NAME = "db"          # 시세/원천 데이터 DB
 REPORT_DB_NAME = "report_DB"   # 리포트 저장 DB
 
+# === (신규 전용) 필수 컬럼: inference 로그 → XAI 변환에 필요한 것만 강제 ===
 REQUIRED_LOG_COLS = {
     "ticker", "date", "action", "price",
-    "feature1", "feature2", "feature3",
-    "prob1", "prob2", "prob3"
+    # XAI evidence 구성에 꼭 필요한 신규 컬럼
+    "feature_name1", "feature_name2", "feature_name3",
+    "feature_score1", "feature_score2", "feature_score3",
+    # (원하면 로깅/모니터링용 확률도 계속 받되 필수는 아님)
 }
 
 def run_weekly_finder() -> List[str]:
@@ -33,7 +36,7 @@ def run_weekly_finder() -> List[str]:
     주간 종목 발굴(Finder)을 실행하고 결과(종목 리스트)를 반환합니다.
     """
     print("--- [PIPELINE-STEP 1] Finder 모듈 실행 시작 ---")
-    # top_tickers = run_finder()
+    # top_tickers = run_finder()  # TODO: 종목 선정 이슈 해결 후 사용
     top_tickers = ["AAPL", "MSFT", "GOOGL"]  # 임시 데이터
     print("--- [PIPELINE-STEP 1] Finder 모듈 실행 완료 ---")
     return top_tickers
@@ -51,8 +54,8 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
         print("[WARN] 빈 종목 리스트가 입력되어 Transformer를 건너뜁니다.")
         return pd.DataFrame()
 
-    #end_date = _utcnow() # 한국 시간 기준 당일 종가까지 사용, 서버 사용시 주석 해제
-    end_date = datetime.strptime("2024-10-30", "%Y-%m-%d") #임시 고정 날짜
+    # end_date = _utcnow()  # 서버 사용 시
+    end_date = datetime.strptime("2024-10-30", "%Y-%m-%d")  # 임시 고정 날짜
     start_date = end_date - timedelta(days=600)
 
     all_ohlcv_df: List[pd.DataFrame] = []
@@ -92,10 +95,10 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
         print("[WARN] Transformer 결과 로그가 비어 있습니다.")
         return pd.DataFrame()
 
-    # 필수 컬럼 검증
+    # === 신규 포맷 강제 체크 ===
     missing_cols = REQUIRED_LOG_COLS - set(logs_df.columns)
     if missing_cols:
-        print(f"[ERROR] 결정 로그에 필수 컬럼 누락: {sorted(missing_cols)}")
+        print(f"[ERROR] 결정 로그에 필수 컬럼 누락(신규 포맷 전용): {sorted(missing_cols)}")
         return pd.DataFrame()
 
     print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 완료 ---")
@@ -103,8 +106,6 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
 
 # --- 안전 변환 유틸 ---
 def _to_iso_date(v) -> str:
-    import pandas as pd
-    from datetime import datetime
     try:
         if isinstance(v, (pd.Timestamp, datetime)):
             return v.strftime("%Y-%m-%d")
@@ -114,17 +115,30 @@ def _to_iso_date(v) -> str:
 
 def _to_float(v, fallback=0.0) -> float:
     try:
-        return float(v)
+        f = float(v)
+        if pd.isna(f):
+            return float(fallback)
+        return f
     except Exception:
         return float(fallback)
 
 # --- XAI 리포트: 5-튜플(rows)로 반환 ---
-from typing import List, Tuple
-
 def run_xai_report(decision_log: pd.DataFrame) -> List[Tuple[str, str, float, str, str]]:
     """
-    save_reports_to_db()가 기대하는 형식:
-      rows = List[ (ticker, signal, price, date_str, report_text) ]
+    반환: List[(ticker, signal, price, date, report_text)]
+    XAI 포맷:
+        {
+          "ticker": "...",
+          "date": "YYYY-MM-DD",
+          "signal": "BUY|HOLD|SELL",
+          "price": float,
+          "evidence": [
+            {"feature_name": str, "contribution": float},  # 0~1 점수 권장
+            ...
+          ]
+        }
+    ※ 신규 포맷 전용:
+        - feature_name1~3, feature_score1~3 필수
     """
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 시작 ---")
     api_key = os.environ.get("GROQ_API_KEY")
@@ -136,25 +150,42 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[Tuple[str, str, float, st
         print("[WARN] 비어있는 결정 로그가 입력되어 XAI 리포트를 생성하지 않습니다.")
         return []
 
+    # 신규 포맷 강제(안전망)
+    for c in ["feature_name1","feature_name2","feature_name3",
+              "feature_score1","feature_score2","feature_score3"]:
+        if c not in decision_log.columns:
+            print(f"[ERROR] XAI: 신규 포맷 필수 컬럼 누락: {c}")
+            return []
+
     rows: List[Tuple[str, str, float, str, str]] = []
 
     for _, row in decision_log.iterrows():
         ticker = str(row.get("ticker", "UNKNOWN"))
         date_s = _to_iso_date(row.get("date", ""))
-        signal = str(row.get("action", ""))
+        signal = str(row.get("action", ""))   # action -> signal
         price  = _to_float(row.get("price", 0.0))
 
-        # evidence 등은 DB에 안 넣는 설계로 보이므로 내부 호출에만 사용
+        # === 신규 포맷 전용 evidence ===
+        evidence: List[Dict[str, float]] = []
+        for i in (1, 2, 3):
+            name = row.get(f"feature_name{i}")
+            score = row.get(f"feature_score{i}")
+            # 이름/점수 모두 있어야 추가
+            if name is None or str(name).strip() == "":
+                continue
+            if score is None or pd.isna(score):
+                continue
+            evidence.append({
+                "feature_name": str(name),
+                "contribution": _to_float(score, 0.0)  # 0~1 정규화 점수
+            })
+
         decision_payload = {
             "ticker": ticker,
             "date": date_s,
             "signal": signal,
             "price": price,
-            "evidence": [
-                {"feature_name": str(row.get("feature1", "")), "contribution": _to_float(row.get("prob1", 0.0))},
-                {"feature_name": str(row.get("feature2", "")), "contribution": _to_float(row.get("prob2", 0.0))},
-                {"feature_name": str(row.get("feature3", "")), "contribution": _to_float(row.get("prob3", 0.0))},
-            ],
+            "evidence": evidence,
         }
 
         try:
@@ -169,8 +200,6 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[Tuple[str, str, float, st
 
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 완료 ---")
     return rows
-
-
 
 
 def run_pipeline() -> Optional[List[str]]:
