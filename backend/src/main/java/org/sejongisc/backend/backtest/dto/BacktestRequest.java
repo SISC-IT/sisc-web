@@ -15,7 +15,7 @@ import java.util.UUID;
 public class BacktestRequest {
   @Schema(hidden = true, description = "회원")
   @JsonIgnore
-  private User user;
+  private UUID userId;
 
   @Schema(description = "템플릿 ID")
   private UUID templateId;

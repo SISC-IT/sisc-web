@@ -43,7 +43,7 @@ public class TemplateController {
   )
   public ResponseEntity<TemplateResponse> getTemplateById(@PathVariable UUID templateId,
                                                           @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    return ResponseEntity.ok(templateService.findById(templateId, customUserDetails.getUser()));
+    return ResponseEntity.ok(templateService.findById(templateId, customUserDetails.getUserId()));
   }
 
   // 템플릿 생성
@@ -54,7 +54,7 @@ public class TemplateController {
   )
   public ResponseEntity<TemplateResponse> createTemplate(@RequestBody TemplateRequest request,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetail) {
-    request.setUser(customUserDetail.getUser());
+    request.setUserId(customUserDetail.getUserId());
     return ResponseEntity.ok(templateService.createTemplate(request));
   }
 
@@ -78,7 +78,7 @@ public class TemplateController {
   )
   public ResponseEntity<Void> deleteTemplate(@PathVariable UUID templateId,
                                              @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    templateService.deleteTemplate(templateId, customUserDetails.getUser());
+    templateService.deleteTemplate(templateId, customUserDetails.getUserId());
     return ResponseEntity.noContent().build();
   }
 }

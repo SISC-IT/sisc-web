@@ -175,7 +175,7 @@ public class BacktestController {
   )
   public ResponseEntity<BacktestResponse> runBacktest(@RequestBody BacktestRequest request,
                                                       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    request.setUser(customUserDetails.getUser());
+    request.setUserId(customUserDetails.getUserId());
     return ResponseEntity.ok(backtestService.runBacktest(request));
   }
 
@@ -199,7 +199,7 @@ public class BacktestController {
   )
   public ResponseEntity<Void> postBacktestIntoTemplate(@RequestBody BacktestRequest request,
                                                        @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    request.setUser(customUserDetails.getUser());
+    request.setUserId(customUserDetails.getUserId());
     backtestService.addBacktestTemplate(request);
     return ResponseEntity.ok().build();
   }
@@ -213,7 +213,7 @@ public class BacktestController {
   public ResponseEntity<Void> deleteBacktestFromTemplate(@RequestBody BacktestRequest request,
                                                          @PathVariable UUID templateId,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    request.setUser(customUserDetails.getUser());
+    request.setUserId(customUserDetails.getUserId());
     backtestService.deleteBacktestFromTemplate(request, templateId);
     return ResponseEntity.noContent().build();
   }
