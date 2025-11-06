@@ -22,25 +22,14 @@ from libs.utils.save_reports_to_db import save_reports_to_db
 MARKET_DB_NAME = "db"          # 시세/원천 데이터 DB
 REPORT_DB_NAME = "report_DB"   # 리포트 저장 DB
 
-# 필수 컬럼 검증
-REQUIRED_NEW = {
+# === (신규 전용) 필수 컬럼: inference 로그 → XAI 변환에 필요한 것만 강제 ===
+REQUIRED_LOG_COLS = {
     "ticker", "date", "action", "price",
+    # XAI evidence 구성에 꼭 필요한 신규 컬럼
     "feature_name1", "feature_name2", "feature_name3",
     "feature_score1", "feature_score2", "feature_score3",
-    "prob1", "prob2", "prob3"
+    # (원하면 로깅/모니터링용 확률도 계속 받되 필수는 아님)
 }
-
-def _has_required_cols(df: pd.DataFrame) -> bool:
-    cols = set(df.columns)
-    return (REQUIRED_NEW <= cols) or (REQUIRED_OLD <= cols)
-
-def _which_format(df: pd.DataFrame) -> str:
-    cols = set(df.columns)
-    if REQUIRED_NEW <= cols:
-        return "new"   # feature_name*/feature_score* 사용
-    if REQUIRED_OLD <= cols:
-        return "old"   # feature1~3만 존재
-    return "none"
 
 def run_weekly_finder() -> List[str]:
     """
@@ -106,9 +95,10 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
         print("[WARN] Transformer 결과 로그가 비어 있습니다.")
         return pd.DataFrame()
 
-    # 필수 컬럼 검증 (신규/구버전 모두 허용)
-    if not _has_required_cols(logs_df):
-        print(f"[ERROR] 결정 로그에 필수 컬럼 누락. 제공 컬럼: {sorted(set(logs_df.columns))}")
+    # === 신규 포맷 강제 체크 ===
+    missing_cols = REQUIRED_LOG_COLS - set(logs_df.columns)
+    if missing_cols:
+        print(f"[ERROR] 결정 로그에 필수 컬럼 누락(신규 포맷 전용): {sorted(missing_cols)}")
         return pd.DataFrame()
 
     print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 완료 ---")
@@ -147,6 +137,8 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[Tuple[str, str, float, st
             ...
           ]
         }
+    ※ 신규 포맷 전용:
+        - feature_name1~3, feature_score1~3 필수
     """
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 시작 ---")
     api_key = os.environ.get("GROQ_API_KEY")
@@ -158,10 +150,12 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[Tuple[str, str, float, st
         print("[WARN] 비어있는 결정 로그가 입력되어 XAI 리포트를 생성하지 않습니다.")
         return []
 
-    fmt = _which_format(decision_log)
-    if fmt == "none":
-        print("[ERROR] 지원되지 않는 로그 포맷입니다.")
-        return []
+    # 신규 포맷 강제(안전망)
+    for c in ["feature_name1","feature_name2","feature_name3",
+              "feature_score1","feature_score2","feature_score3"]:
+        if c not in decision_log.columns:
+            print(f"[ERROR] XAI: 신규 포맷 필수 컬럼 누락: {c}")
+            return []
 
     rows: List[Tuple[str, str, float, str, str]] = []
 
@@ -171,25 +165,20 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[Tuple[str, str, float, st
         signal = str(row.get("action", ""))   # action -> signal
         price  = _to_float(row.get("price", 0.0))
 
-        # evidence 구성
-        evidence: List[Dict[str, Optional[float]]] = []
-        if fmt == "new":
-            # 권장: 이름 + 정규화 점수(0~1)
-            for i in (1, 2, 3):
-                name = row.get(f"feature_name{i}")
-                score = row.get(f"feature_score{i}")
-                if name is None or str(name).strip() == "":
-                    continue
-                contrib = None if pd.isna(score) else _to_float(score, None)
-                evidence.append({"feature_name": str(name), "contribution": contrib})
-        else:
-            # 구버전: 이름 컬럼이 없음 -> 값 자체를 이름처럼 쓰고 랭크 가중치로 대체(임시)
-            rank_contrib = [1.0, 2/3, 1/3]
-            for i, rc in zip((1, 2, 3), rank_contrib):
-                val = row.get(f"feature{i}")
-                if pd.isna(val):
-                    continue
-                evidence.append({"feature_name": str(val), "contribution": rc})
+        # === 신규 포맷 전용 evidence ===
+        evidence: List[Dict[str, float]] = []
+        for i in (1, 2, 3):
+            name = row.get(f"feature_name{i}")
+            score = row.get(f"feature_score{i}")
+            # 이름/점수 모두 있어야 추가
+            if name is None or str(name).strip() == "":
+                continue
+            if score is None or pd.isna(score):
+                continue
+            evidence.append({
+                "feature_name": str(name),
+                "contribution": _to_float(score, 0.0)  # 0~1 정규화 점수
+            })
 
         decision_payload = {
             "ticker": ticker,
