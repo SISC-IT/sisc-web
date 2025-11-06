@@ -5,9 +5,6 @@ import pandas as pd
 from pathlib import Path
 
 
-# (선택) 프로젝트 공용 로거가 있다면 교체: from AI.libs.utils.io import _log
-_log = print
-
 # ★ 실제 추론 로직은 modules/inference.run_inference 에 구현되어 있음
 from .modules.inference import run_inference
 
@@ -19,7 +16,7 @@ def run_transformer(
     pred_h: int,
     raw_data: pd.DataFrame,
     run_date: Optional[str] = None,
-    config: Optional[dict] = None,
+    weights_path: Optional[str] = None,
     interval: str = "1d",
 ) -> Dict[str, pd.DataFrame]:
     """
@@ -60,14 +57,19 @@ def run_transformer(
     """
 
     # 1) weights_path 경로지정
-    base_dir = Path("/transformer/weights")
-    candidate = base_dir / "inital.weights.h5"
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-    weights_path = str(candidate) if candidate.exists() else None
+    weights_dir = PROJECT_ROOT / "transformer" / "weights"
+    candidate = weights_dir / "initial.weights.h5"
+
+    weights_path = str(candidate)
+    if candidate.exists():
+            
+            print(f"[TRANSFORMER] weights_path 설정됨: {weights_path}")
 
     if not weights_path:
-        _log("[TRANSFORMER][WARN] weights_path 미설정 → 가중치 없이 랜덤 초기화로 추론될 수 있음(품질 저하).")
-        _log("  config 예시: {'transformer': {'weights_path': 'weights/inital.weights.h5'}}")
+        print("[TRANSFORMER][WARN] weights_path 미설정 → 가중치 없이 랜덤 초기화로 추론될 수 있음(품질 저하).")
+        print("  config 예시: {'transformer': {'weights_path': 'weights/initial.weights.h5'}}")
 
 
     # 2) 실제 추론 실행(모듈 위임)

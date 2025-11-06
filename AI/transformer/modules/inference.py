@@ -1,13 +1,12 @@
-﻿# transformer/modules/inference.py
+# transformer/modules/inference.py
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras import Model
+from tensorflow.keras import Model 
 
-# from AI.libs.utils.io import _log
-_log = print  # TODO: 추후 io._log 로 교체
+
 from transformer.modules.models import build_transformer_classifier
 from transformer.modules.features import FEATURES, build_features
 
@@ -37,11 +36,11 @@ def _load_or_build_model(seq_len: int, n_features: int, weights_path: Optional[s
     if weights_path:
         try:
             model.load_weights(weights_path)
-            _log(f"[INFER] Transformer weights loaded: {weights_path}")
+            print(f"[INFER] 가중치 로드 완료 : {weights_path}")
         except Exception as e:
-            _log(f"[INFER][WARN] 가중치 로드 실패 → 랜덤 초기화: {e}")
+            print(f"[INFER][WARN] 가중치 로드 실패 → 랜덤 초기화: {e}")
     else:
-        _log("[INFER][WARN] weights_path 미지정 → 랜덤 초기화로 진행")
+        print("[INFER][WARN] weights_path 미지정 → 랜덤 초기화로 진행")
     return model
 
 # ===== 공개 엔트리포인트 (추론) =====
@@ -80,7 +79,7 @@ def run_inference(
     """
     tickers = finder_df["ticker"].astype(str).tolist()
     if raw_data is None or raw_data.empty:
-        _log("[INFER] raw_data empty -> empty logs")
+        print("[INFER] raw_data empty -> empty logs")
         return {"logs": pd.DataFrame(columns=[
             "ticker","date","action","price","weight",
             "feature1","feature2","feature3","prob1","prob2","prob3"
@@ -94,7 +93,7 @@ def run_inference(
     df = df.rename(columns={c: c.lower() for c in df.columns})
     df = df[df["ticker"].astype(str).isin(tickers)]
     if df.empty:
-        _log("[INFER] 대상 종목 데이터 없음")
+        print("[INFER] 대상 종목 데이터 없음")
         return {"logs": pd.DataFrame(columns=[
             "ticker","date","action","price","weight",
             "feature1","feature2","feature3","prob1","prob2","prob3"
@@ -131,12 +130,12 @@ def run_inference(
 
             feats = build_features(ohlcv)
             if feats.empty:
-                _log(f"[INFER] {t} features empty -> skip")
+                print(f"[INFER] {t} features empty -> skip")
                 continue
 
             X_seq = _make_sequence(feats, model_feats, seq_len)
             if X_seq is None:
-                _log(f"[INFER] {t} 부족한 길이(seq_len={seq_len}) -> skip")
+                print(f"[INFER] {t} 부족한 길이(seq_len={seq_len}) -> skip")
                 continue
 
             X_scaled, _ = _scale_per_ticker(X_seq)
@@ -149,7 +148,7 @@ def run_inference(
                 buy_p, hold_p, sell_p = float(probs[0]), float(probs[1]), float(probs[2])
                 action = ["BUY","HOLD","SELL"][int(np.argmax(probs))]
             except Exception as e:
-                _log(f"[INFER][WARN] 예측 실패({t}) → 룰기반 fallback: {e}")
+                print(f"[INFER][WARN] 예측 실패({t}) → 룰기반 fallback: {e}")
                 recent = feats.iloc[-1]
                 rsi = float(recent["RSI"])
                 macd = float(recent["MACD"])
@@ -188,7 +187,7 @@ def run_inference(
                 "prob3": float(sell_p),
             })
         except Exception as e:
-            _log(f"[INFER][ERROR] {t}: {e}")
+            print(f"[INFER][ERROR] {t}: {e}")
             continue
 
     logs_df = pd.DataFrame(rows, columns=[
