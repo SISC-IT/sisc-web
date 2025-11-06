@@ -6,7 +6,6 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras import Model 
 
-
 from transformer.modules.models import build_transformer_classifier
 from transformer.modules.features import FEATURES, build_features
 
@@ -58,31 +57,17 @@ def run_inference(
     ※ 추론 전용 함수
     - 입력: 선정된 종목 목록(finder_df), OHLCV 원천(raw_data)
     - 처리: 피처→시퀀스→스케일링→모델 예측
-    - 출력: logs DataFrame (기존 포맷 유지)
-
-    Parameters
-    ----------
-    finder_df : DataFrame
-        ['ticker'] 컬럼 포함. 추론 대상 종목 목록.
-    raw_data : DataFrame
-        OHLCV 시계열. 필수 컬럼: ['ticker','open','high','low','close','volume', ('ts_local' or 'date')]
-    seq_len : int
-        모델 입력 시퀀스 길이.
-    pred_h : int
-        예측 지평 (현재 로깅 목적으로만 사용).
-    weights_path : str
-        학습된 가중치 파일 경로(.h5 또는 checkpoint).
-    run_date : str, optional
-        'YYYY-MM-DD'. 이 날짜(포함)까지의 데이터만 사용.
-    interval : str
-        '1d' 등. (로그 용도)
+    - 출력: logs DataFrame (feature_name1~3 + feature_score1~3 추가)
     """
     tickers = finder_df["ticker"].astype(str).tolist()
     if raw_data is None or raw_data.empty:
         print("[INFER] raw_data empty -> empty logs")
         return {"logs": pd.DataFrame(columns=[
             "ticker","date","action","price","weight",
-            "feature1","feature2","feature3","prob1","prob2","prob3"
+            "feature1","feature2","feature3",
+            "feature_name1","feature_name2","feature_name3",
+            "feature_score1","feature_score2","feature_score3",
+            "prob1","prob2","prob3"
         ])}
 
     df = raw_data.copy()
@@ -96,7 +81,10 @@ def run_inference(
         print("[INFER] 대상 종목 데이터 없음")
         return {"logs": pd.DataFrame(columns=[
             "ticker","date","action","price","weight",
-            "feature1","feature2","feature3","prob1","prob2","prob3"
+            "feature1","feature2","feature3",
+            "feature_name1","feature_name2","feature_name3",
+            "feature_score1","feature_score2","feature_score3",
+            "prob1","prob2","prob3"
         ])}
 
     # run_date 컷
@@ -113,6 +101,7 @@ def run_inference(
 
     df = df[df[ts_col] <= end_cut].sort_values(["ticker", ts_col]).reset_index(drop=True)
 
+    # 모델 입력 피처 목록 (CLOSE_RAW는 입력 제외)
     model_feats = [f for f in FEATURES if f != "CLOSE_RAW"]
     n_features = len(model_feats)
 
@@ -133,6 +122,7 @@ def run_inference(
                 print(f"[INFER] {t} features empty -> skip")
                 continue
 
+            # === 모델 입력 시퀀스 생성 ===
             X_seq = _make_sequence(feats, model_feats, seq_len)
             if X_seq is None:
                 print(f"[INFER] {t} 부족한 길이(seq_len={seq_len}) -> skip")
@@ -141,6 +131,7 @@ def run_inference(
             X_scaled, _ = _scale_per_ticker(X_seq)
             X_scaled = np.expand_dims(X_scaled, axis=0)  # (1, seq_len, n_features)
 
+            # === 모델 예측 ===
             try:
                 probs = model.predict(X_scaled, verbose=0)[0]
                 probs = np.clip(probs.astype(float), 1e-6, 1.0)
@@ -149,9 +140,9 @@ def run_inference(
                 action = ["BUY","HOLD","SELL"][int(np.argmax(probs))]
             except Exception as e:
                 print(f"[INFER][WARN] 예측 실패({t}) → 룰기반 fallback: {e}")
-                recent = feats.iloc[-1]
-                rsi = float(recent["RSI"])
-                macd = float(recent["MACD"])
+                recent_fb = feats.iloc[-1]
+                rsi = float(recent_fb.get("RSI", np.nan))
+                macd = float(recent_fb.get("MACD", np.nan))
                 if rsi < 30 and macd > 0:
                     action = "BUY"; buy_p, hold_p, sell_p = 0.65, 0.30, 0.05
                 elif rsi > 70 and macd < 0:
@@ -159,19 +150,55 @@ def run_inference(
                 else:
                     action = "HOLD"; buy_p, hold_p, sell_p = 0.33, 0.34, 0.33
 
-            # 가중치(비중) 산출 로직(간단 정책 유지)
+            # === 비중(가중치) 간단 정책 ===
             p_max = max(buy_p, hold_p, sell_p)
             confidence = float(np.clip((p_max - 1/3) * 1.5, 0.0, 1.0))
             ret = 0.0
-            if len(feats) > 2:
+            if len(feats) > 2 and "CLOSE_RAW" in feats.columns:
                 c_now = float(feats["CLOSE_RAW"].iloc[-1])
                 c_prev = float(feats["CLOSE_RAW"].iloc[-2])
                 if c_prev:
                     ret = (c_now / c_prev) - 1.0
             weight = float(np.clip(0.05 + confidence * 0.20 + abs(ret) * 0.05, 0.05, 0.30))
 
+            # === 최근값/가격 ===
             recent = feats.iloc[-1]
-            close_price = float(recent["CLOSE_RAW"])
+            close_price = float(recent.get("CLOSE_RAW", np.nan))
+
+            # === 상위 3개 피처 자동 선별 (히스토리 Min–Max 점수 기준) ===
+            candidate_cols = [c for c in FEATURES if c != "CLOSE_RAW"]
+            eps = 1e-12
+            scores = []  # (name, raw_value, norm_score)
+            for c in candidate_cols:
+                if c not in feats.columns:
+                    continue
+                series = feats[c].astype(float)
+                v = float(recent[c]) if pd.notna(recent[c]) else np.nan
+                if not series.notna().any():
+                    score = -np.inf
+                else:
+                    mn = float(np.nanmin(series.values))
+                    mx = float(np.nanmax(series.values))
+                    if np.isnan(v) or np.isnan(mn) or np.isnan(mx) or mx - mn < eps:
+                        score = -np.inf
+                    else:
+                        score = (v - mn) / (mx - mn + eps)  # 0~1
+                scores.append((c, v, score))
+
+            scores.sort(key=lambda x: x[2], reverse=True)
+            top3 = [item for item in scores if np.isfinite(item[2])][:3]
+
+            f1_name = top3[0][0] if len(top3) > 0 else None
+            f2_name = top3[1][0] if len(top3) > 1 else None
+            f3_name = top3[2][0] if len(top3) > 2 else None
+
+            f1_val = float(top3[0][1]) if len(top3) > 0 and top3[0][1] is not None else np.nan
+            f2_val = float(top3[1][1]) if len(top3) > 1 and top3[1][1] is not None else np.nan
+            f3_val = float(top3[2][1]) if len(top3) > 2 and top3[2][1] is not None else np.nan
+
+            f1_score = float(top3[0][2]) if len(top3) > 0 else np.nan
+            f2_score = float(top3[1][2]) if len(top3) > 1 else np.nan
+            f3_score = float(top3[2][2]) if len(top3) > 2 else np.nan
 
             rows.append({
                 "ticker": str(t),
@@ -179,9 +206,15 @@ def run_inference(
                 "action": action,
                 "price": close_price,
                 "weight": weight,
-                "feature1": float(recent["RSI"]),
-                "feature2": float(recent["MACD"]),
-                "feature3": float(recent["ATR"]),
+                "feature1": f1_val,
+                "feature2": f2_val,
+                "feature3": f3_val,
+                "feature_name1": f1_name,
+                "feature_name2": f2_name,
+                "feature_name3": f3_name,
+                "feature_score1": f1_score,
+                "feature_score2": f2_score,
+                "feature_score3": f3_score,
                 "prob1": float(buy_p),
                 "prob2": float(hold_p),
                 "prob3": float(sell_p),
@@ -192,6 +225,49 @@ def run_inference(
 
     logs_df = pd.DataFrame(rows, columns=[
         "ticker","date","action","price","weight",
-        "feature1","feature2","feature3","prob1","prob2","prob3"
+        "feature1","feature2","feature3",
+        "feature_name1","feature_name2","feature_name3",
+        "feature_score1","feature_score2","feature_score3",
+        "prob1","prob2","prob3"
     ])
     return {"logs": logs_df}
+
+# ===== XAI 어댑터: logs_df -> decisions(list[dict]) =====
+def logs_to_xai_decisions(logs_df: pd.DataFrame) -> List[Dict[str, object]]:
+    """
+    XAI 쪽 generate_report_from_yf(decision, evidence, api_key) 포맷으로 변환.
+    decision 예시:
+    {
+        "ticker": "AAPL",
+        "date": "2024-12-16",
+        "signal": "BUY",
+        "price": 453.72,
+        "evidence": [
+            {"feature_name": "MA_5", "contribution": 0.0186},
+            ...
+        ]
+    }
+    """
+    if logs_df is None or logs_df.empty:
+        return []
+
+    decisions: List[Dict[str, object]] = []
+    for _, row in logs_df.iterrows():
+        # evidence 구성 (이름 + 정규화 점수 → contribution)
+        evidence = []
+        for i in (1, 2, 3):
+            name = row.get(f"feature_name{i}")
+            score = row.get(f"feature_score{i}")  # 0~1
+            if pd.isna(name):
+                continue
+            contrib = None if pd.isna(score) else float(score)
+            evidence.append({"feature_name": str(name), "contribution": contrib})
+
+        decisions.append({
+            "ticker": row.get("ticker"),
+            "date": str(row.get("date")),
+            "signal": row.get("action"),  # action -> signal
+            "price": float(row.get("price")) if pd.notna(row.get("price")) else None,
+            "evidence": evidence
+        })
+    return decisions
