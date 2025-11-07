@@ -89,11 +89,14 @@ public class PostServiceImpl implements PostService {
 
     // 기존 파일 조회 및 삭제
     List<PostAttachment> existingAttachments = postAttachmentRepository.findAllByPostPostId(postId);
+
+    // DB에서 첨부파일 정보 일괄 삭제
+    postAttachmentRepository.deleteAllByPostPostId(postId);
+
+    // 물리적 파일 삭제
     for (PostAttachment attachment : existingAttachments) {
       fileUploadService.delete(attachment.getSavedFilename());
     }
-    // DB에서 첨부파일 정보 일괄 삭제
-    postAttachmentRepository.deleteAllByPostPostId(postId);
 
     // 새 파일 저장
     List<MultipartFile> files = request.getFiles();
@@ -131,13 +134,13 @@ public class PostServiceImpl implements PostService {
     // DB에서 첨부파일 정보 조회
     List<PostAttachment> attachments = postAttachmentRepository.findAllByPostPostId(postId);
 
+    // DB에서 첨부파일 정보 삭제
+    postAttachmentRepository.deleteAllByPostPostId(postId);
+
     // 물리적 파일 삭제
     for (PostAttachment attachment : attachments) {
       fileUploadService.delete(attachment.getSavedFilename());
     }
-
-    // DB에서 첨부파일 정보 삭제
-    postAttachmentRepository.deleteAllByPostPostId(postId);
 
     // 댓글 삭제
     commentRepository.deleteAllByPostPostId(post.getPostId());
