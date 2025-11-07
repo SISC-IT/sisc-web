@@ -54,4 +54,7 @@ public class Post extends BasePostgresEntity {
   // 댓글 수
   @Builder.Default
   private Integer commentCount = 0;
+
+  @Version
+  private Long version;
 }

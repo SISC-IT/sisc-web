@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
+import org.sejongisc.backend.user.entity.User;
 
 @Entity
 @Getter
@@ -19,9 +20,9 @@ public class PostLike extends BasePostgresEntity {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID postLikeId;
 
-  @Column(nullable = false)
-  private UUID postId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  private Post post;
 
-  @Column(nullable = false)
-  private UUID userId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  private User user;
 }

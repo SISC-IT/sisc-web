@@ -10,12 +10,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface PostLikeRepository extends JpaRepository<PostLike, UUID> {
 
-  boolean existsByUserIdAndPostId(UUID userId, UUID postId);
+  boolean existsByUserUserIdAndPostPostId(UUID userId, UUID postId);
 
-  Optional<PostLike> findByPostIdAndUserId(UUID postId, UUID userId);
+  Optional<PostLike> findByPostPostIdAndUserUserId(UUID postId, UUID userId);
 
-  List<PostLike> findAllByPostId(UUID postId);
+  List<PostLike> findAllByPostPostId(UUID postId);
 
   @Transactional
-  void deleteAllByPostId(UUID postId);
+  void deleteAllByPostPostId(UUID postId);
 }

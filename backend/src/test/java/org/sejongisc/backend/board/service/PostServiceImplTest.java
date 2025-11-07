@@ -109,16 +109,18 @@ class PostServiceImplTest {
     when(postRepository.findById(postId)).thenReturn(Optional.of(existing));
     when(fileUploadService.store(any(MultipartFile.class))).thenReturn("new.txt");
     when(fileUploadService.getRootLocation()).thenReturn(java.nio.file.Path.of("/data/upload"));
-    when(postAttachmentRepository.findAllByPostId(postId))
+    when(postAttachmentRepository.findAllByPostPostId(postId))
         .thenReturn(List.of(PostAttachment.builder()
-            .postId(postId).savedFilename("old.txt").build()));
+            .post(existing).savedFilename("old.txt").build()));
 
     postService.updatePost(req, postId, userId);
 
     verify(fileUploadService).delete("old.txt");
-    verify(postAttachmentRepository).deleteAllByPostId(postId);
+    verify(postAttachmentRepository).deleteAllByPostPostId(postId);
     verify(postAttachmentRepository).save(argThat(a ->
-        a.getPostId().equals(postId) && a.getSavedFilename().equals("new.txt")));
+        a.getPost().getPostId().equals(postId) && a.getSavedFilename().equals("new.txt")));
+    assertThat(existing.getTitle()).isEqualTo("제목");
+    assertThat(existing.getContent()).isEqualTo("내용");
   }
 
   @Test
@@ -131,7 +133,7 @@ class PostServiceImplTest {
 
     assertThatThrownBy(() -> postService.updatePost(new PostRequest(), postId, userId))
         .isInstanceOf(CustomException.class)
-        .hasMessage("게시물 수정/삭제 권한이 없습니다.");
+        .hasMessageContaining(ErrorCode.INVALID_POST_OWNER.getMessage());
   }
 
   @Test
@@ -141,73 +143,133 @@ class PostServiceImplTest {
     Post post = Post.builder().postId(postId).user(user).build();
 
     when(postRepository.findById(postId)).thenReturn(Optional.of(post));
-    when(postAttachmentRepository.findAllByPostId(postId))
+    when(postAttachmentRepository.findAllByPostPostId(postId))
         .thenReturn(List.of(
-            PostAttachment.builder().postId(postId).savedFilename("a.txt").build(),
-            PostAttachment.builder().postId(postId).savedFilename("b.txt").build()
+            PostAttachment.builder().post(post).savedFilename("a.txt").build(),
+            PostAttachment.builder().post(post).savedFilename("b.txt").build()
         ));
 
     postService.deletePost(postId, userId);
 
     verify(fileUploadService).delete("a.txt");
     verify(fileUploadService).delete("b.txt");
-    verify(postAttachmentRepository).deleteAllByPostId(postId);
-    verify(commentRepository).deleteAllByPostId(postId);
-    verify(postLikeRepository).deleteAllByPostId(postId);
-    verify(postBookmarkRepository).deleteAllByPostId(postId);
+    verify(postAttachmentRepository).deleteAllByPostPostId(postId);
+    verify(commentRepository).deleteAllByPostPostId(postId);
+    verify(postLikeRepository).deleteAllByPostPostId(postId);
+    verify(postBookmarkRepository).deleteAllByPostPostId(postId);
     verify(postRepository).delete(post);
   }
 
   @Test
-  @DisplayName("좋아요 토글 - 새로 추가")
-  void toggleLike_add() {
+  @DisplayName("게시글 삭제 - 소유자 아님 -> 예외")
+  void deletePost_notOwner_throws() {
     UUID postId = UUID.randomUUID();
-    Post post = Post.builder().postId(postId).user(user).likeCount(0).build();
-    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
-    when(postLikeRepository.findByPostIdAndUserId(postId, userId)).thenReturn(Optional.empty());
+    User other = User.builder().userId(UUID.randomUUID()).build();
+    Post existing = Post.builder().postId(postId).user(other).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(existing));
 
-    postService.toggleLike(postId, userId);
-
-    verify(postLikeRepository).save(argThat(l ->
-        l.getPostId().equals(postId) && l.getUserId().equals(userId)));
-    assertThat(post.getLikeCount()).isEqualTo(1);
+    assertThatThrownBy(() -> postService.deletePost(postId, userId))
+        .isInstanceOf(CustomException.class)
+        .hasMessageContaining(ErrorCode.INVALID_POST_OWNER.getMessage());
   }
 
   @Test
-  @DisplayName("좋아요 토글 - 취소")
-  void toggleLike_remove() {
-    UUID postId = UUID.randomUUID();
-    Post post = Post.builder().postId(postId).user(user).likeCount(2).build();
-    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
-    PostLike like = PostLike.builder().postId(postId).userId(userId).build();
-    when(postLikeRepository.findByPostIdAndUserId(postId, userId)).thenReturn(Optional.of(like));
+  @DisplayName("게시글 목록 조회 - 매핑 검사")
+  void getPosts_mapping() {
+    Post p = Post.builder()
+        .postId(UUID.randomUUID())
+        .user(user)
+        .boardType(BoardType.GENERAL)
+        .title("t")
+        .content("c")
+        .postType(PostType.NORMAL)
+        .bookmarkCount(1)
+        .likeCount(2)
+        .commentCount(3)
+        .build();
 
-    postService.toggleLike(postId, userId);
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    when(postRepository.findAllByBoardType(eq(BoardType.GENERAL), pageableCaptor.capture()))
+        .thenReturn(new PageImpl<>(List.of(p)));
 
-    verify(postLikeRepository).delete(like);
-    assertThat(post.getLikeCount()).isEqualTo(1);
+    Page<PostResponse> page = postService.getPosts(BoardType.GENERAL, 0, 20);
+
+    assertThat(page.getContent()).hasSize(1);
+    PostResponse pr = page.getContent().get(0);
+    assertThat(pr.getTitle()).isEqualTo("t");
+    assertThat(pr.getLikeCount()).isEqualTo(2);
+
+    assertThat(pageableCaptor.getValue().getSort())
+        .isEqualTo(Sort.by(Sort.Direction.DESC, "createdDate"));
   }
 
   @Test
-  @DisplayName("북마크 토글 - 추가/취소")
-  void toggleBookmark_add_and_remove() {
-    UUID postId = UUID.randomUUID();
-    Post post = Post.builder().postId(postId).user(user).bookmarkCount(0).build();
-    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+  @DisplayName("게시글 검색 - 매핑 검사")
+  void searchPosts_mapping() {
+    Post p = Post.builder()
+        .postId(UUID.randomUUID())
+        .user(user)
+        .boardType(BoardType.GENERAL)
+        .title("find me")
+        .content("c")
+        .postType(PostType.NORMAL)
+        .build();
+    String keyword = "find";
 
-    when(postBookmarkRepository.findByPostIdAndUserId(postId, userId)).thenReturn(Optional.empty());
-    postService.toggleBookmark(postId, userId);
-    verify(postBookmarkRepository).save(argThat(b ->
-        b.getPostId().equals(postId) && b.getUserId().equals(userId)));
-    assertThat(post.getBookmarkCount()).isEqualTo(1);
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    when(postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+        eq(keyword), eq(keyword), pageableCaptor.capture()))
+        .thenReturn(new PageImpl<>(List.of(p)));
 
-    reset(postBookmarkRepository);
-    when(postBookmarkRepository.findByPostIdAndUserId(postId, userId))
-        .thenReturn(Optional.of(PostBookmark.builder().postId(postId).userId(userId).build()));
-    postService.toggleBookmark(postId, userId);
-    verify(postBookmarkRepository).delete(any(PostBookmark.class));
-    assertThat(post.getBookmarkCount()).isEqualTo(0);
+    Page<PostResponse> page = postService.searchPosts(keyword, 0, 20);
+
+    assertThat(page.getContent()).hasSize(1);
+    assertThat(page.getContent().get(0).getTitle()).isEqualTo("find me");
+    assertThat(pageableCaptor.getValue().getSort())
+        .isEqualTo(Sort.by(Sort.Direction.DESC, "createdDate"));
   }
+
+  @Test
+  @DisplayName("게시글 상세 조회 - 댓글(페이징)과 첨부파일 포함")
+  void getPostDetail_withCommentsAndAttachments() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder()
+        .postId(postId).user(user).title("detail").content("detail content")
+        .build();
+
+    Comment comment = Comment.builder().commentId(UUID.randomUUID()).post(post).user(user)
+        .content("comment 1").build();
+    Page<Comment> commentPage = new PageImpl<>(List.of(comment));
+
+    PostAttachment attachment = PostAttachment.builder()
+        .postAttachmentId(UUID.randomUUID()).post(post).savedFilename("file.txt").originalFilename("orig.txt")
+        .build();
+    List<PostAttachment> attachmentList = List.of(attachment);
+
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    when(commentRepository.findAllByPostPostId(eq(postId), pageableCaptor.capture()))
+        .thenReturn(commentPage);
+    when(postAttachmentRepository.findAllByPostPostId(postId))
+        .thenReturn(attachmentList);
+
+    PostResponse response = postService.getPostDetail(postId, 0, 10);
+
+    assertThat(response.getPostId()).isEqualTo(postId);
+    assertThat(response.getTitle()).isEqualTo("detail");
+
+    assertThat(pageableCaptor.getValue().getSort())
+        .isEqualTo(Sort.by(Sort.Direction.ASC, "createdDate"));
+
+    assertThat(response.getComments()).isNotNull();
+    assertThat(response.getComments().getTotalElements()).isEqualTo(1);
+    assertThat(response.getComments().getContent().get(0).getContent()).isEqualTo("comment 1");
+
+    assertThat(response.getAttachments()).isNotNull();
+    assertThat(response.getAttachments()).hasSize(1);
+    assertThat(response.getAttachments().get(0).getOriginalFilename()).isEqualTo("orig.txt");
+  }
+
 
   @Test
   @DisplayName("댓글 생성 - 댓글수 증가")
@@ -229,12 +291,47 @@ class PostServiceImplTest {
   }
 
   @Test
+  @DisplayName("댓글 수정 - 성공")
+  void updateComment_success() {
+    UUID commentId = UUID.randomUUID();
+    Comment comment = Comment.builder().commentId(commentId).user(user).content("old content")
+        .build();
+    CommentRequest req = new CommentRequest();
+    req.setContent("new content");
+
+    when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+
+    postService.updateComment(req, commentId, userId);
+
+    assertThat(comment.getContent()).isEqualTo("new content");
+  }
+
+  @Test
+  @DisplayName("댓글 수정 - 소유자 아님 -> 예외")
+  void updateComment_notOwner_throws() {
+    UUID commentId = UUID.randomUUID();
+    User other = User.builder().userId(UUID.randomUUID()).build();
+    Comment comment = Comment.builder().commentId(commentId).user(other).content("old content")
+        .build();
+    CommentRequest req = new CommentRequest();
+    req.setContent("new content");
+
+    when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+
+    assertThatThrownBy(() -> postService.updateComment(req, commentId, userId))
+        .isInstanceOf(CustomException.class)
+        .hasMessageContaining(ErrorCode.INVALID_COMMENT_OWNER.getMessage());
+  }
+
+
+  @Test
   @DisplayName("댓글 삭제 - 작성자 또는 관리자만 가능, 댓글수 감소")
   void deleteComment_ownerOrAdmin() {
     UUID commentId = UUID.randomUUID();
     UUID postId = UUID.randomUUID();
     Post post = Post.builder().postId(postId).user(user).commentCount(3).build();
-    Comment comment = Comment.builder().commentId(commentId).postId(postId).user(user).content("c").build();
+    Comment comment = Comment.builder().commentId(commentId).post(post).user(user).content("c")
+        .build();
 
     when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -246,43 +343,98 @@ class PostServiceImplTest {
 
     reset(commentRepository, userRepository, postRepository);
     User admin = User.builder().userId(UUID.randomUUID()).role(Role.PRESIDENT).build();
-    Comment others = Comment.builder().commentId(commentId).postId(postId)
-        .user(User.builder().userId(UUID.randomUUID()).role(Role.TEAM_MEMBER).build())
+    User otherUser = User.builder().userId(UUID.randomUUID()).role(Role.TEAM_MEMBER).build();
+    Comment othersComment = Comment.builder().commentId(commentId).post(post)
+        .user(otherUser)
         .content("c").build();
 
-    when(commentRepository.findById(commentId)).thenReturn(Optional.of(others));
+    when(commentRepository.findById(commentId)).thenReturn(Optional.of(othersComment));
     when(userRepository.findById(admin.getUserId())).thenReturn(Optional.of(admin));
     when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
     post.setCommentCount(5);
     postService.deleteComment(commentId, admin.getUserId());
-    verify(commentRepository).delete(others);
+    verify(commentRepository).delete(othersComment);
     assertThat(post.getCommentCount()).isEqualTo(4);
   }
 
   @Test
-  @DisplayName("게시글 목록 조회 - 매핑 검사")
-  void getPosts_mapping() {
-    Post p = Post.builder()
-        .postId(UUID.randomUUID())
-        .user(user)
-        .boardType(BoardType.GENERAL)
-        .title("t")
-        .content("c")
-        .postType(PostType.NORMAL)
-        .bookmarkCount(1)
-        .likeCount(2)
-        .commentCount(3)
-        .build();
+  @DisplayName("댓글 삭제 - 소유자/관리자 아님 -> 예외")
+  void deleteComment_notOwnerOrAdmin_throws() {
+    UUID commentId = UUID.randomUUID();
+    UUID postId = UUID.randomUUID();
+    User other = User.builder().userId(UUID.randomUUID()).role(Role.TEAM_MEMBER).build();
+    Post post = Post.builder().postId(postId).user(other).commentCount(1).build();
+    Comment comment = Comment.builder().commentId(commentId).post(post).user(other).build();
 
-    when(postRepository.findAllByBoardType(eq(BoardType.GENERAL), any(Pageable.class)))
-        .thenReturn(new PageImpl<>(List.of(p)));
+    when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-    Page<PostResponse> page = postService.getPosts(BoardType.GENERAL, 0, 20);
+    assertThatThrownBy(() -> postService.deleteComment(commentId, userId))
+        .isInstanceOf(CustomException.class)
+        .hasMessageContaining(ErrorCode.INVALID_COMMENT_OWNER.getMessage());
 
-    assertThat(page.getContent()).hasSize(1);
-    PostResponse pr = page.getContent().get(0);
-    assertThat(pr.getTitle()).isEqualTo("t");
-    assertThat(pr.getLikeCount()).isEqualTo(2);
+    verify(postRepository, never()).findById(any());
+    assertThat(post.getCommentCount()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("좋아요 토글 - 새로 추가")
+  void toggleLike_add() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).likeCount(0).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId))
+        .thenReturn(Optional.empty());
+
+    postService.toggleLike(postId, userId);
+
+    verify(postLikeRepository).save(argThat(l ->
+        l.getPost().getPostId().equals(postId) && l.getUser().getUserId().equals(userId)));
+    assertThat(post.getLikeCount()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("좋아요 토글 - 취소")
+  void toggleLike_remove() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).likeCount(2).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+    PostLike like = PostLike.builder().post(post).user(user).build();
+    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId))
+        .thenReturn(Optional.of(like));
+
+    postService.toggleLike(postId, userId);
+
+    verify(postLikeRepository).delete(like);
+    assertThat(post.getLikeCount()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("북마크 토글 - 추가/취소")
+  void toggleBookmark_add_and_remove() {
+    UUID postId = UUID.randomUUID();
+    Post post = Post.builder().postId(postId).user(user).bookmarkCount(0).build();
+    when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+    when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+    when(postBookmarkRepository.findByPostPostIdAndUserUserId(postId, userId))
+        .thenReturn(Optional.empty());
+    postService.toggleBookmark(postId, userId);
+    verify(postBookmarkRepository).save(argThat(b ->
+        b.getPost().getPostId().equals(postId) && b.getUser().getUserId().equals(userId)));
+    assertThat(post.getBookmarkCount()).isEqualTo(1);
+
+    reset(postBookmarkRepository);
+    PostBookmark existingBookmark = PostBookmark.builder().post(post).user(user).build();
+    when(postBookmarkRepository.findByPostPostIdAndUserUserId(postId, userId))
+        .thenReturn(Optional.of(existingBookmark));
+
+    postService.toggleBookmark(postId, userId);
+
+    verify(postBookmarkRepository).delete(existingBookmark);
+    assertThat(post.getBookmarkCount()).isEqualTo(0);
   }
 }

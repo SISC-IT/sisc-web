@@ -20,8 +20,8 @@ public class Comment extends BasePostgresEntity {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID commentId;
 
-  @Column(nullable = false)
-  private UUID postId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  private Post post;
 
   @ManyToOne(fetch = FetchType.LAZY)
   private User user;

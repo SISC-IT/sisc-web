@@ -11,12 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
-  List<Comment> findByPostId(UUID postId);
+  List<Comment> findByPostPostId(UUID postId);
 
-  List<Comment> findAllByPostId(UUID postId);
+  List<Comment> findAllByPostPostId(UUID postId);
 
-  Page<Comment> findAllByPostId(UUID postId, Pageable pageable);
+  Page<Comment> findAllByPostPostId(UUID postId, Pageable pageable);
 
   @Transactional
-  void deleteAllByPostId(UUID postId);
+  void deleteAllByPostPostId(UUID postId);
 }

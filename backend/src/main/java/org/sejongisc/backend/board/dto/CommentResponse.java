@@ -27,7 +27,7 @@ public class CommentResponse {
   public static CommentResponse of(Comment comment) {
     return CommentResponse.builder()
         .commentId(comment.getCommentId())
-        .postId(comment.getPostId())
+        .postId(comment.getPost().getPostId())
         .content(comment.getContent())
         .createdDate(comment.getCreatedDate())
         .updatedDate(comment.getUpdatedDate())

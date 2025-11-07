@@ -10,12 +10,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface PostBookmarkRepository extends JpaRepository<PostBookmark, UUID> {
 
-  boolean existsByUserIdAndPostId(UUID userId, UUID postId);
+  boolean existsByUserUserIdAndPostPostId(UUID userId, UUID postId);
 
-  Optional<PostBookmark> findByPostIdAndUserId(UUID postId, UUID userId);
+  Optional<PostBookmark> findByPostPostIdAndUserUserId(UUID postId, UUID userId);
 
-  List<PostBookmark> findAllByPostId(UUID postId);
+  List<PostBookmark> findAllByPostPostId(UUID postId);
 
   @Transactional
-  void deleteAllByPostId(UUID postId);
+  void deleteAllByPostPostId(UUID postId);
 }
