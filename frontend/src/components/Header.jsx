@@ -26,7 +26,7 @@ const Header = ({ onToggleSidebar, isOpen }) => {
         <button className={styles.login} onClick={() => nav('/login')}>
           로그인
         </button>
-        <button className={styles.signUp} onClick={() => nav('signup')}>
+        <button className={styles.signUp} onClick={() => nav('/signup')}>
           회원가입
         </button>
       </div>
