@@ -21,6 +21,11 @@
   padding: 72px 0px;
   gap: 16px;
 }
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
 .settings {
   grid-area: settings;
@@ -55,18 +60,25 @@
 }
 
 .header h1 {
-  margin-top: 0px;
+  color: var(--T2, #171717);
+  font-family: Pretendard;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 146%; /* 29.2px */
 }
-
 .inputGroup {
   display: grid;
   gap: 6px;
   margin-bottom: 14px;
 }
 .inputGroup .label {
+  color: #000;
+  font-family: Inter;
   font-size: 14px;
-  color: #111827;
-  font-weight: 600;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
 }
 
 input {
@@ -84,8 +96,7 @@ input {
   outline: none;
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    background 0.15s ease;
+    box-shadow 0.15s ease;
 }
 input::placeholder {
   color: #9ca3af;

@@ -2,7 +2,7 @@
   border-radius: 12px;
   width: 335px;
   background: #fafbfc;
-  padding: 32px 20px;
+  padding: 18px 20px;
 }
 
 .sessionSelect {
@@ -33,11 +33,10 @@
 
 .table thead th {
   text-align: left;
+  border-bottom: 1px solid var(--line);
   color: var(--text);
   padding: 8px 7px;
-  border-bottom: 1px solid var(--line);
   white-space: nowrap;
-  color: #000;
   font-family: Inter;
   font-size: 16px;
   font-style: normal;
@@ -47,13 +46,10 @@
 .row {
   margin-bottom: 10px;
 }
-.table thead th,
-.table tbody td {
-  text-align: center;
-}
 .table tbody td {
   border-bottom: 1px solid var(--line);
   padding: 10px 0px;
+  text-align: center;
 }
 
 .table tbody td:nth-child(2) {

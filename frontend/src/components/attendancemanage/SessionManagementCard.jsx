@@ -8,30 +8,29 @@ const SessionManagementCard = ({
   selectedRound,
   setSelectedRound,
 }) => {
-  const currendSession = sessions.find(
+  const currentSession = sessions.find(
     (session) => session.id === selectedSessionId
   );
-  const currentDisplayedRounds = currendSession ? currendSession.round : [];
+  const currentDisplayedRounds = currentSession ? currentSession.rounds : [];
 
   return (
     <div className={styles.sessionManagementCardContainer}>
       <div className={commonStyles.header}>
-        <h1 className={commonStyles.title}>세션 관리</h1>
+        <h1>세션 관리</h1>
       </div>
       <div className={styles.selectGroup}>
         <select
           id="sessionSelect"
           className={styles.sessionSelect}
           value={selectedSessionId || ''}
-          onChange={(e) => setSelectedSessionId(e.target.value)}
+          onChange={(e) => {
+            setSelectedSessionId(e.target.value);
+            setSelectedRound(null);
+          }}
         >
-          {!selectedSessionId ? (
-            <option value="" disabled>
-              세션을 선택하세요
-            </option>
-          ) : (
-            ' '
-          )}
+          <option value="" disabled>
+            ---------- 세션을 선택하세요 ----------
+          </option>
           {sessions.map((session) => (
             <option key={session.id} value={session.id}>
               {session.title}

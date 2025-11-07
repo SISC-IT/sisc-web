@@ -33,7 +33,6 @@
   padding: 8px 7px;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
-  color: #000;
   font-family: Inter;
   font-size: 16px;
   font-style: normal;
@@ -43,7 +42,9 @@
 .row {
   margin-bottom: 10px;
 }
-.table thead th,
-.table tbody td {
-  text-align: left;
+
+.noData {
+  text-align: center;
+  padding: 20px;
+  color: #888;
 }

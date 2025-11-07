@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useImmer } from 'use-immer';
+import { v4 as uuid } from 'uuid';
+
 import styles from './AttendanceManage.module.css';
 
 import SessionSettingCard from '../components/attendancemanage/SessionSettingCard';
@@ -9,7 +12,7 @@ const sessionData = [
   {
     id: 'session-1',
     title: '금융 IT팀 세션',
-    round: [
+    rounds: [
       {
         id: 'round-1',
         date: '2025-11-06',
@@ -39,39 +42,52 @@ const sessionData = [
 ];
 
 const AttendanceManage = () => {
-  const [sessions, setSessions] = useState(sessionData);
+  const [sessions, setSessions] = useImmer(sessionData);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [selectedRound, setSelectedRound] = useState(null);
 
+  // const currentSession = useMemo(
+  //   () => sessions.find((s) => s.id === selectedSessionId) || null,
+  //   [sessions, selectedSessionId]
+  // );
+  // const currentParticipants = useMemo(() => {
+  //   if (!currentSession) return [];
+
+  //   const currentRound = currentSession.rounds.find((round) => {
+  //     round.id === selectedRound;
+  //   });
+
+  //   return currentRound ? currentRound.participants : [];
+  // }, [currentSession, selectedRound]);
+
   const handleAttendanceChange = (memberId, newAttendance) => {
-    const newSessions = sessions.map((session) => {
-      if (session.id === selectedSessionId) {
-        const newRounds = session.round.map((round) => {
-          if (round.id === selectedRound) {
-            const newParticipants = round.participants.map((participant) => {
-              if (participant.memberId === memberId) {
-                return { ...participant, attendance: newAttendance };
-              }
-              return participant;
-            });
-            return { ...round, participants: newParticipants };
-          }
-          return round;
-        });
-        return { ...session, round: newRounds };
-      }
-      return session;
+    setSessions((draft) => {
+      const session = draft.find((s) => s.id === selectedSessionId);
+      if (!session) return;
+
+      const round = session.rounds.find((r) => r.id === selectedRound);
+      if (!round) return;
+
+      const participant = round.participants.find(
+        (p) => p.memberId === memberId
+      );
+      if (!participant) return;
+
+      // 통과 시 출석 상태 업데이트
+      participant.attendance = newAttendance;
     });
-    setSessions(newSessions);
   };
 
   const handleAddSession = (sessionTitle, roundDetails) => {
+    const sessionId = `session-${uuid()}-${Math.random().toString(36)}`;
+    const roundId = `round-${uuid()}-${Math.random().toString(5)}`;
+
     const newSession = {
-      id: `session-${Date.now()}`,
+      id: sessionId,
       title: sessionTitle,
-      round: [
+      rounds: [
         {
-          id: `round-${Date.now()}`,
+          id: roundId,
           date: new Date().toISOString().slice(0, 10),
           startTime: `${roundDetails.hh}:${roundDetails.mm}:${roundDetails.ss}`,
           availableMinutes: parseInt(roundDetails.availableTimeMm, 10),
@@ -80,21 +96,27 @@ const AttendanceManage = () => {
         },
       ],
     };
+
     setSessions([...sessions, newSession]);
   };
+
+  const selectedSession = sessions.find(
+    (session) => session.id === selectedSessionId
+  );
+
+  const selectedRoundData = selectedSession?.rounds.find(
+    (round) => round.id === selectedRound
+  );
+
+  const participants = selectedRoundData?.participants || [];
 
   return (
     <div className={styles.attendanceManageContainer}>
       <div className={styles.mainTitle}>출석관리(담당자)</div>
       <div className={styles.cardLayout}>
         <div className={styles.leftColumn}>
-          <SessionSettingCard
-            className={styles.settings}
-            styles={styles}
-            onAddSession={handleAddSession}
-          />
+          <SessionSettingCard styles={styles} onAddSession={handleAddSession} />
           <SessionManagementCard
-            className={styles.session}
             styles={styles}
             sessions={sessions}
             selectedSessionId={selectedSessionId}
@@ -104,12 +126,10 @@ const AttendanceManage = () => {
           />
         </div>
         <AttendanceManagementCard
-          className={styles.roster}
           styles={styles}
-          sessions={sessions}
-          selectedSessionId={selectedSessionId}
           selectedRound={selectedRound}
           onAttendanceChange={handleAttendanceChange}
+          participants={participants}
         />
       </div>
     </div>

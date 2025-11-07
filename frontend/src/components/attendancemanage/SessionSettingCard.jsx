@@ -8,37 +8,46 @@ const SessionSettingCard = ({ styles: commonStyles, onAddSession }) => {
   const [ss, setSs] = useState('');
   const [availableTimeMm, setAvailableTimeMm] = useState('');
 
-  const handleCreateClick = () => {
-    // 1. 세션 이름 검사
-    if (!sessionTitle.trim()) {
+  const isFormValid = (title, hour, minute, second, availableMinute) => {
+    if (!title) {
       alert('세션 이름을 입력해주세요.');
-      return;
+      return false;
     }
+    if (isNaN(hour) || hour < 0 || hour > 23) {
+      alert('출석 시작 시간(시)은 0-23 사이의 숫자로 입력해주세요.');
+      return false;
+    }
+    if (isNaN(minute) || minute < 0 || minute > 59) {
+      alert('출석 시작 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
+      return false;
+    }
+    if (isNaN(second) || second < 0 || second > 59) {
+      alert('출석 시작 시간(초)은 0-59 사이의 숫자로 입력해주세요.');
+      return false;
+    }
+    if (isNaN(availableMinute) || availableMinute < 0 || availableMinute > 59) {
+      alert('출석 가능 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
+      return false;
+    }
+    return true;
+  };
 
-    // 2. 시간 값 숫자 및 범위 검사
+  const handleCreateClick = () => {
+    const title = sessionTitle.trim();
     const hour = parseInt(hh, 10);
     const minute = parseInt(mm, 10);
     const second = parseInt(ss, 10);
     const availableMinute = parseInt(availableTimeMm, 10);
 
-    if (isNaN(hour) || hour < 0 || hour > 23) {
-      alert('출석 시작 시간(시)은 0-23 사이의 숫자로 입력해주세요.');
-      return;
-    }
-    if (isNaN(minute) || minute < 0 || minute > 59) {
-      alert('출석 시작 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
-      return;
-    }
-    if (isNaN(second) || second < 0 || second > 59) {
-      alert('출석 시작 시간(초)은 0-59 사이의 숫자로 입력해주세요.');
-      return;
-    }
-    if (isNaN(availableMinute) || availableMinute < 0 || availableMinute > 59) {
-      alert('출석 가능 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
-      return;
-    }
+    // 유효성 검사
+    if (!isFormValid(title, hour, minute, second, availableMinute)) return;
 
-    onAddSession(sessionTitle, { hh, mm, ss, availableTimeMm });
+    onAddSession(sessionTitle, {
+      hh: hh.padStart(2, '0'),
+      mm: mm.padStart(2, '0'),
+      ss: ss.padStart(2, '0'),
+      availableTimeMm: availableMinute,
+    });
 
     // 입력 창 초기화
     setSessionTitle('');
@@ -51,7 +60,7 @@ const SessionSettingCard = ({ styles: commonStyles, onAddSession }) => {
   return (
     <div className={styles.SessionSettingCardContainer}>
       <header className={commonStyles.header}>
-        <h1 className={commonStyles.title}>세션 설정</h1>
+        <h1>세션 설정</h1>
       </header>
       <div className={styles.form}>
         <div className={commonStyles.inputGroup}>

@@ -2,25 +2,14 @@ import styles from './AttendanceManagementCard.module.css';
 
 const AttendanceManagementCard = ({
   styles: commonStyles,
-  sessions,
-  selectedSessionId,
   selectedRound,
   onAttendanceChange,
+  participants,
 }) => {
-  const selectedSession = sessions.find(
-    (session) => session.id === selectedSessionId
-  );
-
-  const selectedRoundData = selectedSession?.round.find(
-    (round) => round.id === selectedRound
-  );
-
-  const participants = selectedRoundData?.participants || [];
-
   return (
     <div className={styles.attendanceManagementCardContainer}>
       <header className={commonStyles.header}>
-        <h1 className={commonStyles.title}>출석 관리</h1>
+        <h1>출석 관리</h1>
       </header>
       <div className={styles.tableGroup}>
         <table className={styles.table} role="grid">
@@ -33,30 +22,39 @@ const AttendanceManagementCard = ({
             </tr>
           </thead>
           <tbody>
-            {participants.length > 0
-              ? participants.map((participant) => (
-                  <tr key={participant.memberId}>
-                    <td>{participant.name}</td>
-                    <td>{participant.attendance}</td>
-                    <td>
-                      <select
-                        className={styles.attendanceSelect}
-                        value={participant.attendance}
-                        onChange={(e) =>
-                          onAttendanceChange(
-                            participant.memberId,
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value="출석">출석</option>
-                        <option value="결석">결석</option>
-                      </select>
-                    </td>
-                    <td>-</td>
-                  </tr>
-                ))
-              : []}
+            {!selectedRound ? (
+              <tr>
+                <td colSpan="4" className={styles.noData}>
+                  회차를 선택해주세요.
+                </td>
+              </tr>
+            ) : participants.length > 0 ? (
+              participants.map((participant) => (
+                <tr key={participant.memberId}>
+                  <td>{participant.name}</td>
+                  <td>{participant.attendance}</td>
+                  <td>
+                    <select
+                      className={styles.attendanceSelect}
+                      value={participant.attendance}
+                      onChange={(e) =>
+                        onAttendanceChange(participant.memberId, e.target.value)
+                      }
+                    >
+                      <option value="출석">출석</option>
+                      <option value="결석">결석</option>
+                    </select>
+                  </td>
+                  <td>-</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" className={styles.noData}>
+                  참가자가 없습니다.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
