@@ -1,8 +1,12 @@
 package org.sejongisc.backend.user.service;
 
 
+import org.sejongisc.backend.auth.service.EmailService;
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
+import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
+import org.sejongisc.backend.user.util.PasswordPolicyValidator;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +25,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
+
 
 @Slf4j
 @Service
@@ -34,7 +41,9 @@ public class UserServiceImpl implements UserService {
     private final OauthUnlinkService oauthUnlinkService;
     private final PasswordEncoder passwordEncoder;
     private final TokenEncryptor tokenEncryptor;
-
+    private final EmailService emailService;
+    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RefreshTokenService refreshTokenService;
 
 
     @Override
@@ -49,8 +58,20 @@ public class UserServiceImpl implements UserService {
             throw new CustomException(ErrorCode.DUPLICATE_PHONE);
         }
 
-        // 패스워드 인코딩
-        String encodedPw = passwordEncoder.encode(dto.getPassword());
+        // trim 적용 후 검증 및 저장
+        String rawPassword = dto.getPassword();
+        String trimmedPassword = rawPassword == null ? null : rawPassword.trim();
+
+        // null / 공백 검사
+        if (trimmedPassword == null || trimmedPassword.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 비밀번호 정책 검증 (trim된 값으로)
+        PasswordPolicyValidator.validate(trimmedPassword);
+
+        // 패스워드 인코딩 (trim된 값 사용)
+        String encodedPw = passwordEncoder.encode(trimmedPassword);
 
         Role role = dto.getRole();
         if (role == null) {
@@ -179,5 +200,118 @@ public class UserServiceImpl implements UserService {
         log.info("회원 탈퇴 완료: userId={}", userId);
     }
 
+    @Override
+    public String findEmailByNameAndPhone(String name, String phone){
+        String normalizedName = name == null ? null : name.trim();
+        String normalizedPhone = phone == null ? null : phone.trim();
+
+        if (normalizedName == null || normalizedName.isEmpty() ||
+                normalizedPhone == null || normalizedPhone.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        return userRepository.findByNameAndPhoneNumber(normalizedName, normalizedPhone)
+                .map(User::getEmail)
+                .orElse(null);
+    }
+
+    @Override
+    public void passwordReset(String email) {
+        if (email == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        String normalizedEmail = email.trim();
+        if (normalizedEmail.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        if (!userRepository.existsByEmail(normalizedEmail)) {
+            log.debug("Password reset requested for non-existent email: {}", normalizedEmail);
+            return;
+        }
+
+        // 정상적인 이메일일 경우만 발송
+        emailService.sendResetEmail(normalizedEmail);
+    }
+
+    @Override
+    public String verifyResetCodeAndIssueToken(String email, String code) {
+        if (email == null || code == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        String normalizedEmail = email.trim();
+        String normalizedCode = code.trim();
+
+        if (normalizedEmail.isEmpty() || normalizedCode.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 정규화된 값으로 검증
+        emailService.verifyResetEmail(normalizedEmail, normalizedCode);
+
+        // 토큰 발급
+        String token = UUID.randomUUID().toString();
+
+        try {
+            redisTemplate.opsForValue().set(
+                    "PASSWORD_RESET:" + token,
+                    normalizedEmail,
+                    Duration.ofMinutes(10)
+            );
+        } catch (Exception e) {
+            log.error("Redis 연결 실패: 비밀번호 재설정 토큰 저장 불가", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        return token;
+    }
+
+    @Override
+    @Transactional
+    public void resetPasswordByToken(String resetToken, String newPassword) {
+//        String email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + resetToken);
+        String email = null;
+
+        try {
+            email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + resetToken);
+        } catch (Exception e) {
+            log.error("Redis 연결 실패 - 비밀번호 재설정 토큰 조회 불가", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        if(email == null) {
+            throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
+        }
+
+        User user = userRepository.findUserByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (newPassword == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        String trimmedPassword = newPassword.trim();
+        if (trimmedPassword.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 반드시 trim된 값으로 정책 검증
+        PasswordPolicyValidator.validate(trimmedPassword);
+
+        // trim된 값을 인코딩하여 저장
+        user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
+        userRepository.save(user);
+
+        try {
+            redisTemplate.delete("PASSWORD_RESET:" + resetToken);
+        } catch (Exception e) {
+            log.error("Redis 연결 실패 - 비밀번호 재설정 토큰 삭제 불가", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        refreshTokenService.deleteByUserId(user.getUserId());
+    }
 
 }
