@@ -234,7 +234,8 @@ public class UserServiceImpl implements UserService {
         try {
             email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + resetToken);
         } catch (Exception e) {
-            log.warn("Redis 연결 실패 - 로컬 테스트 진행: {}", e.getMessage());
+            log.error("Redis 연결 실패 - 비밀번호 재설정 토큰 조회 불가", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         if(email == null) {
