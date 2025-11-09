@@ -253,7 +253,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findUserByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (newPassword == null || newPassword.trim().isEmpty()) {
+        if (newPassword == null) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
 
@@ -271,7 +271,10 @@ public class UserServiceImpl implements UserService {
 
         try {
             redisTemplate.delete("PASSWORD_RESET:" + resetToken);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.error("Redis 연결 실패 - 비밀번호 재설정 토큰 삭제 불가", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
 
         refreshTokenService.deleteByUserId(user.getUserId());
     }
