@@ -42,6 +42,9 @@ class PostServiceImplTest {
   @InjectMocks
   PostServiceImpl postService;
 
+  @InjectMocks
+  PostInteractionService postInteractionService;
+
   UUID userId;
   User user;
 
@@ -284,7 +287,7 @@ class PostServiceImplTest {
     req.setPostId(postId);
     req.setContent("hi");
 
-    postService.createComment(req, userId);
+    postInteractionService.createComment(req, userId);
 
     verify(commentRepository).save(any(Comment.class));
     assertThat(post.getCommentCount()).isEqualTo(1);
@@ -301,7 +304,7 @@ class PostServiceImplTest {
 
     when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
 
-    postService.updateComment(req, commentId, userId);
+    postInteractionService.updateComment(req, commentId, userId);
 
     assertThat(comment.getContent()).isEqualTo("new content");
   }
@@ -318,7 +321,7 @@ class PostServiceImplTest {
 
     when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
 
-    assertThatThrownBy(() -> postService.updateComment(req, commentId, userId))
+    assertThatThrownBy(() -> postInteractionService.updateComment(req, commentId, userId))
         .isInstanceOf(CustomException.class)
         .hasMessageContaining(ErrorCode.INVALID_COMMENT_OWNER.getMessage());
   }
@@ -337,7 +340,7 @@ class PostServiceImplTest {
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
     when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
-    postService.deleteComment(commentId, userId);
+    postInteractionService.deleteComment(commentId, userId);
     verify(commentRepository).delete(comment);
     assertThat(post.getCommentCount()).isEqualTo(2);
 
@@ -353,7 +356,7 @@ class PostServiceImplTest {
     when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
     post.setCommentCount(5);
-    postService.deleteComment(commentId, admin.getUserId());
+    postInteractionService.deleteComment(commentId, admin.getUserId());
     verify(commentRepository).delete(othersComment);
     assertThat(post.getCommentCount()).isEqualTo(4);
   }
@@ -370,7 +373,7 @@ class PostServiceImplTest {
     when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-    assertThatThrownBy(() -> postService.deleteComment(commentId, userId))
+    assertThatThrownBy(() -> postInteractionService.deleteComment(commentId, userId))
         .isInstanceOf(CustomException.class)
         .hasMessageContaining(ErrorCode.INVALID_COMMENT_OWNER.getMessage());
 
@@ -388,7 +391,7 @@ class PostServiceImplTest {
     when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId))
         .thenReturn(Optional.empty());
 
-    postService.toggleLike(postId, userId);
+    postInteractionService.toggleLike(postId, userId);
 
     verify(postLikeRepository).save(argThat(l ->
         l.getPost().getPostId().equals(postId) && l.getUser().getUserId().equals(userId)));
@@ -406,7 +409,7 @@ class PostServiceImplTest {
     when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId))
         .thenReturn(Optional.of(like));
 
-    postService.toggleLike(postId, userId);
+    postInteractionService.toggleLike(postId, userId);
 
     verify(postLikeRepository).delete(like);
     assertThat(post.getLikeCount()).isEqualTo(1);
@@ -422,7 +425,7 @@ class PostServiceImplTest {
 
     when(postBookmarkRepository.findByPostPostIdAndUserUserId(postId, userId))
         .thenReturn(Optional.empty());
-    postService.toggleBookmark(postId, userId);
+    postInteractionService.toggleBookmark(postId, userId);
     verify(postBookmarkRepository).save(argThat(b ->
         b.getPost().getPostId().equals(postId) && b.getUser().getUserId().equals(userId)));
     assertThat(post.getBookmarkCount()).isEqualTo(1);
@@ -432,7 +435,7 @@ class PostServiceImplTest {
     when(postBookmarkRepository.findByPostPostIdAndUserUserId(postId, userId))
         .thenReturn(Optional.of(existingBookmark));
 
-    postService.toggleBookmark(postId, userId);
+    postInteractionService.toggleBookmark(postId, userId);
 
     verify(postBookmarkRepository).delete(existingBookmark);
     assertThat(post.getBookmarkCount()).isEqualTo(0);

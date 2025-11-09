@@ -28,8 +28,8 @@ public class Post extends BasePostgresEntity {
   private User user;
 
   // 게시판 타입
-  @Enumerated(EnumType.STRING)
-  private BoardType boardType;
+  @ManyToOne(fetch = FetchType.LAZY)
+  private Board board;
 
   // 제목
   @Column(nullable = false)
@@ -38,10 +38,6 @@ public class Post extends BasePostgresEntity {
   // 내용
   @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
-
-  // 게시글 타입
-  @Enumerated(EnumType.STRING)
-  private PostType postType;
 
   // 북마크 수
   @Builder.Default
