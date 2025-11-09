@@ -1,8 +1,11 @@
 package org.sejongisc.backend.user.service;
 
 
+import org.sejongisc.backend.auth.service.EmailService;
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
+import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +24,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
+
 
 @Slf4j
 @Service
@@ -34,7 +40,9 @@ public class UserServiceImpl implements UserService {
     private final OauthUnlinkService oauthUnlinkService;
     private final PasswordEncoder passwordEncoder;
     private final TokenEncryptor tokenEncryptor;
-
+    private final EmailService emailService;
+    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RefreshTokenService refreshTokenService;
 
 
     @Override
@@ -179,5 +187,63 @@ public class UserServiceImpl implements UserService {
         log.info("회원 탈퇴 완료: userId={}", userId);
     }
 
+    @Override
+    public String findEmailByNameAndPhone(String name, String phone){
+        return userRepository.findByNameAndPhoneNumber(name, phone)
+                .map(User::getEmail)
+                .orElse(null);
+    }
+
+    @Override
+    public void passwordReset(String email) {
+        User user = userRepository.findUserByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // user가 있으면 email 전송
+        emailService.sendResetEmail(email);
+    }
+
+    @Override
+    public String verifyResetCodeAndIssueToken(String email, String code) {
+        emailService.verifyResetEmail(email, code);
+        String token = UUID.randomUUID().toString();
+
+        try {
+            redisTemplate.opsForValue().set("PASSWORD_RESET:" + token, email, Duration.ofMinutes(10));
+        } catch (Exception e) {
+            log.warn("Redis 연결 실패 - 로컬 테스트 진행: {}", e.getMessage());
+        }
+
+        return token;
+    }
+
+    @Override
+    @Transactional
+    public void resetPasswordByToken(String resetToken, String newPassword) {
+//        String email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + resetToken);
+        String email = null;
+
+        try {
+            email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + resetToken);
+        } catch (Exception e) {
+            log.warn("Redis 연결 실패 - 로컬 테스트 진행: {}", e.getMessage());
+        }
+
+        if(email == null) {
+            throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
+        }
+
+        User user = userRepository.findUserByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword.trim()));
+        userRepository.save(user);
+
+        try {
+            redisTemplate.delete("PASSWORD_RESET:" + resetToken);
+        } catch (Exception ignored) {}
+
+        refreshTokenService.deleteByUserId(user.getUserId());
+    }
 
 }

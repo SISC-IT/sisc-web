@@ -128,6 +128,44 @@ public class EmailService {
     return sb.toString();
   }
 
+  // 비밀번호 인증 관련 메서드
+  public void sendResetEmail(String email) {
+    if(!userRepository.existsByEmail(email)){
+      throw new CustomException(ErrorCode.USER_NOT_FOUND);
+    }
+
+    String code = generateCode();
+    redisTemplate.opsForValue().set("PASSWORD_RESET_EMAIL:" + email, code, emailProperties.getCodeExpire());
+
+    try {
+      MimeMessage message = createResetMessage(email, code);
+      mailSender.send(message);
+    } catch (MessagingException e) {
+      throw new MailSendException("failed to send mail", e);
+    }
+  }
+
+  public void verifyResetEmail(String email, String code) {
+    String stored = redisTemplate.opsForValue().get("PASSWORD_RESET_EMAIL:" + email);
+    if (stored == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
+    if(!stored.equals(code)) throw new CustomException(ErrorCode.EMAIL_CODE_MISMATCH);
+    redisTemplate.delete("PASSWORD_RESET_EMAIL:" + email);
+  }
+
+  private MimeMessage createResetMessage(String email, String code) throws MessagingException {
+    MimeMessage message = mailSender.createMimeMessage();
+    message.setFrom(new InternetAddress(from));
+    message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
+    message.setSubject("비밀번호 재설정 인증코드");
+
+    Context context = new Context();
+    context.setVariable("email", email);
+    context.setVariable("code", code);
+
+    String body = templateEngine.process("mail/resetEmail", context);
+    message.setText(body, "UTF-8", "html");
+    return message;
+  }
 
 
 

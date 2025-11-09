@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sejongisc.backend.auth.service.EmailService;
+import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
@@ -27,6 +30,7 @@ import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
 import org.sejongisc.backend.auth.oauth.OauthUserInfo;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +44,18 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private RedisTemplate<Object, Object> redisTemplate;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private org.sejongisc.backend.common.auth.jwt.TokenEncryptor tokenEncryptor;
 
     @InjectMocks private UserServiceImpl userService;
 
@@ -355,5 +371,102 @@ class UserServiceImplTest {
         verifyNoInteractions(passwordEncoder); // 비밀번호 인코더 안 씀
     }
 
+    @Test
+    @DisplayName("비밀번호 재설정 요청: 유효한 이메일이면 인증 메일 전송")
+    void passwordReset_success() {
+        // given
+        String email = "user@example.com";
+        User mockUser = User.builder().email(email).build();
+
+        when(userRepository.findUserByEmail(email)).thenReturn(Optional.of(mockUser));
+
+        // when
+        userService.passwordReset(email);
+
+        // then
+        verify(emailService, times(1)).sendResetEmail(email);
+    }
+
+    @Test
+    @DisplayName("비밀번호 재설정 요청 실패: 존재하지 않는 이메일이면 예외 발생")
+    void passwordReset_userNotFound() {
+        // given
+        String email = "notfound@example.com";
+        when(userRepository.findUserByEmail(email)).thenReturn(Optional.empty());
+
+        // when & then
+        CustomException ex = assertThrows(CustomException.class, () -> userService.passwordReset(email));
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+        verify(emailService, never()).sendResetEmail(anyString());
+    }
+
+    @Test
+    @DisplayName("비밀번호 재설정 코드 검증 성공: Redis에 토큰 저장 후 반환")
+    void verifyResetCodeAndIssueToken_success() {
+        // given
+        String email = "user@example.com";
+        String code = "123456";
+
+        doNothing().when(emailService).verifyResetEmail(email, code);
+        when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
+
+        // when
+        String token = userService.verifyResetCodeAndIssueToken(email, code);
+
+        // then
+        assertThat(token).isNotNull();
+        verify(emailService).verifyResetEmail(email, code);
+        verify(redisTemplate.opsForValue(), atLeastOnce())
+                .set(startsWith("PASSWORD_RESET:"), eq(email), any(Duration.class));
+    }
+
+    @Test
+    @DisplayName("비밀번호 재설정: 토큰 유효 시 비밀번호 변경 및 RefreshToken 삭제")
+    void resetPasswordByToken_success() {
+        // given
+        String resetToken = "abc123";
+        String email = "user@example.com";
+        String newPassword = "newPassword!";
+
+        var valueOps = mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get("PASSWORD_RESET:" + resetToken)).thenReturn(email);
+
+        User user = User.builder()
+                .userId(UUID.randomUUID())
+                .email(email)
+                .passwordHash("OLD_HASH")
+                .build();
+
+        when(userRepository.findUserByEmail(email)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode(newPassword)).thenReturn("ENCODED_NEW_PW");
+
+        // when
+        userService.resetPasswordByToken(resetToken, newPassword);
+
+        // then
+        assertThat(user.getPasswordHash()).isEqualTo("ENCODED_NEW_PW");
+        verify(passwordEncoder).encode(newPassword);
+        verify(userRepository).save(user);
+        verify(refreshTokenService).deleteByUserId(user.getUserId());
+        verify(redisTemplate).delete("PASSWORD_RESET:" + resetToken);
+    }
+
+    @Test
+    @DisplayName("비밀번호 재설정 실패: Redis에서 이메일을 찾지 못하면 예외 발생")
+    void resetPasswordByToken_invalidToken_throws() {
+        // given
+        String resetToken = "invalid";
+        when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
+        when(redisTemplate.opsForValue().get("PASSWORD_RESET:" + resetToken)).thenReturn(null);
+
+        // when
+        CustomException ex = assertThrows(CustomException.class,
+                () -> userService.resetPasswordByToken(resetToken, "newPw"));
+
+        // then
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.EMAIL_CODE_NOT_FOUND);
+        verify(userRepository, never()).save(any());
+    }
 
 }

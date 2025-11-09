@@ -6,6 +6,7 @@ import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.oauth.OauthUserInfo;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface UserService {
@@ -18,4 +19,12 @@ public interface UserService {
     User getUserById(UUID userId);
 
     void deleteUserWithOauth(UUID userId);
+
+    String findEmailByNameAndPhone(String name, String phoneNumber);
+
+    void passwordReset(String email);
+
+    String verifyResetCodeAndIssueToken(String email, String code);
+
+    void resetPasswordByToken(String resetToken, String newPassword);
 }
