@@ -8,9 +8,11 @@ import java.util.Optional;
 public class KakaoUserInfoAdapter implements OauthUserInfo {
 
     private final KakaoUserInfoResponse kakaoInfo;
+    private final String accessToken;
 
-    public KakaoUserInfoAdapter(KakaoUserInfoResponse kakaoInfo) {
+    public KakaoUserInfoAdapter(KakaoUserInfoResponse kakaoInfo, String  accessToken) {
         this.kakaoInfo = kakaoInfo;
+        this.accessToken = accessToken;
     }
 
     @Override
@@ -30,5 +32,10 @@ public class KakaoUserInfoAdapter implements OauthUserInfo {
     @Override
     public AuthProvider getProvider() {
         return AuthProvider.KAKAO;
+    }
+
+    @Override
+    public String getAccessToken() {
+        return accessToken;
     }
 }
