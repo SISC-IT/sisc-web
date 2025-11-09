@@ -202,30 +202,65 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String findEmailByNameAndPhone(String name, String phone){
-        return userRepository.findByNameAndPhoneNumber(name, phone)
+        String normalizedName = name == null ? null : name.trim();
+        String normalizedPhone = phone == null ? null : phone.trim();
+
+        if (normalizedName == null || normalizedName.isEmpty() ||
+                normalizedPhone == null || normalizedPhone.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        return userRepository.findByNameAndPhoneNumber(normalizedName, normalizedPhone)
                 .map(User::getEmail)
                 .orElse(null);
     }
 
     @Override
     public void passwordReset(String email) {
-        if (!userRepository.existsByEmail(email)) {
-            log.debug("Password reset requested for non-existent email: {}", email);
+        if (email == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        String normalizedEmail = email.trim();
+        if (normalizedEmail.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        if (!userRepository.existsByEmail(normalizedEmail)) {
+            log.debug("Password reset requested for non-existent email: {}", normalizedEmail);
             return;
         }
-        // user가 있으면 email 전송
-        emailService.sendResetEmail(email);
+
+        // 정상적인 이메일일 경우만 발송
+        emailService.sendResetEmail(normalizedEmail);
     }
 
     @Override
     public String verifyResetCodeAndIssueToken(String email, String code) {
-        emailService.verifyResetEmail(email, code);
+        if (email == null || code == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        String normalizedEmail = email.trim();
+        String normalizedCode = code.trim();
+
+        if (normalizedEmail.isEmpty() || normalizedCode.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 정규화된 값으로 검증
+        emailService.verifyResetEmail(normalizedEmail, normalizedCode);
+
+        // 토큰 발급
         String token = UUID.randomUUID().toString();
 
         try {
-            redisTemplate.opsForValue().set("PASSWORD_RESET:" + token, email, Duration.ofMinutes(10));
+            redisTemplate.opsForValue().set(
+                    "PASSWORD_RESET:" + token,
+                    normalizedEmail,
+                    Duration.ofMinutes(10)
+            );
         } catch (Exception e) {
-            // Redis 장애 시 즉시 요청 자체를 실패로 처리
             log.error("Redis 연결 실패: 비밀번호 재설정 토큰 저장 불가", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
