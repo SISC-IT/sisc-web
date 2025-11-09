@@ -58,12 +58,20 @@ public class UserServiceImpl implements UserService {
             throw new CustomException(ErrorCode.DUPLICATE_PHONE);
         }
 
-        // 추가: 비밀번호 정책 검증
-        PasswordPolicyValidator.validate(dto.getPassword());
+        // trim 적용 후 검증 및 저장
+        String rawPassword = dto.getPassword();
+        String trimmedPassword = rawPassword == null ? null : rawPassword.trim();
 
+        // null / 공백 검사
+        if (trimmedPassword == null || trimmedPassword.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
 
-        // 패스워드 인코딩
-        String encodedPw = passwordEncoder.encode(dto.getPassword());
+        // 비밀번호 정책 검증 (trim된 값으로)
+        PasswordPolicyValidator.validate(trimmedPassword);
+
+        // 패스워드 인코딩 (trim된 값 사용)
+        String encodedPw = passwordEncoder.encode(trimmedPassword);
 
         Role role = dto.getRole();
         if (role == null) {
