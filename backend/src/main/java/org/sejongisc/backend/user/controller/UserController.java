@@ -12,8 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.auth.dto.SignupRequest;
 import org.sejongisc.backend.auth.dto.SignupResponse;
-import org.sejongisc.backend.user.dto.UserInfoResponse;
-import org.sejongisc.backend.user.dto.UserUpdateRequest;
+import org.sejongisc.backend.user.dto.*;
 import org.sejongisc.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -184,9 +183,9 @@ public class UserController {
             }
     )
     @PostMapping("/id/find")
-    public ResponseEntity<?> findUserID(@RequestBody Map<String, String> request) {
-        String name = request.get("name");
-        String phone = request.get("phoneNumber");
+    public ResponseEntity<?> findUserID(@RequestBody @Valid UserIdFindRequest request) {
+        String name = request.name();
+        String phone = request.phoneNumber();
         String email = userService.findEmailByNameAndPhone(name, phone);
 
         if (email == null) {
@@ -232,11 +231,11 @@ public class UserController {
             }
     )
     @PostMapping("/password/reset/send")
-    public ResponseEntity<?> sendReset(@RequestBody Map<String, String> req){
-        String email = req.get("email");
-        log.info("비밀번호 재설정 요청: {}", email);
+    public ResponseEntity<?> sendReset(@RequestBody @Valid PasswordResetSendRequest req){
+        String email = req.email().trim();
+        log.info("비밀번호 재설정 요청"); // 개인정보 로그 남기지 않기
         userService.passwordReset(email);
-        return ResponseEntity.ok(Map.of("message","인증코드를 전송했습니다."));
+        return ResponseEntity.ok(Map.of("message", "인증코드를 전송했습니다."));
     }
 
     @Operation(
@@ -274,8 +273,8 @@ public class UserController {
             }
     )
     @PostMapping("/password/reset/verify")
-    public ResponseEntity<?> verifyReset(@RequestBody Map<String, String> req){
-        String token = userService.verifyResetCodeAndIssueToken(req.get("email"), req.get("code"));
+    public ResponseEntity<?> verifyReset(@RequestBody @Valid PasswordResetVerifyRequest req){
+        String token = userService.verifyResetCodeAndIssueToken(req.email(), req.code());
         return ResponseEntity.ok(Map.of("resetToken", token));
     }
 
@@ -321,9 +320,9 @@ public class UserController {
             }
     )
     @PostMapping("/password/reset/commit")
-    public ResponseEntity<?> commitReset(@RequestBody Map<String,String> req){
-        userService.resetPasswordByToken(req.get("resetToken"), req.get("newPassword"));
-        return ResponseEntity.ok(Map.of("message","비밀번호가 변경되었습니다. 다시 로그인해 주세요."));
+    public ResponseEntity<?> commitReset(@RequestBody @Valid PasswordResetCommitRequest req){
+        userService.resetPasswordByToken(req.resetToken(), req.newPassword());
+        return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다. 다시 로그인해 주세요."));
     }
 
 }
