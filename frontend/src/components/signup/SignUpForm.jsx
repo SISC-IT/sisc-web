@@ -1,22 +1,30 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
-import EmailVerificationModal from './../VerificationModal';
+
+import {
+  sendVerificationNumber,
+  signUp,
+  checkVerificationNumber,
+} from '../../utils/auth.js';
 
 const SignUpForm = () => {
   const [nickname, setNickname] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [verificationNumber, setVerificationNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [isVerificationNumberSent, setVerificationNumberSent] = useState(false);
+  const [isVerificationSent, setVerificationSent] = useState(false);
+  const [isVerificationChecked, setVerificationChecked] = useState(false);
+
+  const abortRef = useRef(null);
 
   const nav = useNavigate();
 
-  // 이메일 입력 형태가 맞는지 검사
+  // 이메일 유효성 검사
   const isEmailValid = () => {
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
     return emailRegex.test(email);
@@ -32,24 +40,79 @@ const SignUpForm = () => {
   const isFormValid =
     nickname.trim() !== '' &&
     isEmailValid() &&
-    isPhoneNumberValid() &&
+    isVerificationSent &&
+    isVerificationChecked &&
+    isPhoneNumberValid &&
     password.trim() !== '' &&
     password === confirmPassword;
 
-  const handleSendVerificationNumber = () => {
-    // 전송 state 변경
-    setVerificationNumberSent(true);
+  const handleSendVerificationNumber = async (e) => {
+    e.preventDefault();
+    setVerificationSent(true);
 
-    // 인증번호 발송 로직
-    alert('인증번호가 발송되었습니다.');
+    // 도중에 요청 시 전 요청 취소
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    // 인증번호 발송 로직 & api 자리
+    try {
+      await sendVerificationNumber({ email: email }, abortRef.current.signal);
+
+      alert('인증번호가 발송되었습니다.');
+    } catch (err) {
+      console.log('status:', err.status);
+      console.log('data:', err.data);
+      console.log('message:', err.message);
+    }
   };
-  const handleSignUp = (e) => {
+  const handleCheckVerificationNumber = async () => {
+    setVerificationChecked(true);
+
+    // 도중에 요청 시 전 요청 취소
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    // 인증번호 발송 로직 & api 자리
+    try {
+      await checkVerificationNumber(
+        { email: email, verificationNumber: verificationNumber },
+        abortRef.current.signal
+      );
+
+      setVerificationChecked(true);
+      alert('인증되었습니다.');
+    } catch (err) {
+      console.log('status:', err.status);
+      console.log('data:', err.data);
+      console.log('message:', err.message);
+    }
+  };
+
+  const handleSignUp = async (e) => {
     e.preventDefault();
 
-    // api 자리
+    // 도중에 요청 시 전 요청 취소
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
 
-    // localStorage.setItem('authToken', 'dummy-token-12345');
-    nav('/login'); // 회원가입 성공 시 로그인 페이지 이동
+    try {
+      await signUp(
+        {
+          nickname,
+          email,
+          password,
+          phoneNumber,
+        },
+        abortRef.current.signal
+      );
+
+      alert('회원가입이 완료되었습니다.');
+      nav('/login');
+    } catch (err) {
+      console.log('status:', err.status);
+      console.log('data:', err.data);
+      console.log('message:', err.message);
+    }
   };
 
   return (
@@ -78,21 +141,21 @@ const SignUpForm = () => {
             />
           </div>
           <div className={styles.inputGroup}>
-            <label htmlFor="phoneNumber">휴대전화</label>
+            <label htmlFor="email">Email</label>
             <div className={styles.phoneVerificationContainer}>
               <input
                 type="phoneNumber"
-                id="text"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="ex) 01012345678"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ex) abcde@gmail.com"
                 className={styles.phoneNumberInput}
               />
               <button
                 type="button"
                 className={styles.verifyButton}
                 onClick={handleSendVerificationNumber}
-                disabled={!isPhoneNumberValid()}
+                disabled={!isEmailValid()}
               >
                 인증번호 발송
               </button>
@@ -100,22 +163,32 @@ const SignUpForm = () => {
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="verificationNumber">인증번호</label>
-            <input
-              type="text"
-              id="verificationNumber"
-              value={verificationNumber}
-              onChange={(e) => setVerificationNumber(e.target.value)}
-              placeholder="인증번호를 입력해주세요"
-            />
+            <div className={styles.phoneVerificationContainer}>
+              <input
+                type="text"
+                id="verificationNumber"
+                value={verificationNumber}
+                onChange={(e) => setVerificationNumber(e.target.value)}
+                placeholder="인증번호를 입력해주세요"
+              />
+              <button
+                type="button"
+                className={styles.verifyButton}
+                onClick={handleCheckVerificationNumber}
+                disabled={!isVerificationSent}
+              >
+                인증번호 확인
+              </button>
+            </div>
           </div>
           <div className={styles.inputGroup}>
-            <label htmlFor="email">Email</label>
+            <label htmlFor="phoneNumber">전화번호</label>
             <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일을 입력해주세요"
+              type="text"
+              id="phoneNumber"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="ex) 01012345678"
             />
           </div>
           <div className={styles.inputGroup}>

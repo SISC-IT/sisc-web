@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
@@ -7,6 +7,8 @@ import SocialLoginButtons from './SocialLoginButtons';
 import VerificationModal from './../VerificationModal';
 import ResetPasswordModal from './ResetPasswordModal';
 import FindEmailResultModal from './FindEmailResultModal';
+
+import { login } from '../../utils/auth';
 
 const LoginForm = () => {
   const nav = useNavigate();
@@ -32,17 +34,31 @@ const LoginForm = () => {
 
   const isFormValid = email.trim() !== '' && password.trim() !== '';
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    // 안전장치
-    if (!email || !password) {
-      alert('이메일과 비밀번호를 모두 입력해주세요.');
-      return;
-    }
+  const abortRef = useRef(null);
 
-    // 로그인 성공 시 로직
-    localStorage.setItem('authToken', 'dummy-token-12345');
-    nav('/');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    // 도중에 요청 시 전 요청 취소
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    try {
+      await login(
+        {
+          email,
+          password,
+        },
+        abortRef.current.signal
+      );
+
+      console.log('로그인이 완료되었습니다.');
+      nav('/');
+    } catch (err) {
+      console.log('status:', err.status);
+      console.log('data:', err.data);
+      console.log('message:', err.message);
+    }
   };
 
   return (
