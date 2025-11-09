@@ -71,7 +71,19 @@ public class AuthController {
 
     @Operation(
             summary = "회원가입 API",
-            description = "회원 이메일, 비밀번호, 이름, 전화번호 정보를 입력받아 새로운 사용자를 생성합니다.",
+            description = """
+                회원 이메일, 비밀번호, 이름, 전화번호 정보를 입력받아 새로운 사용자를 생성합니다.
+
+                 비밀번호 정책:
+                - 길이: 8~20자
+                - 최소 1개의 대문자(A-Z)
+                - 최소 1개의 소문자(a-z)
+                - 최소 1개의 숫자(0-9)
+                - 최소 1개의 특수문자(!@#$%^&*()_+=-{};:'",.<>/?)
+
+                위 조건을 모두 만족하지 않으면 400 (INVALID_INPUT) 예외가 발생합니다.
+                """,
+
             responses = {
                     @ApiResponse(
                             responseCode = "201",
@@ -83,11 +95,20 @@ public class AuthController {
                                               "email": "testuser@example.com",
                                               "name": "홍길동",
                                               "phoneNumber": "01012345678",
-                                              "role": "USER"
+                                              "role": "TEAM_MEMBER"
                                             }
                                             """))
                     ),
-                    @ApiResponse(responseCode = "400", description = "요청 데이터 유효성 검증 실패")
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "요청 데이터 유효성 검증 실패 (비밀번호 정책 미준수 포함)",
+                            content = @Content(mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                        {
+                                          "message": "비밀번호는 8~20자, 대소문자/숫자/특수문자를 모두 포함해야 합니다."
+                                        }
+                                        """))
+                    )
             }
     )
     @PostMapping("/signup")

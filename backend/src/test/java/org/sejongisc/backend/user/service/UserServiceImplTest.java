@@ -469,4 +469,17 @@ class UserServiceImplTest {
         verify(userRepository, never()).save(any());
     }
 
+    @Test
+    void verifyResetCodeAndIssueToken_RedisFailure_ThrowsException() {
+        String email = "test@example.com";
+        String code = "123456";
+
+        doThrow(new RuntimeException("Redis down"))
+                .when(redisTemplate.opsForValue())
+                .set(anyString(), any(), any(Duration.class));
+
+        assertThrows(CustomException.class,
+                () -> userService.verifyResetCodeAndIssueToken(email, code));
+    }
+
 }

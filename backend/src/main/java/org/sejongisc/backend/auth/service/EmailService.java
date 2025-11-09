@@ -131,7 +131,8 @@ public class EmailService {
   // 비밀번호 인증 관련 메서드
   public void sendResetEmail(String email) {
     if(!userRepository.existsByEmail(email)){
-      throw new CustomException(ErrorCode.USER_NOT_FOUND);
+      log.debug("Password reset requested for non-existent email {}", email);
+      return;
     }
 
     String code = generateCode();

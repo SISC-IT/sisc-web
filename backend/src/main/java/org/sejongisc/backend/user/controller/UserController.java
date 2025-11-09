@@ -282,10 +282,17 @@ public class UserController {
     @Operation(
             summary = "비밀번호 재설정 최종 API",
             description = """
-                    검증된 resetToken과 새 비밀번호를 전달하면 비밀번호를 최종 변경합니다.
-                    - resetToken은 10분간 유효합니다.
-                    - 변경 완료 후, 로그인 화면으로 이동하여 새 비밀번호로 로그인할 수 있습니다.
-                    """,
+                검증된 resetToken과 새 비밀번호를 전달하면 비밀번호를 최종 변경합니다.
+                - resetToken은 10분간 유효합니다.
+                - 비밀번호 정책:
+                    • 길이: 8~20자  
+                    • 최소 1개의 대문자(A-Z)  
+                    • 최소 1개의 소문자(a-z)  
+                    • 최소 1개의 숫자(0-9)  
+                    • 최소 1개의 특수문자(!@#$%^&*()_+=-{};:'",.<>/?)
+                - 위 조건을 만족하지 않으면 400 응답을 반환합니다.
+                - 변경 완료 후, 로그인 화면으로 이동하여 새 비밀번호로 로그인할 수 있습니다.
+                """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -301,14 +308,14 @@ public class UserController {
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "잘못된 토큰 또는 만료된 토큰",
+                            description = "비밀번호 정책 위반 또는 잘못된/만료된 토큰",
                             content = @Content(
                                     mediaType = "application/json",
                                     examples = @ExampleObject(value = """
-                                            {
-                                              "message": "resetToken이 유효하지 않거나 만료되었습니다."
-                                            }
-                                            """)
+                                        {
+                                          "message": "비밀번호는 8~20자, 대소문자/숫자/특수문자를 모두 포함해야 합니다."
+                                        }
+                                        """)
                             )
                     )
             }

@@ -5,6 +5,7 @@ import org.sejongisc.backend.auth.service.EmailService;
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
+import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +57,10 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
             throw new CustomException(ErrorCode.DUPLICATE_PHONE);
         }
+
+        // 추가: 비밀번호 정책 검증
+        PasswordPolicyValidator.validate(dto.getPassword());
+
 
         // 패스워드 인코딩
         String encodedPw = passwordEncoder.encode(dto.getPassword());
@@ -211,7 +216,9 @@ public class UserServiceImpl implements UserService {
         try {
             redisTemplate.opsForValue().set("PASSWORD_RESET:" + token, email, Duration.ofMinutes(10));
         } catch (Exception e) {
-            log.warn("Redis 연결 실패 - 로컬 테스트 진행: {}", e.getMessage());
+            // Redis 장애 시 즉시 요청 자체를 실패로 처리
+            log.error("Redis 연결 실패: 비밀번호 재설정 토큰 저장 불가", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         return token;
@@ -236,7 +243,14 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findUserByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        user.setPasswordHash(passwordEncoder.encode(newPassword.trim()));
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        PasswordPolicyValidator.validate(newPassword);
+
+        String trimmedPassword = newPassword.trim();
+        user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
         userRepository.save(user);
 
         try {
