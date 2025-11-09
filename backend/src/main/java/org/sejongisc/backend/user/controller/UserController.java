@@ -254,7 +254,7 @@ public class UserController {
                                     mediaType = "application/json",
                                     examples = @ExampleObject(value = """
                                             {
-                                              "resetToken": "eyJhbGciOiJIUzI1NiJ9..."
+                                              "resetToken": "c8a2434d-7e11-4f7e-a201-b9fbc9d7d43a"
                                             }
                                             """)
                             )
