@@ -274,7 +274,10 @@ public class UserController {
     )
     @PostMapping("/password/reset/verify")
     public ResponseEntity<?> verifyReset(@RequestBody @Valid PasswordResetVerifyRequest req){
-        String token = userService.verifyResetCodeAndIssueToken(req.email(), req.code());
+        String email = req.email().trim();
+        String code = req.code().trim();
+
+        String token = userService.verifyResetCodeAndIssueToken(email, code);
         return ResponseEntity.ok(Map.of("resetToken", token));
     }
 
