@@ -201,9 +201,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void passwordReset(String email) {
-        User user = userRepository.findUserByEmail(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
+        if (!userRepository.existsByEmail(email)) {
+            log.debug("Password reset requested for non-existent email: {}", email);
+            return;
+        }
         // user가 있으면 email 전송
         emailService.sendResetEmail(email);
     }
@@ -247,9 +248,15 @@ public class UserServiceImpl implements UserService {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
 
-        PasswordPolicyValidator.validate(newPassword);
-
         String trimmedPassword = newPassword.trim();
+        if (trimmedPassword.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 반드시 trim된 값으로 정책 검증
+        PasswordPolicyValidator.validate(trimmedPassword);
+
+        // trim된 값을 인코딩하여 저장
         user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
         userRepository.save(user);
 
