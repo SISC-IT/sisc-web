@@ -22,6 +22,7 @@ import org.sejongisc.backend.board.repository.PostRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -222,11 +223,23 @@ public class PostServiceImpl implements PostService {
         Sort.by(Sort.Direction.ASC, "createdDate")
     );
 
-    // 해당 게시물의 댓글 목록을 '페이징'하여 조회
-    Page<Comment> comments = commentRepository.findAllByPostPostId(postId, pageable);
+    // 부모 댓글만 페이징하여 조회
+    Page<Comment> parentComments = commentRepository
+        .findAllByPostPostIdAndParentCommentIsNull(postId, pageable);
 
-    // Page<Comment> -> Page<CommentResponse> DTO로 변환
-    Page<CommentResponse> commentResponses = comments.map(CommentResponse::of);
+    // 부모 댓글을 CommentResponse DTO로 변환
+    Page<CommentResponse> commentResponses = parentComments.map(parent -> {
+      // 해당 부모 댓글의 자식 댓글 목록을 조회
+      List<Comment> childComments = commentRepository.findByParentComment(parent);
+
+      // 자식 댓글 목록을 CommentResponse DTO 리스트로 변환
+      List<CommentResponse> replyResponses = childComments.stream()
+          .map(CommentResponse::of)
+          .toList();
+
+      // 부모 댓글 DTO를 생성하며, 자식 DTO 리스트를 주입
+      return CommentResponse.of(parent, replyResponses);
+    });
 
     // 첨부 파일 조회
     List<PostAttachmentResponse> attachmentResponses = postAttachmentRepository.findAllByPostPostId(postId)
@@ -253,7 +266,10 @@ public class PostServiceImpl implements PostService {
 
   // 게시판 생성
   @Transactional
-  public void createBoard(BoardRequest request) {
+  public void createBoard(BoardRequest request, UUID userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
     Board board;
     // 하위 게시판인 경우
     if (request.getParentBoardId() != null) {
@@ -263,12 +279,14 @@ public class PostServiceImpl implements PostService {
 
       board = Board.builder()
           .boardName(request.getBoardName())
+          .createdBy(user)
           .parentBoard(parentBoard)
           .build();
     } else {
       // 상위 게시판인 경우
       board = Board.builder()
           .boardName(request.getBoardName())
+          .createdBy(user)
           .parentBoard(null)
           .build();
     }

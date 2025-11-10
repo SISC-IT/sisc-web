@@ -19,4 +19,8 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
   @Transactional
   void deleteAllByPostPostId(UUID postId);
+
+  List<Comment> findByParentComment(Comment parentComment);
+
+  Page<Comment> findAllByPostPostIdAndParentCommentIsNull(UUID postId, Pageable pageable);
 }

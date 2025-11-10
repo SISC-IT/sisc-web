@@ -27,5 +27,5 @@ public interface PostService {
   PostResponse getPostDetail(UUID postId, int pageNumber, int pageSize);
 
   // 게시판 생성
-  void createBoard(BoardRequest request);
+  void createBoard(BoardRequest request, UUID userId);
 }

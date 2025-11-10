@@ -1,6 +1,7 @@
 package org.sejongisc.backend.board.service;
 
 import jakarta.persistence.OptimisticLockException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -51,11 +52,28 @@ public class PostInteractionService {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+    // 부모 댓글 조회 (대댓글인 경우)
+    Comment parentComment = null;
+    if (request.getParentCommentId() != null) {
+      parentComment = commentRepository.findById(request.getParentCommentId())
+          .orElseThrow(() -> new CustomException(ErrorCode.COMMENT_NOT_FOUND));
+
+      // 부모 댓글이 해당 게시글에 속하는지 확인
+      if (!parentComment.getPost().getPostId().equals(post.getPostId())) {
+        throw new CustomException(ErrorCode.INVALID_PARENT_COMMENT);
+      }
+
+      if (parentComment.getParentComment() != null) {
+        throw new CustomException(ErrorCode.ALREADY_CHILD_COMMENT);
+      }
+    }
+
     // comment 엔티티 저장
     Comment comment = Comment.builder()
         .post(post)
         .user(user)
         .content(request.getContent())
+        .parentComment(parentComment)
         .build();
 
     commentRepository.save(comment);
@@ -102,14 +120,28 @@ public class PostInteractionService {
       throw new CustomException(ErrorCode.INVALID_COMMENT_OWNER);
     }
 
-    // 게시글의 댓글 수 1 감소
+    // 게시글 조회
     Post post = postRepository.findById(comment.getPost().getPostId())
         .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-    post.setCommentCount(post.getCommentCount() - 1);
+    // 자식 댓글 조회
+    List<Comment> childComments = commentRepository.findByParentComment(comment);
 
-    // comment 삭제
+    int totalDeletedCount = 0; // 삭제할 총 개수
+
+    if (!childComments.isEmpty()) {
+      // 자식 댓글 일괄 삭제 (쿼리 1번)
+      commentRepository.deleteAll(childComments);
+
+      totalDeletedCount = childComments.size(); // 자식 댓글 개수만큼 카운트
+    }
+
+    // 부모 댓글(본인) 삭제
     commentRepository.delete(comment);
+    totalDeletedCount += 1; // 본인 개수 추가
+
+    // Post 카운트 업데이트
+    post.setCommentCount(post.getCommentCount() - totalDeletedCount);
   }
 
   // 좋아요 등록/삭제

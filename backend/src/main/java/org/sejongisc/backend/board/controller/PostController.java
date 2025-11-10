@@ -89,9 +89,9 @@ public class PostController {
                     + "페이지 번호와 페이지 크기를 통해 페이징 처리가 가능합니다."
                     + "기본값은 페이지 번호 0, 페이지 크기 20입니다."
   )
-  @GetMapping("/{boardId}")
+  @GetMapping
   public ResponseEntity<Page<PostResponse>> getPosts(
-      @PathVariable UUID boardId,
+      @RequestParam UUID boardId,
       @RequestParam(defaultValue = "0") int pageNumber,
       @RequestParam(defaultValue = "20") int pageSize) {
     return ResponseEntity.ok(postService.getPosts(boardId, pageNumber, pageSize));
@@ -137,8 +137,10 @@ public class PostController {
   )
   @PostMapping("/board")
   public ResponseEntity<Void> createBoard(
-      @RequestBody @Valid BoardRequest request) {
-    postService.createBoard(request);
+      @RequestBody @Valid BoardRequest request,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postService.createBoard(request, userId);
     return ResponseEntity.ok().build();
   }
 }
