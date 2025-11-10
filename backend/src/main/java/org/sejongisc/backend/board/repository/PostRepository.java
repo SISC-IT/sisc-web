@@ -6,6 +6,8 @@ import org.sejongisc.backend.board.entity.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface PostRepository extends JpaRepository<Post, UUID> {
 
@@ -14,6 +16,11 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 
   Page<Post> findAllByBoard(Board board, Pageable pageable);
 
-  Page<Post> findAllByBoardAndTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
-      Board board, String titleKeyword, String contentKeyword, Pageable pageable);
+  @Query("SELECT p FROM Post p WHERE p.board = :board AND (" +
+         "LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+         "LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+  Page<Post> searchByBoardAndKeyword(
+      @Param("board") Board board,
+      @Param("keyword") String keyword,
+      Pageable pageable);
 }

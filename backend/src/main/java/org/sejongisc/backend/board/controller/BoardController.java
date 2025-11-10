@@ -186,7 +186,7 @@ public class BoardController {
                     + "parentCommentId가 제공되면 해당 댓글에 대한 대댓글로 작성됩니다."
                     + "null일 경우 일반 댓글로 작성됩니다."
   )
-  @PostMapping("/{postId}/comment")
+  @PostMapping("/comment")
   public ResponseEntity<Void> createComment(
       @RequestBody CommentRequest request,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {

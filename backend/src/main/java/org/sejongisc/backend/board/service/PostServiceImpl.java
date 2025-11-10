@@ -202,8 +202,8 @@ public class PostServiceImpl implements PostService {
         .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
 
     // 해당 키워드가 들어간 게시물 검색
-    Page<Post> posts = postRepository.findAllByBoardAndTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
-        board, keyword, keyword, pageable);
+    Page<Post> posts = postRepository.searchByBoardAndKeyword(
+        board, keyword, pageable);
 
     return posts.map(this::mapToPostResponse);
   }
@@ -273,9 +273,8 @@ public class PostServiceImpl implements PostService {
     Board board;
     // 하위 게시판인 경우
     if (request.getParentBoardId() != null) {
-      Board parentBoard = Board.builder()
-          .boardId(request.getParentBoardId())
-          .build();
+      Board parentBoard = boardRepository.findById(request.getParentBoardId())
+          .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
 
       board = Board.builder()
           .boardName(request.getBoardName())
