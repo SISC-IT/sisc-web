@@ -25,24 +25,19 @@ import org.sejongisc.backend.user.entity.User;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class Comment extends BasePostgresEntity {
+public class Board extends BasePostgresEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID commentId;
+  @Column(nullable = false, updatable = false)
+  private UUID boardId;
+
+  private String boardName;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "post_id")
-  private Post post;
+  private User createdBy;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id")
-  private User user;
-
-  @Column(columnDefinition = "TEXT", nullable = false)
-  private String content;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "parent_comment_id")
-  private Comment parentComment;
+  @JoinColumn(name = "parent_board_id")
+  private Board parentBoard;
 }
