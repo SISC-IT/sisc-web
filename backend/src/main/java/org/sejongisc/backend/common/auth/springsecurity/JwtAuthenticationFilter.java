@@ -35,14 +35,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtParser jwtParser;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
+
     private static final List<String> EXCLUDE_PATTERNS = List.of(
             "/api/auth/signup",
             "/api/auth/login",
-            "/api/auth/login/kakao",
-            "/api/auth/login/google",
-            "/api/auth/login/github",
+            "/api/auth/login/**",
+            "/api/auth/oauth",
             "/api/auth/oauth/**",
-//            "/api/auth/refresh",
+            "/api/auth/logout",
+            "/api/auth/reissue",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui/index.html",
@@ -72,7 +73,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = resolveToken(request);
 
-            if (token != null && jwtParser.validationToken(token)) {
+            if (token != null && jwtParser.validationToken(token) ) {
                 UsernamePasswordAuthenticationToken authentication = jwtParser.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 log.info("SecurityContext에 인증 저장됨: {}", authentication.getName());
