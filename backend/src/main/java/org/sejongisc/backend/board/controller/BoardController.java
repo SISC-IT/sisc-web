@@ -6,8 +6,10 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.board.dto.BoardRequest;
+import org.sejongisc.backend.board.dto.CommentRequest;
 import org.sejongisc.backend.board.dto.PostRequest;
 import org.sejongisc.backend.board.dto.PostResponse;
+import org.sejongisc.backend.board.service.PostInteractionService;
 import org.sejongisc.backend.board.service.PostService;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.springframework.data.domain.Page;
@@ -27,21 +29,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/post")
+@RequestMapping("/api/board")
 @Tag(
     name = "게시판 및 게시물 API",
     description = "게시판 및 게시물 작성, 수정, 삭제 관련 API 제공"
 )
-public class PostController {
+public class BoardController {
 
   private final PostService postService;
+  private final PostInteractionService postInteractionService;
 
   // 게시글 작성
   @Operation(
       summary = "게시물 작성",
       description = "게시판 ID, 제목, 내용, 첨부파일을 포함한 게시물을 작성합니다."
   )
-  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(value = "/post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> createPost(
       @Valid @ModelAttribute PostRequest request,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
@@ -57,7 +60,7 @@ public class PostController {
                     + "첨부파일은 전체 파일 삭제 후 재저장 방식으로 이루어집니다."
                     + "게시판 종류는 수정할 수 없습니다."
   )
-  @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PutMapping(value = "/post/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> updatePost(
       @Valid @ModelAttribute PostRequest request,
       @PathVariable UUID postId,
@@ -74,7 +77,7 @@ public class PostController {
                     + "작성자 본인만 삭제할 수 있습니다."
                     + "관련 첨부파일 및 댓글 등도 함께 삭제됩니다."
   )
-  @DeleteMapping("/{postId}")
+  @DeleteMapping("/post/{postId}")
   public void deletePost(
       @PathVariable UUID postId,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
@@ -89,7 +92,7 @@ public class PostController {
                     + "페이지 번호와 페이지 크기를 통해 페이징 처리가 가능합니다."
                     + "기본값은 페이지 번호 0, 페이지 크기 20입니다."
   )
-  @GetMapping
+  @GetMapping("/posts")
   public ResponseEntity<Page<PostResponse>> getPosts(
       @RequestParam UUID boardId,
       @RequestParam(defaultValue = "0") int pageNumber,
@@ -104,7 +107,7 @@ public class PostController {
                     + "페이지 번호와 페이지 크기를 통해 페이징 처리가 가능합니다."
                     + "기본값은 페이지 번호 0, 페이지 크기 20입니다."
   )
-  @GetMapping("/search")
+  @GetMapping("/posts/search")
   public ResponseEntity<Page<PostResponse>> searchPosts(
       @RequestParam UUID boardId,
       @RequestParam String keyword,
@@ -120,7 +123,7 @@ public class PostController {
                     + "댓글에 대해서도 페이지 번호와 페이지 크기를 통해 페이징 처리가 가능합니다."
                     + "기본값은 댓글 페이지 번호 0, 댓글 페이지 크기 20입니다."
   )
-  @GetMapping("/{postId}")
+  @GetMapping("/post/{postId}")
   public ResponseEntity<PostResponse> getPostDetail(
       @PathVariable UUID postId,
       @RequestParam(defaultValue = "0") int commentPageNumber,
@@ -135,12 +138,89 @@ public class PostController {
       description = "게시판 이름과 상위 게시판 ID를 포함한 새로운 게시판을 생성합니다."
                     + "상위 게시판의 ID가 null 이면 최상위 게시판으로 생성됩니다."
   )
-  @PostMapping("/board")
+  @PostMapping
   public ResponseEntity<Void> createBoard(
       @RequestBody @Valid BoardRequest request,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     UUID userId = customUserDetails.getUserId();
     postService.createBoard(request, userId);
     return ResponseEntity.ok().build();
+  }
+
+  // 좋아요 토글
+  @Operation(
+      summary = "좋아요 등록 및 취소",
+      description = "좋아요를 등록하거나 취소합니다. "
+                    + "이미 좋아요를 한 게시물인 경우 좋아요가 취소되고, "
+                    + "좋아요를 하지 않은 게시물인 경우 좋아요가 등록됩니다."
+  )
+  @PostMapping("/{postId}/like")
+  public ResponseEntity<Void> toggleLike(
+      @PathVariable UUID postId,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postInteractionService.toggleLike(postId, userId);
+    return ResponseEntity.ok().build();
+  }
+
+  // 북마크 토글
+  @Operation(
+      summary = "북마크 등록 및 취소",
+      description = "북마크를 등록하거나 취소합니다. "
+                    + "이미 북마크를 한 게시물인 경우 북마크가 취소되고, "
+                    + "북마크를 하지 않은 게시물인 경우 북마크가 등록됩니다."
+  )
+  @PostMapping("/{postId}/bookmark")
+  public ResponseEntity<Void> toggleBookmark(
+      @PathVariable UUID postId,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postInteractionService.toggleBookmark(postId, userId);
+    return ResponseEntity.ok().build();
+  }
+
+  // 댓글 작성
+  @Operation(
+      summary = "댓글 작성",
+      description = "게시물에 댓글을 작성합니다."
+                    + "parentCommentId가 제공되면 해당 댓글에 대한 대댓글로 작성됩니다."
+                    + "null일 경우 일반 댓글로 작성됩니다."
+  )
+  @PostMapping("/{postId}/comment")
+  public ResponseEntity<Void> createComment(
+      @RequestBody CommentRequest request,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postInteractionService.createComment(request, userId);
+    return ResponseEntity.ok().build();
+  }
+
+  // 댓글 수정
+  @Operation(
+      summary = "댓글 수정",
+      description = "댓글을 수정합니다. 작성자 본인만 수정할 수 있습니다."
+  )
+  @PutMapping("/comment/{commentId}")
+  public void updateComment(
+      @PathVariable UUID commentId,
+      @RequestBody CommentRequest request,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postInteractionService.updateComment(request, commentId, userId);
+  }
+
+  // 댓글 삭제
+  @Operation(
+      summary = "댓글 삭제",
+      description = "댓글을 삭제합니다. "
+                    + "작성자 본인과 관리자만 삭제할 수 있습니다."
+                    + "대댓글이 있는 경우 함께 삭제됩니다."
+  )
+  @DeleteMapping("/comment/{commentId}")
+  public void deleteComment(
+      @PathVariable UUID commentId,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postInteractionService.deleteComment(commentId, userId);
   }
 }
