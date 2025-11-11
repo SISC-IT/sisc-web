@@ -1,18 +1,31 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PostItem from '../components/Board/PostItem';
 import Modal from '../components/Board/Modal';
+import SearchBar from '../components/Board/SearchBar';
+import BoardActions from '../components/Board/BoardActions';
 import styles from './Board.module.css';
-import PlusIcon from '../assets/board_plus.svg';
-import SelectArrowIcon from '../assets/boardSelectArrow.svg';
-import SearchArrowIcon from '../assets/boardSearchArrow.svg';
 
 const Board = () => {
+  const [posts, setPosts] = useState(() => {
+    const saved = localStorage.getItem('boardPosts');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((post) => ({
+        ...post,
+        date: new Date(post.date),
+      }));
+    }
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [posts, setPosts] = useState([]);
   const [sortOption, setSortOption] = useState('latest');
+
+  useEffect(() => {
+    localStorage.setItem('boardPosts', JSON.stringify(posts));
+  }, [posts]);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -25,59 +38,93 @@ const Board = () => {
   };
 
   const handleSave = () => {
-    const newPost = { title, content, date: new Date() };
+    const newPost = {
+      title,
+      content,
+      date: new Date(),
+      id: Date.now(),
+      likeCount: 0,
+      isLiked: false,
+      isBookmarked: false,
+    };
     setPosts([newPost, ...posts]);
     handleCloseModal();
   };
+
+  const handleLike = (postId) => {
+    setPosts(
+      posts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              isLiked: !post.isLiked,
+              likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
+            }
+          : post
+      )
+    );
+  };
+
+  const handleBookmark = (postId) => {
+    setPosts(
+      posts.map((post) =>
+        post.id === postId
+          ? { ...post, isBookmarked: !post.isBookmarked }
+          : post
+      )
+    );
+  };
+
+  const sortedPosts = [...posts].sort((a, b) => {
+    if (sortOption === 'latest') {
+      return new Date(b.date) - new Date(a.date);
+    }
+    if (sortOption === 'oldest') {
+      return new Date(a.date) - new Date(b.date);
+    }
+    if (sortOption === 'popular') {
+      return b.likeCount - a.likeCount;
+    }
+    return 0;
+  });
+
+  const filteredPosts = sortedPosts.filter((post) => {
+    if (!searchTerm) return true;
+    const lowerSearch = searchTerm.toLowerCase();
+    return (
+      post.title.toLowerCase().includes(lowerSearch) ||
+      post.content.toLowerCase().includes(lowerSearch)
+    );
+  });
 
   return (
     <div className={styles.boardContainer}>
       <header className={styles.boardHeader}>
         <h1 className={styles.boardTitle}>게시판</h1>
       </header>
+
       <div className={styles.boardControls}>
-        <div className={styles.searchContainer}>
-          <input
-            type="text"
-            placeholder="검색어를 입력하는 중"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={styles.searchInput}
-          />
-          <button
-            onClick={() => console.log('검색어:', searchTerm)}
-            className={styles.searchButton}
-          >
-            <img src={SearchArrowIcon} alt="검색" width="20" height="16" />
-          </button>
-        </div>
-        <div className={styles.boardActions}>
-          <div className={styles.selectWrapper}>
-            <select
-              className={styles.sortSelect}
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-            >
-              <option value="latest">최신순</option>
-              <option value="oldest">오래된순</option>
-              <option value="popular">인기순</option>
-            </select>
-            <img
-              src={SelectArrowIcon}
-              alt="화살표"
-              className={styles.selectArrow}
-            />
-          </div>
-          <button onClick={handleOpenModal} className={styles.writeButton}>
-            <span>글 작성하기</span>
-            <img src={PlusIcon} alt="plus" />
-          </button>
-        </div>
+        <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+        <BoardActions
+          sortOption={sortOption}
+          onSortChange={setSortOption}
+          onWrite={handleOpenModal}
+        />
       </div>
+
       <div className={styles.postsContainer}>
-        {posts.map((post, index) => (
-          <PostItem key={index} post={post} />
-        ))}
+        {filteredPosts.length > 0 ? (
+          filteredPosts.map((post) => (
+            <PostItem
+              key={post.id}
+              post={post}
+              onLike={handleLike}
+              onBookmark={handleBookmark}
+            />
+          ))
+        ) : (
+          <p className={styles.emptyMessage}>게시글이 없습니다.</p>
+        )}
       </div>
 
       {showModal && (

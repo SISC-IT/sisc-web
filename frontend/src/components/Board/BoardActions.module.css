@@ -9,6 +9,8 @@
     #d1d8ff 74.81%,
     #dddeff 107.39%
   );
+  --font-family:
+    'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-regular: 400;
   --font-size: 16px;
   --line-height: 100%;
@@ -38,8 +40,8 @@
 .sortSelect {
   width: 90px;
   height: 35px;
-  padding: 8px 12px;
-  padding-right: 36px;
+  padding: 8px;
+  padding-right: 20px;
   border: var(--color-border);
   border-radius: var(--radius);
   background: #fff;

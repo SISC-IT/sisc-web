@@ -57,8 +57,6 @@ const Modal = ({ title, setTitle, content, setContent, onSave, onClose }) => {
             <div className={styles.selectWrapper}>
               <select className={styles.select} defaultValue="세션선택">
                 <option value="세션선택">세션선택</option>
-                <option value="공개">공개</option>
-                <option value="비공개">비공개</option>
               </select>
               <div className={styles.selectIcon}>
                 <img src={DropdownArrowIcon} alt="드롭다운 화살표" />

@@ -318,3 +318,118 @@
     font-size: 14px;
   }
 }
+
+.titleWrapper {
+  width: var(--width-content);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.title {
+  width: auto;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.menuContainer {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menuButton {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1.2;
+}
+
+.menuDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid var(--color-border-card);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  width: 120px;
+  overflow: hidden;
+}
+
+.menuDropdown button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.menuDropdown button img {
+  margin-right: 8px;
+  display: block;
+}
+
+.menuDropdown button:hover {
+  background-color: var(--color-bg-light);
+}
+
+.EditIcon {
+  width: 18px;
+  height: 15px;
+}
+
+.DeleteIcon {
+  width: 11px;
+  height: 11px;
+}
+
+.commentsHeaderWrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--color-divider);
+  padding-bottom: 16px;
+}
+
+.commentsHeader {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.actionButton img {
+  width: 20px;
+  height: 20px;
+}
+
+.actionButton .count {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
