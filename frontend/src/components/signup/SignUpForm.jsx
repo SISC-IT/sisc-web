@@ -48,7 +48,6 @@ const SignUpForm = () => {
 
   const handleSendVerificationNumber = async (e) => {
     e.preventDefault();
-    setVerificationSent(true);
 
     // 도중에 요청 시 전 요청 취소
     abortRef.current?.abort();
@@ -58,6 +57,7 @@ const SignUpForm = () => {
     try {
       await sendVerificationNumber({ email: email }, abortRef.current.signal);
 
+      setVerificationSent(true);
       alert('인증번호가 발송되었습니다.');
     } catch (err) {
       console.log('status:', err.status);
@@ -66,8 +66,6 @@ const SignUpForm = () => {
     }
   };
   const handleCheckVerificationNumber = async () => {
-    setVerificationChecked(true);
-
     // 도중에 요청 시 전 요청 취소
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -144,7 +142,7 @@ const SignUpForm = () => {
             <label htmlFor="email">Email</label>
             <div className={styles.phoneVerificationContainer}>
               <input
-                type="phoneNumber"
+                type="email"
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
