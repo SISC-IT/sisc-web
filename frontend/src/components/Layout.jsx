@@ -11,6 +11,7 @@ function Layout() {
   return (
     <div style={{ display: 'flex', position: 'relative' }}>
       <Header
+        isRoot={isRoot}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         style={{ position: 'fixed' }}
       />

@@ -1,10 +1,8 @@
 import styles from './Header.module.css';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/logo.png';
 
-const Header = ({ onToggleSidebar, isOpen }) => {
-  const location = useLocation();
-  const isRoot = location.pathname === '/';
+const Header = ({ isRoot, onToggleSidebar, isOpen }) => {
   const nav = useNavigate();
   return (
     <header className={styles.header}>
