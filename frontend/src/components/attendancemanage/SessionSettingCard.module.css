@@ -1,0 +1,57 @@
+* {
+  box-sizing: border-box;
+}
+:root {
+  --ctrl-w: 90px;
+  --ctrl-h: 44px;
+  --ctrl-radius: 12px;
+}
+
+.SessionSettingCardContainer {
+  border-radius: 12px;
+  background: #fafbfc;
+  width: 335px;
+
+  flex-shrink: 0;
+  padding: 32px 20px;
+}
+
+.form {
+  display: grid;
+}
+
+.timeInputGroup {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+.timeInputGroup > input {
+  width: var(--ctrl-w);
+}
+
+.availableTimeInputGroup {
+  display: grid;
+  grid-template-columns: var(--ctrl-w) auto;
+  column-gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.availableTimeInputGroup > input {
+  width: var(--ctrl-w);
+}
+.availableTimeInputGroup button {
+  display: flex;
+  width: 90px;
+  padding: 12px 26px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  background: linear-gradient(
+    100deg,
+    #b3ebff -15.44%,
+    #91c3ff 39.86%,
+    #d3edff 94.81%
+  );
+  border: none;
+}

@@ -15,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public class BettingService {
 
     private final Random random = new Random();
 
-    public Optional<BetRound> getActiveRound(Scope type){
+    public Optional<BetRound> getActiveRound(Scope type) {
         return betRoundRepository.findByStatusTrueAndScope(type);
     }
 
@@ -42,7 +43,7 @@ public class BettingService {
         return betRoundRepository.findAllByOrderBySettleAtDesc();
     }
 
-    public Stock getStock(){
+    public Stock getStock() {
         List<Stock> stocks = stockRepository.findAll();
         if (stocks.isEmpty()) {
             throw new CustomException(ErrorCode.STOCK_NOT_FOUND);
@@ -51,7 +52,7 @@ public class BettingService {
         return stocks.get(random.nextInt(stocks.size()));
     }
 
-    public boolean setAllowFree(){
+    public boolean setAllowFree() {
         return random.nextDouble() < 0.2;
     }
 
@@ -61,27 +62,35 @@ public class BettingService {
     }
 
     public void createBetRound(Scope scope) {
-        Stock stock = getStock();
+
         LocalDateTime now = LocalDateTime.now();
+
+        Stock stock = getStock();
 
         BetRound betRound = BetRound.builder()
                 .scope(scope)
                 .title(now.toLocalDate() + " " + stock.getName() + " " + scope.name() + " 라운드")
                 .symbol(stock.getSymbol())
                 .allowFree(setAllowFree())
-                .status(true)
                 .openAt(scope.getOpenAt(now))
                 .lockAt(scope.getLockAt(now))
                 .market(stock.getMarket())
                 .previousClosePrice(stock.getPreviousClosePrice())
                 .build();
 
+        betRound.open();
+
         betRoundRepository.save(betRound);
     }
 
-    public void closeBetRound(){
-        // TODO : status를 false로 바꿔야함, 정산 로직 구현하면서 같이 할 것
+    public void closeBetRound() {
+        LocalDateTime now = LocalDateTime.now();
+        List<BetRound> toClose = betRoundRepository.findByStatusTrueAndLockAtLessThanEqual(now);
+        if (toClose.isEmpty()) return;
+        toClose.forEach(BetRound::close);
+        betRoundRepository.saveAll(toClose);
     }
+
 
     @Transactional
     public UserBet postUserBet(UUID userId, UserBetRequest userBetRequest) {
@@ -92,16 +101,14 @@ public class BettingService {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-
-        // 허용 구간: [openAt, lockAt)
-        if (now.isBefore(betRound.getOpenAt()) || !now.isBefore(betRound.getLockAt())) {
-            throw new CustomException(ErrorCode.BET_TIME_INVALID);
-        }
+        betRound.validate();
 
         int stake = 0;
 
         if (!userBetRequest.isFree()) {
+            if (!userBetRequest.isStakePointsValid()) {
+                throw new CustomException(ErrorCode.BET_POINT_TOO_LOW);
+            }
             pointHistoryService.createPointHistory(
                     userId,
                     -userBetRequest.getStakePoints(),
@@ -136,9 +143,7 @@ public class BettingService {
 
         BetRound betRound = userBet.getRound();
 
-        if (!LocalDateTime.now().isBefore(betRound.getLockAt())){
-            throw new CustomException(ErrorCode.BET_ROUND_CLOSED);
-        }
+        betRound.validate();
 
         if (!userBet.isFree() && userBet.getStakePoints() > 0) {
             pointHistoryService.createPointHistory(
@@ -151,5 +156,50 @@ public class BettingService {
         }
 
         userBetRepository.delete(userBet);
+    }
+
+    @Transactional
+    public void settleUserBets() {
+        LocalDateTime now = LocalDateTime.now();
+
+        List<BetRound> activeRounds =
+                betRoundRepository.findByStatusFalseAndSettleAtIsNullAndLockAtLessThanEqual(now);
+
+        for (BetRound round : activeRounds) {
+            Stock stock = stockRepository.findBySymbol(round.getSymbol())
+                    .orElseThrow(() -> new CustomException(ErrorCode.STOCK_NOT_FOUND));
+
+            BigDecimal finalPrice = stock.getSettleClosePrice();
+            if (finalPrice == null) {
+                continue;
+            }
+            round.settle(finalPrice);
+            betRoundRepository.save(round);
+
+            List<UserBet> userBets = userBetRepository.findAllByRound(round);
+
+            for (UserBet bet : userBets) {
+                if (bet.getBetStatus() != BetStatus.ACTIVE) continue;
+                if (bet.getOption() == round.getResultOption()) {
+                    int reward = calculateReward(bet);
+                    bet.win(reward);
+                    pointHistoryService.createPointHistory(
+                            bet.getUserId(),
+                            reward,
+                            PointReason.BETTING_WIN,
+                            PointOrigin.BETTING,
+                            round.getBetRoundID()
+                    );
+                } else {
+                    bet.lose();
+                }
+            }
+            userBetRepository.saveAll(userBets);
+        }
+    }
+
+    // TODO : 비율을 바탕으로한 reward 계산 로직
+    private int calculateReward(UserBet bet) {
+        return 2;
     }
 }

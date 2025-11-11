@@ -1,6 +1,6 @@
 package org.sejongisc.backend.user.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
@@ -17,6 +17,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User extends BasePostgresEntity{
 
     @Id
@@ -29,7 +30,6 @@ public class User extends BasePostgresEntity{
     private String email;
 
     @Column(name = "password_hash")
-    @JsonIgnore // 응답 직렬화 시 패스워드 해시 값 제외
     private String passwordHash;
 
     @Column(nullable = false)
