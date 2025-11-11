@@ -1,21 +1,21 @@
 import { NavLink } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 
-const Sidebar = ({ isOpen }) => {
+const Sidebar = ({ isOpen, isRoot }) => {
   return (
     <div>
       {/* 클릭 시 사이드바 슬라이드 */}
       <div
         className={`${styles.homeSidebarMenu} ${
-          isOpen ? styles.open : styles.closed
+          !isOpen && isRoot ? styles.closed : styles.open
         }`}
         aria-hidden={!isOpen}
       >
         <nav aria-label="사이드바">
           <div className={styles['menu-section']}>
-            <span className={styles['menu-title']}>Main</span>
+            <span className={styles['menu-title']}>게시판</span>
             <ul>
-              <li>
+              {/* <li>
                 <NavLink
                   to="/"
                   className={({ isActive }) =>
@@ -24,7 +24,7 @@ const Sidebar = ({ isOpen }) => {
                 >
                   홈
                 </NavLink>
-              </li>
+              </li> */}
               <li>
                 <NavLink
                   to="/board"
@@ -111,6 +111,26 @@ const Sidebar = ({ isOpen }) => {
                   }
                 >
                   마이페이지
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/login"
+                  className={({ isActive }) =>
+                    isActive ? styles['active-link'] : styles['inactive-link']
+                  }
+                >
+                  로그인
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/signup"
+                  className={({ isActive }) =>
+                    isActive ? styles['active-link'] : styles['inactive-link']
+                  }
+                >
+                  회원가입
                 </NavLink>
               </li>
             </ul>
