@@ -23,7 +23,7 @@ public class BacktestRequest {
   @Schema(description = "백테스트 ID")
   private Long backtestRunId;
 
-  @Schema(description = "백테스트 제목")
+  @Schema(description = "백테스트 제목", defaultValue = "골든크로스 + RSI (AAPL)")
   private String title;
 
   @Schema(description = "백테스트 시작일")

@@ -1,163 +1,14 @@
-# transformer/modules/transformer.py
+﻿# transformer/main.py
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple
-
-import numpy as np
+from typing import Dict, Optional
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
-import tensorflow as tf
-from tensorflow.keras import layers, Model
-
-# from AI.libs.utils.io import _log
-_log = print  # TODO: 추후 io._log 구현 시 복구
-from .models import build_transformer_classifier  # <-- 모델 분리됨
-
-# ===== 공개 상수 =====
-FEATURES: List[str] = [
-    "RSI",
-    "MACD",
-    "Bollinger_Bands_upper",
-    "Bollinger_Bands_lower",
-    "ATR",
-    "OBV",
-    "Stochastic",   # %K
-    "MFI",
-    "MA_5",
-    "MA_20",
-    "MA_50",
-    "MA_200",
-    "CLOSE_RAW",    # 마지막에 추가 (스케일 제외, 로그용)
-]
-
-CLASS_NAMES = ["BUY", "HOLD", "SELL"]
-
-# ====== 기술지표 유틸 ======
-def _ema(s: pd.Series, span: int) -> pd.Series:
-    return s.ewm(span=span, adjust=False).mean()
-
-def _rsi_wilder(close: pd.Series, period: int = 14) -> pd.Series:
-    delta = close.diff()
-    gain = delta.clip(lower=0.0)
-    loss = -delta.clip(upper=0.0)
-    avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
-    rs = avg_gain / avg_loss.replace(0, np.nan)
-    return 100.0 - (100.0 / (1.0 + rs))
-
-def _macd_line(close: pd.Series, fast: int = 12, slow: int = 26) -> pd.Series:
-    return _ema(close, fast) - _ema(close, slow)
-
-def _true_range(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
-    prev_close = close.shift(1)
-    tr1 = high - low
-    tr2 = (high - prev_close).abs()
-    tr3 = (low - prev_close).abs()
-    return pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-
-def _atr_wilder(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
-    tr = _true_range(high, low, close)
-    return tr.ewm(alpha=1/period, adjust=False).mean()
-
-def _obv(close: pd.Series, volume: pd.Series) -> pd.Series:
-    # 시리즈 보장 + 결측 처리
-    close = pd.Series(close)
-    volume = pd.Series(volume).fillna(0)
-
-    # 전일 대비 가격 변화
-    diff = close.diff()
-
-    # 방향: 상승=1, 하락=-1, 보합=0  (NaN 안전 비교)
-    direction = np.where(diff.gt(0), 1, np.where(diff.lt(0), -1, 0))
-    direction = pd.Series(direction, index=close.index)
-
-    # OBV = 방향 * 거래량 누적합
-    obv_series = (direction * volume).cumsum().fillna(0)
-    obv_series.name = "OBV"
-    return obv_series
-
-def _stochastic_k(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
-    ll = low.rolling(period).min()
-    hh = high.rolling(period).max()
-    denom = (hh - ll).replace(0, np.nan)
-    return (close - ll) / denom * 100.0
-
-def _mfi(high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
-    tp = ((high + low + close) / 3.0).astype(float)
-    rmf = (tp * volume.astype(float)).astype(float)
-
-    delta_tp: pd.Series = tp.diff().astype(float)
-
-    pos_mf = rmf.where(delta_tp.gt(0), 0.0)
-    neg_mf = rmf.where(delta_tp.lt(0), 0.0).abs()
-
-    pos_sum = pos_mf.rolling(period).sum()
-    neg_sum = neg_mf.rolling(period).sum().replace(0, np.nan)
-    mr = pos_sum / neg_sum
-    return 100.0 - (100.0 / (1.0 + mr))
+from pathlib import Path
 
 
-# ====== 피처 빌더 ======
-def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    cols = {c.lower(): c for c in df.columns}
-    need = ["open", "high", "low", "close", "volume"]
-    mapping = {}
-    for k in need:
-        if k in cols:
-            mapping[cols[k]] = k
-    if mapping:
-        df = df.rename(columns=mapping)
+# ★ 실제 추론 로직은 modules/inference.run_inference 에 구현되어 있음
+from .modules.inference import run_inference
 
-    O = df["open"].astype(float)
-    H = df["high"].astype(float)
-    L = df["low"].astype(float)
-    C = df["close"].astype(float)
-    V = df["volume"].astype(float)
 
-    feats = pd.DataFrame(index=df.index)
-    feats["RSI"]  = _rsi_wilder(C, period=14)
-    feats["MACD"] = _macd_line(C, fast=12, slow=26)
-
-    ma20 = C.rolling(20).mean()
-    std20 = C.rolling(20).std(ddof=0)
-    feats["Bollinger_Bands_upper"] = ma20 + 2.0 * std20
-    feats["Bollinger_Bands_lower"] = ma20 - 2.0 * std20
-    feats["ATR"] = _atr_wilder(H, L, C, period=14)
-    feats["OBV"] = _obv(C, V)
-    feats["Stochastic"] = _stochastic_k(H, L, C, period=14)
-    feats["MFI"]        = _mfi(H, L, C, V, period=14)
-    feats["MA_5"]   = C.rolling(5).mean()
-    feats["MA_20"]  = ma20
-    feats["MA_50"]  = C.rolling(50).mean()
-    feats["MA_200"] = C.rolling(200).mean()
-    feats["CLOSE_RAW"] = C
-    return feats.dropna()
-
-# ====== 모델 로드 ======
-def _load_or_build_model(seq_len: int, n_features: int, model_path: Optional[str]) -> Model:
-    model = build_transformer_classifier(seq_len, n_features)
-    if model_path:
-        try:
-            model.load_weights(model_path)
-            _log(f"[TRANSFORMER] Transformer weights loaded: {model_path}")
-        except Exception as e:
-            _log(f"[TRANSFORMER][WARN] 모델 가중치 로드 실패 → 랜덤 초기화: {e}")
-    else:
-        _log("[TRANSFORMER][WARN] model_path 미지정 → 랜덤 초기화로 진행")
-    return model
-
-# ====== 시퀀스/스케일링 ======
-def _make_sequence(feats: pd.DataFrame, use_cols: List[str], seq_len: int) -> Optional[np.ndarray]:
-    if len(feats) < seq_len:
-        return None
-    X = feats[use_cols].iloc[-seq_len:].copy()
-    return X.values.astype("float32")
-
-def _scale_per_ticker(seq_arr: np.ndarray) -> Tuple[np.ndarray, MinMaxScaler]:
-    scaler = MinMaxScaler(feature_range=(0, 1), clip=True)
-    X_scaled = scaler.fit_transform(seq_arr)
-    return X_scaled.astype("float32"), scaler
-
-# ====== 메인 엔트리포인트 ======
 def run_transformer(
     *,
     finder_df: pd.DataFrame,
@@ -165,125 +16,69 @@ def run_transformer(
     pred_h: int,
     raw_data: pd.DataFrame,
     run_date: Optional[str] = None,
-    config: Optional[dict] = None,
+    weights_path: Optional[str] = None,
     interval: str = "1d",
 ) -> Dict[str, pd.DataFrame]:
-    tickers = finder_df["ticker"].astype(str).tolist()
-    if raw_data is None or raw_data.empty:
-        _log("[TRANSFORMER] raw_data empty -> empty logs")
-        return {"logs": pd.DataFrame(columns=[
-            "ticker","date","action","price","weight",
-            "feature1","feature2","feature3","prob1","prob2","prob3"
-        ])}
+    """
 
-    df = raw_data.copy()
-    ts_col = "ts_local" if "ts_local" in df.columns else ("date" if "date" in df.columns else None)
-    if ts_col is None:
-        raise ValueError("raw_data에 'ts_local' 또는 'date' 컬럼이 필요합니다.")
-    df[ts_col] = pd.to_datetime(df[ts_col])
-    df = df.rename(columns={c: c.lower() for c in df.columns})
-    df = df[df["ticker"].astype(str).isin(tickers)]
-    if df.empty:
-        _log("[TRANSFORMER] 대상 종목 데이터 없음")
-        return {"logs": pd.DataFrame(columns=[
-            "ticker","date","action","price","weight",
-            "feature1","feature2","feature3","prob1","prob2","prob3"
-        ])}
+    Parameters
+    ----------
+    finder_df : pd.DataFrame
+        ['ticker'] 컬럼 포함. Finder 단계에서 선정된 추론 대상 종목 목록.
+    seq_len : int
+        모델 입력 시퀀스 길이(예: 64).
+    pred_h : int
+        예측 지평(예: 5). 라벨링/정책 기준(로그, 가중치 산정 보조)에 쓰이며
+        추론 확률 계산 자체에는 직접 관여하지 않음.
+    raw_data : pd.DataFrame
+        OHLCV 시계열. 필수 컬럼:
+        ['ticker','open','high','low','close','volume', ('ts_local' or 'date')]
+    run_date : Optional[str]
+        'YYYY-MM-DD' 형식. 지정 시, 해당 날짜(포함)까지의 데이터만 사용해 추론.
+        미지정 시, Asia/Seoul 기준 당일 종가까지 사용.
+    config : Optional[dict]
+        config["transformer"]["model_path"] 에 학습된 가중치 경로가 존재해야 함.
+        예) {"transformer": {"model_path": "artifacts/transformer_cls.h5"}}
+        (추후 추론 방식 옵션이 늘어나면 이 dict 에 플래그/파라미터를 확장하세요.)
+    interval : str
+        캔들 간격 표기(로그용). 예: '1d', '1h' 등.
 
-    if run_date is None:
-        end_dt = pd.Timestamp.now(tz="Asia/Seoul").normalize() + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
-    else:
-        end_dt = pd.to_datetime(run_date).tz_localize("Asia/Seoul", nonexistent="shift_forward").normalize()
-        end_dt = end_dt + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+    Returns
+    -------
+    Dict[str, pd.DataFrame]
+        {"logs": DataFrame} 형식.
+        컬럼: ["ticker","date","action","price","weight",
+               "feature1","feature2","feature3","prob1","prob2","prob3"]
 
-    if df[ts_col].dt.tz is not None:
-        end_cut = end_dt.tz_convert(df[ts_col].dt.tz)
-    else:
-        end_cut = end_dt.tz_localize(None)
+    Notes
+    -----
+    - 이 래퍼는 '이름/시그니처의 안정성' 확보가 목적입니다.
+      내부 추론 엔진이 변경되어도 외부 호출부 수정 없이 교체가 가능합니다.
+    """
 
-    df = df[df[ts_col] <= end_cut]
-    df = df.sort_values(["ticker", ts_col]).reset_index(drop=True)
+    # 1) weights_path 경로지정
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-    model_feats = [f for f in FEATURES if f != "CLOSE_RAW"]
-    n_features = len(model_feats)
+    weights_dir = PROJECT_ROOT / "transformer" / "weights"
+    candidate = weights_dir / "initial.weights.h5"
 
-    model_path = None
-    if config and "transformer" in config and "model_path" in config["transformer"]:
-        model_path = str(config["transformer"]["model_path"])
+    weights_path = str(candidate)
+    if candidate.exists():
+            
+            print(f"[TRANSFORMER] weights_path 설정됨: {weights_path}")
 
-    model = _load_or_build_model(seq_len=seq_len, n_features=n_features, model_path=model_path)
+    if not weights_path:
+        print("[TRANSFORMER][WARN] weights_path 미설정 → 가중치 없이 랜덤 초기화로 추론될 수 있음(품질 저하).")
+        print("  config 예시: {'transformer': {'weights_path': 'weights/initial.weights.h5'}}")
 
-    rows: List[dict] = []
-    for t, g in df.groupby("ticker", sort=False):
-        try:
-            if g.empty:
-                continue
-            g = g.rename(columns={ts_col: "date"}).set_index("date")
-            ohlcv = g[["open", "high", "low", "close", "volume"]].copy()
 
-            feats = build_features(ohlcv)
-            if feats.empty:
-                _log(f"[TRANSFORMER] {t} features empty -> skip")
-                continue
-
-            X_seq = _make_sequence(feats, model_feats, seq_len)
-            if X_seq is None:
-                _log(f"[TRANSFORMER] {t} 부족한 길이(seq_len={seq_len}) -> skip")
-                continue
-
-            X_scaled, _ = _scale_per_ticker(X_seq)
-            X_scaled = np.expand_dims(X_scaled, axis=0)
-
-            try:
-                probs = model.predict(X_scaled, verbose=0)[0]
-                probs = np.clip(probs.astype(float), 1e-6, 1.0)
-                probs = probs / probs.sum()
-                buy_p, hold_p, sell_p = float(probs[0]), float(probs[1]), float(probs[2])
-                action = CLASS_NAMES[int(np.argmax(probs))]
-            except Exception as e:
-                _log(f"[TRANSFORMER][WARN] 모델 예측 실패({t}) → 룰기반 fallback: {e}")
-                recent = feats.iloc[-1]
-                rsi = float(recent["RSI"])
-                macd = float(recent["MACD"])
-                if rsi < 30 and macd > 0:
-                    action = "BUY"; buy_p, hold_p, sell_p = 0.65, 0.30, 0.05
-                elif rsi > 70 and macd < 0:
-                    action = "SELL"; buy_p, hold_p, sell_p = 0.05, 0.30, 0.65
-                else:
-                    action = "HOLD"; buy_p, hold_p, sell_p = 0.33, 0.34, 0.33
-
-            p_max = max(buy_p, hold_p, sell_p)
-            confidence = float(np.clip((p_max - 1/3) * 1.5, 0.0, 1.0))
-            ret = 0.0
-            if len(feats) > 2:
-                c_now = float(feats["CLOSE_RAW"].iloc[-1])
-                c_prev = float(feats["CLOSE_RAW"].iloc[-2])
-                if c_prev:
-                    ret = (c_now / c_prev) - 1.0
-            weight = float(np.clip(0.05 + confidence * 0.20 + abs(ret) * 0.05, 0.05, 0.30))
-            recent = feats.iloc[-1]
-            close_price = float(recent["CLOSE_RAW"])
-
-            rows.append({
-                "ticker": str(t),
-                "date": feats.index[-1].strftime("%Y-%m-%d"),
-                "action": action,
-                "price": close_price,
-                "weight": weight,
-                "feature1": float(recent["RSI"]),
-                "feature2": float(recent["MACD"]),
-                "feature3": float(recent["ATR"]),
-                "prob1": float(buy_p),
-                "prob2": float(hold_p),
-                "prob3": float(sell_p),
-            })
-        except Exception as e:
-            _log(f"[TRANSFORMER][ERROR] {t}: {e}")
-            continue
-
-    logs_df = pd.DataFrame(rows, columns=[
-        "ticker","date","action","price","weight",
-        "feature1","feature2","feature3","prob1","prob2","prob3"
-    ])
-    return {"logs": logs_df}
-
+    # 2) 실제 추론 실행(모듈 위임)
+    return run_inference(
+        finder_df=finder_df,
+        raw_data=raw_data,
+        seq_len=seq_len,
+        pred_h=pred_h,
+        weights_path=weights_path,   # ★ 학습 가중치 경로 전달
+        run_date=run_date,
+        interval=interval,
+    )

@@ -7,4 +7,5 @@ public interface OauthUserInfo {
     // String getEamil();   // kakao email 승인 필요
     String getName();
     AuthProvider getProvider();
+    String getAccessToken();
 }

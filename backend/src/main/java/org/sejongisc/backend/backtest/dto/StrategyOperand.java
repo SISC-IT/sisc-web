@@ -1,5 +1,6 @@
 package org.sejongisc.backend.backtest.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,24 +17,21 @@ import java.util.Map;
 @AllArgsConstructor
 public class StrategyOperand {
 
-    // 항의 타입: "indicator", "price", "const"
+    @Schema(description = "항의 타입: \"indicator\", \"price\", \"const\"")
     private String type;
 
-    // type == "indicator" 일 때
-    // 지표 코드 (예: "SMA", "RSI", "MACD")
+    @Schema(description = "type == \"indicator\" 일 때의 지표 코드 (예: \"SMA\", \"RSI\", \"MACD\")")
     private String indicatorCode;
 
-    // type == "price" 일 때
-    // 가격 필드 (예: "Close", "Open", "High", "Low", "Volume")
+    @Schema(description = "type == \"price\" 일 때의 가격 필드 (예: \"Close\", \"Open\", \"High\", \"Low\", \"Volume\")")
     private String priceField;
 
-    // type == "const" 일 때
-    // 상수 값 (예: 30, 0.02)
+    @Schema(description = "type == \"const\" 일 때의 상수 값 (예: 30, 0.02)")
     private BigDecimal constantValue;
 
-    // 지표의 출력값 (예: "value", "macd", "signal", "hist")
+    @Schema(description = "지표의 출력값 (예: \"value\", \"macd\", \"signal\", \"hist\")")
     private String output;
 
-    // 지표의 파라미터 맵 (예: {"length": 20})
+    @Schema(description = "지표의 파라미터 맵 (예: {\"length\": 20})")
     private Map<String, Object> params;
 }
