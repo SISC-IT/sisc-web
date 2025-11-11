@@ -211,6 +211,7 @@
 .commentHeader {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-bottom: var(--gap-default);
 }
@@ -335,6 +336,7 @@
 }
 
 .menuContainer {
+  margin-left: auto;
   position: relative;
   flex-shrink: 0;
 }

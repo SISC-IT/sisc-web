@@ -21,7 +21,9 @@ const PostDetail = () => {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+  const [showCommentMenu, setShowCommentMenu] = useState(null);
 
+  // 게시글 저장소 함수
   const getPostsFromStorage = () => {
     try {
       const saved = localStorage.getItem('boardPosts');
@@ -37,6 +39,23 @@ const PostDetail = () => {
     localStorage.setItem('boardPosts', JSON.stringify(posts));
   };
 
+  // 댓글 저장소 함수
+  const getCommentsFromStorage = (postId) => {
+    try {
+      const saved = localStorage.getItem(`comments_${postId}`);
+      if (!saved) return [];
+      return JSON.parse(saved).map((c) => ({ ...c, date: new Date(c.date) }));
+    } catch (error) {
+      console.error('Failed to parse comments from localStorage', error);
+      return [];
+    }
+  };
+
+  const saveCommentsToStorage = (postId, comments) => {
+    localStorage.setItem(`comments_${postId}`, JSON.stringify(comments));
+  };
+
+  // 게시글 로딩 및 댓글 로딩
   useEffect(() => {
     setLoading(true);
     let currentPost = location.state?.post;
@@ -45,11 +64,17 @@ const PostDetail = () => {
       const allPosts = getPostsFromStorage();
       currentPost = allPosts.find((p) => p.id === parseInt(id));
     }
-
     setPost(currentPost);
     setLoading(false);
+
+    if (currentPost) {
+      setComments(getCommentsFromStorage(currentPost.id));
+    } else {
+      setComments([]);
+    }
   }, [id, location.state]);
 
+  // 좋아요 토글
   const handleLike = () => {
     const allPosts = getPostsFromStorage();
     let updatedPost = null;
@@ -68,6 +93,7 @@ const PostDetail = () => {
     setPost(updatedPost);
   };
 
+  // 북마크 토글
   const handleBookmark = () => {
     const allPosts = getPostsFromStorage();
     let updatedPost = null;
@@ -82,6 +108,7 @@ const PostDetail = () => {
     setPost(updatedPost);
   };
 
+  // 게시글 삭제
   const handleDelete = () => {
     if (window.confirm('게시글을 정말 삭제하시겠습니까?')) {
       const allPosts = getPostsFromStorage();
@@ -91,6 +118,7 @@ const PostDetail = () => {
     }
   };
 
+  // 게시글 수정
   const handleUpdate = () => {
     setShowMenu(false);
     const newTitle = prompt('수정할 제목을 입력하세요:', post.title);
@@ -111,6 +139,7 @@ const PostDetail = () => {
     setPost(updatedPost);
   };
 
+  // 댓글 추가
   const handleAddComment = () => {
     if (!commentText.trim()) return;
     const newComment = {
@@ -119,10 +148,36 @@ const PostDetail = () => {
       text: commentText,
       date: new Date(),
     };
-    setComments([...comments, newComment]);
+    const updatedComments = [...comments, newComment];
+    setComments(updatedComments);
+    saveCommentsToStorage(post.id, updatedComments);
     setCommentText('');
   };
 
+  // 댓글 수정
+  const handleUpdateComment = (commentId) => {
+    setShowCommentMenu(null);
+    const currentComment = comments.find((c) => c.id === commentId);
+    const newText = prompt('수정할 댓글을 입력하세요:', currentComment.text);
+    if (newText === null || newText.trim() === '') return;
+    const updatedComments = comments.map((c) =>
+      c.id === commentId ? { ...c, text: newText } : c
+    );
+    setComments(updatedComments);
+    saveCommentsToStorage(post.id, updatedComments);
+  };
+
+  // 댓글 삭제
+  const handleDeleteComment = (commentId) => {
+    if (window.confirm('댓글을 정말 삭제하시겠습니까?')) {
+      const updatedComments = comments.filter((c) => c.id !== commentId);
+      setComments(updatedComments);
+      saveCommentsToStorage(post.id, updatedComments);
+      setShowCommentMenu(null);
+    }
+  };
+
+  // 댓글 입력창에서 ctrl+enter로 댓글 추가
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) handleAddComment();
   };
@@ -253,6 +308,36 @@ const PostDetail = () => {
                       <p className={styles.commentAuthor}>{author}</p>
                     </div>
                     <p className={styles.commentDate}>{getTimeAgo(date)}</p>
+
+                    {/* 댓글 수정/삭제 메뉴 */}
+                    <div className={styles.menuContainer}>
+                      <button
+                        className={styles.menuButton}
+                        onClick={() => setShowCommentMenu(id)}
+                      >
+                        ⋮
+                      </button>
+                      {showCommentMenu === id && (
+                        <div className={styles.menuDropdown}>
+                          <button onClick={() => handleUpdateComment(id)}>
+                            <img
+                              src={EditIcon}
+                              className={styles.EditIcon}
+                              alt="수정버튼"
+                            />
+                            수정하기
+                          </button>
+                          <button onClick={() => handleDeleteComment(id)}>
+                            <img
+                              src={DeleteIcon}
+                              className={styles.DeleteIcon}
+                              alt="삭제버튼"
+                            />
+                            삭제하기
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <p className={styles.commentText}>{text}</p>
                 </div>
