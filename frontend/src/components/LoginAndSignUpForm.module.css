@@ -159,3 +159,19 @@
   background-color: #bce5ff;
   cursor: not-allowed;
 }
+
+.passwordPolicy {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0px 0px 8px;
+  font-size: 13px;
+  color: #868e96;
+}
+
+.passwordPolicy li {
+  transition: color 0.2s ease-in-out;
+}
+
+.passwordPolicy li.valid {
+  color: #28a745;
+}
