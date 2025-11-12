@@ -5,6 +5,7 @@ import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.sejongisc.backend.user.entity.User;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -34,4 +35,19 @@ public class UserOauthAccount extends BasePostgresEntity {
 
     @Column(name = "provider_uid", nullable = false)
     private String providerUid;
+
+    @Column(name = "access_token", length = 2048)
+    private String accessToken;
+
+    @Column(name = "token_expires_at")
+    private LocalDateTime tokenExpiresAt;
+
+    /**
+     * 토큰 만료 여부를 확인합니다.
+     * @return 토큰이 만료되었으면 true,
+     * 만료되지 않았거나 만료 시간이 설정되지 않은 경우 false
+     */
+    public boolean isTokenExpired() {
+        return tokenExpiresAt != null && tokenExpiresAt.isBefore(LocalDateTime.now());
+    }
 }

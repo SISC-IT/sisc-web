@@ -15,4 +15,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findUserByEmail(String email);
 
     List<User> findAllByOrderByPointDesc();
+
+    Optional<User> findByNameAndPhoneNumber(String name, String phoneNumber);
 }

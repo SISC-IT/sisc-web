@@ -3,6 +3,8 @@ import icon1 from '../../assets/at_icon_1.png';
 import StockInfoItem from './StockInfoItem';
 import { dailyBettingHistory } from '../../utils/dailyBettingHistory';
 import { weeklyBettingHistory } from '../../utils/weeklyBettingHistory';
+import Pagination from './Pagination';
+import { useState, useEffect } from 'react';
 
 const BettingHistory = ({ type }) => {
   const formatDate = (dateStr) => {
@@ -10,12 +12,32 @@ const BettingHistory = ({ type }) => {
     return `${year}년 ${month}월 ${day}일`;
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  // 주간/일간 바뀔 때 페이지 초기화
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [type]);
+
   const mockBetHistory =
     type === 'weekly' ? weeklyBettingHistory : dailyBettingHistory;
 
+  const totalPages = Math.ceil(mockBetHistory.length / itemsPerPage);
+
+  // 현재 페이지에 해당하는 데이터만 slice
+  const currentData = mockBetHistory.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   return (
     <>
-      {mockBetHistory.map((history, index) => (
+      {currentData.map((history, index) => (
         <div
           key={index}
           className={`${styles['daily-betting-card']} ${history.isCorrect ? styles['correct-card'] : styles['incorrect-card']}`}
@@ -58,6 +80,13 @@ const BettingHistory = ({ type }) => {
           </div>
         </div>
       ))}
+      <div className={styles.paginationContainer}>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      </div>
     </>
   );
 };
