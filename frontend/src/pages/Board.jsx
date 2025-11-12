@@ -15,6 +15,7 @@ const Board = () => {
         date: new Date(post.date),
       }));
     }
+    return [];
   });
 
   const [searchTerm, setSearchTerm] = useState('');
