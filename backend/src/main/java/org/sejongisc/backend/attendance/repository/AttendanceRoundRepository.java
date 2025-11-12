@@ -38,10 +38,11 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
 
     /**
      * 특정 세션 내 특정 라운드 번호의 라운드 조회
+     * nativeQuery=true를 사용하여 SQL의 LIMIT/OFFSET을 지원
      */
-    @Query("SELECT r FROM AttendanceRound r " +
-            "WHERE r.attendanceSession.attendanceSessionId = :sessionId " +
-            "ORDER BY r.roundDate ASC " +
-            "LIMIT 1 OFFSET :offset")
+    @Query(value = "SELECT * FROM attendance_round " +
+            "WHERE attendance_session_id = :sessionId " +
+            "ORDER BY round_date ASC " +
+            "LIMIT 1 OFFSET :offset", nativeQuery = true)
     Optional<AttendanceRound> findNthRoundInSession(@Param("sessionId") UUID sessionId, @Param("offset") int offset);
 }

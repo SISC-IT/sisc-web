@@ -2,6 +2,7 @@ package org.sejongisc.backend.attendance.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceCheckInRequest;
@@ -12,6 +13,7 @@ import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +44,7 @@ public class AttendanceRoundController {
                     "라운드 날짜, 시작 시간, 출석 가능 시간을 설정할 수 있습니다."
     )
     @PostMapping("/sessions/{sessionId}/rounds")
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<AttendanceRoundResponse> createRound(
             @PathVariable UUID sessionId,
             @RequestBody AttendanceRoundRequest request) {
@@ -105,6 +108,7 @@ public class AttendanceRoundController {
                     "라운드 날짜, 시작 시간, 출석 가능 시간 등을 변경할 수 있습니다."
     )
     @PutMapping("/rounds/{roundId}")
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<AttendanceRoundResponse> updateRound(
             @PathVariable UUID roundId,
             @RequestBody AttendanceRoundRequest request) {
@@ -123,6 +127,7 @@ public class AttendanceRoundController {
                     "라운드와 관련된 모든 출석 기록도 함께 삭제됩니다."
     )
     @DeleteMapping("/rounds/{roundId}")
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<Void> deleteRound(@PathVariable UUID roundId) {
         log.info("라운드 삭제: roundId={}", roundId);
         attendanceRoundService.deleteRound(roundId);
@@ -141,7 +146,7 @@ public class AttendanceRoundController {
     )
     @PostMapping("/rounds/check-in")
     public ResponseEntity<AttendanceCheckInResponse> checkInByRound(
-            @RequestBody AttendanceCheckInRequest request,
+            @Valid @RequestBody AttendanceCheckInRequest request,
             Authentication authentication) {
         UUID userId = null;
 

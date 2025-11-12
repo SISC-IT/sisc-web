@@ -375,9 +375,12 @@ public class AttendanceService {
     private AttendanceResponse convertToResponse(Attendance attendance) {
         return AttendanceResponse.builder()
                 .attendanceId(attendance.getAttendanceId())
-                .userId(attendance.getUser().getUserId())
-                .userName(attendance.getUser().getName())
+                .userId(attendance.getUser() != null ? attendance.getUser().getUserId() : null)
+                .userName(attendance.getUser() != null ? attendance.getUser().getName() :
+                        (attendance.getAnonymousUserName() != null ? attendance.getAnonymousUserName() : "익명사용자"))
                 .attendanceSessionId(attendance.getAttendanceSession().getAttendanceSessionId())
+                .attendanceRoundId(attendance.getAttendanceRound() != null ?
+                        attendance.getAttendanceRound().getRoundId() : null)
                 .attendanceStatus(attendance.getAttendanceStatus())
                 .checkedAt(attendance.getCheckedAt())
                 .awardedPoints(attendance.getAwardedPoints())
