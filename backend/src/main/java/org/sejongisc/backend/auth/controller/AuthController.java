@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j
@@ -214,13 +218,40 @@ public class AuthController {
 
     )
     @GetMapping("/login/{provider}")
-    public ResponseEntity<LoginResponse> handleOauthRedirect(
-            @Parameter(description = "소셜 로그인 제공자", example = "GOOGLE") @PathVariable("provider") String provider,
-            @Parameter(description = "OAuth 인증 코드", example = "4/0AbCdEfG...") @RequestParam("code") String code,
-            @Parameter(description = "CSRF 방지용 state 값", example = "a1b2c3d4") @RequestParam("state") String state,
-            HttpSession session) {
+    public void handleOauthRedirect(
+            @Parameter(description = "소셜 로그인 제공자", example = "GOOGLE")
+            @PathVariable("provider") String provider,
+
+            @Parameter(description = "OAuth 인증 코드", example = "4/0AbCdEfG...")
+            @RequestParam("code") String code,
+
+            @Parameter(description = "CSRF 방지용 state 값", example = "a1b2c3d4")
+            @RequestParam("state") String state,
+
+            HttpSession session,
+            HttpServletResponse response
+    ) throws IOException {
+
         log.info("[{}] OAuth GET redirect received: code={}, state={}", provider, code, state);
-        return OauthLogin(provider, code, state, session);
+
+        // 기존 POST OauthLogin() 재활용 (로그인 처리 + 토큰 발급)
+        ResponseEntity<LoginResponse> result = OauthLogin(provider, code, state, session);
+        LoginResponse body = result.getBody();
+
+        if (body == null) {
+            log.error("OAuth 로그인 실패: 응답 본문이 null입니다.");
+            response.sendRedirect("http://localhost:5173/oauth/fail");
+            return;
+        }
+
+        // 프론트로 리다이렉트 (accessToken, userId, name 전달)
+        String redirectUrl = "http://localhost:5173/oauth/success"
+                + "?accessToken=" + URLEncoder.encode(body.getAccessToken(), StandardCharsets.UTF_8)
+                + "&userId=" + URLEncoder.encode(body.getUserId().toString(), StandardCharsets.UTF_8)
+                + "&name=" + URLEncoder.encode(body.getName(), StandardCharsets.UTF_8);
+
+        log.info("[{}] OAuth 로그인 완료 → 프론트로 리다이렉트: {}", provider, redirectUrl);
+        response.sendRedirect(redirectUrl);
     }
 
 
