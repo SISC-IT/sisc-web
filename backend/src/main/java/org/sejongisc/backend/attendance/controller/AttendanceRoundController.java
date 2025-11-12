@@ -17,6 +17,7 @@ import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -156,7 +157,8 @@ public class AttendanceRoundController {
         UUID userId;
 
         // 인증된 경우 사용자 ID 추출, 미인증인 경우 임시 ID 생성
-        if (authentication != null && authentication.isAuthenticated()) {
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
             userId = extractUserId(authentication, httpRequest);
             log.info("라운드 출석 체크인 요청 (인증됨): roundId={}, userId={}", request.getRoundId(), userId);
         } else {

@@ -43,15 +43,18 @@ public class AttendanceRoundService {
 
         try {
             // 클라이언트가 보낸 날짜 대신 서버의 현재 날짜를 사용하여 시간대 차이 방지
-            LocalDate serverToday = LocalDate.now();
+            LocalDate roundDate = request.getRoundDate();
+            if (roundDate == null) {
+                roundDate = LocalDate.now();
+            }
             LocalTime requestStartTime = request.getStartTime();
 
             log.info("📅 시간대 정보: 클라이언트 roundDate={}, 서버 today={}, 요청 startTime={}",
-                    request.getRoundDate(), serverToday, requestStartTime);
+                    request.getRoundDate(), roundDate, requestStartTime);
 
             AttendanceRound round = AttendanceRound.builder()
                     .attendanceSession(session)
-                    .roundDate(serverToday)  // 클라이언트 날짜 대신 서버 날짜 사용
+                    .roundDate(roundDate)
                     .startTime(requestStartTime)
                     .allowedMinutes(request.getAllowedMinutes() != null ? request.getAllowedMinutes() : 30)
                     .roundStatus(RoundStatus.UPCOMING)
