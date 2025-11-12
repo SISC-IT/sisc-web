@@ -236,6 +236,7 @@ public class AttendanceRoundController {
                     "참석자, 지각자, 결석자 등의 출석 상태별 명단을 반환합니다."
     )
     @GetMapping("/rounds/{roundId}/attendances")
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<?> getAttendancesByRound(
             @PathVariable UUID roundId) {
         log.info("라운드별 출석 명단 조회: roundId={}", roundId);
