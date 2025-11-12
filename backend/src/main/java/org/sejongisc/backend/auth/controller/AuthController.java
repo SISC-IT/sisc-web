@@ -395,7 +395,7 @@ public class AuthController {
             @CookieValue(value = "refresh", required = false) String refreshToken
     ) {
 
-        // ⃣ 쿠키에 refreshToken이 없으면 401
+        // 쿠키에 refreshToken이 없으면 401
         if (refreshToken == null || refreshToken.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Refresh Token이 없습니다."));
