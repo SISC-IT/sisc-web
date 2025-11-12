@@ -46,7 +46,6 @@ public class BettingController {
                     @ApiResponse(responseCode = "404", description = "활성 라운드가 존재하지 않음")
             }
     )
-
     @GetMapping("/bet-rounds/{scope}")
     public ResponseEntity<BetRound> getTodayBetRound(
             @Parameter(description = "라운드 범위 (Scope): DAILY 또는 WEEKLY", example = "DAILY")
