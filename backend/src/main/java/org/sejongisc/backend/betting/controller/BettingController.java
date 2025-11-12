@@ -46,18 +46,19 @@ public class BettingController {
                     @ApiResponse(responseCode = "404", description = "활성 라운드가 존재하지 않음")
             }
     )
+
     @GetMapping("/bet-rounds/{scope}")
     public ResponseEntity<BetRound> getTodayBetRound(
-            @Parameter(description = "라운드 범위: 'daily' 또는 'weekly'", example = "daily")
-            @PathVariable @Pattern(regexp = "daily|weekly") String scope) {
-
-        Scope scopeEnum = Scope.valueOf(scope.toUpperCase());
-        Optional<BetRound> betRound = bettingService.getActiveRound(scopeEnum);
+            @Parameter(description = "라운드 범위 (Scope): DAILY 또는 WEEKLY", example = "DAILY")
+            @PathVariable Scope scope
+    ) {
+        Optional<BetRound> betRound = bettingService.getActiveRound(scope);
 
         return betRound
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
 
     @Operation(
             summary = "전체 베팅 라운드 이력 조회",
