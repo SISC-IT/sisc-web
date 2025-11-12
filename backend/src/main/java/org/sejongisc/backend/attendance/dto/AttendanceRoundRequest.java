@@ -23,7 +23,6 @@ import java.time.LocalTime;
 )
 public class AttendanceRoundRequest {
 
-    @NotNull(message = "라운드 날짜는 필수입니다")
     @Schema(
             description = "라운드 진행 날짜 (YYYY-MM-DD 형식)",
             example = "2025-11-06",

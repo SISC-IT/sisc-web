@@ -104,17 +104,29 @@ public class AttendanceRoundResponse {
     /**
      * 엔티티를 DTO로 변환
      * roundStatus는 실시간으로 계산되어 반환됨
+     * 출석 통계는 단일 루프로 효율적으로 계산됨
      */
     public static AttendanceRoundResponse fromEntity(AttendanceRound round) {
-        long presentCount = round.getAttendances().stream()
-                .filter(a -> a.getAttendanceStatus() == AttendanceStatus.PRESENT)
-                .count();
-        long lateCount = round.getAttendances().stream()
-                .filter(a -> a.getAttendanceStatus() == AttendanceStatus.LATE)
-                .count();
-        long absentCount = round.getAttendances().stream()
-                .filter(a -> a.getAttendanceStatus() == AttendanceStatus.ABSENT)
-                .count();
+        // attendances 리스트가 null일 수 있으므로 방어
+        var attendances = round.getAttendances();
+        if (attendances == null) {
+            attendances = List.of();
+        }
+
+        // 단일 루프로 모든 통계를 효율적으로 계산
+        long presentCount = 0;
+        long lateCount = 0;
+        long absentCount = 0;
+
+        for (var attendance : attendances) {
+            if (attendance.getAttendanceStatus() == AttendanceStatus.PRESENT) {
+                presentCount++;
+            } else if (attendance.getAttendanceStatus() == AttendanceStatus.LATE) {
+                lateCount++;
+            } else if (attendance.getAttendanceStatus() == AttendanceStatus.ABSENT) {
+                absentCount++;
+            }
+        }
 
         // 현재 시간 기준으로 라운드 상태를 실시간 계산
         RoundStatus currentStatus = round.calculateCurrentStatus();
@@ -130,7 +142,7 @@ public class AttendanceRoundResponse {
                 .presentCount(presentCount)
                 .lateCount(lateCount)
                 .absentCount(absentCount)
-                .totalAttendees((long) round.getAttendances().size())
+                .totalAttendees((long) attendances.size())
                 .build();
     }
 }

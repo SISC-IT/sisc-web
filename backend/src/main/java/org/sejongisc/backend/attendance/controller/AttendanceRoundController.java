@@ -1,7 +1,9 @@
 package org.sejongisc.backend.attendance.controller;
 
+import io.jsonwebtoken.JwtException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +13,7 @@ import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundResponse;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
+import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +36,7 @@ public class AttendanceRoundController {
 
     private final AttendanceRoundService attendanceRoundService;
     private final AttendanceService attendanceService;
+    private final JwtProvider jwtProvider;
 
     /**
      * 라운드 생성
@@ -147,18 +151,14 @@ public class AttendanceRoundController {
     @PostMapping("/rounds/check-in")
     public ResponseEntity<AttendanceCheckInResponse> checkInByRound(
             @Valid @RequestBody AttendanceCheckInRequest request,
-            Authentication authentication) {
-        UUID userId = null;
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        UUID userId;
 
         // 인증된 경우 사용자 ID 추출, 미인증인 경우 임시 ID 생성
         if (authentication != null && authentication.isAuthenticated()) {
-            try {
-                userId = UUID.fromString(authentication.getName());
-                log.info("라운드 출석 체크인 요청 (인증됨): roundId={}, userId={}", request.getRoundId(), userId);
-            } catch (Exception e) {
-                log.warn("사용자 ID 파싱 실패, 임시 ID 사용: {}", e.getMessage());
-                userId = UUID.randomUUID();
-            }
+            userId = extractUserId(authentication, httpRequest);
+            log.info("라운드 출석 체크인 요청 (인증됨): roundId={}, userId={}", request.getRoundId(), userId);
         } else {
             // 미인증 사용자: 임시 ID 사용
             userId = UUID.randomUUID();
@@ -167,6 +167,43 @@ public class AttendanceRoundController {
 
         AttendanceCheckInResponse response = attendanceService.checkInByRound(request, userId);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Authentication에서 사용자 ID를 추출합니다.
+     * JWT 토큰을 파싱하여 UUID를 반환하며, 파싱에 실패하면 예외를 던집니다.
+     *
+     * @param authentication 스프링 시큐리티 Authentication 객체
+     * @param httpRequest HTTP 요청 객체
+     * @return 추출된 사용자 UUID
+     * @throws IllegalStateException JWT 파싱 또는 UUID 변환에 실패한 경우
+     */
+    private UUID extractUserId(Authentication authentication, HttpServletRequest httpRequest) {
+        try {
+            // JWT 토큰에서 Authorization 헤더 추출
+            String authHeader = httpRequest.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                throw new IllegalStateException("Authorization 헤더가 없거나 형식이 올바르지 않습니다.");
+            }
+
+            String token = authHeader.substring(7);
+            // JwtProvider를 통해 uid 클레임에서 userId 추출
+            String userIdStr = jwtProvider.getUserIdFromToken(token);
+            if (userIdStr == null || userIdStr.isBlank()) {
+                throw new IllegalStateException("토큰에서 사용자 ID를 찾을 수 없습니다.");
+            }
+
+            return UUID.fromString(userIdStr);
+        } catch (JwtException e) {
+            log.error("JWT 파싱 실패: {}", e.getMessage(), e);
+            throw new IllegalStateException("인증 정보가 유효하지 않습니다. JWT 파싱에 실패했습니다.", e);
+        } catch (IllegalArgumentException e) {
+            log.error("UUID 변환 실패: {}", e.getMessage(), e);
+            throw new IllegalStateException("사용자 ID가 유효한 UUID 형식이 아닙니다.", e);
+        } catch (Exception e) {
+            log.error("사용자 ID 추출 중 오류 발생: {}", e.getMessage(), e);
+            throw new IllegalStateException("사용자 ID를 확인할 수 없습니다.", e);
+        }
     }
 
     /**
