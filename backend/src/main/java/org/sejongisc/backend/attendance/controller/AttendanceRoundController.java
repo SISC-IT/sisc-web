@@ -52,7 +52,7 @@ public class AttendanceRoundController {
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<AttendanceRoundResponse> createRound(
             @PathVariable UUID sessionId,
-            @RequestBody AttendanceRoundRequest request) {
+            @Valid @RequestBody AttendanceRoundRequest request) {
         log.info("📋 라운드 생성 요청 도착:");
         log.info("  - sessionId: {}", sessionId);
         log.info("  - roundDate: {} (타입: {})", request.getRoundDate(), request.getRoundDate() != null ? request.getRoundDate().getClass().getSimpleName() : "null");
@@ -116,7 +116,7 @@ public class AttendanceRoundController {
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
     public ResponseEntity<AttendanceRoundResponse> updateRound(
             @PathVariable UUID roundId,
-            @RequestBody AttendanceRoundRequest request) {
+            @Valid @RequestBody AttendanceRoundRequest request) {
         log.info("라운드 수정: roundId={}", roundId);
         AttendanceRoundResponse response = attendanceRoundService.updateRound(roundId, request);
         return ResponseEntity.ok(response);
