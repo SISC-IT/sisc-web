@@ -19,7 +19,7 @@ const LoginForm = () => {
   const [foundEmail, setFoundEmail] = useState('');
 
   // 전화번호 인증 성공 시 호출하는 함수
-  const handlePhoneVerificationSuccess = (result) => {
+  const handlePhoneVerificationSuccess = () => {
     if (modalStep === 'verifyPhoneForEmail') {
       setFoundEmail('example@google.com');
       setModalStep('showEmail');
@@ -52,12 +52,12 @@ const LoginForm = () => {
         abortRef.current.signal
       );
 
-      console.log('로그인이 완료되었습니다.');
       nav('/');
     } catch (err) {
-      console.log('status:', err.status);
-      console.log('data:', err.data);
-      console.log('message:', err.message);
+      alert(
+        err.data?.message ||
+          '로그인에 실패하였습니다. 이메일과 비밀번호를 확인해주세요.'
+      );
     }
   };
 
@@ -85,6 +85,7 @@ const LoginForm = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일을 입력하세요"
+              autoComplete="email"
             />
           </div>
           <div className={styles.inputGroup}>
@@ -95,6 +96,7 @@ const LoginForm = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="비밀번호를 입력하세요"
+              autoComplete="current-password"
             />
           </div>
           <button

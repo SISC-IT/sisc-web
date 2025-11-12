@@ -9,6 +9,14 @@ import {
   checkVerificationNumber,
 } from '../../utils/auth.js';
 
+const passwordPolicy = [
+  { label: '8~20자 이내', test: (pw) => pw.length >= 8 && pw.length <= 20 },
+  { label: '최소 1개의 대문자 포함', test: (pw) => /[A-Z]/.test(pw) },
+  { label: '최소 1개의 소문자 포함', test: (pw) => /[a-z]/.test(pw) },
+  { label: '최소 1개의 숫자 포함', test: (pw) => /[0-9]/.test(pw) },
+  { label: '최소 1개의 특수문자 포함', test: (pw) => /[\W_]/.test(pw) },
+];
+
 const SignUpForm = () => {
   const [nickname, setNickname] = useState('');
   const [verificationNumber, setVerificationNumber] = useState('');
@@ -16,6 +24,11 @@ const SignUpForm = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordValid, setPasswordValid] = useState(
+    Array(passwordPolicy.length).fill(false)
+  );
+
+  const [isSending, setIsSending] = useState(false);
 
   const [isVerificationSent, setVerificationSent] = useState(false);
   const [isVerificationChecked, setVerificationChecked] = useState(false);
@@ -23,6 +36,15 @@ const SignUpForm = () => {
   const abortRef = useRef(null);
 
   const nav = useNavigate();
+
+  const handlePasswordChange = (e) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    const newPasswordValid = passwordPolicy.map((rule) =>
+      rule.test(newPassword)
+    );
+    setPasswordValid(newPasswordValid);
+  };
 
   // 이메일 유효성 검사
   const isEmailValid = () => {
@@ -37,13 +59,15 @@ const SignUpForm = () => {
   };
 
   // 회원가입 제출 유효성 검사
+  const isPasswordValid = passwordValid.every(Boolean);
+
   const isFormValid =
     nickname.trim() !== '' &&
     isEmailValid() &&
     isVerificationSent &&
     isVerificationChecked &&
     isPhoneNumberValid &&
-    password.trim() !== '' &&
+    isPasswordValid &&
     password === confirmPassword;
 
   const handleSendVerificationNumber = async (e) => {
@@ -53,6 +77,8 @@ const SignUpForm = () => {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
+    setIsSending(true);
+
     // 인증번호 발송 로직 & api 자리
     try {
       await sendVerificationNumber({ email: email }, abortRef.current.signal);
@@ -60,9 +86,9 @@ const SignUpForm = () => {
       setVerificationSent(true);
       alert('인증번호가 발송되었습니다.');
     } catch (err) {
-      console.log('status:', err.status);
-      console.log('data:', err.data);
-      console.log('message:', err.message);
+      alert(err.data?.message || '전송 오류가 발생했습니다.');
+    } finally {
+      setIsSending(false);
     }
   };
   const handleCheckVerificationNumber = async () => {
@@ -80,9 +106,7 @@ const SignUpForm = () => {
       setVerificationChecked(true);
       alert('인증되었습니다.');
     } catch (err) {
-      console.log('status:', err.status);
-      console.log('data:', err.data);
-      console.log('message:', err.message);
+      alert(err.data?.message || '인증에 실패했습니다.');
     }
   };
 
@@ -107,9 +131,7 @@ const SignUpForm = () => {
       alert('회원가입이 완료되었습니다.');
       nav('/login');
     } catch (err) {
-      console.log('status:', err.status);
-      console.log('data:', err.data);
-      console.log('message:', err.message);
+      alert(err.data?.message || '회원가입에 실패하였습니다.');
     }
   };
 
@@ -153,9 +175,13 @@ const SignUpForm = () => {
                 type="button"
                 className={styles.verifyButton}
                 onClick={handleSendVerificationNumber}
-                disabled={!isEmailValid()}
+                disabled={!isEmailValid() || isSending}
               >
-                인증번호 발송
+                {isSending
+                  ? '전송 중...'
+                  : isVerificationSent
+                    ? '재전송'
+                    : '인증번호 발송'}
               </button>
             </div>
           </div>
@@ -187,6 +213,7 @@ const SignUpForm = () => {
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="ex) 01012345678"
+              autoComplete="tel"
             />
           </div>
           <div className={styles.inputGroup}>
@@ -195,9 +222,20 @@ const SignUpForm = () => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               placeholder="비밀번호를 입력해주세요"
+              autoComplete="new-password"
             />
+            <ul className={styles.passwordPolicy}>
+              {passwordPolicy.map((rule, index) => (
+                <li
+                  key={rule.label}
+                  className={passwordValid[index] ? styles.valid : ''}
+                >
+                  {rule.label}
+                </li>
+              ))}
+            </ul>
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="confirm-password">비밀번호 확인</label>
