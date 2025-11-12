@@ -86,7 +86,7 @@ const SignUpForm = () => {
       setVerificationSent(true);
       alert('인증번호가 발송되었습니다.');
     } catch (err) {
-      alert(err.data?.message || '전송 오류가 발생했습니다.');
+      alert(err.data?.errorMessage || '전송 오류가 발생했습니다.');
     } finally {
       setIsSending(false);
     }
@@ -106,7 +106,7 @@ const SignUpForm = () => {
       setVerificationChecked(true);
       alert('인증되었습니다.');
     } catch (err) {
-      alert(err.data?.message || '인증에 실패했습니다.');
+      alert(err.response?.data?.message || '인증에 실패했습니다.');
     }
   };
 
@@ -131,7 +131,7 @@ const SignUpForm = () => {
       alert('회원가입이 완료되었습니다.');
       nav('/login');
     } catch (err) {
-      alert(err.data?.message || '회원가입에 실패하였습니다.');
+      alert(err.data?.errorMessage || '회원가입에 실패하였습니다.');
     }
   };
 

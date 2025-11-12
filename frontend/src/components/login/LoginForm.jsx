@@ -54,8 +54,9 @@ const LoginForm = () => {
 
       nav('/');
     } catch (err) {
+      console.dir(err);
       alert(
-        err.data?.message ||
+        err.data?.errorMessage ||
           '로그인에 실패하였습니다. 이메일과 비밀번호를 확인해주세요.'
       );
     }
