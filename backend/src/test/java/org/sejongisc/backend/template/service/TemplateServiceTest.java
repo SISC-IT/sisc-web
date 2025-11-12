@@ -85,7 +85,7 @@ class TemplateServiceTest {
     when(templateRepository.findById(templateId)).thenReturn(Optional.of(template));
 
     // When
-    TemplateResponse response = templateService.findById(templateId);
+    TemplateResponse response = templateService.findById(templateId, userId);
 
     // Then
     assertThat(response.getTemplate().getTitle()).isEqualTo("title");
@@ -101,7 +101,7 @@ class TemplateServiceTest {
     when(templateRepository.findById(templateId)).thenReturn(Optional.empty());
 
     // When & Then
-    assertThatThrownBy(() -> templateService.findById(templateId))
+    assertThatThrownBy(() -> templateService.findById(templateId, userId))
         .isInstanceOf(CustomException.class)
         .hasMessage(ErrorCode.TEMPLATE_NOT_FOUND.getMessage());
   }

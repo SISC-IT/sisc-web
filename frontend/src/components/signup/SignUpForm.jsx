@@ -13,6 +13,8 @@ const SignUpForm = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const [isVerificationNumberSent, setVerificationNumberSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const nav = useNavigate();
 
@@ -43,13 +45,51 @@ const SignUpForm = () => {
     // 인증번호 발송 로직
     alert('인증번호가 발송되었습니다.');
   };
-  const handleSignUp = (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+    setLoading(true);
 
-    // api 자리
+    try {
+      console.log('📋 회원가입 시작');
+      console.log('닉네임:', nickname, '이메일:', email, '전화번호:', phoneNumber);
 
-    // localStorage.setItem('authToken', 'dummy-token-12345');
-    nav('/login'); // 회원가입 성공 시 로그인 페이지 이동
+      const signupData = {
+        name: nickname,  // 백엔드 필드명은 'name'
+        email: email,
+        password: password,
+        phoneNumber: phoneNumber,
+        role: 'TEAM_MEMBER',  // 기본 역할
+      };
+
+      console.log('🔄 회원가입 API 호출 중...', signupData);
+      const response = await fetch('http://localhost:8080/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(signupData),
+      });
+
+      const data = await response.json();
+      console.log('📨 백엔드 응답:', response.status, data);
+
+      if (response.ok) {
+        console.log('✅ 회원가입 성공:', data);
+        alert('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.');
+        nav('/login');
+      } else {
+        // 백엔드 에러 메시지 처리
+        const errorMsg = data.message || '회원가입에 실패했습니다.';
+        console.error('❌ 회원가입 실패:', errorMsg);
+        setErrorMessage(errorMsg);
+      }
+    } catch (err) {
+      console.error('❌ 회원가입 API 오류:', err.message);
+      setErrorMessage('서버 연결 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -138,12 +178,25 @@ const SignUpForm = () => {
               placeholder="비밀번호를 한번 더 입력해주세요"
             />
           </div>
+          {errorMessage && (
+            <div style={{
+              padding: '10px',
+              marginBottom: '15px',
+              backgroundColor: '#ffebee',
+              border: '1px solid #ef5350',
+              borderRadius: '4px',
+              color: '#c62828',
+              fontSize: '14px'
+            }}>
+              {errorMessage}
+            </div>
+          )}
           <button
             type="submit"
             className={styles.loginButton}
-            disabled={!isFormValid}
+            disabled={!isFormValid || loading}
           >
-            회원가입
+            {loading ? '가입 중...' : '회원가입'}
           </button>
         </form>
       </div>

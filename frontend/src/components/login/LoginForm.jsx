@@ -15,6 +15,8 @@ const LoginForm = () => {
   const [password, setPassword] = useState('');
   const [modalStep, setModalStep] = useState('closed');
   const [foundEmail, setFoundEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // 전화번호 인증 성공 시 호출하는 함수
   const handlePhoneVerificationSuccess = (result) => {
@@ -32,17 +34,109 @@ const LoginForm = () => {
 
   const isFormValid = email.trim() !== '' && password.trim() !== '';
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+    setLoading(true);
+
     // 안전장치
     if (!email || !password) {
       alert('이메일과 비밀번호를 모두 입력해주세요.');
+      setLoading(false);
       return;
     }
 
-    // 로그인 성공 시 로직
-    localStorage.setItem('authToken', 'dummy-token-12345');
-    nav('/');
+    try {
+      console.log('📋 로그인 시작:', email);
+
+      const loginData = {
+        email: email,
+        password: password,
+      };
+
+      console.log('🔄 로그인 API 호출 중...');
+      const response = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      const data = await response.json();
+      console.log('📨 백엔드 응답:', response.status, data);
+
+      if (response.ok) {
+        console.log('✅ 로그인 성공:', data);
+        // 토큰과 사용자 정보 저장
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('userNickname', data.name || email.split('@')[0]);
+
+        console.log('✅ 로그인 완료:', {
+          email: email,
+          nickname: data.name,
+          timestamp: new Date().toLocaleString('ko-KR'),
+        });
+        nav('/');
+      } else {
+        // 백엔드 에러 메시지 처리
+        const errorMsg = data.message || '로그인에 실패했습니다.';
+        console.error('❌ 로그인 실패:', errorMsg);
+        setErrorMessage(errorMsg);
+      }
+    } catch (err) {
+      console.error('❌ 로그인 API 오류:', err.message);
+      setErrorMessage('서버 연결 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // OAuth 로그인 핸들러들
+  const handleGoogleLogin = async () => {
+    try {
+      console.log('🔵 Google OAuth 로그인 시작');
+      const response = await fetch('http://localhost:8080/api/auth/oauth/GOOGLE/init', {
+        credentials: 'include',
+      });
+      const authUrl = await response.text();
+      console.log('🔗 Google 인증 URL:', authUrl);
+      window.location.href = authUrl;
+    } catch (err) {
+      console.error('❌ Google OAuth 초기화 실패:', err);
+      setErrorMessage('Google 로그인 초기화에 실패했습니다.');
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    try {
+      console.log('🐙 Github OAuth 로그인 시작');
+      const response = await fetch('http://localhost:8080/api/auth/oauth/GITHUB/init', {
+        credentials: 'include',
+      });
+      const authUrl = await response.text();
+      console.log('🔗 Github 인증 URL:', authUrl);
+      window.location.href = authUrl;
+    } catch (err) {
+      console.error('❌ Github OAuth 초기화 실패:', err);
+      setErrorMessage('Github 로그인 초기화에 실패했습니다.');
+    }
+  };
+
+  const handleKakaoLogin = async () => {
+    try {
+      console.log('💛 Kakao OAuth 로그인 시작');
+      const response = await fetch('http://localhost:8080/api/auth/oauth/KAKAO/init', {
+        credentials: 'include',
+      });
+      const authUrl = await response.text();
+      console.log('🔗 Kakao 인증 URL:', authUrl);
+      window.location.href = authUrl;
+    } catch (err) {
+      console.error('❌ Kakao OAuth 초기화 실패:', err);
+      setErrorMessage('Kakao 로그인 초기화에 실패했습니다.');
+    }
   };
 
   return (
@@ -81,12 +175,25 @@ const LoginForm = () => {
               placeholder="비밀번호를 입력하세요"
             />
           </div>
+          {errorMessage && (
+            <div style={{
+              padding: '10px',
+              marginBottom: '15px',
+              backgroundColor: '#ffebee',
+              border: '1px solid #ef5350',
+              borderRadius: '4px',
+              color: '#c62828',
+              fontSize: '14px'
+            }}>
+              {errorMessage}
+            </div>
+          )}
           <button
             type="submit"
             className={styles.loginButton}
-            disabled={!isFormValid}
+            disabled={!isFormValid || loading}
           >
-            로그인
+            {loading ? '로그인 중...' : '로그인'}
           </button>
         </form>
         <div className={styles.textContainer}>
@@ -112,7 +219,11 @@ const LoginForm = () => {
           </NavLink>
         </div>
 
-        <SocialLoginButtons />
+        <SocialLoginButtons
+          onGoogle={handleGoogleLogin}
+          onGithub={handleGithubLogin}
+          onKakao={handleKakaoLogin}
+        />
       </div>
 
       {(modalStep === 'verifyPhoneForEmail' ||

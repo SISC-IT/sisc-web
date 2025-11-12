@@ -214,13 +214,34 @@ public class AuthController {
 
     )
     @GetMapping("/login/{provider}")
-    public ResponseEntity<LoginResponse> handleOauthRedirect(
+    public ResponseEntity<?> handleOauthRedirect(
             @Parameter(description = "소셜 로그인 제공자", example = "GOOGLE") @PathVariable("provider") String provider,
             @Parameter(description = "OAuth 인증 코드", example = "4/0AbCdEfG...") @RequestParam("code") String code,
             @Parameter(description = "CSRF 방지용 state 값", example = "a1b2c3d4") @RequestParam("state") String state,
             HttpSession session) {
         log.info("[{}] OAuth GET redirect received: code={}, state={}", provider, code, state);
-        return OauthLogin(provider, code, state, session);
+
+        // OAuth 로그인 처리
+        ResponseEntity<LoginResponse> loginResponse = OauthLogin(provider, code, state, session);
+        LoginResponse body = loginResponse.getBody();
+
+        // 성공 시 프론트엔드 홈으로 리다이렉트 (accessToken, userId, name을 URL 파라미터로 전달)
+        if (loginResponse.getStatusCode().is2xxSuccessful() && body != null) {
+            String redirectUrl = "http://localhost:3000/?accessToken=" + body.getAccessToken()
+                    + "&userId=" + body.getUserId()
+                    + "&name=" + (body.getName() != null ? body.getName() : "");
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, redirectUrl)
+                    .header(HttpHeaders.SET_COOKIE, loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE) != null
+                            ? loginResponse.getHeaders().get(HttpHeaders.SET_COOKIE).get(0)
+                            : "")
+                    .build();
+        }
+
+        // 실패 시 로그인 페이지로 리다이렉트
+        return ResponseEntity.status(302)
+                .header(HttpHeaders.LOCATION, "http://localhost:3000/login?error=oauth_failed")
+                .build();
     }
 
 
@@ -432,22 +453,29 @@ public class AuthController {
             @Parameter(description = "Bearer 토큰", example = "Bearer eyJhbGciOiJIUzI1NiJ9...")
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
+        log.info("📋 로그아웃 요청 도착");
+        long startTime = System.currentTimeMillis();
+
         //  헤더 유효성 검사
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            log.warn("❌ Authorization 헤더 형식 오류: 헤더가 없거나 'Bearer ' 형식이 아님");
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "잘못된 Authorization 헤더 형식입니다."));
         }
 
         String token = authorizationHeader.substring(7);
+        log.info("🔐 토큰 추출 완료: 토큰 길이={}", token.length());
 
         // 예외 처리 및 멱등성 보장
         try {
+            log.info("🔄 LoginService.logout() 호출 중...");
             loginService.logout(token);
+            log.info("✅ LoginService.logout() 완료 - Refresh Token DB에서 삭제됨");
         } catch (JwtException | IllegalArgumentException e) {
             // 이미 만료되었거나 잘못된 토큰이라도 200 OK로 응답 (멱등성 보장)
-            log.warn("Invalid or expired JWT during logout: {}", e.getMessage());
+            log.warn("⚠️ JWT 토큰 오류 (멱등성 보장으로 계속 진행): {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error during logout", e);
+            log.error("❌ 예상치 못한 오류 발생: {}", e.getMessage(), e);
             // 내부 예외는 500으로 보내지 않고 안전하게 처리
         }
 
@@ -459,6 +487,11 @@ public class AuthController {
                 .path("/")
                 .maxAge(0)
                 .build();
+
+        log.info("🍪 Refresh Token 쿠키 삭제 설정: maxAge=0, httpOnly=true, secure=true, sameSite=None");
+
+        long endTime = System.currentTimeMillis();
+        log.info("✅ 로그아웃 완료: 소요시간={}ms", (endTime - startTime));
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())

@@ -73,8 +73,20 @@ public class LoginServiceImpl implements LoginService {
     @Override
     @Transactional
     public void logout(String accessToken) {
-        UUID userId = jwtParser.getUserIdFromToken(accessToken);
-        refreshTokenRepository.deleteByUserId(userId);
-        log.info("로그아웃 완료: userId={}", userId);
+        log.info("🔄 [LoginServiceImpl.logout] 시작");
+        try {
+            log.info("🔐 JWT 토큰 파싱 중...");
+            UUID userId = jwtParser.getUserIdFromToken(accessToken);
+            log.info("✅ 토큰 파싱 완료: userId={}", userId);
+
+            log.info("🗑️ Refresh Token 삭제 중: userId={}", userId);
+            refreshTokenRepository.deleteByUserId(userId);
+            log.info("✅ Refresh Token 삭제 완료: userId={}", userId);
+
+            log.info("✅ [LoginServiceImpl.logout] 완료: userId={}", userId);
+        } catch (Exception e) {
+            log.error("❌ [LoginServiceImpl.logout] 오류 발생: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 }

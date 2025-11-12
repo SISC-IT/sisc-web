@@ -30,7 +30,7 @@ const AttendanceManagementCard = ({
               </tr>
             ) : participants.length > 0 ? (
               participants.map((participant) => (
-                <tr key={participant.memberId}>
+                <tr key={participant.attendanceId}>
                   <td>{participant.name}</td>
                   <td>{participant.attendance}</td>
                   <td>

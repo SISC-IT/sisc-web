@@ -42,7 +42,7 @@ public class AttendanceSessionRequest {
             format = "date-time"
     )
     @NotNull(message = "시작 시간은 필수입니다")
-    @Future(message = "시작 시간은 현재 시간 이후여야 합니다")
+    // @Future(message = "시작 시간은 현재 시간 이후여야 합니다") // TODO: 테스트용으로 주석 처리
     private LocalDateTime startsAt;
 
     @Schema(

@@ -78,7 +78,7 @@ public class JwtProvider {
                 .getExpiration();
     }
 
-    // 토큰에서 사용자 ID 추출
+    // 토큰에서 사용자 ID 추출 (uid 클레임에서)
     public String getUserIdFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(secretKey)
@@ -86,7 +86,12 @@ public class JwtProvider {
                 .parseClaimsJws(token)
                 .getBody();
 
-        return claims.getSubject();
+        // uid 클레임에서 userId 추출
+        String userId = claims.get("uid", String.class);
+        if (userId == null) {
+            throw new JwtException("JWT에 userId(uid 클레임)가 없습니다.");
+        }
+        return userId;
     }
 
     public String getRoleFromToken(String token) {

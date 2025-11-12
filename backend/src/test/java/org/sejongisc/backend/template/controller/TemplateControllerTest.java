@@ -122,7 +122,7 @@ class TemplateControllerTest {
     // when
     when(jwtParser.validationToken(TOKEN)).thenReturn(true);
     when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
-    when(templateService.findById(tid))
+    when(templateService.findById(tid, uid))
             .thenReturn(TemplateResponse.builder().template(t).build());
 
     mockMvc.perform(get("/api/backtest/templates/{templateId}", tid)

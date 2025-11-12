@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 public class PasswordPolicyValidator {
 
     private static final Pattern PASSWORD_PATTERN =
-            Pattern.compile("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*()_+=\\-{};:'\",.<>/?]).{8,20}$");
+            Pattern.compile("^(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*()_+=\\-{};:'\",.<>/?]).{8,20}$");
 
     public static void validate(String password) {
         if (password == null || password.trim().isEmpty()) {

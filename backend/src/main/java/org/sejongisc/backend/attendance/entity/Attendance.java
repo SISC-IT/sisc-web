@@ -26,13 +26,18 @@ public class Attendance extends BasePostgresEntity {
     private UUID attendanceId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     @JsonBackReference
     private AttendanceSession attendanceSession;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "round_id", nullable = true)
+    @JsonBackReference
+    private AttendanceRound attendanceRound;
 
     @Enumerated(EnumType.STRING)
     private AttendanceStatus attendanceStatus;
@@ -52,6 +57,9 @@ public class Attendance extends BasePostgresEntity {
 
     @Column(name = "device_info")
     private String deviceInfo;
+
+    @Column(name = "anonymous_user_name", length = 100)
+    private String anonymousUserName;
 
     // 지각 여부 계산 / 상태 업데이트
 
