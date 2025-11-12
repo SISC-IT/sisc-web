@@ -1,0 +1,52 @@
+.header {
+  width: 264px;
+  height: 90px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  background-color: #000000;
+  align-items: center;
+  padding: 0 30px;
+  gap: 30px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 18.53px;
+  line-height: 120%;
+  letter-spacing: -0.03em;
+  color: white;
+}
+
+.menuButton {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 22px;
+  height: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.menuButton span {
+  display: block;
+  height: 2px;
+  background: white;
+  border-radius: 2px;
+}
+
+.logo {
+  width: 19px;
+  height: 19px;
+}

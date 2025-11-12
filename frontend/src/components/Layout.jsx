@@ -1,20 +1,29 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import Header from './Header';
 import Sidebar from './Sidebar';
+import { useState } from 'react';
 
 function Layout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const isRoot = location.pathname === '/';
 
   return (
     <div style={{ display: 'flex', position: 'relative' }}>
-      {/* 홈이 아닐 때는 Sidebar 고정 */}
-      {!isRoot && <Sidebar />}
-
+      <Header
+        isRoot={isRoot}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        style={{ position: 'fixed' }}
+      />
       <main
-        style={{ flex: 1, backgroundColor: '#ffffff', position: 'relative' }}
+        style={{
+          display: 'flex',
+          position: 'relative',
+          marginLeft: !isRoot ? '264px' : '0',
+          transition: 'margin-left 0.3s ease',
+        }}
       >
-        {/* 홈일 때만 Sidebar를 main 내부에서 렌더링 (햄버거 + 슬라이드) */}
-        {isRoot && <Sidebar />}
+        <Sidebar isOpen={isSidebarOpen} isRoot={isRoot} />
         <Outlet />
       </main>
     </div>
