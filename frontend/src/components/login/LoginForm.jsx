@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
@@ -7,6 +7,8 @@ import SocialLoginButtons from './SocialLoginButtons';
 import VerificationModal from './../VerificationModal';
 import ResetPasswordModal from './ResetPasswordModal';
 import FindEmailResultModal from './FindEmailResultModal';
+
+import { login } from '../../utils/auth';
 
 const LoginForm = () => {
   const nav = useNavigate();
@@ -17,7 +19,7 @@ const LoginForm = () => {
   const [foundEmail, setFoundEmail] = useState('');
 
   // 전화번호 인증 성공 시 호출하는 함수
-  const handlePhoneVerificationSuccess = (result) => {
+  const handlePhoneVerificationSuccess = () => {
     if (modalStep === 'verifyPhoneForEmail') {
       setFoundEmail('example@google.com');
       setModalStep('showEmail');
@@ -32,17 +34,32 @@ const LoginForm = () => {
 
   const isFormValid = email.trim() !== '' && password.trim() !== '';
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    // 안전장치
-    if (!email || !password) {
-      alert('이메일과 비밀번호를 모두 입력해주세요.');
-      return;
-    }
+  const abortRef = useRef(null);
 
-    // 로그인 성공 시 로직
-    localStorage.setItem('authToken', 'dummy-token-12345');
-    nav('/');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    // 도중에 요청 시 전 요청 취소
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    try {
+      await login(
+        {
+          email,
+          password,
+        },
+        abortRef.current.signal
+      );
+
+      nav('/');
+    } catch (err) {
+      console.dir(err);
+      alert(
+        err.data?.errorMessage ||
+          '로그인에 실패하였습니다. 이메일과 비밀번호를 확인해주세요.'
+      );
+    }
   };
 
   return (
@@ -69,6 +86,7 @@ const LoginForm = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일을 입력하세요"
+              autoComplete="email"
             />
           </div>
           <div className={styles.inputGroup}>
@@ -79,6 +97,7 @@ const LoginForm = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="비밀번호를 입력하세요"
+              autoComplete="current-password"
             />
           </div>
           <button
