@@ -1,0 +1,71 @@
+.socialContainer {
+  margin-top: 30px;
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  margin-bottom: 18px;
+  margin-top: 26px;
+}
+
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn {
+  width: 330px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.btn:hover {
+  filter: brightness(0.95);
+  transition: 0.1s;
+}
+.btn img {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+}
+.btn .btnText {
+  /* color: #000; */
+  font-family: Pretendard;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.google {
+  border: 1px solid #acacac;
+  background: #fff;
+}
+
+.github {
+  background: #1a1e24;
+  color: #fff;
+}
+.btnText .githubBtnText {
+  color: #fff;
+}
+
+.kakao {
+  background: #fae000;
+}
+
+.label {
+  white-space: nowrap;
+  font-size: 14px;
+}

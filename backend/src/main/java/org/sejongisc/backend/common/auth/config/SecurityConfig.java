@@ -1,29 +1,99 @@
 package org.sejongisc.backend.common.auth.config;
 
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.common.auth.jwt.JwtAccessDeniedHandler;
+import org.sejongisc.backend.common.auth.jwt.JwtAuthenticationEntryPoint;
+import org.sejongisc.backend.common.auth.springsecurity.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(csrf -> csrf.disable()) // 테스트 편의를 위해 CSRF 비활성화
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/user/signup").permitAll()
-                        .anyRequest().authenticated()
+        http
+                .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint) // 인증 실패 시 JSON 응답
+                        .accessDeniedHandler(jwtAccessDeniedHandler)           // 인가 실패 시 JSON 응답
                 )
-                .build();
+                .authorizeHttpRequests(auth -> {
+                    auth
+                            .requestMatchers(
+                                    "/api/auth/signup",
+                                    "/api/auth/login",
+                                    "/api/auth/login/**",
+                                    "/api/auth/oauth",
+                                    "/api/auth/oauth/**",
+                                    "/actuator",
+                                    "/actuator/**",
+                                    "/api/auth/logout",
+                                    "/api/auth/reissue",
+                                    "/v3/api-docs/**",
+                                    "/swagger-ui/**",
+
+                                    "/api/user/id/find",
+                                    "/api/user/password/reset/**",
+
+                                    "/api/email/**",
+                                    "/swagger-resources/**",
+                                    "/webjars/**"
+                            ).permitAll()
+                            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+//                            .anyRequest().authenticated();
+                            .anyRequest().permitAll();
+                })
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        if(jwtAuthenticationFilter != null) {
+            http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        }
+        return http.build();
     }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+//        config.setAllowedOrigins(List.of(
+//                "http://localhost:5173" // 허용할 프론트 주소
+//        ));
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);    // 캐시 시간(초)
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        return source;
+    }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {

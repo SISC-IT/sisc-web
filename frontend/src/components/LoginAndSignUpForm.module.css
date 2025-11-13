@@ -1,0 +1,177 @@
+/* 로그인 & 회원가입 페이지에서 공통적으로 사용하는 CSS 디자인 */
+
+/* ------------------------ 로그인 페이지 ------------------------ */
+
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */
+  padding: 42px;
+  width: 473px;
+  box-sizing: border-box;
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+
+  text-align: center;
+}
+
+.header h1 {
+  margin-bottom: 16px;
+  margin-top: 9px;
+  color: #142d56;
+  font-family: 'DIN Condensed';
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 146%;
+}
+
+.header {
+  border-bottom: 1px solid #d6d6d6;
+  margin-bottom: 36px;
+  width: 333px;
+}
+.logo {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+}
+
+.inputGroup {
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.inputGroup label {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: #555;
+  color: #000;
+  font-family: Pretendard;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.inputGroup input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.inputGroup input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.loginButton {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 18px;
+  background-color: #0e1a2c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.loginButton:disabled {
+  background-color: #d5d5d5;
+  cursor: not-allowed;
+}
+
+.text {
+  text-decoration: none;
+
+  color: #aaa;
+  font-family: Pretendard;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 146%; /* 17.52px */
+}
+.textContainer {
+  display: flex;
+  width: 330px;
+  justify-content: space-between;
+  align-items: center;
+}
+.textContainer .text {
+  cursor: pointer;
+}
+
+.divider {
+  color: #9ca3af;
+  font-size: 14px;
+  margin: 0 8px;
+}
+
+/* ------------------------ 회원가입 페이지 ------------------------ */
+.phoneVerificationContainer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.emailInput {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.verifyButton {
+  display: flex;
+  height: 44px;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  background: #1d80f4;
+  border: none;
+
+  color: #fff;
+  text-align: center;
+  font-family: Pretendard;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 100%; /* 16px */
+  letter-spacing: -0.48px;
+  white-space: nowrap;
+}
+.verifyButton:disabled {
+  background-color: #bce5ff;
+  cursor: not-allowed;
+}
+
+.passwordPolicy {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0px 0px 8px;
+  font-size: 13px;
+  color: #868e96;
+}
+
+.passwordPolicy li {
+  transition: color 0.2s ease-in-out;
+}
+
+.passwordPolicy li.valid {
+  color: #28a745;
+}

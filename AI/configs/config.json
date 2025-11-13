@@ -1,0 +1,19 @@
+{
+  "db": {
+    "host": "ep-misty-lab-adgec0kl-pooler.c-2.us-east-1.aws.neon.tech",
+    "user": "neondb_owner",
+    "password": "npg_hWkg04MwGlYs",
+    "dbname": "neondb",
+    "port": 5432
+  }
+
+
+  ,
+  "report_DB": {
+    "host": "ep-jolly-waterfall-ads25fir-pooler.c-2.us-east-1.aws.neon.tech",
+    "user": "neondb_owner",
+    "password": "npg_lo0rC9aOyFkw",
+    "dbname": "neondb",
+    "port": 5432
+  }
+}

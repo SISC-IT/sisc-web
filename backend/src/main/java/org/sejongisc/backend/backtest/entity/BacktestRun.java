@@ -2,11 +2,11 @@ package org.sejongisc.backend.backtest.entity;
 
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.sejongisc.backend.template.entity.Template;
+import org.sejongisc.backend.user.entity.User;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,6 +14,7 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,14 +24,21 @@ public class BacktestRun {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "template_id", nullable = false)
+  @JoinColumn(name = "template_id", nullable = true)
   private Template template;
 
-  //@ManyToOne(fetch = FetchType.LAZY)
-  //@JoinColumn(name = "user_id", nullable = false)
-  //private User user;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
+
+  private String title;
+
+  @Enumerated(EnumType.STRING)
+  private BacktestStatus status;
 
   // 조건/종목 등 파라미터(JSONB). 가장 단순하게 String으로 보관
+  // 기록 (불변성 목적) : 생성된 순간의 상태 박제 목적
+  @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "params", columnDefinition = "jsonb")
   private String paramsJson;
 
@@ -44,4 +52,12 @@ public class BacktestRun {
   // 실행 시간들
   private LocalDateTime startedAt;
   private LocalDateTime finishedAt;
+
+  // 오류 발생 시 기록
+  @Column(name = "error_message", columnDefinition = "TEXT")
+  private String errorMessage;
+
+  public void updateTemplate(Template template) {
+    this.template = template;
+  }
 }

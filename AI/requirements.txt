@@ -1,0 +1,14 @@
+﻿pandas
+psycopg2-binary
+langchain-community
+tqdm
+selenium
+webdriver-manager
+numpy
+scikit-learn
+tensorflow
+yfinance
+groq
+requests
+beautifulsoup4
+pathlib

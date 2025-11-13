@@ -1,115 +1,136 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useImmer } from 'use-immer';
+import { v4 as uuid } from 'uuid';
+
 import styles from './AttendanceManage.module.css';
 
-import CreateSessionForm from '../components/attendancemanage/CreateSessionForm';
-import SessionSelect from '../components/attendancemanage/SessionSelect';
-import RemainingTime from '../components/attendancemanage/RemainingTime';
-import RosterTable from '../components/attendancemanage/RosterTable';
+import SessionSettingCard from '../components/attendancemanage/SessionSettingCard';
+import AttendanceManagementCard from '../components/attendancemanage/AttendanceManagementCard';
+import SessionManagementCard from '../components/attendancemanage/SessionManagementCard';
 
-import {
-  STATUSES,
-  uuid,
-  makeInitialMockSessions,
-  makeMockRoster,
-  makeLargeMockRoster,
-} from '../utils/attendancemanageUtils';
+const sessionData = [
+  {
+    id: 'session-1',
+    title: '금융 IT팀 세션',
+    rounds: [
+      {
+        id: 'round-1',
+        date: '2025-11-06',
+        startTime: '10:00:00',
+        availableMinutes: 20,
+        status: 'opened',
+        participants: [
+          { memberId: 'member-1', name: '김민준', attendance: '출석' },
+          { memberId: 'member-2', name: '이서연', attendance: '결석' },
+          { memberId: 'member-3', name: '박도윤', attendance: '출석' },
+        ],
+      },
+      {
+        id: 'round-2',
+        date: '2025-11-06',
+        startTime: '11:00:00',
+        availableMinutes: 30,
+        status: 'opened',
+        participants: [
+          { memberId: 'member-1', name: '김민준', attendance: '출석' },
+          { memberId: 'member-2', name: '이서연', attendance: '출석' },
+          { memberId: 'member-3', name: '박도윤', attendance: '결석' },
+        ],
+      },
+    ],
+  },
+];
 
 const AttendanceManage = () => {
-  // 초기 세션은 한 번만 생성
-  const initialSessions = useMemo(
-    () => makeInitialMockSessions().sort((a, b) => b.createdAt - a.createdAt),
-    []
-  );
+  const [sessions, setSessions] = useImmer(sessionData);
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [selectedRound, setSelectedRound] = useState(null);
 
-  // 세션 목록
-  const [sessions, setSessions] = useState(initialSessions);
+  // const currentSession = useMemo(
+  //   () => sessions.find((s) => s.id === selectedSessionId) || null,
+  //   [sessions, selectedSessionId]
+  // );
+  // const currentParticipants = useMemo(() => {
+  //   if (!currentSession) return [];
 
-  // 세션별 명단 (초기 두 세션에 미리 생성)
-  const [rosterMap, setRosterMap] = useState(() => {
-    const init = {};
-    for (const s of initialSessions) {
-      init[s.id] =
-        s.title === '금융 it 출석' ? makeLargeMockRoster() : makeMockRoster();
-    }
-    return init;
-  });
+  //   const currentRound = currentSession.rounds.find((round) => {
+  //     round.id === selectedRound;
+  //   });
 
-  // 선택된 세션
-  const [selectedId, setSelectedId] = useState(initialSessions[0]?.id || '');
+  //   return currentRound ? currentRound.participants : [];
+  // }, [currentSession, selectedRound]);
 
-  const currentSession = useMemo(
-    () => sessions.find((s) => s.id === selectedId) || null,
-    [sessions, selectedId]
-  );
+  const handleAttendanceChange = (memberId, newAttendance) => {
+    setSessions((draft) => {
+      const session = draft.find((s) => s.id === selectedSessionId);
+      if (!session) return;
 
-  const currentRoster = useMemo(
-    () => (currentSession ? (rosterMap[currentSession.id] ?? []) : []),
-    [currentSession, rosterMap]
-  );
+      const round = session.rounds.find((r) => r.id === selectedRound);
+      if (!round) return;
 
-  const sessionLabel = (s) => `${s.title}`;
+      const participant = round.participants.find(
+        (p) => p.memberId === memberId
+      );
+      if (!participant) return;
 
-  const onChangeStatus = (memberId, status) => {
-    if (!currentSession) return;
-    setRosterMap((prev) => ({
-      ...prev,
-      [currentSession.id]: (prev[currentSession.id] ?? []).map((m) =>
-        m.id === memberId ? { ...m, status } : m
-      ),
-    }));
+      // 통과 시 출석 상태 업데이트
+      participant.attendance = newAttendance;
+    });
   };
 
-  const handleCreateSession = ({ title, code, durationSec }) => {
-    const now = Date.now();
+  const handleAddSession = (sessionTitle, roundDetails) => {
+    const sessionId = `session-${uuid()}-${Math.random().toString(36)}`;
+    const roundId = `round-${uuid()}-${Math.random().toString(5)}`;
+
     const newSession = {
-      id: uuid(),
-      title,
-      code,
-      createdAt: now,
-      expiresAt: now + durationSec * 1000,
+      id: sessionId,
+      title: sessionTitle,
+      rounds: [
+        {
+          id: roundId,
+          date: new Date().toISOString().slice(0, 10),
+          startTime: `${roundDetails.hh}:${roundDetails.mm}:${roundDetails.ss}`,
+          availableMinutes: parseInt(roundDetails.availableTimeMm, 10),
+          status: 'opened',
+          participants: [],
+        },
+      ],
     };
 
-    setSessions((prev) => [newSession, ...prev]);
-    setRosterMap((prev) => ({ ...prev, [newSession.id]: makeMockRoster() }));
-    setSelectedId(newSession.id);
+    setSessions([...sessions, newSession]);
   };
 
+  const selectedSession = sessions.find(
+    (session) => session.id === selectedSessionId
+  );
+
+  const selectedRoundData = selectedSession?.rounds.find(
+    (round) => round.id === selectedRound
+  );
+
+  const participants = selectedRoundData?.participants || [];
+
   return (
-    <div className={styles.page}>
-      <h1 className={styles.pageTitle}>출석관리(관리자)</h1>
-
-      <div className={styles.grid}>
-        {/* 왼쪽: 세션 생성 */}
-        <CreateSessionForm styles={styles} onCreate={handleCreateSession} />
-
-        {/* 오른쪽: 출석 관리 */}
-        <section className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.cardTitle}>출석 관리</div>
-          </div>
-
-          <SessionSelect
+    <div className={styles.attendanceManageContainer}>
+      <div className={styles.mainTitle}>출석관리(담당자)</div>
+      <div className={styles.cardLayout}>
+        <div className={styles.leftColumn}>
+          <SessionSettingCard styles={styles} onAddSession={handleAddSession} />
+          <SessionManagementCard
             styles={styles}
             sessions={sessions}
-            selectedId={selectedId}
-            onChange={setSelectedId}
-            sessionLabel={sessionLabel}
+            selectedSessionId={selectedSessionId}
+            setSelectedSessionId={setSelectedSessionId}
+            selectedRound={selectedRound}
+            setSelectedRound={setSelectedRound}
           />
-
-          {currentSession && (
-            <RemainingTime
-              styles={styles}
-              expiresAt={currentSession.expiresAt}
-            />
-          )}
-
-          <RosterTable
-            styles={styles}
-            roster={currentRoster}
-            statuses={STATUSES}
-            onChangeStatus={onChangeStatus}
-          />
-        </section>
+        </div>
+        <AttendanceManagementCard
+          styles={styles}
+          selectedRound={selectedRound}
+          onAttendanceChange={handleAttendanceChange}
+          participants={participants}
+        />
       </div>
     </div>
   );
