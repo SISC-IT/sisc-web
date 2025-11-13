@@ -46,6 +46,12 @@ public class BacktestService {
   public BacktestResponse getBackTestDetails(Long backtestRunId, UUID userId) {
     BacktestRun backtestRun = findBacktestRunByIdAndVerifyUser(backtestRunId, userId);
 
+    if (backtestRun.getStatus() == BacktestStatus.RUNNING) {
+      return BacktestResponse.builder()
+          .backtestRun(backtestRun)
+          .build();
+    }
+
     BacktestRunMetrics backtestRunMetrics = backtestRunMetricsRepository.findByBacktestRunId(backtestRunId)
         .orElseThrow(() -> new CustomException(ErrorCode.BACKTEST_METRICS_NOT_FOUND));
 
