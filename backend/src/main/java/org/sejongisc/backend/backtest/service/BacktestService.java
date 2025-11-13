@@ -46,7 +46,7 @@ public class BacktestService {
   public BacktestResponse getBackTestDetails(Long backtestRunId, UUID userId) {
     BacktestRun backtestRun = findBacktestRunByIdAndVerifyUser(backtestRunId, userId);
 
-    if (backtestRun.getStatus() == BacktestStatus.RUNNING) {
+    if (backtestRun.getStatus() != BacktestStatus.COMPLETED) {
       return BacktestResponse.builder()
           .backtestRun(backtestRun)
           .build();
