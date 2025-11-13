@@ -26,3 +26,6 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 /venv/
+
+# ===== windows =====
+.desktop.ini
