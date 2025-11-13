@@ -381,7 +381,7 @@ def train_transformer_classifier(
             pickle.dump(scaler, f)
         _log(f"[TRAIN] Scaler saved: {scaler_out_path}")
 
-    _log(f"[TRAIN] Weights saved(best): {model_out_path}")
+    _log(f"[TRAIN] Weights saved(최고): {model_out_path}")
     return {
         "history": history.history,
         "n_samples": int(len(X)),
@@ -538,17 +538,20 @@ def run_training(config: dict):
     _log(f"Weights: {result['model_path']}")
     _log(f"Scaler : {result['scaler_path']}")
 
-
 if __name__ == "__main__":
+    from datetime import datetime
+
+    # 오늘 날짜 YYYYMMDD 문자열 생성
+    today_str = datetime.now().strftime("%Y%m%d")
 
     config = {
         # --- 데이터/티커 소스 ---
-        "tickers_source": "db",         # 티커: DB에서 전체 로드
-        "use_adjusted_close": True,     # adjusted_close가 있으면 close로 사용
-        "db_chunk_size": 200,           # IN 청크 크기(파라미터/성능 균형)
+        "tickers_source": "db",
+        "use_adjusted_close": True,
+        "db_chunk_size": 200,
 
         # --- 기간/빈도 ---
-        "start": "2018-01-01",          # DB DATE 기준 (YYYY-MM-DD)
+        "start": "2018-01-01",
         "end": "2024-10-31",
 
         # --- 시퀀스/라벨 ---
@@ -561,8 +564,8 @@ if __name__ == "__main__":
         "epochs": 50,
         "batch_size": 512,
 
-        # --- 출력 경로 ---
-        "model_out": "AI/transformer/weights/initial.weights.h5",
+        # --- 출력 경로 (오늘날짜 적용) ---
+        "model_out": f"AI/transformer/weights/{today_str}.weights.h5",
         "scaler_out": "AI/transformer/scaler/scaler.pkl",
 
         # --- 기타 ---
