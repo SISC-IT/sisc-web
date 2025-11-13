@@ -62,7 +62,7 @@ const PostDetail = () => {
 
     if (!currentPost) {
       const allPosts = getPostsFromStorage();
-      currentPost = allPosts.find((p) => p.id === parseInt(id));
+      currentPost = allPosts.find((p) => p.id === parseInt(id, 10));
     }
     setPost(currentPost);
     setLoading(false);
@@ -207,6 +207,7 @@ const PostDetail = () => {
             <button
               className={styles.menuButton}
               onClick={() => setShowMenu(!showMenu)}
+              aria-label="게시글 메뉴 열기"
             >
               ⋮
             </button>
@@ -314,6 +315,7 @@ const PostDetail = () => {
                       <button
                         className={styles.menuButton}
                         onClick={() => setShowCommentMenu(id)}
+                        aria-label="댓글 메뉴 열기"
                       >
                         ⋮
                       </button>
