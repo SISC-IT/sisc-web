@@ -126,3 +126,8 @@
   height: 40px;
   margin-left: 5%;
 }
+
+.paginationContainer {
+  display: flex;
+  margin-left: 230px;
+}

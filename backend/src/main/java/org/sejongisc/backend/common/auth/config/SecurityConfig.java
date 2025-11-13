@@ -1,6 +1,8 @@
 package org.sejongisc.backend.common.auth.config;
 
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.common.auth.jwt.JwtAccessDeniedHandler;
+import org.sejongisc.backend.common.auth.jwt.JwtAuthenticationEntryPoint;
 import org.sejongisc.backend.common.auth.springsecurity.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +28,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -34,6 +38,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint) // 인증 실패 시 JSON 응답
+                        .accessDeniedHandler(jwtAccessDeniedHandler)           // 인가 실패 시 JSON 응답
+                )
                 .authorizeHttpRequests(auth -> {
                     auth
                             .requestMatchers(
@@ -49,9 +57,13 @@ public class SecurityConfig {
                                     "/v3/api-docs/**",
                                     "/swagger-ui/**",
 
+                                    "/api/user/id/find",
+                                    "/api/user/password/reset/**",
+
                                     "/api/email/**",
                                     "/swagger-resources/**",
-                                    "/webjars/**").permitAll()
+                                    "/webjars/**"
+                            ).permitAll()
                             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 //                            .anyRequest().authenticated();
                             .anyRequest().permitAll();
