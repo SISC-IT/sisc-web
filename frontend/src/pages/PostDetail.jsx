@@ -255,7 +255,9 @@ const PostDetail = () => {
                   src={post.isBookmarked ? BookmarkFilledIcon : BookmarkIcon}
                   alt="북마크"
                 />
-                {post.isBookmarked && <span className={styles.count}>1</span>}
+                {post.bookmarkCount > 0 && (
+                  <span className={styles.count}>{post.bookmarkCount}</span>
+                )}
               </button>
               <button
                 className={styles.actionButton}
@@ -284,7 +286,6 @@ const PostDetail = () => {
               placeholder="댓글을 입력해주세요. 허위사실, 욕설 등을 포함한 댓글은 별도의 안내 없이 삭제될 수 있어요."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              onKeyPress={handleKeyPress}
             />
           </div>
           <button

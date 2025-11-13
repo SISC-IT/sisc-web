@@ -33,7 +33,7 @@ const PostItem = React.memo(({ post, onLike, onBookmark }) => {
         <div className={styles.contentSection}>
           <div className={styles.header}>
             <div className={styles.metaInfo}>
-              <span className={styles.author}>운영진</span>
+              <span className={styles.author}>{post.author || '운영진'}</span>
               <span className={styles.time}>{getTimeAgo(post.date)}</span>
             </div>
           </div>
@@ -51,7 +51,9 @@ const PostItem = React.memo(({ post, onLike, onBookmark }) => {
               src={post.isBookmarked ? BookmarkFilledIcon : BookmarkIcon}
               alt="북마크"
             />
-            {post.isBookmarked && <span className={styles.count}>1</span>}
+            {post.bookmarkCount > 0 && (
+              <span className={styles.count}>{post.bookmarkCount}</span>
+            )}
           </button>
           <button
             className={styles.actionButton}
