@@ -36,7 +36,15 @@ const PostDetail = () => {
   };
 
   const savePostsToStorage = (posts) => {
-    localStorage.setItem('boardPosts', JSON.stringify(posts));
+    try {
+      localStorage.setItem('boardPosts', JSON.stringify(posts));
+    } catch (error) {
+      if (error.name === 'QuotaExceededError') {
+        console.error('localStorage 용량이 부족합니다.');
+        // 사용자에게 알림 표시 또는 오래된 데이터 정리
+      }
+      throw error;
+    }
   };
 
   // 댓글 저장소 함수
@@ -178,7 +186,7 @@ const PostDetail = () => {
   };
 
   // 댓글 입력창에서 ctrl+enter로 댓글 추가
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) handleAddComment();
   };
 
@@ -256,7 +264,9 @@ const PostDetail = () => {
                   src={post.isBookmarked ? BookmarkFilledIcon : BookmarkIcon}
                   alt="북마크"
                 />
-                {post.isBookmarked && <span className={styles.count}>1</span>}
+                {post.bookmarkCount > 0 && (
+                  <span className={styles.count}>{post.bookmarkCount}</span>
+                )}
               </button>
               <button
                 className={styles.actionButton}
@@ -285,7 +295,7 @@ const PostDetail = () => {
               placeholder="댓글을 입력해주세요. 허위사실, 욕설 등을 포함한 댓글은 별도의 안내 없이 삭제될 수 있어요."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
             />
           </div>
           <button
