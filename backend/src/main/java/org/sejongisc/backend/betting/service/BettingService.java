@@ -37,7 +37,7 @@ public class BettingService {
      * 현재 활성화된 베팅 라운드 조회
      */
     public Optional<BetRound> getActiveRound(Scope type) {
-        return betRoundRepository.findByStatusTrueAndScope(type);
+        return betRoundRepository.findTopByStatusTrueAndScopeOrderByOpenAtDesc(type);
     }
 
     /**
@@ -51,21 +51,30 @@ public class BettingService {
      * PriceData 기반 무작위 종목 선택 (기존 Stock 대체)
      */
     public PriceResponse getPriceData() {
-        List<PriceData> priceList = priceDataRepository.findAll();
-        if (priceList.isEmpty()) {
+        List<PriceData> allData = priceDataRepository.findAll();
+        if (allData.isEmpty()) {
             throw new CustomException(ErrorCode.STOCK_NOT_FOUND);
         }
 
-        PriceData price = priceList.get(random.nextInt(priceList.size()));
+        List<String> tickers = allData.stream()
+                .map(PriceData::getTicker)
+                .distinct()
+                .toList();
+
+        String randomTicker = tickers.get(random.nextInt(tickers.size()));
+
+        PriceData latest = priceDataRepository.findTopByTickerOrderByDateDesc(randomTicker)
+                .orElseThrow(() -> new CustomException(ErrorCode.STOCK_NOT_FOUND));
 
         return PriceResponse.builder()
-                .name(price.getTicker())
-                .symbol(price.getTicker())
+                .name(latest.getTicker())
+                .symbol(latest.getTicker())
                 .market(MarketType.US)
-                .previousClosePrice(price.getClosePrice())
-                .settleClosePrice(price.getAdjustedClose())
+                .previousClosePrice(latest.getClosePrice())
+                .settleClosePrice(latest.getAdjustedClose())
                 .build();
     }
+
 
     /**
      * 무료 베팅 가능 여부 (20% 확률)
@@ -199,7 +208,7 @@ public class BettingService {
 
         for (BetRound round : activeRounds) {
             // PriceData를 이용해 시세 조회
-            Optional<PriceData> priceOpt = priceDataRepository.findFirstByTickerOrderByDateDesc(round.getSymbol());
+            Optional<PriceData> priceOpt = priceDataRepository.findTopByTickerOrderByDateDesc(round.getSymbol());
             if (priceOpt.isEmpty()) continue;
 
             PriceData price = priceOpt.get();
