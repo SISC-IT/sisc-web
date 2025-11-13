@@ -36,6 +36,7 @@ public class BacktestService {
   private final UserRepository userRepository;
 
   public BacktestResponse getBacktestStatus(Long backtestRunId, UUID userId) {
+    log.info("백테스팅 실행 상태 조회를 시작합니다.");
     BacktestRun backtestRun = findBacktestRunByIdAndVerifyUser(backtestRunId, userId);
     return BacktestResponse.builder()
         .backtestRun(backtestRun)

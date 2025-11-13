@@ -9,18 +9,17 @@ import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeries;
 import org.ta4j.core.Indicator;
 import org.ta4j.core.Rule;
-import org.ta4j.core.indicators.CachedIndicator; // ⭐️ MACD Hist 구현용
+import org.ta4j.core.indicators.CachedIndicator;
 import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.RSIIndicator;
 import org.ta4j.core.indicators.SMAIndicator;
 import org.ta4j.core.indicators.helpers.*;
+import org.ta4j.core.indicators.ATRIndicator;
 import org.ta4j.core.num.Num;
-import org.ta4j.core.rules.*; // IsEqualRule, AndRule, OrRule, OverIndicatorRule 등
+import org.ta4j.core.rules.*;
 
-import java.math.BigDecimal;
 import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,12 +27,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class Ta4jHelperService {
-
     /**
      * PriceData 리스트를 ta4j의 BarSeries로 변환합니다.
      */
     public BarSeries createBarSeries(List<PriceData> priceDataList) {
-        // ⭐️ (수정) BarSeries 이름에 Ticker 추가
+        // BarSeries 이름에 Ticker 추가
         BarSeries series = new BaseBarSeries(priceDataList.get(0).getTicker());
         for (PriceData p : priceDataList) {
             series.addBar(
@@ -46,46 +44,36 @@ public class Ta4jHelperService {
 
     /**
      * DTO 조건(List<StrategyCondition>)을 ta4j의 Rule 객체로 빌드합니다.
-     * "isAbsolute" 로직(✳️무조건 OR ⚪️일반)을 포함합니다.
+     * "isAbsolute" 로직을 포함합니다.
      */
-    public Rule buildCombinedRule(List<StrategyCondition> conditions, BarSeries series,
-                                  Map<String, Indicator<Num>> indicatorCache) {
-
+    public Rule buildCombinedRule(List<StrategyCondition> conditions, BarSeries series, Map<String, Indicator<Num>> indicatorCache) {
         if (series.isEmpty()) {
             throw new IllegalArgumentException("Cannot build rules on an empty series.");
         }
-
-        // ⭐️ (수정) "1"과 "0"에 해당하는 Num 객체를 시리즈에서 가져옴
         Num sampleNum = series.getBar(0).getClosePrice();
         Num one = sampleNum.numOf(1);
         Num zero = sampleNum.numOf(0);
 
-        // ⭐️ (수정) "1"과 "0"에 해당하는 Indicator를 '먼저' 생성
         Indicator<Num> indicatorOne = new ConstantIndicator<>(series, one);
         Indicator<Num> indicatorZero = new ConstantIndicator<>(series, zero);
 
-        // "FalseRule" 대체: "1 == 0" 규칙 (항상 false)
         Rule falseRule = new IsEqualRule(indicatorOne, indicatorZero);
-        // "TrueRule" 대체: "1 == 1" 규칙 (항상 true)
         Rule trueRule = new IsEqualRule(indicatorOne, indicatorOne);
 
         if (conditions == null || conditions.isEmpty()) {
-            return falseRule; // 조건이 없으면 항상 false
+            return falseRule;
         }
 
-        // 1. ✳️ '무조건' 조건과 ⚪️ '일반' 조건으로 분리
         Map<Boolean, List<StrategyCondition>> partitioned = conditions.stream()
             .collect(Collectors.partitioningBy(StrategyCondition::isAbsolute));
-
         List<StrategyCondition> absoluteConditions = partitioned.get(true);
         List<StrategyCondition> standardConditions = partitioned.get(false);
-
         Rule absoluteRule;
         Rule standardRule;
 
-        // 2. ✳️ '무조건' 조건들을 OR로 묶음
+        // '무조건' 조건들을 OR로 묶음
         if (absoluteConditions.isEmpty()) {
-            absoluteRule = falseRule; // ✳️ 조건 없음
+            absoluteRule = falseRule;
         } else {
             Rule combinedOrRule = buildSingleRule(absoluteConditions.get(0), series, indicatorCache);
             for (int i = 1; i < absoluteConditions.size(); i++) {
@@ -97,9 +85,9 @@ public class Ta4jHelperService {
             absoluteRule = combinedOrRule;
         }
 
-        // 3. ⚪️ '일반' 조건들을 AND로 묶음
+        // '일반' 조건들을 AND로 묶음
         if (standardConditions.isEmpty()) {
-            standardRule = falseRule; // ⚪️ 조건 없음
+            standardRule = falseRule;
         } else {
             Rule combinedAndRule = buildSingleRule(standardConditions.get(0), series, indicatorCache);
             for (int i = 1; i < standardConditions.size(); i++) {
@@ -110,8 +98,6 @@ public class Ta4jHelperService {
             }
             standardRule = combinedAndRule;
         }
-
-        // 4. 최종 결합: (✳️무조건 OR ⚪️일반)
         return new OrRule(absoluteRule, standardRule);
     }
 
@@ -120,58 +106,54 @@ public class Ta4jHelperService {
      */
     private Rule buildSingleRule(StrategyCondition condition, BarSeries series,
                                  Map<String, Indicator<Num>> indicatorCache) {
-
         Indicator<Num> left = resolveOperand(condition.getLeftOperand(), series, indicatorCache);
         Indicator<Num> right = resolveOperand(condition.getRightOperand(), series, indicatorCache);
 
-        // ⭐️ (스크린샷 0.13 버전 규칙 기준)
-        switch (condition.getOperator()) {
-            case "GT":
-                return new OverIndicatorRule(left, right);
-            case "GTE":
-                return new IsEqualRule(left, right).or(new OverIndicatorRule(left, right));
-            case "LT":
-                return new UnderIndicatorRule(left, right);
-            case "LTE":
-                return new IsEqualRule(left, right).or(new UnderIndicatorRule(left, right));
-            case "EQ":
-                return new IsEqualRule(left, right);
-            case "CROSSES_ABOVE":
-                return new CrossedUpIndicatorRule(left, right);
-            case "CROSSES_BELOW":
-                return new CrossedDownIndicatorRule(left, right);
-            default:
-                throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
-        }
+        return switch (condition.getOperator()) {
+            case "GT" -> new OverIndicatorRule(left, right);
+            case "GTE" -> new IsEqualRule(left, right).or(new OverIndicatorRule(left, right));
+            case "LT" -> new UnderIndicatorRule(left, right);
+            case "LTE" -> new IsEqualRule(left, right).or(new UnderIndicatorRule(left, right));
+            case "EQ" -> new IsEqualRule(left, right);
+            case "CROSSES_ABOVE" -> new CrossedUpIndicatorRule(left, right);
+            case "CROSSES_BELOW" -> new CrossedDownIndicatorRule(left, right);
+            default -> throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
+        };
     }
 
     /**
-     * StrategyOperand DTO를 ta4j Indicator 객체로 "번역"
+     * StrategyOperand DTO를 ta4j Indicator 객체로 번역
      */
     private Indicator<Num> resolveOperand(StrategyOperand operand, BarSeries series,
                                           Map<String, Indicator<Num>> indicatorCache) {
         if (operand == null) return null;
-
+        validateOperand(operand);
         String key = generateIndicatorKey(operand);
         if (indicatorCache.containsKey(key)) {
             return indicatorCache.get(key);
         }
 
-        Indicator<Num> indicator;
-        switch (operand.getType()) {
-            case "price":
-                indicator = createPriceIndicator(operand.getPriceField(), series);
-                break;
-            case "indicator":
-                indicator = createIndicator(operand, series, indicatorCache);
-                break;
-            case "const":
+        Num indicatorOne = series.getBar(0).getClosePrice().numOf(1); // 1.0에 해당하는 Num
+
+        Indicator<Num> indicator = switch (operand.getType()) {
+            case "price" -> createPriceIndicator(operand.getPriceField(), series);
+            case "indicator" -> {
+                Indicator<Num> baseIndicator = createIndicator(operand, series, indicatorCache);
+                // Transform 로직 추가
+                //if ("ATR".equals(operand.getIndicatorCode()) && "pctOfPrice".equals(operand.getTransform())) {
+                    // ATR/ClosePrice 비율을 계산하는 Indicator 생성
+                    //Indicator<Num> closePrice = createPriceIndicator("Close", series);
+                    // ATR / ClosePrice = ATR * (1 / ClosePrice)
+                    //yield new MultiplierIndicator(baseIndicator, new DivisionIndicator(new ConstantIndicator<>(series, indicatorOne), closePrice));
+                //}
+                yield baseIndicator;
+            }
+            case "const" -> {
                 Num constValue = series.getBar(0).getClosePrice().numOf(operand.getConstantValue());
-                indicator = new ConstantIndicator<>(series, constValue);
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown operand type: " + operand.getType());
-        }
+                yield new ConstantIndicator<>(series, constValue);
+            }
+            default -> throw new IllegalArgumentException("Unknown operand type: " + operand.getType());
+        };
 
         indicatorCache.put(key, indicator);
         return indicator;
@@ -179,19 +161,14 @@ public class Ta4jHelperService {
 
     // 팩토리 헬퍼 1: 원본 가격 지표 생성
     private Indicator<Num> createPriceIndicator(String field, BarSeries series) {
-        switch (field) {
-            case "Open":
-                return new OpenPriceIndicator(series);
-            case "High":
-                return new HighPriceIndicator(series);
-            case "Low":
-                return new LowPriceIndicator(series);
-            case "Volume":
-                return new VolumeIndicator(series, 0);
-            case "Close":
-            default:
-                return new ClosePriceIndicator(series);
-        }
+        return switch (field) {
+            case "Open" -> new OpenPriceIndicator(series);
+            case "High" -> new HighPriceIndicator(series);
+            case "Low" -> new LowPriceIndicator(series);
+            case "Volume" -> new VolumeIndicator(series, 0);
+            case "Close" -> new ClosePriceIndicator(series);
+            default -> throw new IllegalArgumentException("Unknown priceField: " + field);
+        };
     }
 
     // 팩토리 헬퍼 2: 보조 지표 생성
@@ -200,10 +177,7 @@ public class Ta4jHelperService {
         String code = operand.getIndicatorCode();
         Map<String, Object> params = operand.getParams();
 
-        Indicator<Num> baseIndicator = resolveOperand(
-            new StrategyOperand("price", null, null, null, "Close", null),
-            series, cache
-        );
+        Indicator<Num> baseIndicator = createPriceIndicator("Close", series);
 
         switch (code) {
             case "SMA":
@@ -221,26 +195,23 @@ public class Ta4jHelperService {
                 int signal = ((Number) params.get("signal")).intValue();
 
                 MACDIndicator macd = new MACDIndicator(baseIndicator, fast, slow);
-                Indicator<Num> signalLine = new EMAIndicator(macd, signal); // Signal 라인 생성
+                Indicator<Num> signalLine = new EMAIndicator(macd, signal);
 
-                switch (operand.getOutput()) {
-                    case "macd":
-                        return macd;
-                    case "signal":
-                        return signalLine;
-                    case "hist":
-                        // ⭐️ (변경) MACDHistogramIndicator -> 수동 계산 클래스
-                        return new ManualMACDHistogramIndicator(macd, signalLine);
-                    default:
-                        return macd;
-                }
-                // TODO: ATR, 볼린저 밴드 등 다른 지표 추가...
+                return switch (operand.getOutput()) {
+                    case "macd" -> macd;
+                    case "signal" -> signalLine;
+                    case "hist" -> new ManualMACDHistogramIndicator(macd, signalLine);
+                    default -> macd;
+                };
+            //case "ATR":
+                //int atrLength = ((Number) params.get("length")).intValue();
+                //return new ATRIndicator(series, atrLength);
             default:
                 throw new IllegalArgumentException("Unknown indicator code: " + code);
         }
     }
 
-    // Operand DTO로부터 Map의 키를 생성
+    // Operand DTO 로부터 Map의 키를 생성
     private String generateIndicatorKey(StrategyOperand operand) {
         if (operand == null) return "null_operand";
         switch (operand.getType()) {
@@ -257,6 +228,10 @@ public class Ta4jHelperService {
                 if (operand.getOutput() != null && !"value".equals(operand.getOutput())) {
                     key += "." + operand.getOutput();
                 }
+                // Transform 정보도 Key에 포함
+                //if (operand.getTransform() != null) {
+                  //  key += "~" + operand.getTransform();
+                //}
                 return key;
             default:
                 return "unknown_operand";
@@ -264,7 +239,7 @@ public class Ta4jHelperService {
     }
 
     /**
-     * ⭐️ (신규) MACD 히스토그램 수동 계산 클래스
+     * MACD 히스토그램 수동 계산 클래스
      * (MACDIndicator - EMAIndicator(MACDIndicator, signalLength))
      */
     private static class ManualMACDHistogramIndicator extends CachedIndicator<Num> {
@@ -272,7 +247,6 @@ public class Ta4jHelperService {
         private final Indicator<Num> signal;
 
         public ManualMACDHistogramIndicator(Indicator<Num> macd, Indicator<Num> signal) {
-            // 부모 클래스에 BarSeries를 전달해야 함 (macd에서 가져옴)
             super(macd);
             this.macd = macd;
             this.signal = signal;
@@ -280,9 +254,36 @@ public class Ta4jHelperService {
 
         @Override
         protected Num calculate(int index) {
-            // MACD 값 - Signal 값
             return macd.getValue(index).minus(signal.getValue(index));
         }
     }
-}
 
+    private void validateOperand(StrategyOperand operand) {
+        if (operand.getType() == null) {
+            throw new IllegalArgumentException("Operand 'type' must not be null.");
+        }
+
+        switch (operand.getType()) {
+            case "price":
+                if (operand.getPriceField() == null) {
+                    throw new IllegalArgumentException("Operand of type 'price' must have a non-null 'priceField'.");
+                }
+                break;
+            case "indicator":
+                if (operand.getIndicatorCode() == null) {
+                    throw new IllegalArgumentException("Operand of type 'indicator' must have a non-null 'indicatorCode'.");
+                }
+                if (operand.getParams() == null) {
+                    throw new IllegalArgumentException("Operand of type 'indicator' must have non-null 'params'.");
+                }
+                break;
+            case "const":
+                if (operand.getConstantValue() == null) {
+                    throw new IllegalArgumentException("Operand of type 'const' must have a non-null 'constantValue'.");
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown operand type: " + operand.getType());
+        }
+    }
+}

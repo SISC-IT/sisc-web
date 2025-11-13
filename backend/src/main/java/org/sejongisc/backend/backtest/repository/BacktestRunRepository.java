@@ -19,9 +19,8 @@ public interface BacktestRunRepository extends JpaRepository<BacktestRun, Long> 
   List<BacktestRun> findByTemplate_TemplateIdWithTemplate(@Param("templateTemplateId") UUID templateTemplateId);
 
   @Query("SELECT br FROM BacktestRun br " +
-         "JOIN br.template t " +
-         "JOIN t.user u " +
-         "WHERE br.id = :backtestRunId " +
-         "AND u.userId = :userId")
+         "LEFT JOIN FETCH br.template t " +     // template은 없을 수 있기에 left join
+         "JOIN FETCH br.user u " +
+         "WHERE br.id = :backtestRunId ")
   Optional<BacktestRun> findByIdWithMember(@Param("backtestRunId") Long backtestRunId);
 }
