@@ -31,3 +31,6 @@ __pycache__/
 
 # ===== Backend =====
 backend/src/main/java/org/sejongisc/backend/stock/TestController.java
+
+# ===== windows =====
+.desktop.ini

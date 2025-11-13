@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Attendance from './pages/Attendance';
 import Board from './pages/Board';
+import PostDetail from './pages/PostDetail';
 import StockGame from './pages/StockGame';
 import BackTest from './pages/BackTest';
 import Mypage from './pages/Mypage';
@@ -23,6 +24,7 @@ function App() {
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/attendance-manage" element={<AttendanceManage />} />
           <Route path="/board" element={<Board />} />
+          <Route path="/board/:postId" element={<PostDetail />} />
           <Route path="/quant-bot" element={<QuantBot />} />
           <Route path="/stock-game" element={<StockGame />} />
           <Route path="/back-test" element={<BackTest />} />
