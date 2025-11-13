@@ -12,6 +12,7 @@ import org.sejongisc.backend.attendance.entity.AttendanceStatus;
 import org.sejongisc.backend.attendance.entity.RoundStatus;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
+import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -50,6 +51,9 @@ public class AttendanceRoundControllerTest {
 
     @MockitoBean
     private AttendanceService attendanceService;
+
+    @MockitoBean
+    private JwtProvider jwtProvider;
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
@@ -286,11 +290,13 @@ public class AttendanceRoundControllerTest {
                 .remainingSeconds(1200L)
                 .build();
 
+        when(jwtProvider.getUserIdFromToken(anyString())).thenReturn(userId.toString());
         when(attendanceService.checkInByRound(any(AttendanceCheckInRequest.class), any(UUID.class)))
                 .thenReturn(response);
 
         // when & then
         mockMvc.perform(post("/api/attendance/rounds/check-in")
+                        .header("Authorization", "Bearer test-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -305,6 +311,7 @@ public class AttendanceRoundControllerTest {
     @WithMockUser
     void checkInByRound_fail_upcoming() throws Exception {
         // given
+        UUID userId = UUID.randomUUID();
         AttendanceCheckInRequest request = AttendanceCheckInRequest.builder()
                 .roundId(roundId)
                 .latitude(37.4979)
@@ -312,8 +319,11 @@ public class AttendanceRoundControllerTest {
                 .userName("김철수")
                 .build();
 
+        when(jwtProvider.getUserIdFromToken(anyString())).thenReturn(userId.toString());
+
         // when & then
         mockMvc.perform(post("/api/attendance/rounds/check-in")
+                        .header("Authorization", "Bearer test-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -324,14 +334,18 @@ public class AttendanceRoundControllerTest {
     @WithMockUser
     void checkInByRound_fail_closed() throws Exception {
         // given
+        UUID userId = UUID.randomUUID();
         AttendanceCheckInRequest request = AttendanceCheckInRequest.builder()
                 .roundId(roundId)
                 .latitude(37.4979)
                 .longitude(127.0276)
                 .build();
 
+        when(jwtProvider.getUserIdFromToken(anyString())).thenReturn(userId.toString());
+
         // when & then
         mockMvc.perform(post("/api/attendance/rounds/check-in")
+                        .header("Authorization", "Bearer test-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -412,6 +426,7 @@ public class AttendanceRoundControllerTest {
     @WithMockUser
     void checkInByRound_anonymous_noName() throws Exception {
         // given
+        UUID userId = UUID.randomUUID();
         AttendanceCheckInRequest request = AttendanceCheckInRequest.builder()
                 .roundId(roundId)
                 .latitude(37.4979)
@@ -429,11 +444,13 @@ public class AttendanceRoundControllerTest {
                 .remainingSeconds(1200L)
                 .build();
 
+        when(jwtProvider.getUserIdFromToken(anyString())).thenReturn(userId.toString());
         when(attendanceService.checkInByRound(any(AttendanceCheckInRequest.class), any(UUID.class)))
                 .thenReturn(response);
 
         // when & then
         mockMvc.perform(post("/api/attendance/rounds/check-in")
+                        .header("Authorization", "Bearer test-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
