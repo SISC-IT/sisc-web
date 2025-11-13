@@ -15,7 +15,7 @@
 import os
 import sys
 from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timezone
+from datetime import datetime, timezone ,timedelta
 import pandas as pd
 
 # --- 프로젝트 루트 경로 설정 ---
@@ -26,11 +26,14 @@ sys.path.append(project_root)
 # --- 모듈 import ---
 from finder.main import run_finder                       # 1) 종목 발굴
 from transformer.main import run_transformer             # 2) 신호 생성(결정 로그 생성)
-from xai.run_xai import run_xai                          # 4) XAI 리포트 텍스트 생성
-from libs.utils.save_reports_to_db import save_reports_to_db  # 5) 리포트 저장
-from libs.utils.get_db_conn import get_db_conn           # (옵션) DB 연결 헬퍼
 from backtest.simple_backtester import backtest, BacktestConfig  # 3) 백테스팅(간소화)
 from libs.utils.save_executions_to_db import save_executions_to_db # 3.5) 체결내역 저장
+from xai.run_xai import run_xai                          # 4) XAI 리포트 텍스트 생성
+from libs.utils.save_reports_to_db import save_reports_to_db  # 5) 리포트 저장
+#---------------------------------
+
+# --- 추가 유틸 import ---
+from libs.utils.fetch_ohlcv import fetch_ohlcv           # 2) OHLCV 수집 헬퍼
 # ---------------------------------
 
 # DB 이름 상수(실제 등록된 키와 반드시 일치해야 함)
@@ -95,25 +98,67 @@ def run_weekly_finder() -> List[str]:
 def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
     """
     한국어 주석:
-    - Transformer 모듈을 실행하여 의사결정 로그(decision logs)를 반환한다.
-    - 반환 데이터프레임 예시 컬럼:
-      ['ticker','date','action','price','feature_name1','feature_score1', ...]
-    - XAI 단계의 필수 컬럼(REQUIRED_LOG_COLS)을 사전 점검한다.
+    - 종목 리스트를 받아 DB에서 OHLCV를 수집(fetch_ohlcv)하고, 이를 raw_data로 Transformer에 전달한다.
+    - Transformer는 전달받은 raw_data를 바탕으로 의사결정 로그(logs_df)를 생성한다.
+    - 반환: 의사결정 로그 DataFrame (REQUIRED_LOG_COLS 검증 포함)
+    - 전제:
+        * fetch_ohlcv(ticker, start, end, db_name) -> pd.DataFrame(columns=['date','open','high','low','close','volume',...])
+        * run_transformer(finder_df, seq_len, pred_h, raw_data) -> {'logs': pd.DataFrame(...)}
     """
     print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 시작 ---")
+
+    # 1) 입력 방어
     if not tickers:
         print("[WARN] 빈 종목 리스트가 입력되어 Transformer를 건너뜁니다.")
         return pd.DataFrame()
 
-    # Transformer 인터페이스 규약: finder_df, seq_len, pred_h, raw_data 등 필요 시 맞춰 전달
-    # (여기서는 run_transformer 내부에서 데이터 수집/전처리까지 처리한다고 가정)
-    finder_df = pd.DataFrame(tickers, columns=["ticker"])
+    # 2) 날짜 구간 설정
+    #    - 서버 실사용 시: end_date = _utcnow()
+    #    - 재현 테스트/고정 시: 아래 고정값 활용
+    end_date = datetime.strptime("2024-11-1", "%Y-%m-%d")  # 임시 고정 날짜
+    start_date = end_date - timedelta(days=600)
 
+    # 3) 티커별 OHLCV 수집 (DB)
+    all_ohlcv_df: List[pd.DataFrame] = []
+    for ticker in tickers:
+        try:
+            ohlcv_df = fetch_ohlcv(
+                ticker=ticker,
+                start=start_date.strftime("%Y-%m-%d"),
+                end=end_date.strftime("%Y-%m-%d"),
+                db_name=db_name,
+            )
+            if ohlcv_df is None or ohlcv_df.empty:
+                print(f"[WARN] OHLCV 미수집: {ticker}")
+                continue
+
+            # 스키마 안전화 및 티커 컬럼 주입
+            ohlcv_df = ohlcv_df.copy()
+            # date 컬럼이 문자열이면 Timestamp로 변환(Transformer에서 기대하는 형식 맞추기)
+            if not pd.api.types.is_datetime64_any_dtype(ohlcv_df["date"]):
+                ohlcv_df["date"] = pd.to_datetime(ohlcv_df["date"])
+            ohlcv_df["ticker"] = ticker
+
+            all_ohlcv_df.append(ohlcv_df)
+        except Exception as e:
+            print(f"[ERROR] OHLCV 수집 실패({ticker}): {e}")
+
+    # 4) 합치기 및 검증
+    if not all_ohlcv_df:
+        print("[ERROR] 어떤 티커에서도 OHLCV 데이터를 가져오지 못했습니다.")
+        return pd.DataFrame()
+
+    raw_data = pd.concat(all_ohlcv_df, ignore_index=True)
+    # 정렬/인덱스 리셋 (모델 입력 일관성)
+    raw_data = raw_data.sort_values(["ticker", "date"]).reset_index(drop=True)
+
+    # 5) Transformer 호출
+    finder_df = pd.DataFrame(tickers, columns=["ticker"])
     transformer_result: Dict = run_transformer(
         finder_df=finder_df,
         seq_len=60,
         pred_h=1,
-        raw_data=None  # OHLCV 비사용 파이프라인이므로 None 전달(내부에서 자체 처리할 수 있음)
+        raw_data=raw_data,  # ✅ DB에서 가져온 OHLCV를 그대로 전달
     ) or {}
 
     logs_df: pd.DataFrame = transformer_result.get("logs", pd.DataFrame())
@@ -121,14 +166,15 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
         print("[WARN] Transformer 결과 로그가 비어 있습니다.")
         return pd.DataFrame()
 
-    # 신규 포맷 강제 체크(XAI 및 백테스터가 기대하는 컬럼 존재 여부 확인)
+    # 6) XAI/백테스터 필수 컬럼 체크
     missing_cols = REQUIRED_LOG_COLS - set(logs_df.columns)
     if missing_cols:
         print(f"[ERROR] 결정 로그에 필수 컬럼 누락(신규 포맷 전용): {sorted(missing_cols)}")
         return pd.DataFrame()
 
-    print(f"--- [PIPELINE-STEP 2] Transformer 완료: logs={len(logs_df)} rows ---")
+    print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 완료 ---")
     return logs_df
+
 
 # === 3) Backtester: 로그 price 기준 체결가/수량 산출 ===
 def run_backtester(decision_log: pd.DataFrame) -> pd.DataFrame:
