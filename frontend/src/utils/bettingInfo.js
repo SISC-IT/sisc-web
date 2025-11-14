@@ -6,6 +6,7 @@ export const dailyBet = async () => {
     return res.data;
   } catch (error) {
     console.log(error.message);
+    return null;
   }
 };
 
@@ -15,5 +16,6 @@ export const weeklyBet = async () => {
     return res.data;
   } catch (error) {
     console.log(error.message);
+    return null;
   }
 };

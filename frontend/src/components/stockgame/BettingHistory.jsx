@@ -8,7 +8,7 @@ import {
   getWeeklyBetHistory,
 } from '../../utils/bettingHistory';
 
-const Bettingdata = ({ type }) => {
+const BettingHistory = ({ type }) => {
   const [data, setData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -110,4 +110,4 @@ const Bettingdata = ({ type }) => {
   );
 };
 
-export default Bettingdata;
+export default BettingHistory;
