@@ -40,7 +40,7 @@ public class SignupRequest {
 
     @Schema(
             description = "사용자 비밀번호 (8자 이상, 숫자/영문/특수문자 조합 권장)",
-            example = "abcd1234!",
+            example = "Abcd1234!",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "비밀번호는 필수입니다.")
@@ -48,7 +48,7 @@ public class SignupRequest {
 
     @Schema(
             description = "사용자 역할 (USER 또는 ADMIN 등)",
-            example = "USER",
+            example = "TEAM_MEMBER",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotNull(message = "역할은 필수입니다.")

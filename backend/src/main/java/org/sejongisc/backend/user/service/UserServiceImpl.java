@@ -1,12 +1,19 @@
 package org.sejongisc.backend.user.service;
 
 
+import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.auth.service.EmailService;
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +33,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -314,4 +323,35 @@ public class UserServiceImpl implements UserService {
         refreshTokenService.deleteByUserId(user.getUserId());
     }
 
+
+
+    @Override
+    @Transactional
+    public User upsertOAuthUser(String provider, String providerUid, String email, String name) {
+
+        AuthProvider authProvider = AuthProvider.valueOf(provider.toUpperCase());
+
+        return oauthAccountRepository
+                .findByProviderAndProviderUid(authProvider, providerUid)
+                .map(UserOauthAccount::getUser)
+                .orElseGet(() -> {
+                    User newUser = User.builder()
+                            .email(email)
+                            .name(name)
+                            .role(Role.TEAM_MEMBER)
+                            .build();
+
+                    User savedUser = userRepository.save(newUser);
+
+                    UserOauthAccount oauthAccount = UserOauthAccount.builder()
+                            .user(savedUser)
+                            .provider(authProvider)
+                            .providerUid(providerUid)
+                            .build();
+
+                    oauthAccountRepository.save(oauthAccount);
+
+                    return savedUser;
+                });
+    }
 }
