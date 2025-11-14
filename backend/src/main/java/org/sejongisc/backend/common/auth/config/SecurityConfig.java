@@ -71,6 +71,7 @@ public class SecurityConfig {
                                     "/api/auth/signup",
                                     "/api/auth/login",
                                     "/api/auth/login/**",
+                                    "/api/auth/oauth",
                                     "/api/auth/oauth/**",
                                     "/actuator",
                                     "/actuator/**",
@@ -85,11 +86,8 @@ public class SecurityConfig {
                                     "/api/email/**",
                                     "/swagger-resources/**",
                                     "/webjars/**"
-                            ).permitAll();
-
-                            auth.requestMatchers("/api/user/**").authenticated();
-
-                            auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                            ).permitAll()
+                            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 //                            .anyRequest().authenticated();
                             .anyRequest().permitAll();
                 })

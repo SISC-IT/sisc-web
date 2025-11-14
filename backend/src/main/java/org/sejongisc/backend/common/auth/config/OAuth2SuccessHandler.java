@@ -67,34 +67,23 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
 
         // 6.  HttpOnly 쿠키로 refreshToken 저장
-        ResponseCookie accessCookie = ResponseCookie.from("refresh", refreshToken)
+        ResponseCookie cookie = ResponseCookie.from("refresh", refreshToken)
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)   // 로컬 개발 환경
                 .sameSite("None")
                 .path("/")
-                .maxAge(60L * 60)  // 1 hour
+                .maxAge(60L * 60 * 24 * 14)
                 .build();
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh", refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/")
-                .maxAge(60L * 60 * 24 * 14) // 2 weeks
-                .build();
-
-
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         // 7. 프론트로 redirect
-        String redirectUrl = "http://localhost:5173/oauth/success";
-//                + "?accessToken=" + accessToken
-//                + "&name=" + URLEncoder.encode(name, StandardCharsets.UTF_8)
-//                + "&userId=" + userId;
+        String redirectUrl = "http://localhost:5173/oauth/success"
+                + "?accessToken=" + accessToken
+                + "&name=" + URLEncoder.encode(name, StandardCharsets.UTF_8)
+                + "&userId=" + userId;
 
-        // log.info("[OAuth2 Redirect] {}", redirectUrl);
+        log.info("[OAuth2 Redirect] {}", redirectUrl);
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }

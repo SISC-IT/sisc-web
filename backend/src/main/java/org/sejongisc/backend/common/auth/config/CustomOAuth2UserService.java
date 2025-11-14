@@ -43,9 +43,7 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
         Map<String, Object> attrs = oauthUser.getAttributes();
 
         log.info("[OAuth2] Provider = {}", provider);
-        if (log.isDebugEnabled()) {
-            log.debug("[OAuth2] Attributes = {}", attrs);
-        }
+        log.info("[OAuth2] Attributes = {}", attrs);
 
         String providerUid;
         String email = null;
