@@ -12,12 +12,15 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import QuantBot from './pages/QuantBot';
 
+import OAuthSuccess from './pages/OAuthSuccess.jsx';
+
 function App() {
   return (
     <>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/oauth/success" element={<OAuthSuccess />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/attendance" element={<Attendance />} />

@@ -7,6 +7,8 @@ const SessionManagementCard = ({
   setSelectedSessionId,
   selectedRound,
   setSelectedRound,
+  setEditingRound,
+  onClick,
 }) => {
   const currentSession = sessions.find(
     (session) => session.id === selectedSessionId
@@ -63,8 +65,10 @@ const SessionManagementCard = ({
                     <button
                       className={styles.menuButton}
                       onClick={(e) => {
+                        onClick();
                         e.stopPropagation();
                         setSelectedRound(null);
+                        setEditingRound(round);
                       }}
                     >
                       ···

@@ -7,11 +7,22 @@ import styles from './AttendanceManage.module.css';
 import SessionSettingCard from '../components/attendancemanage/SessionSettingCard';
 import AttendanceManagementCard from '../components/attendancemanage/AttendanceManagementCard';
 import SessionManagementCard from '../components/attendancemanage/SessionManagementCard';
+import RoundSettingModal from '../components/attendancemanage/RoundSettingModal';
 
 const sessionData = [
   {
     id: 'session-1',
     title: '금융 IT팀 세션',
+    // 세션의 기본 위치 정보
+    location: {
+      lat: 37.5499,
+      lng: 127.0751,
+    },
+    defaultStartTime: '18:30', // 세션의 기본 시간 설정
+    defaultAvailableMinutes: 30, // 출석 인정 시간 (분 단위)
+    rewardPoints: 100, // 세션의 리워드
+    isVisible: true, // 세션 공개 여부
+    // 세션 회차들
     rounds: [
       {
         id: 'round-1',
@@ -46,6 +57,9 @@ const AttendanceManage = () => {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [selectedRound, setSelectedRound] = useState(null);
 
+  const [editingRound, setEditingRound] = useState(null);
+  const [isModalOpen, setModalOpen] = useState(false);
+
   // const currentSession = useMemo(
   //   () => sessions.find((s) => s.id === selectedSessionId) || null,
   //   [sessions, selectedSessionId]
@@ -77,7 +91,31 @@ const AttendanceManage = () => {
       participant.attendance = newAttendance;
     });
   };
+  const handleRoundChange = (updateRoundData) => {
+    setSessions((draft) => {
+      const session = draft.find((s) => s.id === selectedSessionId);
+      if (!session) return;
 
+      const round = session.rounds.find((r) => r.id === updateRoundData.id);
+      if (!round) return;
+
+      // 통과 시 회차 정보 수정
+      round.startTime = updateRoundData.startTime;
+      round.availableMinutes = updateRoundData.availableMinutes;
+    });
+    console.log(sessions);
+  };
+
+  // 모달 open, close
+  const openModal = () => {
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+  };
+
+  // 세션 추가
   const handleAddSession = (sessionTitle, roundDetails) => {
     const sessionId = `session-${uuid()}-${Math.random().toString(36)}`;
     const roundId = `round-${uuid()}-${Math.random().toString(5)}`;
@@ -85,6 +123,10 @@ const AttendanceManage = () => {
     const newSession = {
       id: sessionId,
       title: sessionTitle,
+      defaultStartTime: `${roundDetails.hh}:${roundDetails.mm}:${roundDetails.ss}`,
+      defaultAvailableMinutes: parseInt(roundDetails.availableTimeMm, 10),
+      rewardPoints: 100,
+      isVisible: true,
       rounds: [
         {
           id: roundId,
@@ -111,28 +153,43 @@ const AttendanceManage = () => {
   const participants = selectedRoundData?.participants || [];
 
   return (
-    <div className={styles.attendanceManageContainer}>
-      <div className={styles.mainTitle}>출석관리(담당자)</div>
-      <div className={styles.cardLayout}>
-        <div className={styles.leftColumn}>
-          <SessionSettingCard styles={styles} onAddSession={handleAddSession} />
-          <SessionManagementCard
+    <>
+      <div className={styles.attendanceManageContainer}>
+        <div className={styles.mainTitle}>출석관리(담당자)</div>
+        <div className={styles.cardLayout}>
+          <div className={styles.leftColumn}>
+            <SessionSettingCard
+              styles={styles}
+              onAddSession={handleAddSession}
+            />
+            <SessionManagementCard
+              styles={styles}
+              sessions={sessions}
+              selectedSessionId={selectedSessionId}
+              setSelectedSessionId={setSelectedSessionId}
+              selectedRound={selectedRound}
+              setSelectedRound={setSelectedRound}
+              setEditingRound={setEditingRound}
+              onClick={openModal}
+            />
+          </div>
+          <AttendanceManagementCard
             styles={styles}
-            sessions={sessions}
-            selectedSessionId={selectedSessionId}
-            setSelectedSessionId={setSelectedSessionId}
             selectedRound={selectedRound}
-            setSelectedRound={setSelectedRound}
+            onAttendanceChange={handleAttendanceChange}
+            participants={participants}
           />
         </div>
-        <AttendanceManagementCard
-          styles={styles}
-          selectedRound={selectedRound}
-          onAttendanceChange={handleAttendanceChange}
-          participants={participants}
-        />
       </div>
-    </div>
+      {isModalOpen && (
+        <RoundSettingModal
+          styles={styles}
+          onClose={closeModal}
+          round={editingRound}
+          onSave={handleRoundChange}
+        />
+      )}
+    </>
   );
 };
 
