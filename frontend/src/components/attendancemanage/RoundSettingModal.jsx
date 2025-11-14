@@ -8,7 +8,15 @@ const RoundSettingModal = ({
   onSave,
 }) => {
   // 받은 round 파싱
-  const [h = '00', m = '00', s = '00'] = round.startTime.split(':');
+  const parseTime = (timeStr) => {
+    const parts = (timeStr || '00:00:00').split(':');
+    return {
+      h: parts[0] || '00',
+      m: parts[1] || '00',
+      s: parts[2] || '00',
+    };
+  };
+  const [h = '00', m = '00', s = '00'] = parseTime(round.startTime);
 
   const [hh, setHh] = useState(h);
   const [mm, setMm] = useState(m);

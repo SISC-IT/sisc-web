@@ -103,7 +103,6 @@ const AttendanceManage = () => {
       round.startTime = updateRoundData.startTime;
       round.availableMinutes = updateRoundData.availableMinutes;
     });
-    console.log(sessions);
   };
 
   // 모달 open, close
