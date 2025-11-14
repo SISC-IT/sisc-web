@@ -74,25 +74,6 @@ public class AttendanceSessionController {
     }
 
     /**
-     * 출석 코드로 세션 조회
-     * - 학생이 출석 코드 입력 시 사용
-     * - 체크인 가능 여부 확인
-     */
-    @Operation(
-            summary = "출석 코드로 세션 조회",
-            description = "6자리 출석 코드를 입력하여 해당 세션을 조회합니다. (학생용) " +
-                    "체크인 가능 여부, 남은 시간 등의 정보를 확인할 수 있습니다."
-    )
-    @GetMapping("/code/{code}")
-    public ResponseEntity<AttendanceSessionResponse> getSessionByCode(@PathVariable String code) {
-        log.info("출석 코드로 세션 조회: 코드={}", code);
-
-        AttendanceSessionResponse response = attendanceSessionService.getSessionByCode(code);
-
-        return ResponseEntity.ok(response);
-    }
-
-    /**
      * 모든 세션 목록 조회
      * - 최신 순으로 정렬
      * - 공개/비공개 세션 모두 포함
@@ -145,43 +126,6 @@ public class AttendanceSessionController {
         log.info("활성 출석 세션 조회");
 
         List<AttendanceSessionResponse> sessions = attendanceSessionService.getActiveSessions();
-
-        return ResponseEntity.ok(sessions);
-    }
-
-    /**
-     * 태그별 세션 목록 조회
-     * - "금융IT", "동아리 전체" 등 태그로 필터링
-     */
-    @Operation(
-            summary = "태그별 세션 목록 조회",
-            description = "특정 태그를 가진 세션들을 조회합니다. " +
-                    "예: '금융IT', '동아리 전체', '스터디' 등으로 세션을 분류할 수 있습니다."
-    )
-    @GetMapping("/tag/{tag}")
-    public ResponseEntity<List<AttendanceSessionResponse>> getSessionsByTag(@PathVariable String tag) {
-        log.info("태그별 출석 세션 조회: 태그={}", tag);
-
-        List<AttendanceSessionResponse> sessions = attendanceSessionService.getSessionsByTag(tag);
-
-        return ResponseEntity.ok(sessions);
-    }
-
-    /**
-     * 상태별 세션 목록 조회 (관리자용)
-     * - UPCOMING/OPEN/CLOSED 상태별 필터링
-     */
-    @Operation(
-            summary = "상태별 세션 목록 조회",
-            description = "특정 상태의 세션들을 조회합니다. (관리자 전용) " +
-                    "UPCOMING(예정), OPEN(진행중), CLOSED(종료) 상태별로 필터링할 수 있습니다."
-    )
-    @GetMapping("/status/{status}")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<List<AttendanceSessionResponse>> getSessionsByStatus(@PathVariable SessionStatus status) {
-        log.info("상태별 출석 세션 조회: 상태={}", status);
-
-        List<AttendanceSessionResponse> sessions = attendanceSessionService.getSessionsByStatus(status);
 
         return ResponseEntity.ok(sessions);
     }

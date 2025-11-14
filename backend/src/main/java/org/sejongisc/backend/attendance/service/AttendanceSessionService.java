@@ -81,19 +81,6 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 출석 코드로 세션 조회
-     * - 학생이 코드 입력 시 사용
-     * - 체크인 가능 여부 자동 계산
-     */
-    @Transactional(readOnly = true)
-    public AttendanceSessionResponse getSessionByCode(String code) {
-        AttendanceSession session = attendanceSessionRepository.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 출석 코드입니다: " + code));
-
-        return convertToResponse(session);
-    }
-
-    /**
      * 모든 세션 목록 조회
      * - 관리자용, 공개/비공개 모두 포함
      * - 최신 순으로 정렬
@@ -101,32 +88,6 @@ public class AttendanceSessionService {
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getAllSessions() {
         List<AttendanceSession> sessions = attendanceSessionRepository.findAllByOrderByStartsAtDesc();
-
-        return sessions.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 태그별 세션 목록 조회
-     * - "금융IT", "동아리 전체" 등 태그로 필터링
-     */
-    @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionsByTag(String tag) {
-        List<AttendanceSession> sessions = attendanceSessionRepository.findByTag(tag);
-
-        return sessions.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 상태별 세션 목록 조회
-     * - UPCOMING/OPEN/CLOSED 상태별 필터링
-     */
-    @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionsByStatus(SessionStatus status) {
-        List<AttendanceSession> sessions = attendanceSessionRepository.findByStatus(status);
 
         return sessions.stream()
                 .map(this::convertToResponse)

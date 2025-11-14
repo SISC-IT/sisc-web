@@ -133,36 +133,6 @@ public class AttendanceSessionControllerTest {
     }
 
     @Test
-    @DisplayName("출석 코드로 세션 조회 성공")
-    @WithMockUser
-    void getSessionByCode_success() throws Exception {
-        //given
-        String code = "123456";
-        AttendanceSessionResponse response = AttendanceSessionResponse.builder()
-                .attendanceSessionId(UUID.randomUUID())
-                .title("세투연 정규 세션")
-                .code(code)
-                .startsAt(LocalDateTime.now().plusMinutes(30))
-                .windowSeconds(1800)
-                .status(SessionStatus.UPCOMING)
-                .participantCount(5)
-                .remainingSeconds(1800L)
-                .checkInAvailable(false)
-                .build();
-
-        when(attendanceSessionService.getSessionByCode(code)).thenReturn(response);
-
-        //then
-        mockMvc.perform(get("/api/attendance/sessions/code/{code}", code))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(code))
-                .andExpect(jsonPath("$.title").value("세투연 정규 세션"))
-                .andExpect(jsonPath("$.participantCount").value(5))
-                .andExpect(jsonPath("$.remainingSeconds").value(1800))
-                .andExpect(jsonPath("$.checkInAvailable").value(false));
-    }
-
-    @Test
     @DisplayName("세션 상세 조회 성공")
     @WithMockUser
     void getSession_success() throws Exception {
@@ -255,39 +225,6 @@ public class AttendanceSessionControllerTest {
     }
 
     @Test
-    @DisplayName("태그별 세션 목록 조회 성공")
-    @WithMockUser
-    void getSessionByTag_success() throws Exception {
-        //given
-        String tag = "금융IT";
-        List<AttendanceSessionResponse> responses = Arrays.asList(
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("금융IT 정규 세션 1")
-                        .tag(tag)
-                        .code("111111")
-                        .participantCount(16)
-                        .build(),
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("금융IT 정규 세션 2")
-                        .tag(tag)
-                        .code("222222")
-                        .participantCount(14)
-                        .build()
-        );
-
-        when(attendanceSessionService.getSessionsByTag(tag)).thenReturn(responses);
-
-        //then
-        mockMvc.perform(get("/api/attendance/sessions/tag/{tag}", tag))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].tag").value(tag))
-                .andExpect(jsonPath("$[1].tag").value(tag));
-    }
-
-    @Test
     @DisplayName("세션 수정 성공 (관리자)")
     @WithMockUser(roles = "PRESIDENT")
     void updateSession_success() throws Exception {
@@ -368,37 +305,6 @@ public class AttendanceSessionControllerTest {
     }
 
     @Test
-    @DisplayName("상태별 세션 목록 조회 성공 (관리자)")
-    @WithMockUser(roles = "PRESIDENT")
-    void getSessionByStatus_success() throws Exception {
-        //given
-        SessionStatus status = SessionStatus.OPEN;
-        List<AttendanceSessionResponse> responses = Arrays.asList(
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("진행중인 세션 1")
-                        .status(status)
-                        .participantCount(8)
-                        .build(),
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("진행중인 세션 2")
-                        .status(status)
-                        .participantCount(14)
-                        .build()
-        );
-
-        when(attendanceSessionService.getSessionsByStatus(status)).thenReturn(responses);
-
-        //then
-        mockMvc.perform(get("/api/attendance/sessions/status/{status}", status))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].status").value("OPEN"))
-                .andExpect(jsonPath("$[1].status").value("OPEN"));
-    }
-
-    @Test
     @DisplayName("관리자 전용 기능 접근 실패: 권한 없음")
     @WithMockUser(roles = "TEAM_MEMBER")
     void adminOnlyEndpoints_fail_noPermission() throws Exception {
@@ -420,10 +326,6 @@ public class AttendanceSessionControllerTest {
 
         // 세션 삭제
         mockMvc.perform(delete("/api/attendance/sessions/{sessionId}", sessionId))
-                .andExpect(status().isForbidden());
-
-        // 상태별 조회
-        mockMvc.perform(get("/api/attendance/sessions/status/OPEN"))
                 .andExpect(status().isForbidden());
     }
 }

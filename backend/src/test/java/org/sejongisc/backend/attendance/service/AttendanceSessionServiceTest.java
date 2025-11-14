@@ -139,50 +139,6 @@ public class AttendanceSessionServiceTest {
     }
 
     @Test
-    @DisplayName("출석 코드로 세션 조회 성공")
-    void getSessionByCode_success() {
-        //given
-        String code = "123456";
-        LocalDateTime now = LocalDateTime.now();
-        AttendanceSession session = AttendanceSession.builder()
-                .attendanceSessionId(UUID.randomUUID())
-                .title("세투연 정규 세션")
-                .code(code)
-                .startsAt(now.plusMinutes(30))
-                .windowSeconds(1800)
-                .status(SessionStatus.UPCOMING)
-                .build();
-
-        when(attendanceSessionRepository.findByCode(code)).thenReturn(Optional.of(session));
-        when(attendanceRepository.countByAttendanceSession(session)).thenReturn(5L);
-
-        //when
-        AttendanceSessionResponse response = attendanceSessionService.getSessionByCode(code);
-
-        //then
-        assertAll(
-                () -> assertThat(response.getCode()).isEqualTo(code),
-                () -> assertThat(response.getTitle()).isEqualTo("세투연 정규 세션"),
-                () -> assertThat(response.getParticipantCount()).isEqualTo(5),
-                () -> assertThat(response.getRemainingSeconds()).isGreaterThan(0),
-                () -> assertThat(response.isCheckInAvailable()).isFalse()
-        );
-    }
-
-    @Test
-    @DisplayName("출석 코드로 세션 조회 실패: 존재하지 않는 코드")
-    void getSessionByCode_fail_notFound() {
-        //given
-        String invalidCode = "111111";
-        when(attendanceSessionRepository.findByCode(invalidCode)).thenReturn(Optional.empty());
-
-        //then
-        assertThatThrownBy(() -> attendanceSessionService.getSessionByCode(invalidCode))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("존재하지 않는 출석 코드입니다: " + invalidCode);
-    }
-
-    @Test
     @DisplayName("공개 세션 목록 조회")
     void getPublicSession_success() {
         //given
@@ -395,42 +351,5 @@ public class AttendanceSessionServiceTest {
         verify(attendanceSessionRepository).delete(session);
     }
 
-    @Test
-    @DisplayName("태그별 세션 목록 조회")
-    void getSessionByTag_success() {
-        //given
-        String tag = "세투연";
-        List<AttendanceSession> sessions = Arrays.asList(
-                AttendanceSession.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("세투연 정규 세션")
-                        .tag(tag)
-                        .code("111111")
-                        .startsAt(LocalDateTime.now().plusHours(1))
-                        .windowSeconds(1800)
-                        .build(),
-                AttendanceSession.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("세투연 정규 세션 2")
-                        .tag(tag)
-                        .code("222222")
-                        .startsAt(LocalDateTime.now().plusHours(2))
-                        .windowSeconds(1800)
-                        .build()
-        );
-
-        when(attendanceSessionRepository.findByTag(tag)).thenReturn(sessions);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
-
-        //when
-        List<AttendanceSessionResponse> responses = attendanceSessionService.getSessionsByTag(tag);
-
-        //then
-        assertAll(
-                () -> assertThat(responses).hasSize(2),
-                () -> assertThat(responses.get(0).getTag()).isEqualTo(tag),
-                () -> assertThat(responses.get(1).getTag()).isEqualTo(tag)
-        );
-    }
 }
 
