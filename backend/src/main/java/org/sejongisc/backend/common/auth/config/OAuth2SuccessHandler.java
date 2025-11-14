@@ -67,7 +67,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
 
         // 6.  HttpOnly 쿠키로 refreshToken 저장
-        ResponseCookie accessCookie = ResponseCookie.from("access", refreshToken)
+        ResponseCookie accessCookie = ResponseCookie.from("access", accessToken)
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
