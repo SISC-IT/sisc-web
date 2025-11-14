@@ -1,10 +1,10 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { useState } from 'react';
 
 const Sidebar = ({ isOpen, isRoot }) => {
-  const [selectedBoard, setSelectedBoard] = useState('전체 게시판');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const boardList = [
     { name: '전체 게시판', path: '/board' },
@@ -16,6 +16,14 @@ const Sidebar = ({ isOpen, isRoot }) => {
     { name: '매크로팀 게시판', path: '/board/macro' },
     { name: '트레이딩팀 게시판', path: '/board/trading' },
   ];
+
+  const currentBoard = boardList.find(
+    (item) => item.path === location.pathname
+  );
+  const [selectedBoard, setSelectedBoard] = useState(
+    currentBoard?.name || '전체 게시판'
+  );
+
   return (
     <div>
       {/* 클릭 시 사이드바 슬라이드 */}
@@ -37,10 +45,10 @@ const Sidebar = ({ isOpen, isRoot }) => {
                 const selected = boardList.find(
                   (item) => item.name === newBoard
                 );
-                setSelectedBoard(newBoard);
-
-                // 라우팅
-                navigate(selected.path);
+                if (selected) {
+                  setSelectedBoard(newBoard);
+                  navigate(selected.path);
+                }
               }}
             >
               {boardList.map((item) => (
