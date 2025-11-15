@@ -3,6 +3,9 @@ package org.sejongisc.backend.common.auth.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
+import org.sejongisc.backend.auth.entity.AuthProvider;
+import org.sejongisc.backend.auth.entity.UserOauthAccount;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.user.dao.UserRepository;
@@ -11,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -22,6 +26,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -32,6 +37,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
+    private final UserOauthAccountRepository userOauthAccountRepository;
 
     @Override
     public void onAuthenticationSuccess(
@@ -39,26 +45,48 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         HttpServletResponse response,
         Authentication authentication) throws IOException{
 
+        // log.info("[OAuth2SuccessHandler] SUCCESS HANDLER CALLED!");
+
+        if (!(authentication.getPrincipal() instanceof DefaultOAuth2User oauthUser)) {
+            throw new IllegalStateException("Unknown principal type: " + authentication.getPrincipal().getClass());
+        }
+
         // 1. CustomOAuth2UserService에서 넣어준 attributes 가져오기
-        DefaultOAuth2User oauthUser = (DefaultOAuth2User) authentication.getPrincipal();
+        Map<String, Object> attrs = oauthUser.getAttributes();
 
-        String userIdStr = oauthUser.getAttributes().get("id").toString();
-        UUID userId = UUID.fromString(userIdStr);
-        String email = (String) oauthUser.getAttributes().get("email");
-        String name  = (String) oauthUser.getAttributes().get("name");
+        String providerStr = (String) attrs.get("provider");
+        String providerUid = (String) attrs.get("providerUid");
 
-        log.info("[OAuth2 Success] userId = {}, email = {}", userId, email);
+        if (providerStr == null) {
+            throw new IllegalStateException("OAuth provider attribute missing from attributes");
+        }
 
-        // 2. User 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found during OAuth login"));
+        AuthProvider provider =
+                switch (providerStr) {
+                    case "kakao" -> AuthProvider.KAKAO;
+                    case "github" -> AuthProvider.GITHUB;
+                    case "google" -> AuthProvider.GOOGLE;
+                    default -> throw new IllegalStateException("Unknown OAuth provider: " + providerStr);
+                };
 
-        // 3. AccessToken 발급
+
+        // log.info("[OAuth2SuccessHandler] provider={}, providerUid={}", provider, providerUid);
+
+        // DB 조회
+        UserOauthAccount account = userOauthAccountRepository
+                .findByProviderAndProviderUid(provider, providerUid)
+                .orElseThrow(() -> new RuntimeException("소셜 계정이 DB에 없습니다. (회원가입 필요)"));
+
+        User user = userRepository.findById(account.getUser().getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // JWT 생성
         String accessToken = jwtProvider.createToken(
                 user.getUserId(),
                 user.getRole(),
                 user.getEmail()
         );
+
 
         // 4. RefreshToken 생성
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
@@ -69,16 +97,16 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // 6.  HttpOnly 쿠키로 refreshToken 저장
         ResponseCookie accessCookie = ResponseCookie.from("access", accessToken)
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
+                .secure(false)   // 로컬 개발
+                .sameSite("Lax")   // 로컬에서는 None 비추천
                 .path("/")
                 .maxAge(60L * 60)  // 1 hour
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refresh", refreshToken)
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
+                .secure(false)
+                .sameSite("Lax")
                 .path("/")
                 .maxAge(60L * 60 * 24 * 14) // 2 weeks
                 .build();
@@ -94,7 +122,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 //                + "&name=" + URLEncoder.encode(name, StandardCharsets.UTF_8)
 //                + "&userId=" + userId;
 
-        // log.info("[OAuth2 Redirect] {}", redirectUrl);
+     //    log.info("[OAuth2 Redirect] {}", redirectUrl);
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
