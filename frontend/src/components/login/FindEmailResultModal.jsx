@@ -1,14 +1,20 @@
 import styles from '../VerificationModal.module.css';
 
 const FindEmailResultModal = ({ onClose, result }) => {
-  const handleSubmit = (e) => {
-    e.preventDefault();
-  };
-
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
-        <h1 className={styles.findEmailH1}>이메일 찾기</h1>
+        <div className={styles.modalHeader}>
+          <h1>이메일 찾기</h1>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+          >
+            &times;
+          </button>
+        </div>
+
         <div className={styles.textbox}>
           {result ? (
             <>

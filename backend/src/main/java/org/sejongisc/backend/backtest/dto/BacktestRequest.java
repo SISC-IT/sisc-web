@@ -35,6 +35,10 @@ public class BacktestRequest {
   @Schema(description = "백테스트 실행 요청 JSON")
   private BacktestRunRequest strategy;
 
+  @Schema(description = "기본 청산 기간")
+  private int defaultExitDays;
+
+
   // 백테스트 리스트 삭제
   @Schema(description = "삭제할 백테스트 실행 리스트")
   private List<Long> backtestRunIds;

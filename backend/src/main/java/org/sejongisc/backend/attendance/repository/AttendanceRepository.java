@@ -52,4 +52,12 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     Long countByAttendanceSessionAndStatus(@Param("session") AttendanceSession session,
                                            @Param("status") AttendanceStatus status);
 
+    // 라운드별 출석 조회
+    @Query("SELECT a FROM Attendance a WHERE a.attendanceRound.roundId = :roundId ORDER BY a.checkedAt ASC")
+    List<Attendance> findByAttendanceRound_RoundId(@Param("roundId") UUID roundId);
+
+    // 라운드별 특정 사용자 출석 확인
+    @Query("SELECT a FROM Attendance a WHERE a.attendanceRound.roundId = :roundId AND a.user = :user")
+    Optional<Attendance> findByAttendanceRound_RoundIdAndUser(@Param("roundId") UUID roundId, @Param("user") User user);
+
 }
