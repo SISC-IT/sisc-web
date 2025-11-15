@@ -84,7 +84,9 @@ public class SecurityConfig {
 
                                     "/api/email/**",
                                     "/swagger-resources/**",
-                                    "/webjars/**"
+                                    "/webjars/**",
+                                    "/login/**",
+                                    "/oauth2/**"
                             ).permitAll();
 
                             auth.requestMatchers("/api/user/**").authenticated();
