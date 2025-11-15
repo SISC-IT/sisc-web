@@ -1,11 +1,11 @@
 import styles from './AttendanceManagementCard.module.css';
 
-const AttendanceManagementCard = ({
-  styles: commonStyles,
-  selectedRound,
-  onAttendanceChange,
-  participants,
-}) => {
+import { useAttendance } from '../../contexts/AttendanceContext';
+
+const AttendanceManagementCard = ({ styles: commonStyles }) => {
+  const { selectedRound, handleAttendanceChange, participants } =
+    useAttendance();
+
   return (
     <div className={styles.attendanceManagementCardContainer}>
       <header className={commonStyles.header}>
@@ -38,7 +38,10 @@ const AttendanceManagementCard = ({
                       className={styles.attendanceSelect}
                       value={participant.attendance}
                       onChange={(e) =>
-                        onAttendanceChange(participant.memberId, e.target.value)
+                        handleAttendanceChange(
+                          participant.memberId,
+                          e.target.value
+                        )
                       }
                     >
                       <option value="출석">출석</option>

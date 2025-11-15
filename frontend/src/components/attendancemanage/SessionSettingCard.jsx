@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import styles from './SessionSettingCard.module.css';
+import { useAttendance } from '../../contexts/AttendanceContext';
 
-const SessionSettingCard = ({ styles: commonStyles, onAddSession }) => {
+const SessionSettingCard = ({ styles: commonStyles }) => {
+  const { handleAddSession } = useAttendance();
+
   const [sessionTitle, setSessionTitle] = useState('');
   const [hh, setHh] = useState('');
   const [mm, setMm] = useState('');
@@ -42,7 +45,7 @@ const SessionSettingCard = ({ styles: commonStyles, onAddSession }) => {
     // 유효성 검사
     if (!isFormValid(title, hour, minute, second, availableMinute)) return;
 
-    onAddSession(sessionTitle, {
+    handleAddSession(sessionTitle, {
       hh: hh.padStart(2, '0'),
       mm: mm.padStart(2, '0'),
       ss: ss.padStart(2, '0'),
