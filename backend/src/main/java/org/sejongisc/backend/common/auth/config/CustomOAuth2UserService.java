@@ -35,7 +35,7 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
     @Override
     public OAuth2User loadUser(OAuth2UserRequest req) throws OAuth2AuthenticationException {
 
-
+        log.info("[CustomOAuth2UserService loadUser start]");
         DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
         OAuth2User oauthUser = delegate.loadUser(req);
 
@@ -108,7 +108,7 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
 
                     return saved;
                 });
-
+        log.info("[CustomOAuth2UserService loadUser end]");
         return new DefaultOAuth2User(
                 List.of(new SimpleGrantedAuthority("ROLE_TEAM_MEMBER")),
                 Map.of(
