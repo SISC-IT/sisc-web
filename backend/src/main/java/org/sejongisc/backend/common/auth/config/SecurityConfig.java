@@ -35,6 +35,7 @@ public class SecurityConfig {
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
@@ -56,8 +57,10 @@ public class SecurityConfig {
                         .authorizationEndpoint(a ->
                                 a.authorizationRequestRepository(authorizationRequestRepository())
                         )
-                        .userInfoEndpoint(u ->
-                                u.userService(customOAuth2UserService)
+                        .userInfoEndpoint(u -> {
+                                    u.userService(customOAuth2UserService);  // kakao, github
+                                    u.oidcUserService(customOidcUserService);  //google
+                                }
                         )
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler((req, res, ex) ->
@@ -71,7 +74,6 @@ public class SecurityConfig {
                                     "/api/auth/signup",
                                     "/api/auth/login",
                                     "/api/auth/login/**",
-                                    "/api/auth/oauth/**",
                                     "/actuator",
                                     "/actuator/**",
                                     "/api/auth/logout",
