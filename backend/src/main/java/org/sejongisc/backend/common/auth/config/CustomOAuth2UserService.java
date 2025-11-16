@@ -34,9 +34,9 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest req) throws OAuth2AuthenticationException {
-
-        log.info("[CustomOAuth2UserService] loadUser START");
-
+        // log.info("[CustomOAuth2UserService] loadUser START");
+=======
+        
         OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate =
                 new DefaultOAuth2UserService();
         OAuth2User oAuth2User = delegate.loadUser(req);
@@ -48,7 +48,8 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
         String email;
         String name;
 
-       // log.info("[OAuth2] Provider = {}", provider);
+
+        // log.info("[OAuth2] Provider = {}", provider);
         if (log.isDebugEnabled()) {
             log.debug("[OAuth2] Attributes = {}", attrs);
         }
@@ -74,7 +75,7 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
             default -> throw new RuntimeException("지원하지 않는 provider: " + provider);
         }
 
-        //log.info("provider={}, providerUid={}, email={}, name={}", provider, providerUid, email, name);
+        // log.info("provider={}, providerUid={}, email={}, name={}", provider, providerUid, email, name);
 
         final String fProviderUid = providerUid;
         final String fEmail = email;
@@ -102,7 +103,7 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
                     return saved;
                 });
 
-        log.info("[CustomOAuth2UserService] User resolved → returning OAuth2User");
+        // log.info("[CustomOAuth2UserService] User resolved → returning OAuth2User");
 
         Map<String, Object> attributes = new java.util.HashMap<>();
         attributes.put("provider", provider);           // google / kakao / github

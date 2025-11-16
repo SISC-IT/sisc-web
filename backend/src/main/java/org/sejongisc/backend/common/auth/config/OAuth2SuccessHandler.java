@@ -107,12 +107,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .httpOnly(true)
                 .secure(false)
                 .sameSite("Lax")
-                .secure(true)
-                .sameSite("None")
                 .path("/")
                 .maxAge(60L * 60 * 24 * 14) // 2 weeks
                 .build();
-
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
@@ -124,7 +121,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 //                + "&name=" + URLEncoder.encode(name, StandardCharsets.UTF_8)
 //                + "&userId=" + userId;
 
-        log.info("[OAuth2 Redirect] {}", redirectUrl);
+       // log.info("[OAuth2 Redirect] {}", redirectUrl);
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
