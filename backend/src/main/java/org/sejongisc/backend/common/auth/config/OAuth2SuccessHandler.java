@@ -122,7 +122,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 //                + "&name=" + URLEncoder.encode(name, StandardCharsets.UTF_8)
 //                + "&userId=" + userId;
 
-     //    log.info("[OAuth2 Redirect] {}", redirectUrl);
+       // log.info("[OAuth2 Redirect] {}", redirectUrl);
 
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
