@@ -33,6 +33,10 @@ public class BacktestRunRequest {
     @Schema(description = "노트", defaultValue = "골든크로스 + RSI 필터 전략 테스트")
     private String note;
 
+    //@Schema(description = "거래 시 매수 비중", defaultValue = "10")
+    //private int buyRatio;
+    //@Schema(description = "거래 시 매도 비중", defaultValue = "10")
+    //private int sellRatio;
     /*
      * 타임 프레임 (예: "D", "W", "M")
      private String timeFrame;
