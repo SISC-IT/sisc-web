@@ -77,7 +77,6 @@ public class CustomOidcUserService extends OidcUserService {
         attrs.put("name", user.getName());
         attrs.put("userId", user.getUserId()); // SuccessHandler가 필요로 함
 
-
         // 여기서 attrs를 defaultOidcUser에 직접 넣음
         return new DefaultOidcUser(
                 oidcUser.getAuthorities(),
