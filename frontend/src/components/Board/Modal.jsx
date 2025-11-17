@@ -34,7 +34,7 @@ const Modal = ({ title, setTitle, content, setContent, onSave, onClose }) => {
                 onClick={() => document.getElementById('fileUpload').click()}
               >
                 <img src={FolderIcon} alt="폴더" />
-                <span className={styles.fileText}>파일추가</span>
+                <span className={styles.fileText}>파일 추가</span>
                 <input
                   type="file"
                   id="fileUpload"
@@ -66,7 +66,7 @@ const Modal = ({ title, setTitle, content, setContent, onSave, onClose }) => {
         </div>
 
         <button className={styles.saveButton} onClick={onSave}>
-          저장
+          게시글 작성
         </button>
       </div>
     </div>

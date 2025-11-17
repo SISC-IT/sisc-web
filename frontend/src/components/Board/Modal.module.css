@@ -13,7 +13,6 @@
 
 .modal {
   width: 906px;
-  height: 653px;
   max-width: 90vw;
   max-height: 90vh;
   background: rgba(255, 255, 255, 1);
@@ -62,6 +61,7 @@
   flex-direction: column;
   gap: 47px;
   flex: 1;
+  margin-bottom: 27px;
 }
 
 .titleField {
@@ -242,13 +242,13 @@
   font-weight: 500;
   font-size: 16px;
   cursor: pointer;
-  background: rgba(23, 23, 23, 1);
+  background: rgba(29, 128, 244, 1);
   color: rgba(255, 255, 255, 1);
-  margin-left: auto;
-  margin-top: auto;
+  align-self: flex-end;
+  flex-shrink: 0;
 }
 
 .saveButton:hover {
-  background: rgba(50, 50, 50, 1);
+  background: rgb(6, 2, 2);
   transform: translateY(-1px);
 }
