@@ -5,11 +5,12 @@
   background-color: #f9f9f9;
   border-radius: 12px;
   width: 880px;
-  height: 170px;
+  height: 200px;
   /* max-width: 880px;
   min-width: 440px; */
   padding: 30px;
   position: relative;
+  gap: 25px;
 }
 
 .date {

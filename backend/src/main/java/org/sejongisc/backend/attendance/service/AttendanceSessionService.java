@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
+import org.sejongisc.backend.attendance.dto.SessionLocationUpdateRequest;
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.Location;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
@@ -275,6 +276,36 @@ public class AttendanceSessionService {
             code = generateRandomCode();
         } while (attendanceSessionRepository.existsByCode(code));
         return code;
+    }
+
+    /**
+     * 세션 위치 재설정
+     * - 기존 위치 정보를 새로운 위치로 업데이트
+     * - 반경은 기존 값 유지 또는 0으로 설정
+     */
+    public AttendanceSessionResponse updateSessionLocation(UUID sessionId, SessionLocationUpdateRequest request) {
+        log.info("세션 위치 재설정 시작: 세션ID={}, 위도={}, 경도={}",
+                sessionId, request.getLatitude(), request.getLongitude());
+
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 세션입니다: " + sessionId));
+
+        Location newLocation = Location.builder()
+                .lat(request.getLatitude())
+                .lng(request.getLongitude())
+                .radiusMeters(session.getLocation() != null ?
+                        session.getLocation().getRadiusMeters() : 100)
+                .build();
+
+        session = session.toBuilder()
+                .location(newLocation)
+                .build();
+
+        session = attendanceSessionRepository.save(session);
+
+        log.info("세션 위치 재설정 완료: 세션ID={}", sessionId);
+
+        return convertToResponse(session);
     }
 
     /**

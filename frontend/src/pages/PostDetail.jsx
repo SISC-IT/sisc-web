@@ -4,7 +4,7 @@ import styles from './PostDetail.module.css';
 
 import ProfileIcon from '../assets/board_profile.svg';
 import BookmarkIcon from '../assets/boardBookMark.svg';
-import BookmarkFilledIcon from '../assets/boardBookmark.fill.svg';
+import BookmarkFilledIcon from '../assets/boardBookMark.fill.svg';
 import HeartIcon from '../assets/boardHeart.svg';
 import HeartFilledIcon from '../assets/boardHeart.fill.svg';
 import EditIcon from '../assets/boardPencil.svg';

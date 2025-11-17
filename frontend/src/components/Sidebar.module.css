@@ -2,7 +2,7 @@
   position: fixed;
   top: 90px;
   left: 0;
-  width: 200px;
+  width: 264px;
   height: calc(100vh - 90px);
   padding: 0 32px;
   background-color: #02040d;
@@ -115,4 +115,21 @@
 .logo {
   width: 19px;
   height: 19px;
+}
+
+.boardSelect {
+  width: 100%;
+  background: transparent;
+  color: #ffffff;
+  border: none;
+  padding: 3px;
+  border-radius: 6px;
+  margin-top: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.boardSelect option {
+  color: black;
 }

@@ -27,7 +27,7 @@ public class BacktestRunMetrics {
   private BigDecimal totalReturn;       // 총 수익률
 
   @Column(nullable = false, precision = 12, scale = 6)
-  private BigDecimal maxDrawdown;       // 최대 낙폭
+  private BigDecimal maxDrawdown;       // 최대 낙폭, 퍼센티지로 계산됨
 
   @Column(nullable = false, precision = 12, scale = 6)
   private BigDecimal sharpeRatio;       // 샤프 지수

@@ -119,7 +119,7 @@ class BacktestServiceTest {
 
     BacktestResponse response = backtestService.getBackTestDetails(1L, userId);
 
-    assertThat(response.getBacktestRunMetrics().getSharpeRatio()).isEqualTo(BigDecimal.valueOf(1.5));
+    assertThat(response.getBacktestRunMetricsResponse().getSharpeRatio()).isEqualTo(BigDecimal.valueOf(1.5));
   }
 
   @Test

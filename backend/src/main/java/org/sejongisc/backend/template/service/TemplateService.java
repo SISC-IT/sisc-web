@@ -11,6 +11,7 @@ import org.sejongisc.backend.template.dto.TemplateRequest;
 import org.sejongisc.backend.template.dto.TemplateResponse;
 import org.sejongisc.backend.template.entity.Template;
 import org.sejongisc.backend.template.repository.TemplateRepository;
+import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +24,7 @@ public class TemplateService {
 
   private final TemplateRepository templateRepository;
   private final BacktestRunRepository backtestRunRepository;
-  private final EntityManager em;
+  private final UserRepository userRepository;
 
   // 유저 ID로 템플릿 목록 조회
   public TemplateResponse findAllByUserId(UUID userId) {
@@ -44,10 +45,10 @@ public class TemplateService {
 
   // 템플릿 생성
   public TemplateResponse createTemplate(TemplateRequest request) {
-    // userId 만을 가진 FK 전용 프록시 객체 생성
-    User userRef = em.getReference(User.class, request.getUserId());
+    User user = userRepository.findById(request.getUserId())
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-    Template template = Template.of(userRef, request.getTitle(),
+    Template template = Template.of(user, request.getTitle(),
         request.getDescription(), request.getIsPublic());
 
     templateRepository.save(template);
