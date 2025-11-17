@@ -29,6 +29,10 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
         <button
           className={commonStyles.iconButton}
           onClick={() => {
+            if (!currentSession) {
+              alert('세션을 먼저 선택해주세요.');
+              return;
+            }
             openAddRoundsModal();
           }}
         >
