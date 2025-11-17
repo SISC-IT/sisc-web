@@ -6,6 +6,7 @@ import org.sejongisc.backend.common.auth.jwt.JwtAuthenticationEntryPoint;
 import org.sejongisc.backend.common.auth.springsecurity.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -38,6 +39,12 @@ public class SecurityConfig {
     private final CustomOidcUserService customOidcUserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
+    private final Environment env;
+
+    private boolean isProd() {
+        return List.of(env.getActiveProfiles()).contains("prod");
+    }
+
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
         return new HttpSessionOAuth2AuthorizationRequestRepository();
@@ -63,9 +70,13 @@ public class SecurityConfig {
                                 }
                         )
                         .successHandler(oAuth2SuccessHandler)
-                        .failureHandler((req, res, ex) ->
-                                res.sendRedirect("http://localhost:5173/oauth/fail")
-                        )
+                        .failureHandler((req, res, ex) -> {
+                            if (isProd()) {
+                                res.sendRedirect("https://sisc-web.duckdns.org/oauth/fail");
+                            } else {
+                                res.sendRedirect("http://localhost:5173/oauth/fail");
+                            }
+                        })
                 )
 
                 .authorizeHttpRequests(auth -> {
@@ -110,8 +121,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173", // 허용할 프론트 주소
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
                 "https://sisc-web.duckdns.org"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
