@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../VerificationModal.module.css';
 
 const SessionModifyModal = ({
@@ -25,6 +25,21 @@ const SessionModifyModal = ({
   const [defaultAvailableMinutes, setDefaultAvailableMinutes] = useState(
     session.defaultAvailableMinutes
   );
+
+  // ESC 키로 모달을 닫는 기능
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   const isFormValid = (hour, minute, second, defaultAvailableMinutes) => {
     if (isNaN(hour) || hour < 0 || hour > 23) {

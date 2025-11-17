@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../VerificationModal.module.css';
 
 import { DayPicker } from 'react-day-picker';
@@ -12,6 +12,21 @@ const RoundDayPicker = () => {
 
   const [selectedRounds, setSelectedRounds] = useState([]);
   const today = new Date();
+
+  // ESC 키로 모달을 닫는 기능
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeAddRoundsModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [closeAddRoundsModal]);
 
   const handleComplete = () => {
     const currentSession = sessions.find((s) => s.id === selectedSessionId);
