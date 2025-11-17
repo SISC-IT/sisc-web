@@ -1,12 +1,27 @@
 import styles from './Betting.module.css';
-import icon1 from '../../assets/at_icon_1.png';
+// import icon1 from '../../assets/at_icon_1.png';
 import StockInfoItem from './StockInfoItem';
-import { mockDailyBet, mockWeeklyBet } from '../../utils/bettingInfo';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { dailyBet, weeklyBet } from '../../utils/bettingInfo';
 
 const DailyBetting = ({ period }) => {
   const [isBetting, setIsBetting] = useState('none');
-  const mockBettingInfo = period === 'daily' ? mockDailyBet : mockWeeklyBet;
+  // const data = period === 'daily' ? mockDailyBet : mockWeeklyBet;
+  // const data = period === 'daily' ? dailyBet() : weeklyBet();
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (period === 'daily') {
+        const res = await dailyBet();
+        setData(res);
+      } else {
+        const res = await weeklyBet();
+        setData(res);
+      }
+    }
+    fetchData();
+  }, [period]);
 
   const onClickUpBet = () => {
     if (isBetting !== 'none') {
@@ -30,30 +45,25 @@ const DailyBetting = ({ period }) => {
     }
   };
 
-  const formatDate = (dateStr) => {
-    const [year, month, day] = dateStr.split('-');
-    return `${year}년 ${month}월 ${day}일`;
-  };
+  if (!data) return <div>Loading...</div>;
 
   return (
     <div className={styles['daily-betting-card']}>
-      <span className={styles['date']}>
-        {formatDate(mockBettingInfo.date)} 베팅
-      </span>
+      <span className={styles['date']}>{data.title}</span>
       {/* 베팅종목 정보 */}
       <div className={styles['stock-info']}>
-        <StockInfoItem label="종목" value={mockBettingInfo.symbol} />
-        <StockInfoItem label="종가" value={mockBettingInfo.closePrice} />
+        <StockInfoItem label="종목" value={data.symbol} />
+        <StockInfoItem label="종가" value={data.previousClosePrice} />
         {/* 베팅 정보 */}
         <div className={styles['bet-info']}>
           {/* 상승 베팅 */}
           <div className={styles['upper-bet']}>
-            <div className={styles['bet-point']}>
+            {/* <div className={styles['bet-point']}>
               <img src={icon1} className={styles['icon']} />
-              <span>+{mockBettingInfo.upperBet}P</span>
+              <span>+{data.upperBet}P</span>
             </div>
             <div className={styles['divider']} />
-            <span>{mockBettingInfo.upBetCount}명</span>
+            <span>{data.upBetCount}명</span> */}
             <button
               className={`${styles['up-button']} ${isBetting === 'up' && styles.upActive}`}
               onClick={onClickUpBet}
@@ -64,12 +74,12 @@ const DailyBetting = ({ period }) => {
           </div>
           {/* 하락 베팅 */}
           <div className={styles['lower-bet']}>
-            <div className={styles['bet-point']}>
+            {/* <div className={styles['bet-point']}>
               <img src={icon1} className={styles['icon']} />
-              <span>-{mockBettingInfo.lowerBet}P</span>
+              <span>-{data.lowerBet}P</span>
             </div>
             <div className={styles['divider']} />
-            <span>{mockBettingInfo.downBetCount}명</span>
+            <span>{data.downBetCount}명</span> */}
             <button
               className={`${styles['down-button']} ${isBetting === 'down' && styles.downActive}`}
               onClick={onClickDownBet}
