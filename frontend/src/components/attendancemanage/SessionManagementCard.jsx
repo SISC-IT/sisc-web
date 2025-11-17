@@ -99,10 +99,10 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
                       <button
                         className={styles.menuButton}
                         onClick={(e) => {
-                          openRoundModifyModal();
                           e.stopPropagation();
                           setSelectedRound(null);
                           setEditingRound(round);
+                          openRoundModifyModal();
                         }}
                       >
                         ···
