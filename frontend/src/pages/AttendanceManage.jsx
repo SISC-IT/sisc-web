@@ -11,6 +11,8 @@ import RoundModifyModal from '../components/attendancemanage/RoundModifyModal';
 import SessionModifyModal from '../components/attendancemanage/SessionModifyModal';
 import RoundDayPicker from '../components/attendancemanage/RoundDayPicker';
 
+import { ToastContainer } from 'react-toastify';
+
 const AttendanceContent = () => {
   const {
     isRoundModifyModalOpen,
@@ -63,6 +65,13 @@ const AttendanceContent = () => {
 const AttendanceManage = () => {
   return (
     <AttendanceProvider>
+      <ToastContainer
+        position="top-center"
+        autoClose={false} //
+        closeOnClick={false}
+        draggable={false}
+        theme="light"
+      />
       <div className={styles.attendanceManageContainer}>
         <div className={styles.mainTitle}>출석관리(담당자)</div>
         <AttendanceContent />

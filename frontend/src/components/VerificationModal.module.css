@@ -138,10 +138,10 @@ h1 {
   background: #ff2c4c;
 }
 .resetPasswordButton:disabled {
-  background: #bce5ff;
+  background: #ff9ead;
 }
 
-/* ------------------------------------ 회차 재설정 모달 디자인 ------------------------------------ */
+/* ------------------------------------ 재설정 모달 디자인 ------------------------------------ */
 .timeInputGroup {
   display: flex;
   width: 100%;
@@ -180,4 +180,6 @@ h1 {
   display: flex;
   justify-content: space-between;
   margin-top: 18px;
+}
+.modifyButtonGroup button:disabled {
 }

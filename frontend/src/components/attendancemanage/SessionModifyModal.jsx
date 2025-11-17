@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import styles from '../VerificationModal.module.css';
+import { toast } from 'react-toastify';
+import ConfirmationToast from './ConfirmationToast';
 
 const SessionModifyModal = ({
   styles: commonStyles,
@@ -8,6 +10,8 @@ const SessionModifyModal = ({
   onSave,
   onDelete,
 }) => {
+  const [activeToastId, setActiveToastId] = useState(null);
+
   // 받은 session 파싱
   const parseTime = (timeStr) => {
     const parts = (timeStr || '00:00:00').split(':');
@@ -26,11 +30,16 @@ const SessionModifyModal = ({
     session.defaultAvailableMinutes
   );
 
-  // ESC 키로 모달을 닫는 기능
+  // ESC 키로 모달 또는 토스트를 닫는 기능
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        onClose();
+        if (activeToastId) {
+          toast.dismiss(activeToastId);
+          setActiveToastId(null);
+        } else {
+          onClose();
+        }
       }
     };
 
@@ -39,7 +48,7 @@ const SessionModifyModal = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, activeToastId]);
 
   const isFormValid = (hour, minute, second, defaultAvailableMinutes) => {
     if (isNaN(hour) || hour < 0 || hour > 23) {
@@ -81,14 +90,29 @@ const SessionModifyModal = ({
       defaultAvailableMinutes: availableMinute,
     });
 
-    // 모달 닫기
     onClose();
   };
+
   const handleDeleteClick = () => {
-    if (window.confirm('이 세션을 정말로 삭제하시겠습니까?')) {
+    const handleConfirm = () => {
       onDelete(session.id);
       onClose();
-    }
+    };
+
+    const toastId = toast(
+      <ConfirmationToast
+        onConfirm={handleConfirm}
+        message="이 세션을 정말로 삭제하시겠습니까?"
+      />,
+      {
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
+        onClose: () => setActiveToastId(null), // 토스트가 닫히면 초기화
+      }
+    );
+    setActiveToastId(toastId);
   };
 
   return (
@@ -100,6 +124,7 @@ const SessionModifyModal = ({
             type="button"
             className={styles.closeButton}
             onClick={onClose}
+            disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
           >
             &times;
           </button>
@@ -156,12 +181,14 @@ const SessionModifyModal = ({
               <button
                 className={`${styles.button} ${styles.resetPasswordButton}`}
                 onClick={handleDeleteClick}
+                disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
               >
                 삭제
               </button>
               <button
                 className={`${styles.button} ${styles.submitButton}`}
                 onClick={handleModifyClick}
+                disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
               >
                 완료
               </button>
