@@ -77,7 +77,7 @@ const LoginForm = () => {
     // console.log(
     //   `${import.meta.env.VITE_API_URL}/oauth2/authorization/${provider}`
     // );
-    window.location.href = `${import.meta.env.VITE_API_URL}/oauth2/authorization/${provider}`;
+    window.location.href = `/oauth2/authorization/${provider}`;
   };
 
   return (
