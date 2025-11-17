@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
 const getParams = (search) => {
   const p = new URLSearchParams(search);
 
@@ -45,6 +44,7 @@ const getSafeRedirectPath = (encodedPath) => {
 const OAuthSuccess = () => {
   const nav = useNavigate();
   const { search } = useLocation();
+
   const params = useMemo(() => getParams(search), [search]);
   const safePath = useMemo(
     () => getSafeRedirectPath(params.next),

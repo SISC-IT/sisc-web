@@ -10,6 +10,17 @@ import FindEmailResultModal from './FindEmailResultModal';
 
 import { login } from '../../utils/auth';
 
+import { api } from './../../utils/axios.js';
+const getUserDetails = async () => {
+  try {
+    const res = await api.get('/api/user/details');
+    return res.data;
+  } catch (err) {
+    console.error('[getUserDetails] error:', err);
+    throw err;
+  }
+};
+
 const LoginForm = () => {
   const nav = useNavigate();
 
@@ -62,9 +73,28 @@ const LoginForm = () => {
     }
   };
 
+  const handleSocialLogin = (provider) => {
+    // console.log(
+    //   `${import.meta.env.VITE_API_URL}/oauth2/authorization/${provider}`
+    // );
+    window.location.href = `${import.meta.env.VITE_API_URL}/oauth2/authorization/${provider}`;
+  };
+
   return (
     <>
       <div className={styles.formContainer}>
+        <button
+          onClick={async () => {
+            try {
+              const user = await getUserDetails();
+              console.log('USER:', user);
+            } catch (e) {
+              console.error(e);
+            }
+          }}
+        >
+          유저 정보 확인
+        </button>
         <form className={styles.loginForm} onSubmit={handleLogin}>
           <div className={styles.header}>
             <div className={styles.logoBox}>
@@ -131,7 +161,7 @@ const LoginForm = () => {
           </NavLink>
         </div>
 
-        <SocialLoginButtons />
+        <SocialLoginButtons onSocialLogin={handleSocialLogin} />
       </div>
 
       {(modalStep === 'verifyPhoneForEmail' ||
