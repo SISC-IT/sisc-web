@@ -3,6 +3,7 @@ package org.sejongisc.backend.common.auth.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
 import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
@@ -10,6 +11,7 @@ import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
@@ -26,6 +28,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,6 +41,10 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
     private final UserOauthAccountRepository userOauthAccountRepository;
+    private final Environment env;
+
+    @Value("${app.oauth2.redirect-success}")
+    private String redirectSuccessBase;
 
     @Override
     public void onAuthenticationSuccess(
@@ -94,19 +101,26 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // 5. RefreshToken 저장(DB or Redis)
         refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
 
+        boolean isProd = Arrays.asList(env.getActiveProfiles()).contains("prod");
+
+        String sameSite = isProd ? "None" : "Lax";
+        boolean secure = isProd;
+        String domain = isProd ? "sisc-web.duckdns.org" : "localhost";
+
+
         // 6.  HttpOnly 쿠키로 refreshToken 저장
         ResponseCookie accessCookie = ResponseCookie.from("access", accessToken)
                 .httpOnly(true)
-                .secure(false)   // 로컬 개발
-                .sameSite("Lax")   // 로컬에서는 None 비추천
+                .secure(secure)    // 로컬=false, 배포=true
+                .sameSite(sameSite)  // 로컬= "Lax", 배포="None"
                 .path("/")
                 .maxAge(60L * 60)  // 1 hour
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refresh", refreshToken)
                 .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(secure)
+                .sameSite(sameSite)
                 .path("/")
                 .maxAge(60L * 60 * 24 * 14) // 2 weeks
                 .build();
@@ -117,14 +131,16 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
 
         // 7. 프론트로 redirect
-        String redirectUrl = "http://localhost:5173/oauth/success";
+        // application-local.yml → http://localhost:5173/oauth/success
+        // application-prod.yml → https://sisc-web.duckdns.org/oauth/success
+        //String redirectUrl = redirectSuccessBase;
 //                + "?accessToken=" + accessToken
 //                + "&name=" + URLEncoder.encode(name, StandardCharsets.UTF_8)
 //                + "&userId=" + userId;
 
        // log.info("[OAuth2 Redirect] {}", redirectUrl);
 
-        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
+        getRedirectStrategy().sendRedirect(request, response, redirectSuccessBase);
     }
 
 }

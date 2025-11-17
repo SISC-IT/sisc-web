@@ -113,10 +113,10 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173" // 허용할 프론트 주소
         ));
-        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        config.addExposedHeader("Authorization");
         config.setMaxAge(3600L);    // 캐시 시간(초)
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

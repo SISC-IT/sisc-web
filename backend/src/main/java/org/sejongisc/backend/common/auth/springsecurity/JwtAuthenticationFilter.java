@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
@@ -40,15 +41,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/api/auth/signup",
             "/api/auth/login",
             "/api/auth/login/**",
-            "/api/auth/oauth",
-            "/api/auth/oauth/**",
             "/api/auth/logout",
             "/api/auth/reissue",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui/index.html",
             "/swagger-resources/**",
-            "/webjars/**"
+            "/webjars/**",
+            "/login/**",
+            "/oauth2/**"
     );
 
     @Override
@@ -72,6 +73,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String token = resolveToken(request);
+
+            if (token == null) {
+                token = resolveTokenFromCookie(request);
+            }
 
             if (token != null && jwtParser.validationToken(token) ) {
                 UsernamePasswordAuthenticationToken authentication = jwtParser.getAuthentication(token);
@@ -119,6 +124,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if(StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
+        return null;
+    }
+
+    private String resolveTokenFromCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
+
+        for (Cookie cookie : request.getCookies()) {
+            if ("access".equals(cookie.getName())) {
+                log.info("쿠키에서 access token 추출됨");
+                return cookie.getValue();
+            }
+        }
+
         return null;
     }
 
