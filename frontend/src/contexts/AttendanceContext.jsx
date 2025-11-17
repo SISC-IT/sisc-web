@@ -83,6 +83,14 @@ export const AttendanceProvider = ({ children }) => {
         round.startTime = updateRoundData.startTime;
         round.availableMinutes = updateRoundData.availableMinutes;
       }
+      // 회차 수정 후 정렬
+      if (session.rounds) {
+        session.rounds.sort(
+          (a, b) =>
+            new Date(`${a.date}T${a.startTime}`) -
+            new Date(`${b.date}T${b.startTime}`)
+        );
+      }
     });
   };
 
@@ -136,6 +144,12 @@ export const AttendanceProvider = ({ children }) => {
 
       if (session) {
         session.rounds.push(...newRounds);
+        // 회차 추가 후 정렬
+        session.rounds.sort(
+          (a, b) =>
+            new Date(`${a.date}T${a.startTime}`) -
+            new Date(`${b.date}T${b.startTime}`)
+        );
       }
     });
   };

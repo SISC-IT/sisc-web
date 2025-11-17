@@ -63,7 +63,7 @@ const SessionModifyModal = ({
     onSave({
       id: session.id,
       defaultStartTime: `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`,
-      defaultAvailableMinutes: defaultAvailableMinutes,
+      defaultAvailableMinutes: availableMinute,
     });
 
     // 모달 닫기
