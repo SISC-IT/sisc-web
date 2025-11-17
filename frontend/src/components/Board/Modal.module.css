@@ -249,6 +249,6 @@
 }
 
 .saveButton:hover {
-  background: rgb(6, 2, 2);
+  background: rgba(24, 102, 195, 1);
   transform: translateY(-1px);
 }
