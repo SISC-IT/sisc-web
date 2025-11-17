@@ -30,8 +30,6 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
     private final UserRepository userRepository;
     private final UserOauthAccountRepository oauthAccountRepository;
 
-
-
     @Override
     public OAuth2User loadUser(OAuth2UserRequest req) throws OAuth2AuthenticationException {
         // log.info("[CustomOAuth2UserService] loadUser START");
@@ -46,7 +44,6 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
         String providerUid;
         String email;
         String name;
-
 
         // log.info("[OAuth2] Provider = {}", provider);
         if (log.isDebugEnabled()) {

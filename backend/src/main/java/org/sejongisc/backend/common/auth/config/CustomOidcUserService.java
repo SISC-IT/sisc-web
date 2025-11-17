@@ -66,7 +66,7 @@ public class CustomOidcUserService extends OidcUserService {
                             .build();
                     oauthAccountRepository.save(oauth);
 
-                  //  log.info("[CustomOidcUserService] 신규 User 및 UserOauthAccount 생성됨");
+                  // log.info("[CustomOidcUserService] 신규 User 및 UserOauthAccount 생성됨");
                     return savedUser;
                 });
 
