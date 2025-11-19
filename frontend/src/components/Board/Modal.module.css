@@ -12,34 +12,44 @@
 }
 
 .modal {
-  width: 906px;
+  --spacing-xs: clamp(8px, 1vh, 12px);
+  --spacing-sm: clamp(12px, 2vh, 24px);
+  --spacing-md: clamp(24px, 4vh, 47px);
+  --spacing-lg: clamp(24px, 5vw, 52px);
+
+  --font-sm: clamp(12px, 1.5vw, 14px);
+  --font-base: clamp(14px, 2vw, 16px);
+  --font-md: clamp(16px, 2.5vw, 20px);
+  --font-lg: clamp(18px, 3vw, 24px);
+
+  --input-height: clamp(40px, 6vh, 48px);
+  --button-padding: clamp(10px, 1.5vw, 12px) clamp(18px, 3vw, 24px);
+
+  width: clamp(320px, 90vw, 906px);
   max-width: 90vw;
   max-height: 90vh;
   background: rgba(255, 255, 255, 1);
   border: 1px solid rgba(128, 128, 128, 1);
   border-radius: 20px;
-  padding: 52px;
-  gap: 47px;
-  opacity: 1;
+  padding: var(--spacing-lg);
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: auto;
 }
 
 .header {
   width: 100%;
-  height: 35px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  opacity: 1;
+  margin-bottom: var(--spacing-md);
 }
 
 .title {
   font-weight: 700;
-  font-size: 24px;
+  font-size: var(--font-lg);
   line-height: 146%;
-  letter-spacing: 0%;
   color: rgba(23, 23, 23, 1);
   margin: 0;
 }
@@ -52,46 +62,48 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: clamp(16px, 2vw, 18px);
+  height: clamp(16px, 2vw, 18px);
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 47px;
-  flex: 1;
-  margin-bottom: 27px;
+  gap: var(--spacing-md);
+  flex: 0 1 auto;
+  margin-bottom: var(--spacing-sm);
 }
 
 .titleField {
   width: 100%;
-  height: 89px;
+  display: flex;
+  flex-direction: column;
 }
 
 .label {
-  width: 40px;
-  height: 29px;
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--font-md);
   line-height: 146%;
-  letter-spacing: 0%;
   color: rgba(23, 23, 23, 1);
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--spacing-xs) 0;
   display: block;
-  opacity: 1;
 }
 
 .input {
   width: 100%;
-  height: 48px;
+  height: var(--input-height);
   border-radius: 8px;
   border: 0.4px solid rgba(175, 175, 175, 1);
   background: rgba(255, 255, 255, 1);
-  padding: 16px 24px;
+  padding: clamp(12px, 2vh, 16px) clamp(16px, 3vw, 24px);
   box-sizing: border-box;
-  opacity: 1;
-  font-size: 16px;
+  font-family:
+    'Pretendard',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-size: var(--font-base);
   outline: none;
 }
 
@@ -101,20 +113,20 @@
 
 .contentField {
   width: 100%;
-  height: 203px;
+  display: flex;
+  flex-direction: column;
 }
 
 .contentContainer {
   width: 100%;
-  height: 162px;
+  min-height: clamp(120px, 20vh, 162px);
   border-radius: 8px;
   border: 0.4px solid rgba(175, 175, 175, 1);
   background: rgba(255, 255, 255, 1);
-  padding: 24px;
+  padding: clamp(16px, 3vh, 24px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  opacity: 1;
 }
 
 .fileSection {
@@ -123,18 +135,14 @@
   gap: 8px;
   cursor: pointer;
   flex-shrink: 0;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .fileText {
-  width: 52px;
-  height: 14px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--font-sm);
   line-height: 100%;
-  letter-spacing: 0%;
   color: rgba(175, 175, 175, 1);
-  opacity: 1;
   flex-shrink: 0;
 }
 
@@ -142,8 +150,7 @@
   width: 100%;
   height: 0px;
   border: 0.4px solid rgba(175, 175, 175, 1);
-  opacity: 1;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-xs);
   flex-shrink: 0;
 }
 
@@ -152,75 +159,83 @@
   outline: none;
   resize: none;
   flex: 1;
+  font-family:
+    'Pretendard',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   font-weight: 500;
-  font-size: 16px;
-  line-height: 100%;
-  letter-spacing: -3%;
-  color: rgba(170, 170, 170, 1);
+  font-size: var(--font-base);
+  line-height: 140%;
+  color: rgba(23, 23, 23, 1);
   background: transparent;
-  min-height: 50px;
+  min-height: clamp(40px, 8vh, 50px);
 }
 
 .textarea::placeholder {
   font-weight: 500;
-  font-size: 16px;
-  line-height: 100%;
-  letter-spacing: -3%;
+  font-size: var(--font-base);
+  line-height: 140%;
   color: rgba(170, 170, 170, 1);
 }
 
 .accessField {
-  width: 283px;
-  height: 81px;
+  width: 100%;
+  max-width: clamp(200px, 40vw, 283px);
+  display: flex;
+  flex-direction: column;
 }
 
 .accessLabel {
-  width: 74px;
-  height: 29px;
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--font-md);
   line-height: 146%;
-  letter-spacing: 0%;
   color: rgba(23, 23, 23, 1);
-  margin: 0 0 12px 0;
-  opacity: 1;
+  margin: 0 0 var(--spacing-xs) 0;
   display: block;
 }
 
 .selectWrapper {
   position: relative;
-  width: 283px;
+  width: 100%;
   display: flex;
   align-items: center;
 }
 
 .select {
   width: 100%;
-  height: 40px;
+  height: clamp(36px, 5vh, 40px);
   border-radius: 8px;
   border: 0.8px solid rgba(175, 175, 175, 1);
   background: rgba(255, 255, 255, 1);
-  padding: 12px 20px;
-  padding-right: 40px;
+  padding: clamp(8px, 1.5vh, 12px) clamp(16px, 2.5vw, 20px);
+  padding-right: clamp(32px, 5vw, 40px);
   box-sizing: border-box;
-  opacity: 1;
+  font-family:
+    'Pretendard',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   font-weight: 400;
-  font-size: 16px;
+  font-size: var(--font-base);
   line-height: 100%;
-  letter-spacing: -3%;
   color: rgba(23, 23, 23, 1);
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+  cursor: pointer;
 }
 
 .selectIcon {
   position: absolute;
-  right: 16px;
-  top: 10px;
+  right: clamp(12px, 2vw, 16px);
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: none;
-  width: 10px;
-  height: 16px;
+  width: clamp(8px, 1.2vw, 10px);
+  height: clamp(12px, 2vw, 16px);
 }
 
 .select:focus {
@@ -236,19 +251,24 @@
 }
 
 .saveButton {
-  padding: 12px 24px;
+  padding: var(--button-padding);
   border: none;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 16px;
+  font-size: var(--font-base);
   cursor: pointer;
   background: rgba(29, 128, 244, 1);
   color: rgba(255, 255, 255, 1);
   align-self: flex-end;
   flex-shrink: 0;
+  transition: all 0.2s;
 }
 
 .saveButton:hover {
   background: rgba(24, 102, 195, 1);
   transform: translateY(-1px);
+}
+
+.saveButton:active {
+  transform: translateY(0);
 }
