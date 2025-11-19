@@ -1,97 +1,133 @@
 package org.sejongisc.backend.betting.service;
 
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.betting.dto.PriceResponse;
 import org.sejongisc.backend.betting.dto.UserBetRequest;
 import org.sejongisc.backend.betting.entity.*;
 import org.sejongisc.backend.betting.repository.BetRoundRepository;
-import org.sejongisc.backend.betting.repository.StockRepository;
 import org.sejongisc.backend.betting.repository.UserBetRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.service.PointHistoryService;
+import org.sejongisc.backend.stock.entity.PriceData;
+import org.sejongisc.backend.stock.repository.PriceDataRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class BettingService {
 
     private final BetRoundRepository betRoundRepository;
-    private final StockRepository stockRepository;
     private final UserBetRepository userBetRepository;
     private final PointHistoryService pointHistoryService;
+    private final PriceDataRepository priceDataRepository;
 
     private final Random random = new Random();
 
+    /**
+     * 현재 활성화된 베팅 라운드 조회
+     */
     public Optional<BetRound> getActiveRound(Scope type) {
-        return betRoundRepository.findByStatusTrueAndScope(type);
+        return betRoundRepository.findTopByStatusTrueAndScopeOrderByOpenAtDesc(type);
     }
 
-    // NULL일 시 빈 리스트 반환
+    /**
+     * 전체 베팅 라운드 목록 조회
+     */
     public List<BetRound> getAllBetRounds() {
-        // TODO : 필요 시 필터링, 정렬, 검색 로직 추가
         return betRoundRepository.findAllByOrderBySettleAtDesc();
     }
 
-    public Stock getStock() {
-        List<Stock> stocks = stockRepository.findAll();
-        if (stocks.isEmpty()) {
+    /**
+     * PriceData 기반 무작위 종목 선택 (기존 Stock 대체)
+     */
+    public PriceResponse getPriceData() {
+        List<PriceData> allData = priceDataRepository.findAll();
+        if (allData.isEmpty()) {
             throw new CustomException(ErrorCode.STOCK_NOT_FOUND);
         }
-        // TODO : 가중치 랜덤설정
-        return stocks.get(random.nextInt(stocks.size()));
+
+        List<String> tickers = allData.stream()
+                .map(PriceData::getTicker)
+                .distinct()
+                .toList();
+
+        String randomTicker = tickers.get(random.nextInt(tickers.size()));
+
+        PriceData latest = priceDataRepository.findTopByTickerOrderByDateDesc(randomTicker)
+                .orElseThrow(() -> new CustomException(ErrorCode.STOCK_NOT_FOUND));
+
+        return PriceResponse.builder()
+                .name(latest.getTicker())
+                .symbol(latest.getTicker())
+                .market(MarketType.US)
+                .previousClosePrice(latest.getClosePrice())
+                .settleClosePrice(latest.getAdjustedClose())
+                .build();
     }
 
+
+    /**
+     * 무료 베팅 가능 여부 (20% 확률)
+     */
     public boolean setAllowFree() {
         return random.nextDouble() < 0.2;
     }
 
+    /**
+     * 사용자의 전체 베팅 내역 조회
+     */
     public List<UserBet> getAllMyBets(UUID userId) {
-        // TODO : 필요 시 필터링, 정렬, 검색 로직 추가
         return userBetRepository.findAllByUserIdOrderByRound_SettleAtDesc(userId);
     }
 
+    /**
+     * 새로운 베팅 라운드 생성
+     */
     public void createBetRound(Scope scope) {
-
         LocalDateTime now = LocalDateTime.now();
 
-        Stock stock = getStock();
+        PriceResponse price = getPriceData();
 
         BetRound betRound = BetRound.builder()
                 .scope(scope)
-                .title(now.toLocalDate() + " " + stock.getName() + " " + scope.name() + " 라운드")
-                .symbol(stock.getSymbol())
+                .title(now.toLocalDate() + " " + price.getName() + " " + scope.name() + " 라운드")
+                .symbol(price.getSymbol())
                 .allowFree(setAllowFree())
                 .openAt(scope.getOpenAt(now))
                 .lockAt(scope.getLockAt(now))
-                .market(stock.getMarket())
-                .previousClosePrice(stock.getPreviousClosePrice())
+                .market(price.getMarket())
+                .previousClosePrice(price.getPreviousClosePrice())
                 .build();
 
         betRound.open();
-
         betRoundRepository.save(betRound);
     }
 
+    /**
+     * 종료 조건을 만족한 라운드 종료
+     */
     public void closeBetRound() {
         LocalDateTime now = LocalDateTime.now();
         List<BetRound> toClose = betRoundRepository.findByStatusTrueAndLockAtLessThanEqual(now);
         if (toClose.isEmpty()) return;
+
         toClose.forEach(BetRound::close);
         betRoundRepository.saveAll(toClose);
     }
 
-
+    /**
+     * 사용자 베팅 생성
+     */
     @Transactional
     public UserBet postUserBet(UUID userId, UserBetRequest userBetRequest) {
         BetRound betRound = betRoundRepository.findById(userBetRequest.getRoundId())
@@ -109,6 +145,7 @@ public class BettingService {
             if (!userBetRequest.isStakePointsValid()) {
                 throw new CustomException(ErrorCode.BET_POINT_TOO_LOW);
             }
+
             pointHistoryService.createPointHistory(
                     userId,
                     -userBetRequest.getStakePoints(),
@@ -131,18 +168,19 @@ public class BettingService {
         try {
             return userBetRepository.save(userBet);
         } catch (DataIntegrityViolationException e) {
-            // DB 유니크 제약(중복 베팅) 위반 시
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
     }
 
+    /**
+     * 사용자 베팅 취소
+     */
     @Transactional
     public void cancelUserBet(UUID userId, UUID userBetId) {
         UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
 
         BetRound betRound = userBet.getRound();
-
         betRound.validate();
 
         if (!userBet.isFree() && userBet.getStakePoints() > 0) {
@@ -158,6 +196,9 @@ public class BettingService {
         userBetRepository.delete(userBet);
     }
 
+    /**
+     * 베팅 결과 정산
+     */
     @Transactional
     public void settleUserBets() {
         LocalDateTime now = LocalDateTime.now();
@@ -166,13 +207,15 @@ public class BettingService {
                 betRoundRepository.findByStatusFalseAndSettleAtIsNullAndLockAtLessThanEqual(now);
 
         for (BetRound round : activeRounds) {
-            Stock stock = stockRepository.findBySymbol(round.getSymbol())
-                    .orElseThrow(() -> new CustomException(ErrorCode.STOCK_NOT_FOUND));
+            // PriceData를 이용해 시세 조회
+            Optional<PriceData> priceOpt = priceDataRepository.findTopByTickerOrderByDateDesc(round.getSymbol());
+            if (priceOpt.isEmpty()) continue;
 
-            BigDecimal finalPrice = stock.getSettleClosePrice();
-            if (finalPrice == null) {
-                continue;
-            }
+            PriceData price = priceOpt.get();
+            BigDecimal finalPrice = price.getAdjustedClose();
+
+            if (finalPrice == null) continue;
+
             round.settle(finalPrice);
             betRoundRepository.save(round);
 
@@ -180,6 +223,7 @@ public class BettingService {
 
             for (UserBet bet : userBets) {
                 if (bet.getBetStatus() != BetStatus.ACTIVE) continue;
+
                 if (bet.getOption() == round.getResultOption()) {
                     int reward = calculateReward(bet);
                     bet.win(reward);
@@ -198,8 +242,10 @@ public class BettingService {
         }
     }
 
-    // TODO : 비율을 바탕으로한 reward 계산 로직
+    /**
+     * TODO: 향후 배당 비율에 따른 보상 계산 로직
+     */
     private int calculateReward(UserBet bet) {
-        return 2;
+        return 10;
     }
 }

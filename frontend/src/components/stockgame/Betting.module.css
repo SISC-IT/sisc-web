@@ -5,10 +5,12 @@
   background-color: #f9f9f9;
   border-radius: 12px;
   width: 880px;
-  height: 170px;
+  height: 200px;
   /* max-width: 880px;
   min-width: 440px; */
   padding: 30px;
+  position: relative;
+  gap: 25px;
 }
 
 .date {
@@ -78,6 +80,25 @@
   width: 78px;
   height: 40px;
   margin-left: 5%;
+  position: relative;
+}
+
+.upActive {
+  border: 1px solid #4baaff;
+}
+
+.upBetCheck {
+  background-color: #4baaff;
+  color: #ffffff;
+  font-size: 13px;
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: none;
+  top: -7.5px;
+  left: 2px;
+  line-height: 100%;
 }
 
 .down-button {
@@ -92,4 +113,34 @@
   width: 78px;
   height: 40px;
   margin-left: 5%;
+  position: relative;
+}
+
+.downActive {
+  border: 1px solid #ff6348;
+}
+
+.downBetCheck {
+  background-color: #ff6348;
+  color: #ffffff;
+  font-size: 13px;
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: none;
+  top: -7.5px;
+  left: 2px;
+  line-height: 100%;
+}
+
+.cancel {
+  cursor: pointer;
+  color: #616161;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 146%;
+  position: absolute;
+  bottom: 15px;
+  right: 30px;
 }

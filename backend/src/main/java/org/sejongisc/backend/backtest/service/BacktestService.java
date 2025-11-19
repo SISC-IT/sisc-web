@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.backtest.dto.BacktestRequest;
 import org.sejongisc.backend.backtest.dto.BacktestResponse;
+import org.sejongisc.backend.backtest.dto.BacktestRunMetricsResponse;
 import org.sejongisc.backend.backtest.entity.BacktestRun;
 import org.sejongisc.backend.backtest.entity.BacktestRunMetrics;
 import org.sejongisc.backend.backtest.entity.BacktestStatus;
@@ -15,12 +16,11 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.template.entity.Template;
 import org.sejongisc.backend.template.repository.TemplateRepository;
+import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,36 +33,31 @@ public class BacktestService {
   private final TemplateRepository templateRepository;
   private final BacktestingEngine backtestingEngine;
   private final ObjectMapper objectMapper;
-  private final EntityManager em;
+  private final UserRepository userRepository;
 
   public BacktestResponse getBacktestStatus(Long backtestRunId, UUID userId) {
-    // TODO : 백테스트 상태 조회 로직 구현 (진행 중, 완료, 실패 등)
+    log.info("백테스팅 실행 상태 조회를 시작합니다.");
     BacktestRun backtestRun = findBacktestRunByIdAndVerifyUser(backtestRunId, userId);
     return BacktestResponse.builder()
-        .id(backtestRun.getId())
-        .paramsJson(backtestRun.getParamsJson())
-        .title(backtestRun.getTitle())
-        .status(backtestRun.getStatus())
-        .startDate(backtestRun.getStartDate())
-        .endDate(backtestRun.getEndDate())
-        .template(backtestRun.getTemplate())
+        .backtestRun(backtestRun)
         .build();
   }
   @Transactional
   public BacktestResponse getBackTestDetails(Long backtestRunId, UUID userId) {
-    BacktestRunMetrics backtestRunMetrics = backtestRunMetricsRepository.findByBacktestRunId(backtestRunId)
-        .orElse(null);
     BacktestRun backtestRun = findBacktestRunByIdAndVerifyUser(backtestRunId, userId);
 
+    if (backtestRun.getStatus() != BacktestStatus.COMPLETED) {
+      return BacktestResponse.builder()
+          .backtestRun(backtestRun)
+          .build();
+    }
+
+    BacktestRunMetrics backtestRunMetrics = backtestRunMetricsRepository.findByBacktestRunId(backtestRunId)
+        .orElseThrow(() -> new CustomException(ErrorCode.BACKTEST_METRICS_NOT_FOUND));
+
     return BacktestResponse.builder()
-        .id(backtestRun.getId())
-        .paramsJson(backtestRun.getParamsJson())
-        .title(backtestRun.getTitle())
-        .status(backtestRun.getStatus())
-        .startDate(backtestRun.getStartDate())
-        .endDate(backtestRun.getEndDate())
-        .template(backtestRun.getTemplate())
-        .backtestRunMetrics(backtestRunMetrics)
+        .backtestRun(backtestRun)
+        .backtestRunMetricsResponse(BacktestRunMetricsResponse.fromEntity(backtestRunMetrics))
         .build();
   }
 
@@ -81,11 +76,11 @@ public class BacktestService {
   }
 
   public BacktestResponse runBacktest(BacktestRequest request) {
-    User userRef = em.getReference(User.class, request.getUserId());
-
-    Template templateRef = null;
+    User user = userRepository.findById(request.getUserId())
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    Template template = null;
     if (request.getTemplateId() != null)
-      templateRef =  em.getReference(Template.class, request.getTemplateId());
+      template = findTemplateByIdAndVerifyUser(request.getTemplateId(), request.getUserId());
 
     String paramsJson;
     try {
@@ -97,8 +92,8 @@ public class BacktestService {
 
     // BacktestRun 엔티티를 "PENDING" 상태로 생성
     BacktestRun backtestRun = BacktestRun.builder()
-        .user(userRef)
-        .template(templateRef)
+        .user(user)
+        .template(template)
         .title(request.getTitle())
         .paramsJson(paramsJson)
         .startDate(request.getStartDate())
@@ -114,13 +109,7 @@ public class BacktestService {
 
     // 사용자에게 실행 중 응답 반환
     return BacktestResponse.builder()
-        .id(savedRun.getId())
-        .paramsJson(savedRun.getParamsJson())
-        .title(savedRun.getTitle())
-        .status(savedRun.getStatus())
-        .startDate(savedRun.getStartDate())
-        .endDate(savedRun.getEndDate())
-        .template(templateRef)
+        .backtestRun(savedRun)
         .build();
   }
 
@@ -159,7 +148,7 @@ public class BacktestService {
   }
 
   private BacktestRun findBacktestRunByIdAndVerifyUser(Long backtestRunId, UUID userId) {
-    BacktestRun backtestRun = backtestRunRepository.findById(backtestRunId)
+    BacktestRun backtestRun = backtestRunRepository.findByIdWithMember(backtestRunId)
         .orElseThrow(() -> new CustomException(ErrorCode.BACKTEST_NOT_FOUND));
 
     if (!backtestRun.getUser().getUserId().equals(userId)) {

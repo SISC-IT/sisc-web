@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -14,7 +15,7 @@ import java.util.Map;
  */
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
+@Setter
 public class StrategyOperand {
 
     @Schema(description = "항의 타입: \"indicator\", \"price\", \"const\"")
@@ -34,4 +35,6 @@ public class StrategyOperand {
 
     @Schema(description = "지표의 파라미터 맵 (예: {\"length\": 20})")
     private Map<String, Object> params;
+
+    //private String transform;     // 거래량 관련 필드, 추후 적용 고려
 }

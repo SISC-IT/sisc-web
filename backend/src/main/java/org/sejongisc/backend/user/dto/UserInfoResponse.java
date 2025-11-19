@@ -47,7 +47,7 @@ public class UserInfoResponse {
 
     @Schema(
             description = "사용자 역할 (예: USER, ADMIN)",
-            example = "USER"
+            example = "TEAM_MEMBER"
     )
     private String role;  // enum Role을 String으로 변환
 

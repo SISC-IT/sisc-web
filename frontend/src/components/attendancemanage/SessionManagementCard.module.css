@@ -5,6 +5,11 @@
   padding: 18px 20px;
 }
 
+.selectGroup {
+  display: flex;
+  gap: 5px;
+}
+
 .sessionSelect {
   display: flex;
   width: 100%;
@@ -80,6 +85,6 @@
 }
 
 .selectedRound {
-  background-color: #e0f7fa; /* 선택된 행의 배경색 */
-  cursor: pointer; /* 클릭 가능한 시각적 피드백 */
+  background-color: #e0f7fa; /* 선택 회차 하늘색으로 */
+  cursor: pointer;
 }

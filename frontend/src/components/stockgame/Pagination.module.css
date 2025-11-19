@@ -1,0 +1,35 @@
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 30px;
+}
+
+.page,
+.arrow {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  color: #616161;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.arrow:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.active {
+  background-color: #616161;
+  color: #fff;
+}
+
+.ellipsis {
+  color: #888;
+  padding: 0 3px;
+}

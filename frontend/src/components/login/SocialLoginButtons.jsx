@@ -4,14 +4,16 @@ import googleIcon from './../../assets/google.png';
 import kakaoIcon from './../../assets/kakao.png';
 import githubIcon from './../../assets/github.png';
 
-const SocialLoginButtons = ({ onGoogle, onGithub, onKakao }) => {
+const SocialLoginButtons = ({ onSocialLogin }) => {
   return (
     <div className={styles.socialContainer} aria-label="소셜 로그인">
       <div className={styles.buttonGroup}>
         <button
           type="button"
           className={`${styles.btn} ${styles.google}`}
-          onClick={onGoogle}
+          onClick={() => {
+            onSocialLogin('google');
+          }}
           alt="구글로 로그인"
         >
           <img src={googleIcon} />
@@ -21,7 +23,9 @@ const SocialLoginButtons = ({ onGoogle, onGithub, onKakao }) => {
         <button
           type="button"
           className={`${styles.btn} ${styles.github}`}
-          onClick={onGithub}
+          onClick={() => {
+            onSocialLogin('github');
+          }}
           alt="깃허브로 로그인"
         >
           <img src={githubIcon} />
@@ -33,7 +37,9 @@ const SocialLoginButtons = ({ onGoogle, onGithub, onKakao }) => {
         <button
           type="button"
           className={`${styles.btn} ${styles.kakao}`}
-          onClick={onKakao}
+          onClick={() => {
+            onSocialLogin('kakao');
+          }}
           alt="카카오로 로그인"
         >
           <img src={kakaoIcon} />

@@ -27,4 +27,7 @@ public interface UserService {
     String verifyResetCodeAndIssueToken(String email, String code);
 
     void resetPasswordByToken(String resetToken, String newPassword);
+
+    User upsertOAuthUser(String provider, String providerId, String email, String name);
+
 }

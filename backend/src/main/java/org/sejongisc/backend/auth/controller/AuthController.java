@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j
@@ -43,30 +47,10 @@ import java.util.Map;
 )
 public class AuthController {
 
-    private final Map<String, Oauth2Service<?, ?>> oauth2Services;
     private final LoginService loginService;
     private final UserService userService;
     private final JwtProvider jwtProvider;
-    private final OauthStateService oauthStateService;
     private final RefreshTokenService refreshTokenService;
-
-    @Value("${google.client.id}")
-    private String googleClientId;
-
-    @Value("${google.redirect.uri}")
-    private String googleRedirectUri;
-
-    @Value("${kakao.client.id}")
-    private String kakaoClientId;
-
-    @Value("${kakao.redirect.uri}")
-    private String kakaoRedirectUri;
-
-    @Value("${github.client.id}")
-    private String githubClientId;
-
-    @Value("${github.redirect.uri}")
-    private String githubRedirectUri;
 
 
     @Operation(
@@ -132,7 +116,7 @@ public class AuthController {
                                               "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
                                               "userId": "1c54b9f3-8234-4e8f-b001-11cc4d9012ab",
                                               "name": "홍길동",
-                                              "role": "USER",
+                                              "role": "TEAM_MEMBER",
                                               "phoneNumber": "01012345678"
                                             }
                                             """))
@@ -157,178 +141,6 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + response.getAccessToken())
-                .body(response);
-    }
-
-    // OAuth 로그인 시작 (state 생성 + 각 provider별 인증 URL 반환)
-    @Operation(
-            summary = "OAuth 로그인 시작 (INIT)",
-            description = "소셜 로그인 시작 시 각 Provider(GOOGLE, KAKAO, GITHUB)의 인증 URL을 반환합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "OAuth 인증 URL 반환 성공",
-                            content = @Content(mediaType = "application/json",
-                                    examples = @ExampleObject(value = "\"https://accounts.google.com/o/oauth2/v2/auth?...\""))
-                    ),
-                    @ApiResponse(responseCode = "400", description = "지원하지 않는 Provider 요청")
-            }
-    )
-    @GetMapping("/oauth/{provider}/init")
-    public ResponseEntity<String> startOauthLogin(
-            @Parameter(description = "소셜 로그인 제공자 (GOOGLE, KAKAO, GITHUB)", example = "GOOGLE")
-            @PathVariable String provider,
-            HttpSession session) {
-        String state = oauthStateService.generateAndSaveState(session);
-        String authUrl;
-
-        switch (provider.toUpperCase()) {
-            case "GOOGLE" -> authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
-                    "?client_id=" + googleClientId +
-                    "&redirect_uri=" + googleRedirectUri +
-                    "&response_type=code" +
-                    "&scope=email%20profile" +
-                    "&state=" + state;
-            case "KAKAO" -> authUrl = "https://kauth.kakao.com/oauth/authorize" +
-                    "?client_id=" + kakaoClientId +
-                    "&redirect_uri=" + kakaoRedirectUri +
-                    "&response_type=code" +
-                    "&state=" + state;
-            case "GITHUB" -> authUrl = "https://github.com/login/oauth/authorize" +
-                    "?client_id=" + githubClientId +
-                    "&redirect_uri=" + githubRedirectUri +
-                    "&scope=user:email" +
-                    "&state=" + state;
-            default -> throw new IllegalArgumentException("Unknown provider " + provider);
-        }
-
-        log.debug("Generated OAuth URL for {}: {}", provider, authUrl);
-        return ResponseEntity.ok(authUrl);
-    }
-
-    //redirection api
-    @Operation(
-            summary = "OAuth 로그인 리다이렉트 (GET)",
-            description = "소셜 로그인 후 리다이렉션 시 호출되는 엔드포인트입니다. "
-                    + "code와 state 값을 받아 실제 로그인 과정을 처리하며 일반적으로 프론트엔드에서 이 요청을 자동으로 POST로 전달합니다."
-
-    )
-    @GetMapping("/login/{provider}")
-    public ResponseEntity<LoginResponse> handleOauthRedirect(
-            @Parameter(description = "소셜 로그인 제공자", example = "GOOGLE") @PathVariable("provider") String provider,
-            @Parameter(description = "OAuth 인증 코드", example = "4/0AbCdEfG...") @RequestParam("code") String code,
-            @Parameter(description = "CSRF 방지용 state 값", example = "a1b2c3d4") @RequestParam("state") String state,
-            HttpSession session) {
-        log.info("[{}] OAuth GET redirect received: code={}, state={}", provider, code, state);
-        return OauthLogin(provider, code, state, session);
-    }
-
-
-    // OAuth 인증 완료 후 Code + State 처리
-    @Operation(
-            summary = "OAuth 로그인 완료 (POST)",
-            description = "OAuth 인증 후 전달된 code와 state를 이용해 토큰을 발급받고 사용자 로그인 처리합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "OAuth 로그인 성공",
-                            content = @Content(mediaType = "application/json",
-                                    examples = @ExampleObject(value = """
-                                            {
-                                              "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-                                              "userId": "3a93f8c2-412b-4d9c-84a2-52bdfec91d11",
-                                              "name": "카카오홍길동",
-                                              "role": "USER",
-                                              "phoneNumber": "01099998888"
-                                            }
-                                            """))
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "잘못된 state 값 또는 만료된 인증 코드",
-                            content = @Content(mediaType = "application/json",
-                                    examples = @ExampleObject(value = """
-                                            {
-                                              "message": "Invalid OAuth state or expired authorization code"
-                                            }
-                                            """))
-                    )
-            }
-    )
-    @PostMapping("/login/{provider}")
-    public ResponseEntity<LoginResponse> OauthLogin(
-            @Parameter(description = "소셜 로그인 제공자", example = "KAKAO") @PathVariable("provider") String provider,
-            @Parameter(description = "OAuth 인증 코드", example = "4/0AbCdEfG...") @RequestParam("code") String code,
-            @Parameter(description = "CSRF 방지용 state 값", example = "a1b2c3d4") @RequestParam("state") String state,
-            HttpSession session) {
-
-        //  서버에 저장된 state와 요청으로 받은 state 비교
-        String savedState = oauthStateService.getStateFromSession(session);
-
-        if(savedState == null || !savedState.equals(state)) {
-            log.warn("[{}] Invalid OAuth state detected. Expected={}, Received={}", provider, savedState, state);
-            return ResponseEntity.status(401).build();
-        }
-
-        oauthStateService.clearState(session);
-
-        Oauth2Service<?, ?> service = oauth2Services.get(provider.toUpperCase());
-        if (service == null) {
-            throw new IllegalArgumentException("Unknown provider " + provider);
-        }
-
-        User user = switch (provider.toUpperCase()) {
-            case "GOOGLE" -> {
-                var googleService = (Oauth2Service<GoogleTokenResponse, GoogleUserInfoResponse>) service;
-                var token = googleService.getAccessToken(code);
-                var info = googleService.getUserInfo(token.getAccessToken());
-                yield userService.findOrCreateUser(new GoogleUserInfoAdapter(info, token.getAccessToken()));
-            }
-            case "KAKAO" -> {
-                var kakaoService = (Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse>) service;
-                var token = kakaoService.getAccessToken(code);
-                var info = kakaoService.getUserInfo(token.getAccessToken());
-                yield userService.findOrCreateUser(new KakaoUserInfoAdapter(info, token.getAccessToken()));
-            }
-            case "GITHUB" -> {
-                var githubService = (Oauth2Service<GithubTokenResponse, GithubUserInfoResponse>) service;
-                var token = githubService.getAccessToken(code);
-                var info = githubService.getUserInfo(token.getAccessToken());
-                yield userService.findOrCreateUser(new GithubUserInfoAdapter(info, token.getAccessToken()));
-            }
-            default -> throw new IllegalArgumentException("Unknown provider " + provider);
-        };
-
-        // Access 토큰 발급
-        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
-
-        String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
-
-        refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
-
-        // HttpOnly 쿠키에 담기
-        ResponseCookie cookie = ResponseCookie.from("refresh", refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/")
-                .maxAge(60L * 60 * 24 * 14) // 2주
-                .build();
-
-        // LoginResponse 생성
-        LoginResponse response = LoginResponse.builder()
-                .accessToken(accessToken)
-                .userId(user.getUserId())
-                .name(user.getName())
-                .role(user.getRole())
-                .phoneNumber(user.getPhoneNumber())
-                .build();
-
-        log.info("{} 로그인 성공: userId={}, provider={}", provider.toUpperCase(), user.getUserId(), provider.toUpperCase());
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .body(response);
     }
 
@@ -364,7 +176,7 @@ public class AuthController {
             @CookieValue(value = "refresh", required = false) String refreshToken
     ) {
 
-        // ⃣ 쿠키에 refreshToken이 없으면 401
+        // 쿠키에 refreshToken이 없으면 401
         if (refreshToken == null || refreshToken.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Refresh Token이 없습니다."));

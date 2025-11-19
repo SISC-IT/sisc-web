@@ -1,6 +1,5 @@
 package org.sejongisc.backend.point.service;
 
-import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -14,7 +13,6 @@ import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;

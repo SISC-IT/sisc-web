@@ -66,6 +66,7 @@ public class TemplateController {
   )
   public ResponseEntity<TemplateResponse> updateTemplate(@RequestBody TemplateRequest request,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    request.setUserId(customUserDetails.getUserId());
     return ResponseEntity.ok(templateService.updateTemplate(request));
   }
 
