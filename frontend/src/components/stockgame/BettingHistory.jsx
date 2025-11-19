@@ -69,12 +69,12 @@ const BettingHistory = ({ type }) => {
       {currentData.map((item, index) => (
         <div
           key={index}
-          className={`${styles['daily-betting-card']} ${item.collect ? styles['correct-card'] : styles['incorrect-card']}`}
+          className={`${styles['daily-betting-card']} ${item.correct ? styles['correct-card'] : styles['incorrect-card']}`}
         >
           <button
-            className={`${styles['result-icon']} ${item.collect ? styles.correct : styles.incorrect}`}
+            className={`${styles['result-icon']} ${item.correct ? styles.correct : styles.incorrect}`}
           >
-            {item.collect ? 'v' : 'x'}
+            {item.correct ? 'v' : 'x'}
           </button>
           <span className={styles['date']}>{item.round.title}</span>
           <div className={styles['stock-info']}>
