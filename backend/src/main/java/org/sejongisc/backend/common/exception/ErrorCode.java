@@ -69,10 +69,28 @@ public enum ErrorCode {
   STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "주식 종목이 존재하지 않습니다."),
   BET_ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 라운드입니다."),
   BET_DUPLICATE(HttpStatus.CONFLICT, "이미 이 라운드에 베팅했습니다."),
-  BET_TIME_INVALID(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다."),
+  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "베팅 가능 시간이 아닙니다."),
   BET_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 베팅을 찾을 수 없습니다."),
-  BET_ROUND_CLOSED(HttpStatus.CONFLICT, "이미 마감된 라운드입니다."),
-  BET_POINT_TOO_LOW(HttpStatus.CONFLICT, "베팅 포인트는 10 이상이어야 합니다.");
+  BET_POINT_TOO_LOW(HttpStatus.CONFLICT, "베팅 포인트는 10 이상이어야 합니다."),
+  BET_ROUND_NOT_CLOSED(HttpStatus.CONFLICT, "닫히지 않은 배팅입니다."),
+
+  // BOARD
+
+  POST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 게시물을 찾을 수 없습니다."),
+
+  INVALID_POST_OWNER(HttpStatus.FORBIDDEN, "게시물 수정/삭제 권한이 없습니다."),
+
+  COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 댓글을 찾을 수 없습니다."),
+
+  INVALID_COMMENT_OWNER(HttpStatus.FORBIDDEN, "댓글 수정/삭제 권한이 없습니다."),
+
+  INVALID_PARENT_COMMENT(HttpStatus.BAD_REQUEST, "부모 댓글이 해당 게시판에 속해 있지 않습니다."),
+
+  ALREADY_CHILD_COMMENT(HttpStatus.BAD_REQUEST, "대댓글에는 다시 대댓글을 작성할 수 없습니다."),
+
+  BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 게시판을 찾을 수 없습니다."),
+
+  INVALID_BOARD_TYPE(HttpStatus.BAD_REQUEST, "상위 게시판에는 글을 작성할 수 없습니다.");
 
   private final HttpStatus status;
   private final String message;

@@ -1,0 +1,90 @@
+.sessionManagementCardContainer {
+  border-radius: 12px;
+  width: 335px;
+  background: #fafbfc;
+  padding: 18px 20px;
+}
+
+.selectGroup {
+  display: flex;
+  gap: 5px;
+}
+
+.sessionSelect {
+  display: flex;
+  width: 100%;
+  padding: 12px 20px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+
+  border-radius: 8px;
+  border: 0.8px solid #afafaf;
+}
+
+.tableGroup {
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 250px;
+  overflow-y: auto;
+}
+.table {
+  width: 100%;
+
+  border-collapse: collapse;
+  border-spacing: 0px 10px;
+  table-layout: fixed;
+}
+
+.table thead th {
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  padding: 8px 7px;
+  white-space: nowrap;
+  font-family: Inter;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 100%;
+}
+.row {
+  margin-bottom: 10px;
+}
+.table tbody td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0px;
+  text-align: center;
+}
+
+.table tbody td:nth-child(2) {
+  padding-left: 10px;
+}
+
+.table thead th:nth-child(1),
+.table tbody td:nth-child(1) {
+  width: 25%;
+}
+.table thead th:nth-child(2),
+.table tbody td:nth-child(2) {
+  width: 25%;
+}
+.table thead th:nth-child(3),
+.table tbody td:nth-child(3) {
+  width: 20%;
+}
+.table thead th:nth-child(4),
+.table tbody td:nth-child(4) {
+  width: 10%;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.selectedRound {
+  background-color: #e0f7fa; /* 선택 회차 하늘색으로 */
+  cursor: pointer;
+}

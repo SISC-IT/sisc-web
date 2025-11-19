@@ -7,9 +7,11 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PriceDataRepository extends JpaRepository<PriceData, PriceDataId> {
     List<PriceData> findByTickerAndDateBetweenOrderByDateAsc(String ticker, LocalDate startDate, LocalDate endDate);
     List<PriceData> findByTicker(String ticker);
+    Optional<PriceData> findTopByTickerOrderByDateDesc(String ticker);
 }

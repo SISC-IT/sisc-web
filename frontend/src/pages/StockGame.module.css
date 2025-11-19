@@ -4,6 +4,7 @@
   justify-content: center;
   padding: 45px;
   gap: 25px;
+  margin-left: 50px;
 }
 
 .title {
@@ -26,7 +27,6 @@
   cursor: pointer;
   color: #9c9c9c;
   font-weight: 700;
-  font-style: bold;
   font-size: 26px;
   border: none;
   background: none;
@@ -48,10 +48,10 @@
 .daily-betting {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 30px;
 }
 
-.daily-betting span {
+.daily-betting > span {
   font-weight: 500;
   font-style: medium;
   font-size: 20px;
@@ -68,7 +68,6 @@
   background: none;
 
   font-weight: 600;
-  font-style: semi-bold;
   font-size: 16px;
   color: #171717;
 }

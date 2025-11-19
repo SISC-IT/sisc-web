@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>비밀번호 재설정 인증코드</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f9f9f9; color: #333; padding: 30px; }
+        .container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .code { font-size: 24px; font-weight: bold; color: #1565c0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>비밀번호 재설정 요청</h2>
+    <p>안녕하세요, <b th:text="${email}">user@example.com</b> 님.</p>
+    <p>아래 인증 코드를 입력해 비밀번호를 재설정하세요.</p>
+    <p class="code" th:text="${code}">123456</p>
+    <p>이 코드는 3분간 유효합니다.</p>
+    <br>
+    <p>감사합니다.<br><b>Sejong ISC</b> 드림.</p>
+</div>
+</body>
+</html>

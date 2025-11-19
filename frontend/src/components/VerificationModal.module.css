@@ -13,7 +13,7 @@
 
 .modal {
   background-color: white;
-  padding: 56px;
+  padding: 30px 50px;
   border-radius: 16px;
   width: 500px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 52px;
+  margin-bottom: 30px;
 }
 
 h1 {
@@ -33,10 +33,6 @@ h1 {
   font-style: normal;
   font-weight: 700;
   line-height: 100%;
-}
-
-h1.findEmailH1 {
-  margin-bottom: 33px;
 }
 
 .closeButton {
@@ -109,8 +105,8 @@ h1.findEmailH1 {
   gap: 10px;
   border-radius: 8px;
 
-  width: 132px;
-  height: 48px;
+  width: 100px;
+  height: 42px;
 
   color: white;
   border: none;
@@ -139,9 +135,51 @@ h1.findEmailH1 {
 }
 
 .resetPasswordButton {
-  background: #1d80f4;
-  width: 30%;
+  background: #ff2c4c;
 }
 .resetPasswordButton:disabled {
-  background: #bce5ff;
+  background: #ff9ead;
+}
+
+/* ------------------------------------ 재설정 모달 디자인 ------------------------------------ */
+.timeInputGroup {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.availableTimeInputGroup {
+  display: grid;
+  grid-template-columns: 116px auto;
+  column-gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+/* .availableTimeInputGroup > input {
+  width: 200px;
+} */
+.availableTimeInputGroup button {
+  display: flex;
+  width: 90px;
+  padding: 12px 26px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  background: linear-gradient(
+    100deg,
+    #b3ebff -15.44%,
+    #91c3ff 39.86%,
+    #d3edff 94.81%
+  );
+  border: none;
+}
+
+.modifyButtonGroup {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+.modifyButtonGroup button:disabled {
 }

@@ -22,45 +22,61 @@ import java.util.Map;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
-    basePackages = "org.sejongisc.backend.stock.repository",    // PriceDataRepository 가 있는 패키지만 스캔하도록 지정
-    entityManagerFactoryRef = "stockEntityManagerFactory",      // 아래 Bean 이름과 일치
-    transactionManagerRef = "stockTransactionManager"           // 아래 Bean 이름과 일치
+        basePackages = "org.sejongisc.backend.stock.repository",
+        entityManagerFactoryRef = "stockEntityManagerFactory",
+        transactionManagerRef = "stockTransactionManager"
 )
 public class StockDataSourceConfig {
 
     @Bean(name = "stockDataSourceProperties")
-    @ConfigurationProperties("spring.stock.datasource")         // yml의 'stock.datasource' 참조
+    @ConfigurationProperties("spring.stock.datasource")
     public DataSourceProperties stockDataSourceProperties() {
         return new DataSourceProperties();
     }
 
-    @Bean(name = "stockDataSource")
+    // ✅ HikariConfig에 먼저 바인딩
+    @Bean(name = "stockHikariConfig")
     @ConfigurationProperties("spring.stock.datasource.hikari")
-    public DataSource stockDataSource(@Qualifier("stockDataSourceProperties") DataSourceProperties properties) {
-        return properties.initializeDataSourceBuilder().type(HikariDataSource.class).build();
+    public com.zaxxer.hikari.HikariConfig stockHikariConfig() {
+        return new com.zaxxer.hikari.HikariConfig();
+    }
+
+    @Bean(name = "stockDataSource")
+    public DataSource stockDataSource(
+            @Qualifier("stockDataSourceProperties") DataSourceProperties props,
+            @Qualifier("stockHikariConfig") com.zaxxer.hikari.HikariConfig hkCfg) {
+
+        hkCfg.setJdbcUrl(props.getUrl());
+        hkCfg.setUsername(props.getUsername());
+        hkCfg.setPassword(props.getPassword());
+        if (props.getDriverClassName() != null) {
+            hkCfg.setDriverClassName(props.getDriverClassName());
+        }
+        return new HikariDataSource(hkCfg);
     }
 
     @Bean(name = "stockEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean stockEntityManagerFactory(
-        EntityManagerFactoryBuilder builder,
-        @Qualifier("stockDataSource") DataSource dataSource) {
+            EntityManagerFactoryBuilder builder,
+            @Qualifier("stockDataSource") DataSource dataSource) {
 
-        Map<String, String> jpaProperties = new HashMap<>();
-        jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-        jpaProperties.put("hibernate.default_schema", "public");
-        jpaProperties.put("hibernate.hbm2ddl.auto", "none");
+        Map<String, Object> jpaProps = new HashMap<>();
+        jpaProps.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
+        jpaProps.put("hibernate.default_schema", "public");
+        // ddl-auto는 yml로 관리 권장
+        // jpaProps.put("hibernate.hbm2ddl.auto", "none");
 
         return builder
-            .dataSource(dataSource)
-            .packages("org.sejongisc.backend.stock.entity")     // PriceData 엔티티가 있는 패키지 지정
-            .persistenceUnit("stock")           // Persistence Unit 이름
-            .properties(jpaProperties)
-            .build();
+                .dataSource(dataSource)
+                .packages("org.sejongisc.backend.stock.entity")
+                .persistenceUnit("stock")
+                .properties(jpaProps)
+                .build();
     }
 
     @Bean(name = "stockTransactionManager")
     public PlatformTransactionManager stockTransactionManager(
-        @Qualifier("stockEntityManagerFactory") EntityManagerFactory entityManagerFactory) {
-        return new JpaTransactionManager(entityManagerFactory);
+            @Qualifier("stockEntityManagerFactory") EntityManagerFactory emf) {
+        return new JpaTransactionManager(emf);
     }
 }

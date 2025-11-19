@@ -6,7 +6,7 @@
   background-color: #f9f9f9;
   border-radius: 12px;
   width: 880px;
-  height: 130px;
+  height: 200px;
   /* max-width: 880px;
   min-width: 440px; */
   padding: 30px;
@@ -125,4 +125,9 @@
   width: 78px;
   height: 40px;
   margin-left: 5%;
+}
+
+.paginationContainer {
+  display: flex;
+  margin-left: 230px;
 }
