@@ -92,6 +92,7 @@ public class UserServiceImpl implements UserService {
                 .email(dto.getEmail())
                 .passwordHash(encodedPw)
                 .role(role)
+                .point(0)
                 .phoneNumber(dto.getPhoneNumber())
                 .build();
 
