@@ -2,6 +2,8 @@ package org.sejongisc.backend.stock.service;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.stock.dto.HoldingDto;
 import org.sejongisc.backend.stock.dto.TradeLogDto;
 import org.sejongisc.backend.stock.entity.Execution;
@@ -32,15 +34,14 @@ public class QuantBotService {
   // execution에 따른 리포트 조회
   public XaiReport getXaiReportByExecutionId(Long executionId) {
     Execution exec = executionRepository.findById(executionId)
-        .orElseThrow(() -> new IllegalArgumentException("Execution not found: " + executionId));
+        .orElseThrow(() -> new CustomException(ErrorCode.EXECUTION_NOT_FOUND));
 
-    Long xaiReportId = exec.getXaiReport().getId();
-    if (xaiReportId == null) {
-      throw new IllegalStateException("Execution has no xaiReportId: " + executionId);
+    XaiReport xaiReport = exec.getXaiReport();
+    if(xaiReport == null) {
+      throw new CustomException(ErrorCode.XAI_REPORT_NOT_FOUND);
     }
 
-    return xaiReportRepository.findById(xaiReportId)
-        .orElseThrow(() -> new IllegalArgumentException("XaiReport not found: " + xaiReportId));
+    return xaiReport;
   }
 }
 

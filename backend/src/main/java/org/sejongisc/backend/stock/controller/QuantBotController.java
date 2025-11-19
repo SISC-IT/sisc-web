@@ -7,6 +7,7 @@ import org.sejongisc.backend.stock.dto.HoldingDto;
 import org.sejongisc.backend.stock.dto.TradeLogDto;
 import org.sejongisc.backend.stock.entity.XaiReport;
 import org.sejongisc.backend.stock.service.QuantBotService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -88,12 +89,17 @@ public class QuantBotController {
           ## 반환값 (XaiReport)
           - **`XaiReport`**: 
             - 선택된 실행에 대한 설명 가능한 AI 리포트 객체
+            
+          ## 에러코드
+          - **`XAI_REPORT_NOT_FOUND`**: 해당 실행 ID에 대한 리포트를 찾을 수 없습니다
+          - **`QUANT_EXECUTION_NOT_FOUND`**: executionId에 해당하는 전략 실행 내역이 없습니다
           
           """
   )
   @GetMapping("/report")
-  public XaiReport getAllReports(@RequestParam(required = false) Long executionId) {
-    return quantBotService.getXaiReportByExecutionId(executionId);
+  public ResponseEntity<XaiReport> getAllReports(@RequestParam(required = false) Long executionId) {
+    XaiReport xaiReport = quantBotService.getXaiReportByExecutionId(executionId);
+    return ResponseEntity.ok(xaiReport);
   }
 }
 
