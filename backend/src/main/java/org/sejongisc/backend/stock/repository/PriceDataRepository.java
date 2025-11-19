@@ -13,5 +13,5 @@ import java.util.Optional;
 public interface PriceDataRepository extends JpaRepository<PriceData, PriceDataId> {
     List<PriceData> findByTickerAndDateBetweenOrderByDateAsc(String ticker, LocalDate startDate, LocalDate endDate);
     List<PriceData> findByTicker(String ticker);
-    Optional<PriceData> findFirstByTickerOrderByDateDesc(String ticker);
+    Optional<PriceData> findTopByTickerOrderByDateDesc(String ticker);
 }

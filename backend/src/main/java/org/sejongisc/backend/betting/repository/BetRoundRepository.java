@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface BetRoundRepository extends JpaRepository<BetRound, UUID> {
-    Optional<BetRound> findByStatusTrueAndScope(Scope type);
+    Optional<BetRound> findTopByStatusTrueAndScopeOrderByOpenAtDesc(Scope type);
 
     List<BetRound> findAllByOrderBySettleAtDesc();
 

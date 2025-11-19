@@ -57,6 +57,25 @@
   --text: #333333;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.iconButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.iconButton img {
+  width: 20px;
+  height: 20px;
+}
+
 .header h1 {
   color: var(--T2, #171717);
   font-family: Pretendard;

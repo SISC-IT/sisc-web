@@ -43,6 +43,12 @@ public class AttendanceResponse {
     private UUID attendanceSessionId;
 
     @Schema(
+            description = "해당 출석 라운드의 ID",
+            example = "b5c3d4e5-f6a7-8901-bcde-f12345678901"
+    )
+    private UUID attendanceRoundId;
+
+    @Schema(
             description = "출석 상태. PRESENT(출석), LATE(지각), ABSENT(결석), EXCUSED(사유결석)",
             example = "PRESENT",
             implementation = AttendanceStatus.class

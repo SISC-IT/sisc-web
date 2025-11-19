@@ -1,0 +1,207 @@
+/* Board.module.css */
+.boardContainer {
+  width: 100%;
+  max-width: 1030px;
+  background: rgba(255, 255, 255, 1);
+  padding: 32px 40px;
+  margin-top: 80px;
+  margin-left: 100px;
+  box-sizing: border-box;
+}
+
+.boardHeader {
+  margin-bottom: 32px;
+}
+
+.boardTitle {
+  width: 94px;
+  height: 36px;
+  font-weight: 600;
+  font-size: 36px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: rgba(23, 23, 23, 1);
+  margin: 0;
+  opacity: 1;
+}
+
+.boardControls {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 32px;
+  gap: 70px;
+  align-items: flex-start;
+}
+
+.searchContainer {
+  width: 908px;
+  height: 68px;
+  border-radius: 50px;
+  padding: 24px 26px;
+  gap: 10px;
+  opacity: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.searchContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50px;
+  padding: 0.8px;
+  background: linear-gradient(93.24deg, #7f7f7f 29.23%, #2b518e 91.43%);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 20px;
+  color: rgba(23, 23, 23, 1);
+  padding: 0;
+  margin: 0;
+}
+
+.searchInput::placeholder {
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: rgba(170, 170, 170, 1);
+  opacity: 1;
+}
+
+.searchButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 1); /* 검정색 원형 배경 유지 */
+  border: none;
+  opacity: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.searchButton img {
+  width: 20px;
+  height: 16px;
+  display: block;
+}
+
+.boardActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  width: 908px;
+}
+
+/* selectWrapper 추가 */
+.selectWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.sortSelect {
+  width: 90px;
+  height: 35px;
+  border-radius: 4px;
+  padding: 8px 12px;
+  gap: 12px;
+  opacity: 1;
+  border: 0.6px solid rgba(0, 0, 0, 1);
+  background: #ffffff;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: rgba(0, 0, 0, 1);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.sortSelect:focus {
+  outline: none;
+  border-color: #2b518e;
+}
+
+/* selectArrow - img 태그용 스타일 */
+.selectArrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  width: 12px;
+  height: 8px;
+}
+
+.writeButton {
+  width: 122px;
+  height: 35px;
+  border-radius: 4px;
+  padding: 8px 12px;
+  gap: 12px;
+  opacity: 1;
+  background: linear-gradient(
+    92.89deg,
+    #d8e8ff 6.95%,
+    #d1d8ff 74.81%,
+    #dddeff 107.39%
+  );
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.writeButton span {
+  width: 74px;
+  height: 19px;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: rgba(0, 0, 0, 1);
+  opacity: 1;
+  display: flex;
+  align-items: center;
+}
+
+.writeButton img {
+  width: auto;
+  height: auto;
+  flex-shrink: 0;
+  display: block;
+}
+
+.postsContainer {
+  width: 100%;
+  max-width: 908px;
+  margin: 0;
+  height: auto;
+  min-height: auto;
+  box-sizing: border-box;
+}

@@ -1,4 +1,4 @@
-name: Build & Deploy (backend only)
+name: Build & Deploy (backend + frontend)
 
 on:
   workflow_dispatch: {}
@@ -6,6 +6,7 @@ on:
     branches: ["main"]
     paths:
       - "backend/**"
+      - "frontend/**"              # ⬅ 프론트 변경에도 트리거
       - ".github/workflows/deploy.yml"
 
 concurrency:
@@ -16,12 +17,14 @@ env:
   REGISTRY: ghcr.io
   REPO: sisc-it/sisc-web
   IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
+  IMAGE_FRONT: ghcr.io/sisc-it/sisc-web-front   # ⬅ 프론트 이미지 추가
 
 jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
       back: ${{ steps.filter.outputs.back }}
+      front: ${{ steps.filter.outputs.front }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v4
@@ -35,6 +38,8 @@ jobs:
           filters: |
             back:
               - 'backend/**'
+            front:
+              - 'frontend/**'
 
   build-back:
     needs: [changes]
@@ -60,8 +65,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Meta (tags/labels)
-        id: meta
+      - name: Meta (tags/labels) - backend
+        id: meta-back
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_BACK }}
@@ -75,14 +80,60 @@ jobs:
           context: ./backend
           push: true
           platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-back.outputs.tags }}
+          labels: ${{ steps.meta-back.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-front:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Meta (tags/labels) - frontend
+        id: meta-front
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_FRONT }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build & Push (frontend)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend    # ⬅ 프론트 도커 컨텍스트 위치
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta-front.outputs.tags }}
+          labels: ${{ steps.meta-front.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
-    needs: [changes, build-back]
-    if: ${{ always() && (needs.build-back.result == 'success' || github.event_name == 'workflow_dispatch') }}
+    needs: [changes, build-back, build-front]
+    # - manual 실행(workflow_dispatch)이면 무조건 실행
+    # - push일 때는 둘 중 하나라도 성공한 경우에만 실행 (둘 다 failure가 아닌 이상 OK)
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -97,9 +148,17 @@ jobs:
           script: |
             set -euo pipefail
             cd ~/apps/sisc-web
+
+            # GHCR 로그인 (백/프론트 둘 다 같은 레지스트리 사용)
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
+
+            # 최신 이미지 받기
             docker compose pull
+
+            # 컨테이너 재기동
             docker compose up -d --remove-orphans
+
+            # 백엔드 헬스체크 (서비스 이름이 api일 때)
             if docker ps --format '{{.Names}}' | grep -q "^api$"; then
               echo "Waiting for api to be healthy..."
               for i in {1..30}; do
