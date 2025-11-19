@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../VerificationModal.module.css';
+import { toast } from 'react-toastify';
+import ConfirmationToast from './ConfirmationToast';
 
-const RoundSettingModal = ({
+const SessionModifyModal = ({
   styles: commonStyles,
   onClose,
-  round,
+  session,
   onSave,
+  onDelete,
 }) => {
-  // 받은 round 파싱
+  const [activeToastId, setActiveToastId] = useState(null);
+
+  // 받은 session 파싱
   const parseTime = (timeStr) => {
     const parts = (timeStr || '00:00:00').split(':');
     return {
@@ -16,16 +21,36 @@ const RoundSettingModal = ({
       s: parts[2] || '00',
     };
   };
-  const [h = '00', m = '00', s = '00'] = parseTime(round.startTime);
+  const { h = '00', m = '00', s = '00' } = parseTime(session.defaultStartTime);
 
   const [hh, setHh] = useState(h);
   const [mm, setMm] = useState(m);
   const [ss, setSs] = useState(s);
-  const [availableTimeMm, setAvailableTimeMm] = useState(
-    round.availableMinutes
+  const [defaultAvailableMinutes, setDefaultAvailableMinutes] = useState(
+    session.defaultAvailableMinutes
   );
 
-  const isFormValid = (hour, minute, second, availableMinute) => {
+  // ESC 키로 모달 또는 토스트를 닫는 기능
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        if (activeToastId) {
+          toast.dismiss(activeToastId);
+          setActiveToastId(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, activeToastId]);
+
+  const isFormValid = (hour, minute, second, defaultAvailableMinutes) => {
     if (isNaN(hour) || hour < 0 || hour > 23) {
       alert('출석 시작 시간(시)은 0-23 사이의 숫자로 입력해주세요.');
       return false;
@@ -38,7 +63,11 @@ const RoundSettingModal = ({
       alert('출석 시작 시간(초)은 0-59 사이의 숫자로 입력해주세요.');
       return false;
     }
-    if (isNaN(availableMinute) || availableMinute < 0 || availableMinute > 59) {
+    if (
+      isNaN(defaultAvailableMinutes) ||
+      defaultAvailableMinutes < 0 ||
+      defaultAvailableMinutes > 59
+    ) {
       alert('출석 가능 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
       return false;
     }
@@ -49,31 +78,53 @@ const RoundSettingModal = ({
     const hour = parseInt(hh, 10);
     const minute = parseInt(mm, 10);
     const second = parseInt(ss, 10);
-    const availableMinute = parseInt(availableTimeMm, 10);
+    const availableMinute = parseInt(defaultAvailableMinutes, 10);
 
     // 유효성 검사
     if (!isFormValid(hour, minute, second, availableMinute)) return;
 
     // 상위 컴포넌트로 업데이트된 회차 데이터 전달
     onSave({
-      id: round.id,
-      startTime: `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`,
-      availableMinutes: availableMinute,
+      id: session.id,
+      defaultStartTime: `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`,
+      defaultAvailableMinutes: availableMinute,
     });
 
-    // 모달 닫기
     onClose();
+  };
+
+  const handleDeleteClick = () => {
+    const handleConfirm = () => {
+      onDelete(session.id);
+      onClose();
+    };
+
+    const toastId = toast(
+      <ConfirmationToast
+        onConfirm={handleConfirm}
+        message="이 세션을 정말로 삭제하시겠습니까?"
+      />,
+      {
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
+        onClose: () => setActiveToastId(null), // 토스트가 닫히면 초기화
+      }
+    );
+    setActiveToastId(toastId);
   };
 
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
-          <h1>회차 정보 수정</h1>
+          <h1>세션 정보 수정</h1>
           <button
             type="button"
             className={styles.closeButton}
             onClick={onClose}
+            disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
           >
             &times;
           </button>
@@ -120,12 +171,27 @@ const RoundSettingModal = ({
               <input
                 type="text"
                 id="sessionAvailableTime"
-                value={availableTimeMm}
+                value={defaultAvailableMinutes}
                 maxLength="2"
-                onChange={(e) => setAvailableTimeMm(e.target.value)}
+                onChange={(e) => setDefaultAvailableMinutes(e.target.value)}
                 placeholder="분(MM)"
               />
-              <button onClick={handleModifyClick}>완료</button>
+            </div>
+            <div className={styles.modifyButtonGroup}>
+              <button
+                className={`${styles.button} ${styles.resetPasswordButton}`}
+                onClick={handleDeleteClick}
+                disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
+              >
+                삭제
+              </button>
+              <button
+                className={`${styles.button} ${styles.submitButton}`}
+                onClick={handleModifyClick}
+                disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
+              >
+                완료
+              </button>
             </div>
           </div>
         </div>
@@ -134,4 +200,4 @@ const RoundSettingModal = ({
   );
 };
 
-export default RoundSettingModal;
+export default SessionModifyModal;

@@ -13,7 +13,7 @@
 
 .modal {
   background-color: white;
-  padding: 56px;
+  padding: 30px 50px;
   border-radius: 16px;
   width: 500px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 52px;
+  margin-bottom: 30px;
 }
 
 h1 {
@@ -105,8 +105,8 @@ h1 {
   gap: 10px;
   border-radius: 8px;
 
-  width: 132px;
-  height: 48px;
+  width: 100px;
+  height: 42px;
 
   color: white;
   border: none;
@@ -135,14 +135,13 @@ h1 {
 }
 
 .resetPasswordButton {
-  background: #1d80f4;
-  width: 30%;
+  background: #ff2c4c;
 }
 .resetPasswordButton:disabled {
-  background: #bce5ff;
+  background: #ff9ead;
 }
 
-/* ------------------------------------ 회차 재설정 모달 디자인 ------------------------------------ */
+/* ------------------------------------ 재설정 모달 디자인 ------------------------------------ */
 .timeInputGroup {
   display: flex;
   width: 100%;
@@ -175,4 +174,12 @@ h1 {
     #d3edff 94.81%
   );
   border: none;
+}
+
+.modifyButtonGroup {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+.modifyButtonGroup button:disabled {
 }
