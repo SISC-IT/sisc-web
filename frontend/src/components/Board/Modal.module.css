@@ -26,7 +26,6 @@
   --button-padding: clamp(10px, 1.5vw, 12px) clamp(18px, 3vw, 24px);
 
   width: clamp(320px, 90vw, 906px);
-  max-width: 90vw;
   max-height: 90vh;
   background: rgba(255, 255, 255, 1);
   border: 1px solid rgba(128, 128, 128, 1);
@@ -245,7 +244,7 @@
 
 .select option {
   font-weight: 400;
-  font-size: 16px;
+  font-size: var(--font-base);
   color: rgba(23, 23, 23, 1);
   background: rgba(255, 255, 255, 1);
 }
