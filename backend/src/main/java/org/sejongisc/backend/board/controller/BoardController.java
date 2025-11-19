@@ -154,7 +154,7 @@ public class BoardController {
       summary = "부모 게시판 목록 조회",
       description = "최상위 부모 게시판들의 목록을 조회합니다."
   )
-  @PostMapping
+  @GetMapping("/parents")
   public ResponseEntity<List<BoardResponse>> getParentBoards(
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(postService.getParentBoards());
