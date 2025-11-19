@@ -5,6 +5,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.board.dto.BoardRequest;
+import org.sejongisc.backend.board.dto.BoardResponse;
 import org.sejongisc.backend.board.dto.CommentResponse;
 import org.sejongisc.backend.board.dto.PostAttachmentResponse;
 import org.sejongisc.backend.board.dto.PostRequest;
@@ -265,6 +266,7 @@ public class PostServiceImpl implements PostService {
   }
 
   // 게시판 생성
+  @Override
   @Transactional
   public void createBoard(BoardRequest request, UUID userId) {
     User user = userRepository.findById(userId)
@@ -291,6 +293,17 @@ public class PostServiceImpl implements PostService {
     }
 
     boardRepository.save(board);
+  }
+
+  // 부모 게시판 조회
+  @Override
+  @Transactional(readOnly = true)
+  public List<BoardResponse> getParentBoards() {
+    List<Board> parentBoards = boardRepository.findAllByParentBoardIsNull();
+
+    return parentBoards.stream()
+        .map(BoardResponse::of)
+        .toList();
   }
 
   private PostResponse mapToPostResponse(Post post) {
