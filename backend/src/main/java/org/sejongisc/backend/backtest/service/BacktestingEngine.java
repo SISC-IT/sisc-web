@@ -89,8 +89,8 @@ public class BacktestingEngine {
             BigDecimal peakValue = initialCapital;                          // 최고 포트폴리오 가치
             BigDecimal maxDrawdown = BigDecimal.ZERO;                       // 최대 낙폭
             BigDecimal previousValue = initialCapital;                      // 전날 포트폴리오 가치
-            //BigDecimal buyRatio = convertPercentToRatio(strategyDto.getBuyRatioPct(), BigDecimal.ONE);
-            //BigDecimal sellRatio = convertPercentToRatio(strategyDto.getSellRatioPct(), BigDecimal.ONE);
+            BigDecimal buyRatio = convertPercentToRatio(10, BigDecimal.ONE);    // TODO : DTO 매수 비중 설정
+            BigDecimal sellRatio = convertPercentToRatio(10, BigDecimal.ONE);   // TODO : DTO 매도 비중 설정
             // 백테스팅 메인 반복문
             for (int i = 0; i < series.getBarCount(); i++) {
                 LocalDateTime currentTime = series.getBar(i).getEndTime().toLocalDateTime();                // 장 종료 시간
@@ -100,14 +100,14 @@ public class BacktestingEngine {
                 boolean shouldSell = sellRule.isSatisfied(i);
                 // 매수
                 if (shares.compareTo(BigDecimal.ZERO) == 0 && shouldBuy) {
-                    //BigDecimal cashToUse = cash.multiply(buyRatio); // 매수 비중 적용
+                    BigDecimal cashToUse = cash.multiply(buyRatio); // 매수 비중 적용
                     // 거래 가능한 최대 주식 개수
-                    BigDecimal buyShares = cash.divide(currentClosePrice, 8, RoundingMode.DOWN);
+                    BigDecimal buyShares = cashToUse.divide(currentClosePrice, 8, RoundingMode.DOWN);
                     // 거래 로그 기록
                     if (buyShares.compareTo(BigDecimal.ZERO) > 0) {
                         BigDecimal transactionCost = buyShares.multiply(currentClosePrice);
                         tradeLogs.add(new TradeLog(TradeLog.Type.BUY, currentTime, currentClosePrice, buyShares));
-                        shares = buyShares;                     // 매수 주식 수
+                        shares = shares.add(buyShares);         // 매수 주식 수
                         cash = cash.subtract(transactionCost);  // 잔고에서 매수 대금 차감
                         tradesCount++;                          // 거래 횟수 증가
                         log.debug("[{}] BUY at {}", currentTime.toLocalDate(), currentClosePrice);
@@ -116,14 +116,13 @@ public class BacktestingEngine {
                 // 매도
                 else if (shares.compareTo(BigDecimal.ZERO) > 0 && shouldSell) {
                     // 매도 대금 계산 - 주식 수 * 현재가
-                    //BigDecimal sharesToSell = shares.multiply(sellRatio).setScale(8, RoundingMode.HALF_UP);   // 매도 비중 적용
-                    BigDecimal tradeValue = shares.multiply(currentClosePrice);
+                    BigDecimal sharesToSell = shares.multiply(sellRatio).setScale(8, RoundingMode.DOWN);   // 매도 비중 적용
+                    BigDecimal tradeValue = sharesToSell.multiply(currentClosePrice);
                     // 거래 로그 기록
                     tradeLogs.add(new TradeLog(TradeLog.Type.SELL, currentTime, currentClosePrice, shares));
-                    cash = tradeValue;                  // 매도 대금이 잔고로
-                    //shares = shares.subtract(sharesToSell);   // 매도 주식 수 차감
-                    shares = BigDecimal.ZERO;           // 주식 전량 매도
-                    tradesCount++;                      // 거래 횟수 증가
+                    shares = shares.subtract(sharesToSell);     // 매도 주식 수 차감
+                    cash = cash.add(tradeValue);                // 잔고에서 매도 대금 추가
+                    tradesCount++;                              // 거래 횟수 증가
                     log.debug("[{}] SELL at {}", currentTime.toLocalDate(), currentClosePrice);
                 }
 
