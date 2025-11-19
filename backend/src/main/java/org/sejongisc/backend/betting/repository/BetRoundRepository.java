@@ -1,6 +1,6 @@
 package org.sejongisc.backend.betting.repository;
 
-import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.repository.query.Param;
 import org.sejongisc.backend.betting.entity.BetRound;
 import org.sejongisc.backend.betting.entity.Scope;
 import org.springframework.data.jpa.repository.JpaRepository;
