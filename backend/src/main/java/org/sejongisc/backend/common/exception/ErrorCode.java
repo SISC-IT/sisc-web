@@ -55,14 +55,12 @@ public enum ErrorCode {
 
   EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "인증 코드가 일치하지 않습니다."),
 
-  EMAIL_INVALID_EMAIL(HttpStatus.BAD_REQUEST, "유효하지 않은 이메일입니다"),
+  EMAIL_INVALID_EMAIL(HttpStatus.BAD_REQUEST, "유효하지 않은 이메일입니다."),
 
   EMAIL_ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "24시간 이내에 이미 인증된 이메일입니다."),
 
   // QUANTBOT
   EXECUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 퀀트봇 실행 내역이 존재하지 않습니다."),
-
-  EXECUTION_HAS_NO_XAI_REPORT(HttpStatus.NOT_FOUND, "해당 실행 내역에는 XAI 리포트가 존재하지 않습니다."),
 
   XAI_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 XAI 리포트가 존재하지 않습니다."),
 

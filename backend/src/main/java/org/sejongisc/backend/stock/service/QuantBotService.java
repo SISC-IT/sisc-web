@@ -11,6 +11,7 @@ import org.sejongisc.backend.stock.entity.XaiReport;
 import org.sejongisc.backend.stock.repository.ExecutionRepository;
 import org.sejongisc.backend.stock.repository.XaiReportRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +33,7 @@ public class QuantBotService {
   }
 
   // execution에 따른 리포트 조회
+  @Transactional(readOnly = true)
   public XaiReport getXaiReportByExecutionId(Long executionId) {
     Execution exec = executionRepository.findById(executionId)
         .orElseThrow(() -> new CustomException(ErrorCode.EXECUTION_NOT_FOUND));
