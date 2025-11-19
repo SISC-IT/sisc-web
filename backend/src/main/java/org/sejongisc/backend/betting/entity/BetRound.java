@@ -80,14 +80,14 @@ public class BetRound extends BasePostgresEntity {
     @Column(nullable = false, columnDefinition = "integer default 0")
     private int upBetCount = 0;
 
-    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Column(nullable = false)
     private long upTotalPoints = 0;
 
     // [추가] 하락(DOWN) 베팅 통계
     @Column(nullable = false, columnDefinition = "integer default 0")
     private int downBetCount = 0;
 
-    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Column(nullable = false)
     private long downTotalPoints = 0;
 
     // 라운드가 현재 진행 중인지 여부 반환
@@ -108,18 +108,6 @@ public class BetRound extends BasePostgresEntity {
     // 베팅 불가
     public void close() {
         this.status = false;
-    }
-
-
-    // [추가] 통계 업데이트 메서드 (서비스에서 호출)
-    public void addBetStats(BetOption option, int points) {
-        if (option == BetOption.RISE) { // UP
-            this.upBetCount++;
-            this.upTotalPoints += points;
-        } else if (option == BetOption.FALL) { // DOWN
-            this.downBetCount++;
-            this.downTotalPoints += points;
-        }
     }
 
     // [추가] 예상 배당률 조회 (예시: 전체 포인트 / 해당 옵션 포인트)
