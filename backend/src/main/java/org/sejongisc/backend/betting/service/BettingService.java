@@ -1,6 +1,7 @@
 package org.sejongisc.backend.betting.service;
 
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.betting.dto.BetRoundResponse;
 import org.sejongisc.backend.betting.dto.PriceResponse;
 import org.sejongisc.backend.betting.dto.UserBetRequest;
 import org.sejongisc.backend.betting.entity.*;
@@ -139,7 +140,13 @@ public class BettingService {
 
         betRound.validate();
 
-        int stake = 0;
+        // [수정] 유료 베팅인 경우 베팅 포인트 설정
+        int stake = userBetRequest.isFree() ? 0 : userBetRequest.getStakePoints();
+
+        // [추가] 라운드 통계 업데이트 (인원수, 포인트 증가)
+        betRound.addBetStats(userBetRequest.getOption(), stake);
+        // 변경감지(Dirty Checking)에 의해 betRoundRepository.save(betRound) 없이도 저장되지만,
+        // 명시적으로 저장해도 무방.
 
         if (!userBetRequest.isFree()) {
             if (!userBetRequest.isStakePointsValid()) {
@@ -170,6 +177,12 @@ public class BettingService {
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
+    }
+
+    // [추가] getActiveRound 반환 타입 변경 대응 메서드 (Controller에서 사용)
+    public Optional<BetRoundResponse> getActiveRoundResponse(Scope type) {
+        return betRoundRepository.findTopByStatusTrueAndScopeOrderByOpenAtDesc(type)
+                .map(BetRoundResponse::from);
     }
 
     /**
