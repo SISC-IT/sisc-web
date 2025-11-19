@@ -3,9 +3,11 @@ package org.sejongisc.backend.board.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.board.dto.BoardRequest;
+import org.sejongisc.backend.board.dto.BoardResponse;
 import org.sejongisc.backend.board.dto.CommentRequest;
 import org.sejongisc.backend.board.dto.PostRequest;
 import org.sejongisc.backend.board.dto.PostResponse;
@@ -145,6 +147,17 @@ public class BoardController {
     UUID userId = customUserDetails.getUserId();
     postService.createBoard(request, userId);
     return ResponseEntity.ok().build();
+  }
+
+  // 게시판 생성
+  @Operation(
+      summary = "부모 게시판 목록 조회",
+      description = "최상위 부모 게시판들의 목록을 조회합니다."
+  )
+  @PostMapping
+  public ResponseEntity<List<BoardResponse>> getParentBoards(
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    return ResponseEntity.ok(postService.getParentBoards());
   }
 
   // 좋아요 토글
