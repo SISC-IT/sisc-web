@@ -143,10 +143,14 @@ public class BettingService {
         // [수정] 유료 베팅인 경우 베팅 포인트 설정
         int stake = userBetRequest.isFree() ? 0 : userBetRequest.getStakePoints();
 
-        // [추가] 라운드 통계 업데이트 (인원수, 포인트 증가)
-        betRound.addBetStats(userBetRequest.getOption(), stake);
-        // 변경감지(Dirty Checking)에 의해 betRoundRepository.save(betRound) 없이도 저장되지만,
-        // 명시적으로 저장해도 무방.
+        // [삭제] 기존 엔티티 메서드 호출 방식 (동시성 문제 발생)
+        //betRound.addBetStats(userBetRequest.getOption(), stake);
+
+        if (userBetRequest.getOption() == BetOption.RISE) {
+            betRoundRepository.incrementUpStats(betRound.getBetRoundID(), stake);
+        } else {
+            betRoundRepository.incrementDownStats(betRound.getBetRoundID(), stake);
+        }
 
         if (!userBetRequest.isFree()) {
             if (!userBetRequest.isStakePointsValid()) {
