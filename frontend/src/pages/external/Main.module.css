@@ -9,10 +9,11 @@
 
 .image {
   position: absolute;
-  left: -80px;
+  left: 0;
   top: 0;
-  width: 1800px;
-  height: 1190px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   z-index: -1;
 }
 
@@ -52,7 +53,6 @@
 }
 
 .title {
-  font-family: DIN Condensed;
   font-weight: 700;
   font-size: 80px;
   line-height: 100%;
