@@ -1,47 +1,98 @@
 import styles from './Betting.module.css';
-// import icon1 from '../../assets/at_icon_1.png';
+import icon1 from '../../assets/at_icon_1.png';
 import StockInfoItem from './StockInfoItem';
 import { useState, useEffect } from 'react';
 import { dailyBet, weeklyBet } from '../../utils/bettingInfo';
+import {
+  getDailyBetHistory,
+  getWeeklyBetHistory,
+} from '../../utils/bettingHistory';
+import { api } from '../../utils/axios';
 
-const DailyBetting = ({ period }) => {
+const Betting = ({ period }) => {
   const [isBetting, setIsBetting] = useState('none');
-  // const data = period === 'daily' ? mockDailyBet : mockWeeklyBet;
-  // const data = period === 'daily' ? dailyBet() : weeklyBet();
   const [data, setData] = useState(null);
+  const [userBets, setUserBets] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
       if (period === 'daily') {
         const res = await dailyBet();
         setData(res);
+        const history = await getDailyBetHistory();
+        setUserBets(history[0]);
       } else {
         const res = await weeklyBet();
         setData(res);
+        const history = await getWeeklyBetHistory();
+        setUserBets(history[0]);
       }
     }
     fetchData();
   }, [period]);
 
-  const onClickUpBet = () => {
+  // userBets 또는 data가 바뀔 때 베팅 여부 체크
+  useEffect(() => {
+    if (!data || !userBets) {
+      setIsBetting('none');
+      return;
+    }
+
+    if (data.betRoundID === userBets.round.betRoundID) {
+      userBets.option === 'RISE' ? setIsBetting('up') : setIsBetting('down');
+    } else {
+      setIsBetting('none');
+    }
+  }, [data, userBets]);
+
+  const onClickUpBet = async () => {
     if (isBetting !== 'none') {
       alert('이미 베팅하셨습니다.');
     } else if (confirm('상승에 베팅하시겠습니까?')) {
-      setIsBetting('up');
+      try {
+        const res = await api.post('/api/user-bets', {
+          roundId: data.betRoundID,
+          option: 'RISE',
+          stakePoints: 0,
+          isFree: true,
+        });
+        setIsBetting('up');
+        return res;
+      } catch (error) {
+        console.log(error.message);
+        return null;
+      }
     }
   };
 
-  const onClickDownBet = () => {
+  const onClickDownBet = async () => {
     if (isBetting !== 'none') {
       alert('이미 베팅하셨습니다.');
     } else if (confirm('하락에 베팅하시겠습니까?')) {
-      setIsBetting('down');
+      try {
+        const res = await api.post('/api/user-bets', {
+          roundId: data.betRoundID,
+          option: 'FALL',
+          stakePoints: 0,
+          isFree: true,
+        });
+        setIsBetting('down');
+        return res;
+      } catch (error) {
+        console.log(error.message);
+        return null;
+      }
     }
   };
 
-  const onClickCancelBet = () => {
+  const onClickCancelBet = async () => {
     if (confirm('베팅을 취소하시겠습니까?')) {
-      setIsBetting('none');
+      try {
+        await api.delete(`/api/user-bets/${userBets.userBetId}`);
+        setIsBetting('none');
+      } catch (error) {
+        console.log(error);
+      }
     }
   };
 
@@ -58,12 +109,12 @@ const DailyBetting = ({ period }) => {
         <div className={styles['bet-info']}>
           {/* 상승 베팅 */}
           <div className={styles['upper-bet']}>
-            {/* <div className={styles['bet-point']}>
+            <div className={styles['bet-point']}>
               <img src={icon1} className={styles['icon']} />
-              <span>+{data.upperBet}P</span>
+              <span>+{data.upTotalPoints}P</span>
             </div>
             <div className={styles['divider']} />
-            <span>{data.upBetCount}명</span> */}
+            <span>{data.upBetCount}명</span>
             <button
               className={`${styles['up-button']} ${isBetting === 'up' && styles.upActive}`}
               onClick={onClickUpBet}
@@ -74,12 +125,12 @@ const DailyBetting = ({ period }) => {
           </div>
           {/* 하락 베팅 */}
           <div className={styles['lower-bet']}>
-            {/* <div className={styles['bet-point']}>
+            <div className={styles['bet-point']}>
               <img src={icon1} className={styles['icon']} />
-              <span>-{data.lowerBet}P</span>
+              <span>-{data.downTotalPoints}P</span>
             </div>
             <div className={styles['divider']} />
-            <span>{data.downBetCount}명</span> */}
+            <span>{data.downBetCount}명</span>
             <button
               className={`${styles['down-button']} ${isBetting === 'down' && styles.downActive}`}
               onClick={onClickDownBet}
@@ -101,4 +152,4 @@ const DailyBetting = ({ period }) => {
   );
 };
 
-export default DailyBetting;
+export default Betting;
