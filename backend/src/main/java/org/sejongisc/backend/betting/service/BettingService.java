@@ -1,6 +1,7 @@
 package org.sejongisc.backend.betting.service;
 
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.betting.dto.BetRoundResponse;
 import org.sejongisc.backend.betting.dto.PriceResponse;
 import org.sejongisc.backend.betting.dto.UserBetRequest;
 import org.sejongisc.backend.betting.entity.*;
@@ -139,7 +140,17 @@ public class BettingService {
 
         betRound.validate();
 
-        int stake = 0;
+        // [수정] 유료 베팅인 경우 베팅 포인트 설정
+        int stake = userBetRequest.isFree() ? 0 : userBetRequest.getStakePoints();
+
+        // [삭제] 기존 엔티티 메서드 호출 방식 (동시성 문제 발생)
+        //betRound.addBetStats(userBetRequest.getOption(), stake);
+
+        if (userBetRequest.getOption() == BetOption.RISE) {
+            betRoundRepository.incrementUpStats(betRound.getBetRoundID(), stake);
+        } else {
+            betRoundRepository.incrementDownStats(betRound.getBetRoundID(), stake);
+        }
 
         if (!userBetRequest.isFree()) {
             if (!userBetRequest.isStakePointsValid()) {
@@ -170,6 +181,12 @@ public class BettingService {
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
+    }
+
+    // [추가] getActiveRound 반환 타입 변경 대응 메서드 (Controller에서 사용)
+    public Optional<BetRoundResponse> getActiveRoundResponse(Scope type) {
+        return betRoundRepository.findTopByStatusTrueAndScopeOrderByOpenAtDesc(type)
+                .map(BetRoundResponse::from);
     }
 
     /**
