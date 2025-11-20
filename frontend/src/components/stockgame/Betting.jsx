@@ -38,7 +38,7 @@ const Betting = ({ period }) => {
       return;
     }
 
-    if (data.betRoundID === userBets.round.betRoundID) {
+    if (data.betRoundId === userBets.round.betRoundId) {
       userBets.option === 'RISE' ? setIsBetting('up') : setIsBetting('down');
     } else {
       setIsBetting('none');
@@ -51,7 +51,7 @@ const Betting = ({ period }) => {
     } else if (confirm('상승에 베팅하시겠습니까?')) {
       try {
         const res = await api.post('/api/user-bets', {
-          roundId: data.betRoundID,
+          roundId: data.betRoundId,
           option: 'RISE',
           stakePoints: 0,
           isFree: true,
@@ -71,7 +71,7 @@ const Betting = ({ period }) => {
     } else if (confirm('하락에 베팅하시겠습니까?')) {
       try {
         const res = await api.post('/api/user-bets', {
-          roundId: data.betRoundID,
+          roundId: data.betRoundId,
           option: 'FALL',
           stakePoints: 0,
           isFree: true,
