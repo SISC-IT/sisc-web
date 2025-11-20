@@ -75,7 +75,6 @@ public class AttendanceSessionServiceTest {
 
         when(attendanceSessionRepository.existsByCode(anyString())).thenReturn(false);
         when(attendanceSessionRepository.save(any(AttendanceSession.class))).thenReturn(savedSession);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         //when
         AttendanceSessionResponse response = attendanceSessionService.createSession(request);
@@ -119,7 +118,6 @@ public class AttendanceSessionServiceTest {
 
         when(attendanceSessionRepository.existsByCode(anyString())).thenReturn(false);
         when(attendanceSessionRepository.save(any(AttendanceSession.class))).thenReturn(savedSession);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         //when
         AttendanceSessionResponse response = attendanceSessionService.createSession(request);
@@ -158,7 +156,6 @@ public class AttendanceSessionServiceTest {
         );
 
         when(attendanceSessionRepository.findByVisibilityOrderByStartsAtDesc(SessionVisibility.PUBLIC)).thenReturn(sessions);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         //when
         List<AttendanceSessionResponse> responses = attendanceSessionService.getPublicSessions();
@@ -185,6 +182,7 @@ public class AttendanceSessionServiceTest {
                         .startsAt(now.minusMinutes(10))
                         .windowSeconds(1800)
                         .status(SessionStatus.OPEN)
+                        .visibility(SessionVisibility.PUBLIC)
                         .build(),
                 AttendanceSession.builder()
                         .attendanceSessionId(UUID.randomUUID())
@@ -192,6 +190,7 @@ public class AttendanceSessionServiceTest {
                         .code("222222")
                         .startsAt(now.plusMinutes(10))
                         .windowSeconds(1800)
+                        .visibility(SessionVisibility.PUBLIC)
                         .build(),
                 AttendanceSession.builder()
                         .attendanceSessionId(UUID.randomUUID())
@@ -199,11 +198,11 @@ public class AttendanceSessionServiceTest {
                         .code("333333")
                         .startsAt(now.minusHours(2))
                         .windowSeconds(1800)
+                        .visibility(SessionVisibility.PUBLIC)
                         .build()
         );
 
         when(attendanceSessionRepository.findAllByOrderByStartsAtDesc()).thenReturn(allSessions);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         //when
         List<AttendanceSessionResponse> responses = attendanceSessionService.getActiveSessions();
@@ -257,7 +256,6 @@ public class AttendanceSessionServiceTest {
 
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(existingSession));
         when(attendanceSessionRepository.save(any(AttendanceSession.class))).thenReturn(updatedSession);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         //when
         AttendanceSessionResponse response = attendanceSessionService.updateSession(sessionId, request);
