@@ -72,22 +72,10 @@ public class AttendanceRoundResponse {
     private RoundStatus roundStatus;
 
     @Schema(
-            description = "라운드의 이름/제목. 예: 1주차, 2주차 등",
-            example = "1주차"
-    )
-    private String roundName;
-
-    @Schema(
             description = "정시 출석자 수",
             example = "20"
     )
     private Long presentCount;
-
-    @Schema(
-            description = "지각 출석자 수",
-            example = "5"
-    )
-    private Long lateCount;
 
     @Schema(
             description = "결석자 수",
@@ -138,9 +126,7 @@ public class AttendanceRoundResponse {
                 .endTime(round.getEndTime())
                 .allowedMinutes(round.getAllowedMinutes())
                 .roundStatus(currentStatus)
-                .roundName(round.getRoundName())
                 .presentCount(presentCount)
-                .lateCount(lateCount)
                 .absentCount(absentCount)
                 .totalAttendees((long) attendances.size())
                 .build();
