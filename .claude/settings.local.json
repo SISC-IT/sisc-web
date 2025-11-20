@@ -1,23 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)",
-      "Bash(tree:*)",
-      "Bash(./gradlew bootRun:*)",
-      "Bash(openssl rand:*)",
-      "Bash(./gradlew:*)",
-      "Bash(pkill:*)",
-      "Bash(python3:*)",
-      "Bash(curl:*)",
-      "Bash(npm install:*)",
-      "Bash(psql:*)",
-      "Bash(lsof:*)",
-      "Bash(npm run dev:*)",
-      "Bash(timeout 10 curl:*)",
-      "Bash(PGPASSWORD=devPassword psql:*)",
-      "Bash(cat:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\n[BE] SISC1-XXX [FIX] 출석 라운드 API 보안 및 성능 개선\n\n- AttendanceRoundController: extractUserId() 추가, 인증 실패 시 예외 발생\n- AttendanceRoundResponse: 출석 통계 단일 루프 최적화, null 방어 처리\n- AttendanceRoundRequest: roundDate @NotNull 제거 (선택적 필드로 변경)\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\n[BE] SISC1-XXX [DELETE] Remove unused attendance session APIs\n\nDeleted 3 unused REST APIs confirmed with frontend team:\n- getSessionByCode: GET /api/attendance/sessions/code/{code}\n- getSessionsByTag: GET /api/attendance/sessions/tag/{tag}\n- getSessionsByStatus: GET /api/attendance/sessions/status/{status}\n\nChanges:\n- AttendanceSessionController: Removed 3 API endpoint methods\n- AttendanceSessionService: Removed 3 service methods\n- AttendanceSessionControllerTest: Removed 3 test methods and admin permission test reference\n- AttendanceSessionServiceTest: Removed 3 test methods\n\nAll tests pass successfully.\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git restore:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

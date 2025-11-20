@@ -82,9 +82,7 @@ public class AttendanceRoundControllerTest {
                 .endTime(startTime.plusMinutes(30))
                 .allowedMinutes(30)
                 .roundStatus(RoundStatus.UPCOMING)
-                .roundName("1주차")
                 .presentCount(0L)
-                .lateCount(0L)
                 .absentCount(0L)
                 .totalAttendees(0L)
                 .build();
@@ -103,7 +101,6 @@ public class AttendanceRoundControllerTest {
                 .andExpect(jsonPath("$.allowedMinutes").value(30))
                 .andExpect(jsonPath("$.roundStatus").value("UPCOMING"))
                 .andExpect(jsonPath("$.presentCount").value(0))
-                .andExpect(jsonPath("$.lateCount").value(0))
                 .andExpect(jsonPath("$.absentCount").value(0))
                 .andExpect(jsonPath("$.totalAttendees").value(0));
     }
@@ -141,9 +138,7 @@ public class AttendanceRoundControllerTest {
                 .endTime(startTime.plusMinutes(30))
                 .allowedMinutes(30)
                 .roundStatus(RoundStatus.ACTIVE)
-                .roundName("1주차")
                 .presentCount(5L)
-                .lateCount(2L)
                 .absentCount(1L)
                 .totalAttendees(8L)
                 .build();
@@ -156,9 +151,7 @@ public class AttendanceRoundControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roundId").value(roundId.toString()))
                 .andExpect(jsonPath("$.roundStatus").value("ACTIVE"))
-                .andExpect(jsonPath("$.roundName").value("1주차"))
                 .andExpect(jsonPath("$.presentCount").value(5))
-                .andExpect(jsonPath("$.lateCount").value(2))
                 .andExpect(jsonPath("$.absentCount").value(1))
                 .andExpect(jsonPath("$.totalAttendees").value(8));
     }
@@ -178,9 +171,7 @@ public class AttendanceRoundControllerTest {
                 .endTime(startTime.plusMinutes(30))
                 .allowedMinutes(30)
                 .roundStatus(RoundStatus.ACTIVE)
-                .roundName("1주차")
                 .presentCount(5L)
-                .lateCount(2L)
                 .absentCount(1L)
                 .totalAttendees(8L)
                 .build();
@@ -192,9 +183,7 @@ public class AttendanceRoundControllerTest {
                 .endTime(startTime.plusMinutes(30))
                 .allowedMinutes(30)
                 .roundStatus(RoundStatus.UPCOMING)
-                .roundName("2주차")
                 .presentCount(0L)
-                .lateCount(0L)
                 .absentCount(0L)
                 .totalAttendees(0L)
                 .build();
@@ -206,9 +195,7 @@ public class AttendanceRoundControllerTest {
         mockMvc.perform(get("/api/attendance/sessions/{sessionId}/rounds", sessionId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].roundName").value("1주차"))
                 .andExpect(jsonPath("$[0].roundStatus").value("ACTIVE"))
-                .andExpect(jsonPath("$[1].roundName").value("2주차"))
                 .andExpect(jsonPath("$[1].roundStatus").value("UPCOMING"));
     }
 
@@ -233,9 +220,7 @@ public class AttendanceRoundControllerTest {
                 .endTime(newStartTime.plusMinutes(45))
                 .allowedMinutes(45)
                 .roundStatus(RoundStatus.UPCOMING)
-                .roundName("1주차")
                 .presentCount(0L)
-                .lateCount(0L)
                 .absentCount(0L)
                 .totalAttendees(0L)
                 .build();
@@ -366,9 +351,7 @@ public class AttendanceRoundControllerTest {
                 .endTime(startTime.plusMinutes(30))
                 .allowedMinutes(30)
                 .roundStatus(RoundStatus.ACTIVE)
-                .roundName("1주차")
                 .presentCount(5L)
-                .lateCount(2L)
                 .absentCount(1L)
                 .totalAttendees(8L)
                 .build();
@@ -380,7 +363,6 @@ public class AttendanceRoundControllerTest {
                         .param("date", targetDate.toString())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roundName").value("1주차"))
                 .andExpect(jsonPath("$.roundStatus").value("ACTIVE"));
     }
 
