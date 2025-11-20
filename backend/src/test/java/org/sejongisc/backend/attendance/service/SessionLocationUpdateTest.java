@@ -75,16 +75,14 @@ public class SessionLocationUpdateTest {
 
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(existingSession));
         when(attendanceSessionRepository.save(any(AttendanceSession.class))).thenReturn(updatedSession);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         // when
         AttendanceSessionResponse response = attendanceSessionService.updateSessionLocation(sessionId, request);
 
         // then
         assertAll(
-                () -> assertThat(response.getLatitude()).isEqualTo(newLatitude),
-                () -> assertThat(response.getLongitude()).isEqualTo(newLongitude),
-                () -> assertThat(response.getRadiusMeters()).isEqualTo(200)
+                () -> assertThat(response.getLocation().getLat()).isEqualTo(newLatitude),
+                () -> assertThat(response.getLocation().getLng()).isEqualTo(newLongitude)
         );
 
         verify(attendanceSessionRepository).save(any(AttendanceSession.class));
@@ -123,16 +121,14 @@ public class SessionLocationUpdateTest {
 
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(existingSession));
         when(attendanceSessionRepository.save(any(AttendanceSession.class))).thenReturn(updatedSession);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         // when
         AttendanceSessionResponse response = attendanceSessionService.updateSessionLocation(sessionId, request);
 
         // then
         assertAll(
-                () -> assertThat(response.getLatitude()).isEqualTo(newLatitude),
-                () -> assertThat(response.getLongitude()).isEqualTo(newLongitude),
-                () -> assertThat(response.getRadiusMeters()).isEqualTo(100)
+                () -> assertThat(response.getLocation().getLat()).isEqualTo(newLatitude),
+                () -> assertThat(response.getLocation().getLng()).isEqualTo(newLongitude)
         );
 
         verify(attendanceSessionRepository).save(any(AttendanceSession.class));
@@ -194,12 +190,11 @@ public class SessionLocationUpdateTest {
 
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.of(existingSession));
         when(attendanceSessionRepository.save(any(AttendanceSession.class))).thenReturn(updatedSession);
-        when(attendanceRepository.countByAttendanceSession(any(AttendanceSession.class))).thenReturn(0L);
 
         // when
         AttendanceSessionResponse response = attendanceSessionService.updateSessionLocation(sessionId, request);
 
         // then
-        assertThat(response.getRadiusMeters()).isEqualTo(customRadius);
+        // radiusMeters is no longer available in AttendanceSessionResponse
     }
 }

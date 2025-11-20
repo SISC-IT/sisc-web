@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
@@ -284,40 +285,37 @@ public class AttendanceSessionService {
 
     /**
      * AttendanceSession 엔티티를 Response DTO로 변환
-     * - 남은 시간, 체크인 가능 여부, 참여자 수 계산
-     * - 현재 시간 기준으로 동적 정보 생성
+     * - 기본 세션 정보: 제목, 시작 시간, 출석 인정 시간, 보상 포인트
+     * - 위치 정보: location 객체 (lat, lng)
+     * - 공개 여부: isVisible boolean
      */
     private AttendanceSessionResponse convertToResponse(AttendanceSession session) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
-
-        Long remainingSeconds = null;
-        boolean checkInAvailable = false;
-
-        if (now.isBefore(session.getStartsAt())) {
-            remainingSeconds = java.time.Duration.between(now, session.getStartsAt()).getSeconds();
-        } else if (now.isBefore(endTime)) {
-            remainingSeconds = java.time.Duration.between(now, endTime).getSeconds();
-            checkInAvailable = session.getStatus() == SessionStatus.OPEN;
+        // 위치 정보 변환 (location이 존재하면 LocationInfo 객체 생성, 없으면 null)
+        AttendanceSessionResponse.LocationInfo location = null;
+        if (session.getLocation() != null) {
+            location = AttendanceSessionResponse.LocationInfo.builder()
+                    .lat(session.getLocation().getLat())
+                    .lng(session.getLocation().getLng())
+                    .build();
         }
 
-        Long participantCount = attendanceRepository.countByAttendanceSession(session);
+        // defaultAvailableMinutes: windowSeconds를 분 단위로 변환
+        Integer defaultAvailableMinutes = (int) (session.getWindowSeconds() / 60);
+
+        // defaultStartTime: startsAt에서 시간 부분만 추출
+        LocalTime defaultStartTime = session.getStartsAt().toLocalTime();
+
+        // isVisible: 공개 세션이면 true, 비공개면 false
+        Boolean isVisible = session.getVisibility() == SessionVisibility.PUBLIC;
 
         return AttendanceSessionResponse.builder()
                 .attendanceSessionId(session.getAttendanceSessionId())
                 .title(session.getTitle())
-                .windowSeconds(session.getWindowSeconds())
+                .location(location)
+                .defaultStartTime(defaultStartTime)
+                .defaultAvailableMinutes(defaultAvailableMinutes)
                 .rewardPoints(session.getRewardPoints())
-                .latitude(session.getLocation() != null ? session.getLocation().getLat() : null)
-                .longitude(session.getLocation() != null ? session.getLocation().getLng() : null)
-                .radiusMeters(session.getLocation() != null ? session.getLocation().getRadiusMeters() : null)
-                .visibility(session.getVisibility())
-                .status(session.getStatus())
-                .createdAt(session.getCreatedDate())
-                .updatedAt(session.getUpdatedDate())
-                .remainingSeconds(remainingSeconds)
-                .checkInAvailable(checkInAvailable)
-                .participantCount(participantCount.intValue())
+                .isVisible(isVisible)
                 .build();
 
     }

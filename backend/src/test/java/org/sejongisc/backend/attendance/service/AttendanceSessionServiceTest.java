@@ -84,12 +84,11 @@ public class AttendanceSessionServiceTest {
         assertAll(
                 () -> assertThat(response.getTitle()).isEqualTo("세투연 정기모임"),
                 () -> assertThat(response.getRewardPoints()).isEqualTo(10),
-                () -> assertThat(response.getLatitude()).isEqualTo(37.5665),
-                () -> assertThat(response.getLongitude()).isEqualTo(126.9780),
-                () -> assertThat(response.getRadiusMeters()).isEqualTo(100),
-                () -> assertThat(response.getVisibility()).isEqualTo(SessionVisibility.PUBLIC),
-                () -> assertThat(response.getStatus()).isEqualTo(SessionStatus.UPCOMING),
-                () -> assertThat(response.getParticipantCount()).isEqualTo(0)
+                () -> assertThat(response.getLocation()).isNotNull(),
+                () -> assertThat(response.getLocation().getLat()).isEqualTo(37.5665),
+                () -> assertThat(response.getLocation().getLng()).isEqualTo(126.9780),
+                () -> assertThat(response.getDefaultAvailableMinutes()).isEqualTo(30),
+                () -> assertThat(response.getIsVisible()).isEqualTo(true)
         );
 
         verify(attendanceSessionRepository).save(any(AttendanceSession.class));
@@ -128,10 +127,9 @@ public class AttendanceSessionServiceTest {
         //then
         assertAll(
                 () -> assertThat(response.getTitle()).isEqualTo("정규세션"),
-                () -> assertThat(response.getLatitude()).isNull(),
-                () -> assertThat(response.getLongitude()).isNull(),
-                () -> assertThat(response.getRadiusMeters()).isNull(),
-                () -> assertThat(response.getVisibility()).isEqualTo(SessionVisibility.PUBLIC)
+                () -> assertThat(response.getLocation()).isNull(),
+                () -> assertThat(response.getDefaultAvailableMinutes()).isEqualTo(60),
+                () -> assertThat(response.getIsVisible()).isEqualTo(true)
         );
     }
 
@@ -214,7 +212,7 @@ public class AttendanceSessionServiceTest {
         assertAll(
                 () -> assertThat(responses).hasSize(1),
                 () -> assertThat(responses.get(0).getTitle()).isEqualTo("활성세션"),
-                () -> assertThat(responses.get(0).isCheckInAvailable()).isTrue()
+                () -> assertThat(responses.get(0).getIsVisible()).isEqualTo(true)
         );
     }
 
@@ -268,10 +266,10 @@ public class AttendanceSessionServiceTest {
         assertAll(
                 () -> assertThat(response.getTitle()).isEqualTo("수정된 제목"),
                 () -> assertThat(response.getRewardPoints()).isEqualTo(10),
-                () -> assertThat(response.getLatitude()).isEqualTo(37.5000),
-                () -> assertThat(response.getLongitude()).isEqualTo(127.0000),
-                () -> assertThat(response.getRadiusMeters()).isEqualTo(200),
-                () -> assertThat(response.getVisibility()).isEqualTo(SessionVisibility.PRIVATE)
+                () -> assertThat(response.getLocation()).isNotNull(),
+                () -> assertThat(response.getLocation().getLat()).isEqualTo(37.5000),
+                () -> assertThat(response.getLocation().getLng()).isEqualTo(127.0000),
+                () -> assertThat(response.getIsVisible()).isEqualTo(false)
         );
 
         verify(attendanceSessionRepository).save(any(AttendanceSession.class));

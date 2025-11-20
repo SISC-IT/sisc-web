@@ -82,7 +82,7 @@ public class AttendanceRoundServiceTest {
                 () -> assertThat(response.getRoundId()).isNotNull(),
                 () -> assertThat(response.getRoundDate()).isEqualTo(roundDate),
                 () -> assertThat(response.getStartTime()).isEqualTo(startTime),
-                () -> assertThat(response.getAllowedMinutes()).isEqualTo(30)
+                () -> assertThat(response.getAvailableMinutes()).isEqualTo(30)
         );
 
         verify(attendanceSessionRepository).findById(sessionId);
@@ -228,7 +228,7 @@ public class AttendanceRoundServiceTest {
         assertAll(
                 () -> assertThat(response.getRoundDate()).isEqualTo(newDate),
                 () -> assertThat(response.getStartTime()).isEqualTo(newTime),
-                () -> assertThat(response.getAllowedMinutes()).isEqualTo(45)
+                () -> assertThat(response.getAvailableMinutes()).isEqualTo(45)
         );
 
         verify(attendanceRoundRepository).save(any(AttendanceRound.class));

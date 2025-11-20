@@ -7,12 +7,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
-import org.sejongisc.backend.attendance.entity.RoundStatus;
-import org.sejongisc.backend.attendance.entity.AttendanceStatus;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -21,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Schema(
         title = "출석 라운드 응답",
-        description = "출석 라운드의 상세 정보. 라운드 상태, 시간, 출석 현황 통계를 포함합니다."
+        description = "출석 라운드의 상세 정보. 라운드 날짜, 시간, 상태를 포함합니다."
 )
 public class AttendanceRoundResponse {
 
@@ -42,93 +39,39 @@ public class AttendanceRoundResponse {
 
     @Schema(
             description = "라운드 출석 시작 시간",
-            example = "10:00",
+            example = "10:00:00",
             type = "string",
             format = "time"
     )
-    @JsonFormat(pattern = "HH:mm")
+    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime startTime;
 
     @Schema(
-            description = "라운드 출석 종료 시간 (startTime + allowedMinutes)",
-            example = "10:30",
-            type = "string",
-            format = "time"
-    )
-    @JsonFormat(pattern = "HH:mm")
-    private LocalTime endTime;
-
-    @Schema(
-            description = "출석 가능한 시간 (분단위)",
-            example = "30"
-    )
-    private Integer allowedMinutes;
-
-    @Schema(
-            description = "라운드의 현재 상태. UPCOMING(시작 전), ACTIVE(진행 중), CLOSED(종료됨)",
-            example = "ACTIVE",
-            implementation = RoundStatus.class
-    )
-    private RoundStatus roundStatus;
-
-    @Schema(
-            description = "정시 출석자 수",
+            description = "출석 가능한 시간 (분 단위)",
             example = "20"
     )
-    private Long presentCount;
+    private Integer availableMinutes;
 
     @Schema(
-            description = "결석자 수",
-            example = "3"
+            description = "라운드의 현재 상태 (opened, upcoming, closed 등)",
+            example = "opened"
     )
-    private Long absentCount;
-
-    @Schema(
-            description = "총 출석자 수",
-            example = "28"
-    )
-    private Long totalAttendees;
+    private String status;
 
     /**
      * 엔티티를 DTO로 변환
-     * roundStatus는 실시간으로 계산되어 반환됨
-     * 출석 통계는 단일 루프로 효율적으로 계산됨
+     * status는 실시간으로 계산되어 반환됨
      */
     public static AttendanceRoundResponse fromEntity(AttendanceRound round) {
-        // attendances 리스트가 null일 수 있으므로 방어
-        var attendances = round.getAttendances();
-        if (attendances == null) {
-            attendances = List.of();
-        }
-
-        // 단일 루프로 모든 통계를 효율적으로 계산
-        long presentCount = 0;
-        long lateCount = 0;
-        long absentCount = 0;
-
-        for (var attendance : attendances) {
-            if (attendance.getAttendanceStatus() == AttendanceStatus.PRESENT) {
-                presentCount++;
-            } else if (attendance.getAttendanceStatus() == AttendanceStatus.LATE) {
-                lateCount++;
-            } else if (attendance.getAttendanceStatus() == AttendanceStatus.ABSENT) {
-                absentCount++;
-            }
-        }
-
         // 현재 시간 기준으로 라운드 상태를 실시간 계산
-        RoundStatus currentStatus = round.calculateCurrentStatus();
+        String statusString = round.calculateCurrentStatus().toString().toLowerCase();
 
         return AttendanceRoundResponse.builder()
                 .roundId(round.getRoundId())
                 .roundDate(round.getRoundDate())
                 .startTime(round.getStartTime())
-                .endTime(round.getEndTime())
-                .allowedMinutes(round.getAllowedMinutes())
-                .roundStatus(currentStatus)
-                .presentCount(presentCount)
-                .absentCount(absentCount)
-                .totalAttendees((long) attendances.size())
+                .availableMinutes(round.getAllowedMinutes())
+                .status(statusString)
                 .build();
     }
 }
