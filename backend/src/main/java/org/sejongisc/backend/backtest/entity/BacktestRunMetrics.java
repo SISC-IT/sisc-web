@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Entity
 @Getter
@@ -37,4 +36,20 @@ public class BacktestRunMetrics {
 
   @Column(nullable = false)
   private int tradesCount;              // 총 거래 횟수
+
+  public static BacktestRunMetrics fromDto(BacktestRun backtestRun,
+                                           BigDecimal totalReturn,
+                                           BigDecimal maxDrawdown,
+                                           BigDecimal sharpeRatio,
+                                           BigDecimal avgHoldDays,
+                                           int tradesCount) {
+    return BacktestRunMetrics.builder()
+        .backtestRun(backtestRun)
+        .totalReturn(totalReturn)
+        .maxDrawdown(maxDrawdown)
+        .sharpeRatio(sharpeRatio)
+        .avgHoldDays(avgHoldDays)
+        .tradesCount(tradesCount)
+        .build();
+  }
 }
