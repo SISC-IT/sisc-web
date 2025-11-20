@@ -132,7 +132,7 @@ public class BacktestingEngine {
                     BigDecimal tradeValue = sharesToSell.multiply(currentClosePrice);
                     // 거래 로그 기록
                     TradeLog.Type logType = shouldExitByDays ? TradeLog.Type.SELL_FORCED : TradeLog.Type.SELL;  // 강제 청산 여부에 따른 로그 타입 설정
-                    tradeLogs.add(new TradeLog(logType, currentTime, currentClosePrice, shares));
+                    tradeLogs.add(new TradeLog(logType, currentTime, currentClosePrice, sharesToSell));
                     shares = shares.subtract(sharesToSell);     // 매도 주식 수 차감
                     cash = cash.add(tradeValue);                // 잔고에서 매도 대금 추가
                     tradesCount++;                              // 거래 횟수 증가
