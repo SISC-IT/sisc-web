@@ -14,6 +14,7 @@ import org.sejongisc.backend.backtest.repository.BacktestRunMetricsRepository;
 import org.sejongisc.backend.backtest.repository.BacktestRunRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.stock.repository.PriceDataRepository;
 import org.sejongisc.backend.template.entity.Template;
 import org.sejongisc.backend.template.repository.TemplateRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
@@ -34,7 +35,17 @@ public class BacktestService {
   private final BacktestingEngine backtestingEngine;
   private final ObjectMapper objectMapper;
   private final UserRepository userRepository;
+  private final PriceDataRepository priceDataRepository;
 
+  // 백테스트용 주식 정보 조회
+  @Transactional
+  public BacktestResponse getBacktestStockInfo() {
+    return BacktestResponse.builder()
+        .availableTickers(priceDataRepository.findDistinctTickers())
+        .build();
+  }
+
+  @Transactional
   public BacktestResponse getBacktestStatus(Long backtestRunId, UUID userId) {
     log.info("백테스팅 실행 상태 조회를 시작합니다.");
     BacktestRun backtestRun = findBacktestRunByIdAndVerifyUser(backtestRunId, userId);
@@ -105,7 +116,7 @@ public class BacktestService {
     log.info("백테스팅 실행 요청이 성공적으로 처리되었습니다. ID: {}", savedRun.getId());
 
     // 비동기로 백테스팅 실행 시작
-    backtestingEngine.execute(savedRun.getId());
+    backtestingEngine.execute(savedRun);
 
     // 사용자에게 실행 중 응답 반환
     return BacktestResponse.builder()
