@@ -24,6 +24,9 @@ public class BacktestRunRequest {
     @Schema(description = "대상 종목 티커", defaultValue = "AAPL")
     private String ticker;
 
+    @Schema(description = "기본 청산 기간")
+    private int defaultExitDays;
+
     @Schema(description = "매수 조건 그룹")
     private List<StrategyCondition> buyConditions;
 

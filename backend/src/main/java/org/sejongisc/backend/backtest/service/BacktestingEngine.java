@@ -43,13 +43,11 @@ public class BacktestingEngine {
 
     @Async
     //@Transactional(propagation = Propagation.REQUIRES_NEW) @Async는 새로운 쓰레드에서 실행되므로 DB 작업 수행 시 주석 제거 필요
-    public void execute(Long backtestRunId) {
+    public void execute(BacktestRun backtestRun) {
+        Long backtestRunId = backtestRun.getId();
         log.info("백테스팅 실행이 시작됩니다. 실행 ID : {}", backtestRunId);
-        BacktestRun backtestRun = backtestRunRepository.findById(backtestRunId)
-            .orElseThrow(() -> new CustomException(ErrorCode.BACKTEST_NOT_FOUND));
         // 거래 로그 리스트 초기화
         List<TradeLog> tradeLogs = new ArrayList<>();
-
         try {
             // 백테스팅 상태 RUNNING 으로 변경
             backtestRun.setStatus(BacktestStatus.RUNNING);
@@ -90,7 +88,9 @@ public class BacktestingEngine {
             BigDecimal maxDrawdown = BigDecimal.ZERO;                       // 최대 낙폭
             BigDecimal previousValue = initialCapital;                      // 전날 포트폴리오 가치
             BigDecimal buyRatio = convertPercentToRatio(10, BigDecimal.ONE);    // TODO : DTO 매수 비중 설정
-            BigDecimal sellRatio = convertPercentToRatio(10, BigDecimal.ONE);   // TODO : DTO 매도 비중 설정
+            BigDecimal sellRatio = convertPercentToRatio(100, BigDecimal.ONE);   // TODO : DTO 매도 비중 설정
+            Integer buyBarIndex = null;	                                    // 현재 보유 주식의 매수 시점 바(Bar) 인덱스
+            int defaultExitDays = strategyDto.getDefaultExitDays();	        // 기본 청산 기간
             // 백테스팅 메인 반복문
             for (int i = 0; i < series.getBarCount(); i++) {
                 LocalDateTime currentTime = series.getBar(i).getEndTime().toLocalDateTime();                // 장 종료 시간
@@ -98,8 +98,17 @@ public class BacktestingEngine {
                 // 매수/매도 신호 평가
                 boolean shouldBuy = buyRule.isSatisfied(i);
                 boolean shouldSell = sellRule.isSatisfied(i);
+                // 기본 청산 기간(Default Exit Days) 조건
+                boolean shouldExitByDays = false;
+                // 주식을 보유하고 있고, 매수 시점 기록이 있으며, 청산 기간이 0보다 큰 경우에만 체크
+                if (shares.compareTo(BigDecimal.ZERO) > 0 && buyBarIndex != null && defaultExitDays > 0) {
+                    if (i - buyBarIndex >= defaultExitDays) {
+                        shouldExitByDays = true; // 매수 후 기본 청산 기간 도달
+                        log.debug("[{}] DEFAULT EXIT by {} days", currentTime.toLocalDate(), defaultExitDays);
+                    }
+                }
                 // 매수
-                if (shares.compareTo(BigDecimal.ZERO) == 0 && shouldBuy) {
+                if (shouldBuy) {
                     BigDecimal cashToUse = cash.multiply(buyRatio); // 매수 비중 적용
                     // 거래 가능한 최대 주식 개수
                     BigDecimal buyShares = cashToUse.divide(currentClosePrice, 8, RoundingMode.DOWN);
@@ -110,19 +119,24 @@ public class BacktestingEngine {
                         shares = shares.add(buyShares);         // 매수 주식 수
                         cash = cash.subtract(transactionCost);  // 잔고에서 매수 대금 차감
                         tradesCount++;                          // 거래 횟수 증가
+                        if (buyBarIndex == null) {
+                            buyBarIndex = i;                    // 첫 매수 시점에만 인덱스 기록
+                        }
                         log.debug("[{}] BUY at {}", currentTime.toLocalDate(), currentClosePrice);
                     }
                 }
                 // 매도
-                else if (shares.compareTo(BigDecimal.ZERO) > 0 && shouldSell) {
+                else if (shares.compareTo(BigDecimal.ZERO) > 0 && (shouldSell || shouldExitByDays)) {
                     // 매도 대금 계산 - 주식 수 * 현재가
                     BigDecimal sharesToSell = shares.multiply(sellRatio).setScale(8, RoundingMode.DOWN);   // 매도 비중 적용
                     BigDecimal tradeValue = sharesToSell.multiply(currentClosePrice);
                     // 거래 로그 기록
-                    tradeLogs.add(new TradeLog(TradeLog.Type.SELL, currentTime, currentClosePrice, shares));
+                    TradeLog.Type logType = shouldExitByDays ? TradeLog.Type.SELL_FORCED : TradeLog.Type.SELL;  // 강제 청산 여부에 따른 로그 타입 설정
+                    tradeLogs.add(new TradeLog(logType, currentTime, currentClosePrice, shares));
                     shares = shares.subtract(sharesToSell);     // 매도 주식 수 차감
                     cash = cash.add(tradeValue);                // 잔고에서 매도 대금 추가
                     tradesCount++;                              // 거래 횟수 증가
+                    buyBarIndex = null;                         // 매도 시점 인덱스 초기화
                     log.debug("[{}] SELL at {}", currentTime.toLocalDate(), currentClosePrice);
                 }
 

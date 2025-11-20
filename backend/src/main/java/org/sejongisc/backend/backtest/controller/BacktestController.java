@@ -27,6 +27,15 @@ import java.util.UUID;
 public class BacktestController {
   private final BacktestService backtestService;
 
+  @GetMapping("/stocks/info")
+  @Operation(
+      summary = "백테스트용 주식 정보 조회",
+      description = "백테스트에 사용되는 주식의 기본 정보를 조회합니다."
+  )
+  public ResponseEntity<BacktestResponse> getBacktestStockInfo() {
+    return ResponseEntity.ok(backtestService.getBacktestStockInfo());
+  }
+
   // 백테스트 실행 상태 조회
   @GetMapping("/runs/{backtestRunId}/status")
   @Operation(
@@ -73,6 +82,7 @@ public class BacktestController {
                   "strategy": {
                     "initialCapital": 100000.00,
                     "ticker": "AAPL",
+                    "defaultExitDays" : 30,
                     "buyConditions": [
                       {
                         "leftOperand": {
