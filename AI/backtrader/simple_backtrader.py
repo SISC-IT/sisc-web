@@ -18,7 +18,7 @@ from backtrader.order_policy import decide_order  # 분리된 정책 모듈 impo
 
 # === 설정 클래스 ===
 @dataclass
-class BacktestConfig:
+class BacktradeConfig:
     """
     한국어 주석:
     - 간소화 백테스터 설정
@@ -52,7 +52,7 @@ def _fill_date_from_signal(sig_date: pd.Timestamp, same_day: bool) -> pd.Timesta
 # === 백테스트 본체 ===
 def backtrader(
     decision_log: pd.DataFrame,
-    config: Optional[BacktestConfig] = None,
+    config: Optional[BacktradeConfig] = None,
     run_id: Optional[str] = None,
 ) -> Tuple[pd.DataFrame, Dict]:
     """
@@ -62,7 +62,7 @@ def backtrader(
     - 반환: (fills_df, summary)
     """
     if config is None:
-        config = BacktestConfig()
+        config = BacktraderConfig()
 
     dl = decision_log.copy()
     if not {"ticker", "date", "action", "price"}.issubset(dl.columns):

@@ -2,35 +2,35 @@
 # -*- coding: utf-8 -*-
 """
 한국어 주석 (개요):
-- 본 파일은 "주간 자동 파이프라인"의 전체 흐름을 오케스트레이션한다.
-  (Finder → Transformer → XAI 리포트 → Backtester → DB 저장)
+- 본 파일은 "주간 자동 파이프라인"의 전체 흐름을 오케스트레이션합니다.
+  (Finder → Transformer → XAI 리포트 → Backtrader → DB 저장)
 
 [전체 플로우]
 1) Finder
-   - 시장/전략 조건에 맞는 종목 목록(ticker list)을 선정한다.
+   - 시장/전략 조건에 맞는 종목 목록(ticker list)을 선정합니다.
 
 2) Transformer
-   - 선택된 종목들의 OHLCV를 DB에서 가져온다(fetch_ohlcv).
-   - LSTM/Rule 기반 등의 Transformer 로직을 통해 의사결정 로그(DataFrame)를 생성한다.
-   - 이 의사결정 로그는 XAI와 Backtester에서 모두 공통으로 사용된다.
+   - 선택된 종목들의 OHLCV 데이터를 DB에서 가져옵니다(fetch_ohlcv).
+   - LSTM/Rule 기반 등의 Transformer 로직을 통해 의사결정 로그(DataFrame)를 생성합니다.
+   - 이 의사결정 로그는 XAI와 Backtrader에서 모두 공통으로 사용됩니다.
 
 3) XAI (e.g. GROQ 등 LLM 기반 설명 생성)
    - 각 의사결정에 대해 feature_name / feature_score를 기반으로
-     "왜 이 신호가 나왔는지"에 대한 자연어 리포트를 생성한다.
-   - 결과는 xai_reports 테이블에 먼저 저장된다.
-   - 이 때 생성된 xai_reports.id를 decision_log(logs_df)에 xai_report_id로 심는다.
+     "왜 이 신호가 나왔는지"에 대한 자연어 리포트를 생성합니다.
+   - 결과는 xai_reports 테이블에 먼저 저장됩니다.
+   - 이 때 생성된 xai_reports.id를 decision_log(logs_df)에 xai_report_id로 심습니다.
 
-4) Backtester
+4) Backtrader
    - xai_report_id가 포함된 의사결정 로그(decision_log)를 받아,
-     price 컬럼을 "체결 기준가"로 직접 사용해 간소화된 백테스트를 수행한다.
-   - Backtest 결과(fills_df)는 xai_report_id를 그대로 보존한 상태로 executions에 저장된다.
+     price 컬럼을 "체결 기준가"로 직접 사용해 간소화된 백테스트를 수행합니다.
+   - 백테스트 결과(fills_df)는 xai_report_id를 그대로 보존한 상태로 executions 테이블에 저장됩니다.
 
 [주의 사항]
-- Transformer가 생성하는 decision_log(DataFrame)는 최소한 아래 컬럼을 포함해야 한다.
+- Transformer가 생성하는 decision_log(DataFrame)는 최소한 아래 컬럼을 포함해야 합니다:
   ['ticker', 'date', 'action', 'price',
    'feature_name1', 'feature_name2', 'feature_name3',
    'feature_score1', 'feature_score2', 'feature_score3']
-- GROQ_API_KEY 환경변수가 없으면 XAI 단계는 자동으로 스킵된다.
+- GROQ_API_KEY 환경변수가 없으면 XAI 단계는 자동으로 스킵됩니다.
 """
 
 import os
@@ -51,10 +51,10 @@ sys.path.append(project_root)
 # ----------------------------------------------------------------------
 from finder.main import run_finder                                # 1) 종목 발굴
 from transformer.main import run_transformer                      # 2) 신호 생성(의사결정 로그 생성)
-from backtrader.run_backtrader import backtest, BacktestConfig   # 4) 백트레이딩(간소화 체결 엔진)
-from libs.utils.save_executions_to_db import save_executions_to_db  # 5) 체결내역 DB 저장
-from xai.run_xai import run_xai                                   # 3) XAI 리포트 텍스트 생성
-from libs.utils.save_reports_to_db import save_reports_to_db      # 3.5) XAI 리포트 DB 저장 (id 반환)
+from backtrader.run_backtrader import backtrader, BacktradeConfig   # 3) 백트레이딩(간소화 체결 엔진)
+from libs.utils.save_executions_to_db import save_executions_to_db  # 3.5) 체결내역 DB 저장
+from xai.run_xai import run_xai                                   # 4) XAI 리포트 텍스트 생성
+from libs.utils.save_reports_to_db import save_reports_to_db      # 4.5) XAI 리포트 DB 저장 (id 반환)
 from libs.utils.fetch_ohlcv import fetch_ohlcv                    # (Transformer용) OHLCV 수집 헬퍼
 
 # ----------------------------------------------------------------------
@@ -69,7 +69,7 @@ MARKET_DB_NAME = "db"   # 시세/시장 데이터(DB) 명.
 REPORT_DB_NAME = "db"   # 체결내역 / XAI 리포트를 저장하는 DB 명
 
 # ----------------------------------------------------------------------
-# XAI 및 Backtester에서 공통으로 요구하는 "결정 로그 필수 컬럼" 정의
+# XAI 및 Backtrader에서 공통으로 요구하는 "결정 로그 필수 컬럼" 정의
 # ----------------------------------------------------------------------
 REQUIRED_LOG_COLS = {
     "ticker",
@@ -122,7 +122,7 @@ def _to_float(v, fallback: float = 0.0) -> float:
 
 def run_weekly_finder() -> List[str]:
     """
-    Finder 모듈을 실행하여 후보 티커 리스트를 반환.
+    Finder 모듈을 실행하여 후보 티커 리스트를 반환합니다.
     """
     print("--- [PIPELINE-STEP 1] Finder 모듈 실행 시작 ---")
     try:
@@ -144,7 +144,7 @@ def run_weekly_finder() -> List[str]:
 def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
     """
     종목 리스트에 대해 DB에서 OHLCV를 수집하고 Transformer를 호출하여
-    의사결정 로그(DataFrame)를 생성한다.
+    의사결정 로그(DataFrame)를 생성합니다.
     """
     print("--- [PIPELINE-STEP 2] Transformer 모듈 실행 시작 ---")
 
@@ -219,21 +219,21 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
 def run_backtrader(decision_log: pd.DataFrame) -> pd.DataFrame:
     """
     Transformer에서 생성된 의사결정 로그(decision_log)의 price 컬럼을
-    OHLCV 없이 "체결 기준가"로 직접 사용해 간소화된 백테스트를 수행한다.
+    OHLCV 없이 "체결 기준가"로 직접 사용해 간소화된 백테스트를 수행합니다.
 
     주의:
     - decision_log는 xai_report_id 컬럼을 포함할 수 있으며,
-      backtest() 구현이 해당 컬럼을 드롭하지 않으면 fills_df에도 그대로 보존된다.
+      backtrader() 구현이 해당 컬럼을 드롭하지 않으면 fills_df에도 그대로 보존됩니다.
     """
-    print("--- [PIPELINE-STEP 4] Backtester 실행 시작 ---")
+    print("--- [PIPELINE-STEP 4] Backtrader 실행 시작 ---")
 
     if decision_log is None or decision_log.empty:
-        print("[WARN] Backtester: 비어있는 결정 로그가 입력되었습니다. 체결을 수행하지 않습니다.")
+        print("[WARN] Backtrader: 비어있는 결정 로그가 입력되었습니다. 체결을 수행하지 않습니다.")
         return pd.DataFrame()
 
     run_id = _utcnow().strftime("run-%Y%m%d-%H%M%S")
 
-    cfg = BacktradeConfig(
+    cfg = BacktraderConfig(
         initial_cash=100_000.0,
         slippage_bps=5.0,
         commission_bps=3.0,
@@ -268,7 +268,7 @@ def run_backtrader(decision_log: pd.DataFrame) -> pd.DataFrame:
 def run_xai_report(decision_log: pd.DataFrame) -> List[ReportRow]:
     """
     Transformer 결정 로그를 입력으로 받아, 각 행(의사결정)에 대한
-    XAI 설명 리포트(자연어 텍스트)를 생성한다.
+    XAI 설명 리포트(자연어 텍스트)를 생성합니다.
     """
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 시작 ---")
 
@@ -346,7 +346,7 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[ReportRow]:
 
 def run_pipeline() -> Optional[List[ReportRow]]:
     """
-    전체 파이프라인(Finder → Transformer → XAI → Backtester → DB 저장)을
+    전체 파이프라인(Finder → Transformer → XAI → Backtrader → DB 저장)을
     한 번에 실행하는 엔트리 포인트 함수.
     """
     # 1) Finder
@@ -373,7 +373,6 @@ def run_pipeline() -> Optional[List[ReportRow]]:
         xai_ids = []
 
     # 3.7) logs_df에 xai_report_id 심기
-    #      (길이가 맞지 않거나 XAI 저장 실패 시에는 NULL로 채워서 진행)
     logs_df = logs_df.copy().reset_index(drop=True)
     if xai_ids and len(xai_ids) == len(logs_df):
         logs_df["xai_report_id"] = xai_ids
