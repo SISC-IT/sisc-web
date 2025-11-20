@@ -34,7 +34,7 @@ public class UserBetResponse {
                 .isFree(bet.isFree())
                 .stakePoints(bet.getStakePoints())
                 .betStatus(bet.getBetStatus())
-                .isCorrect(bet.isCollect())        // boolean 타입의 Getter는 isCorrect()
+                .isCorrect(bet.isCorrect())        // boolean 타입의 Getter는 isCorrect()
                 .earnedPoints(bet.getPayoutPoints()) // 엔티티 필드명이 payoutPoints임
                 .build();
     }
