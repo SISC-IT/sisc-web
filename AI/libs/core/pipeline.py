@@ -51,7 +51,7 @@ sys.path.append(project_root)
 # ----------------------------------------------------------------------
 from finder.main import run_finder                                # 1) 종목 발굴
 from transformer.main import run_transformer                      # 2) 신호 생성(의사결정 로그 생성)
-from backtest.simple_backtester import backtest, BacktestConfig   # 4) 백테스팅(간소화 체결 엔진)
+from backtrader.run_backtrader import backtest, BacktestConfig   # 4) 백트레이딩(간소화 체결 엔진)
 from libs.utils.save_executions_to_db import save_executions_to_db  # 5) 체결내역 DB 저장
 from xai.run_xai import run_xai                                   # 3) XAI 리포트 텍스트 생성
 from libs.utils.save_reports_to_db import save_reports_to_db      # 3.5) XAI 리포트 DB 저장 (id 반환)
@@ -213,10 +213,10 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
 
 
 # ======================================================================
-# 3) Backtester: 의사결정 로그 기반 체결/포지션 계산 단계
+# 3) Backtrader: 의사결정 로그 기반 체결/포지션 계산 단계
 # ======================================================================
 
-def run_backtester(decision_log: pd.DataFrame) -> pd.DataFrame:
+def run_backtrader(decision_log: pd.DataFrame) -> pd.DataFrame:
     """
     Transformer에서 생성된 의사결정 로그(decision_log)의 price 컬럼을
     OHLCV 없이 "체결 기준가"로 직접 사용해 간소화된 백테스트를 수행한다.
@@ -233,7 +233,7 @@ def run_backtester(decision_log: pd.DataFrame) -> pd.DataFrame:
 
     run_id = _utcnow().strftime("run-%Y%m%d-%H%M%S")
 
-    cfg = BacktestConfig(
+    cfg = BacktradeConfig(
         initial_cash=100_000.0,
         slippage_bps=5.0,
         commission_bps=3.0,
@@ -242,18 +242,18 @@ def run_backtester(decision_log: pd.DataFrame) -> pd.DataFrame:
         fill_on_same_day=True,
     )
 
-    fills_df, summary = backtest(
+    fills_df, summary = backtrader(
         decision_log=decision_log,
         config=cfg,
         run_id=run_id,
     )
 
     if fills_df is None or fills_df.empty:
-        print("[WARN] Backtester: 생성된 체결 내역이 없습니다.")
+        print("[WARN] Backtrader: 생성된 체결 내역이 없습니다.")
         return pd.DataFrame()
 
     print(
-        f"--- [PIPELINE-STEP 4] Backtester 완료: "
+        f"--- [PIPELINE-STEP 4] Backtrader 완료: "
         f"trades={len(fills_df)}, "
         f"cash_final={summary.get('cash_final')}, "
         f"pnl_realized_sum={summary.get('pnl_realized_sum')} ---"
@@ -386,7 +386,7 @@ def run_pipeline() -> Optional[List[ReportRow]]:
             )
 
     # 4) Backtester: xai_report_id 포함 decision_log로 체결 내역 생성
-    fills_df = run_backtester(logs_df)
+    fills_df = run_backtrader(logs_df)
 
     # 5) executions 테이블에 체결 내역 저장
     try:
