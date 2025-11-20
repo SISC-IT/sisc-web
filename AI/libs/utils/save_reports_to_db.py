@@ -2,11 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 한국어 주석:
-- XAI 리포트 저장(원복 버전)
-- 체결/자산(cash) 업데이트 로직을 모두 제거하고,
-  기존처럼 xai_reports 테이블에 INSERT만 수행한다.
+- XAI 리포트 저장
+- 체결/자산(cash) 업데이트 로직 없이, xai_reports 테이블에 INSERT만 수행한다.
 - DB 스키마는 절대 변경하지 않는다(테이블/컬럼 생성/수정 X).
 - 입력 rows 형식: List[Tuple[ticker, signal, price, date_str, report_text]]
+
+변경점:
+- 기존에는 "실제 INSERT 된 행 수(int)"를 반환했으나,
+  이제는 "각 INSERT 행의 xai_reports.id 리스트(List[int])"를 반환한다.
+  (rows의 순서와 id 리스트의 순서는 동일하다.)
 """
 
 from __future__ import annotations
@@ -48,39 +52,42 @@ def _build_insert_params(rows: Iterable[ReportRow], created_at: datetime) -> Lis
 
 
 # ----- 메인: 리포트 저장(INSERT only) -----
-def save_reports_to_db(rows: List[ReportRow], db_name: str) -> int:
+def save_reports_to_db(rows: List[ReportRow], db_name: str) -> List[int]:
     """
     한국어 주석:
     - 입력된 XAI 리포트(rows)를 public.xai_reports 테이블에 INSERT 한다.
     - 테이블 스키마는 건드리지 않는다(생성/ALTER 하지 않음).
-    - 반환값: 실제 INSERT 된 행 수.
+    - 반환값: 실제 INSERT 된 각 행의 xai_reports.id 리스트.
+      (rows의 순서에서 유효한 행만 추려낸 순서와 동일)
     """
     if not rows:
         print("[INFO] 저장할 XAI 리포트가 없습니다.")
-        return 0
+        return []
 
     engine = get_engine(db_name)
     created_at = utcnow()
 
-    # INSERT 템플릿 (스키마는 기존 그대로 사용)
+    # INSERT 템플릿 (스키마는 기존 그대로 사용) + RETURNING id
     insert_sql = text("""
         INSERT INTO public.xai_reports (ticker, signal, price, date, report, created_at)
         VALUES (:ticker, :signal, :price, :date, :report, :created_at)
+        RETURNING id
     """)
 
-    inserted = 0
+    inserted_ids: List[int] = []
+
     with engine.begin() as conn:
         params = _build_insert_params(rows, created_at)
         if not params:
             print("[WARN] 유효한 XAI 리포트 파라미터가 없어 저장을 생략합니다.")
-            return 0
+            return []
 
-        # 대량 삽입 시 성능을 위해 청크 처리
-        CHUNK = 1000
-        for i in range(0, len(params), CHUNK):
-            batch = params[i:i + CHUNK]
-            conn.execute(insert_sql, batch)
-            inserted += len(batch)
+        # 리포트 개수가 엄청 많지 않을 것으로 가정하고, id를 받기 위해 한 행씩 INSERT
+        for p in params:
+            result = conn.execute(insert_sql, p)
+            new_id = result.scalar()
+            if new_id is not None:
+                inserted_ids.append(int(new_id))
 
-    print(f"--- {inserted}개의 XAI 리포트가 저장되었습니다. ---")
-    return inserted
+    print(f"--- {len(inserted_ids)}개의 XAI 리포트가 저장되었습니다. ---")
+    return inserted_ids
