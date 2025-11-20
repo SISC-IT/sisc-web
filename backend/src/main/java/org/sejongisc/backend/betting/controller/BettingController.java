@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.sejongisc.backend.betting.dto.UserBetResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -91,12 +92,12 @@ public class BettingController {
             }
     )
     @PostMapping("/user-bets")
-    public ResponseEntity<UserBet> postUserBet(
+    public ResponseEntity<UserBetResponse> postUserBet(
             @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UserBetRequest userBetRequest) {
 
-        UserBet userBet = bettingService.postUserBet(principal.getUserId(), userBetRequest);
+        UserBetResponse userBet = bettingService.postUserBet(principal.getUserId(), userBetRequest);
         return ResponseEntity.ok(userBet);
     }
 
@@ -135,11 +136,11 @@ public class BettingController {
             }
     )
     @GetMapping("/user-bets/history")
-    public ResponseEntity<List<UserBet>> getAllUserBets(
+    public ResponseEntity<List<UserBetResponse>> getAllUserBets(
             @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails principal) {
 
-        List<UserBet> userBets = bettingService.getAllMyBets(principal.getUserId());
+        List<UserBetResponse> userBets = bettingService.getAllMyBets(principal.getUserId());
         return ResponseEntity.ok(userBets);
     }
 }
