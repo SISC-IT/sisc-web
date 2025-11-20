@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.betting.dto.BetRoundResponse;
 import org.sejongisc.backend.betting.dto.UserBetRequest;
 import org.sejongisc.backend.betting.entity.BetRound;
 import org.sejongisc.backend.betting.entity.Scope;
@@ -47,11 +48,11 @@ public class BettingController {
             }
     )
     @GetMapping("/bet-rounds/{scope}")
-    public ResponseEntity<BetRound> getTodayBetRound(
+    public ResponseEntity<BetRoundResponse> getTodayBetRound(
             @Parameter(description = "라운드 범위 (Scope): DAILY 또는 WEEKLY", example = "DAILY")
             @PathVariable Scope scope
     ) {
-        Optional<BetRound> betRound = bettingService.getActiveRound(scope);
+        Optional<BetRoundResponse> betRound = bettingService.getActiveRoundResponse(scope);
 
         return betRound
                 .map(ResponseEntity::ok)
