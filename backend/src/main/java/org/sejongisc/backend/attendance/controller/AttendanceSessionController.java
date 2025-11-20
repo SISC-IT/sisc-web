@@ -49,7 +49,7 @@ public class AttendanceSessionController {
 
         AttendanceSessionResponse response = attendanceSessionService.createSession(request);
 
-        log.info("출석 세션 생성 완료: 세션ID={}, 코드={}", response.getAttendanceSessionId(), response.getCode());
+        log.info("출석 세션 생성 완료: 세션ID={}", response.getAttendanceSessionId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

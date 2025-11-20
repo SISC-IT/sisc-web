@@ -62,10 +62,7 @@ public class AttendanceSessionControllerTest {
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
                 .attendanceSessionId(UUID.randomUUID())
                 .title("세투연 정규 세션")
-                .tag("금융IT")
-                .startsAt(request.getStartsAt())
                 .windowSeconds(1800)
-                .code("123456")
                 .rewardPoints(10)
                 .latitude(37.5665)
                 .longitude(126.9780)
@@ -83,8 +80,6 @@ public class AttendanceSessionControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("세투연 정규 세션"))
-                .andExpect(jsonPath("$.tag").value("금융IT"))
-                .andExpect(jsonPath("$.code").value("123456"))
                 .andExpect(jsonPath("$.rewardPoints").value(10))
                 .andExpect(jsonPath("$.latitude").value(37.5665))
                 .andExpect(jsonPath("$.longitude").value(126.9780))
@@ -141,8 +136,6 @@ public class AttendanceSessionControllerTest {
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
                 .attendanceSessionId(sessionId)
                 .title("세투연 정규 세션")
-                .code("123456")
-                .startsAt(LocalDateTime.now().plusHours(1))
                 .windowSeconds(1800)
                 .status(SessionStatus.UPCOMING)
                 .participantCount(0)
@@ -154,8 +147,7 @@ public class AttendanceSessionControllerTest {
         mockMvc.perform(get("/api/attendance/sessions/{sessionId}", sessionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.attendanceSessionId").value(sessionId.toString()))
-                .andExpect(jsonPath("$.title").value("세투연 정규 세션"))
-                .andExpect(jsonPath("$.code").value("123456"));
+                .andExpect(jsonPath("$.title").value("세투연 정규 세션"));
     }
 
     @Test
@@ -167,7 +159,6 @@ public class AttendanceSessionControllerTest {
                 AttendanceSessionResponse.builder()
                         .attendanceSessionId(UUID.randomUUID())
                         .title("정규 세션 1")
-                        .code("111111")
                         .status(SessionStatus.UPCOMING)
                         .visibility(SessionVisibility.PUBLIC)
                         .participantCount(10)
@@ -175,7 +166,6 @@ public class AttendanceSessionControllerTest {
                 AttendanceSessionResponse.builder()
                         .attendanceSessionId(UUID.randomUUID())
                         .title("정규 세션 2")
-                        .code("222222")
                         .status(SessionStatus.OPEN)
                         .visibility(SessionVisibility.PUBLIC)
                         .participantCount(5)
@@ -203,7 +193,6 @@ public class AttendanceSessionControllerTest {
                 AttendanceSessionResponse.builder()
                         .attendanceSessionId(UUID.randomUUID())
                         .title("활성 세션")
-                        .code("111111")
                         .status(SessionStatus.OPEN)
                         .checkInAvailable(true)
                         .remainingSeconds(900L)
@@ -242,10 +231,7 @@ public class AttendanceSessionControllerTest {
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
                 .attendanceSessionId(sessionId)
                 .title("수정된 제목")
-                .tag("수정된 태그")
-                .startsAt(request.getStartsAt())
                 .windowSeconds(3600)
-                .code("123456")
                 .rewardPoints(10)
                 .visibility(SessionVisibility.PRIVATE)
                 .status(SessionStatus.UPCOMING)
@@ -260,7 +246,6 @@ public class AttendanceSessionControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("수정된 제목"))
-                .andExpect(jsonPath("$.tag").value("수정된 태그"))
                 .andExpect(jsonPath("$.rewardPoints").value(10))
                 .andExpect(jsonPath("$.visibility").value("PRIVATE"));
     }

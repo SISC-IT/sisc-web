@@ -83,9 +83,6 @@ public class AttendanceSessionServiceTest {
         //then
         assertAll(
                 () -> assertThat(response.getTitle()).isEqualTo("세투연 정기모임"),
-                () -> assertThat(response.getTag()).isEqualTo("금융IT"),
-                () -> assertThat(response.getCode()).isNotNull(),
-                () -> assertThat(response.getCode()).hasSize(6),
                 () -> assertThat(response.getRewardPoints()).isEqualTo(10),
                 () -> assertThat(response.getLatitude()).isEqualTo(37.5665),
                 () -> assertThat(response.getLongitude()).isEqualTo(126.9780),
@@ -270,7 +267,6 @@ public class AttendanceSessionServiceTest {
         //then
         assertAll(
                 () -> assertThat(response.getTitle()).isEqualTo("수정된 제목"),
-                () -> assertThat(response.getTag()).isEqualTo("수정된 태그"),
                 () -> assertThat(response.getRewardPoints()).isEqualTo(10),
                 () -> assertThat(response.getLatitude()).isEqualTo(37.5000),
                 () -> assertThat(response.getLongitude()).isEqualTo(127.0000),

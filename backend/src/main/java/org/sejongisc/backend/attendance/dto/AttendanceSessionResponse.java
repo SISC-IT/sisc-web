@@ -32,29 +32,10 @@ public class AttendanceSessionResponse {
     private String title;
 
     @Schema(
-            description = "세션의 분류 태그",
-            example = "금융IT"
-    )
-    private String tag;
-
-    @Schema(
-            description = "세션 시작 시간",
-            example = "2024-11-15 14:00:00"
-    )
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime startsAt;
-
-    @Schema(
             description = "출석 체크인이 가능한 시간 윈도우 (초 단위)",
             example = "1800"
     )
     private Integer windowSeconds;
-
-    @Schema(
-            description = "출석 세션의 6자리 코드. 학생들이 체크인 시 입력합니다.",
-            example = "ABC123"
-    )
-    private String code;
 
     @Schema(
             description = "출석 완료 시 지급할 포인트",
@@ -107,13 +88,6 @@ public class AttendanceSessionResponse {
     )
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
-
-    @Schema(
-            description = "세션의 예상 종료 시간 (시작시간 + 윈도우)",
-            example = "2024-11-15 14:30:00"
-    )
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime endsAt;
 
     @Schema(
             description = "현재부터 체크인 마감까지 남은 시간 (초 단위). 음수이면 마감됨",
