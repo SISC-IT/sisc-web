@@ -38,6 +38,7 @@ import org.sejongisc.backend.board.repository.PostRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.entity.Role; // Role Enum import 필요
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -86,9 +87,28 @@ class PostServiceImplTest {
     boardId = UUID.randomUUID();
     postId = UUID.randomUUID();
 
-    mockUser = User.builder().userId(userId).build();
-    mockParentBoard = Board.builder().boardId(UUID.randomUUID()).parentBoard(null).build();
-    mockBoard = Board.builder().boardId(boardId).parentBoard(mockParentBoard).build();
+    // DTO 변환(UserInfoResponse.from)시 NPE 방지를 위해 Role, Name, Email 등 필수 필드 세팅
+    mockUser = User.builder()
+        .userId(userId)
+        .email("test@example.com")
+        .name("Tester")
+        .role(Role.TEAM_MEMBER) // 또는 Role.USER (프로젝트 Enum 정의에 맞게)
+        .build();
+
+    mockParentBoard = Board.builder()
+        .boardId(UUID.randomUUID())
+        .boardName("Parent Board")
+        .parentBoard(null)
+        .createdBy(mockUser)
+        .build();
+
+    mockBoard = Board.builder()
+        .boardId(boardId)
+        .boardName("Child Board")
+        .parentBoard(mockParentBoard)
+        .createdBy(mockUser) // BoardResponse.from 호출 시 필요
+        .build();
+
     mockPost = Post.builder()
         .postId(postId)
         .user(mockUser)
@@ -118,7 +138,7 @@ class PostServiceImplTest {
     when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
     when(fileUploadService.store(any(MultipartFile.class))).thenReturn("saved_filename.txt");
     when(fileUploadService.getRootLocation()).thenReturn(Paths.get("test/path"));
-    when(postRepository.save(any(Post.class))).thenReturn(mockPost); // 저장된 post 반환
+    when(postRepository.save(any(Post.class))).thenReturn(mockPost);
 
     // when
     postService.savePost(request, userId);
@@ -153,7 +173,7 @@ class PostServiceImplTest {
     PostRequest request = PostRequest.builder()
         .title("Updated Title")
         .content("Updated Content")
-        .files(Collections.emptyList()) // 테스트 편의상 새 파일은 없음
+        .files(Collections.emptyList())
         .build();
 
     PostAttachment oldAttachment = PostAttachment.builder().savedFilename("old_file.txt").build();
@@ -180,11 +200,11 @@ class PostServiceImplTest {
     PostRequest request = PostRequest.builder().build();
 
     // Mocking
-    when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost)); // mockPost의 user는 'userId'
+    when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
 
     // when & then
     CustomException exception = assertThrows(CustomException.class, () -> {
-      postService.updatePost(request, postId, otherUserId); // 다른 'otherUserId'로 수정 시도
+      postService.updatePost(request, postId, otherUserId);
     });
 
     assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_POST_OWNER);
@@ -228,11 +248,16 @@ class PostServiceImplTest {
     when(postRepository.findAllByBoard(mockBoard, pageable)).thenReturn(postPage);
 
     // when
+    // 여기서 mapToPostResponse 내부적으로 UserInfoResponse.from(), BoardResponse.from()이 호출됨
+    // mockUser에 Role 정보가 없으면 NPE 발생 가능 (setUp에서 처리함)
     Page<PostResponse> result = postService.getPosts(boardId, page, size);
 
     // then
     assertThat(result.getTotalElements()).isEqualTo(1);
     assertThat(result.getContent().get(0).getPostId()).isEqualTo(postId);
+    // DTO 변환 확인
+    assertThat(result.getContent().get(0).getUser().getName()).isEqualTo(mockUser.getName());
+    assertThat(result.getContent().get(0).getBoard().getBoardName()).isEqualTo(mockBoard.getBoardName());
   }
 
   @Test
@@ -244,8 +269,21 @@ class PostServiceImplTest {
     Pageable commentPageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDate"));
 
     // 댓글 Mock 데이터 생성
-    Comment parentComment = Comment.builder().commentId(UUID.randomUUID()).post(mockPost).content("부모댓글1").parentComment(null).build();
-    Comment childComment = Comment.builder().commentId(UUID.randomUUID()).post(mockPost).content("대댓글1").parentComment(parentComment).build();
+    Comment parentComment = Comment.builder()
+        .commentId(UUID.randomUUID())
+        .post(mockPost)
+        .user(mockUser) // 댓글 작성자 필요 (DTO 변환 위해)
+        .content("부모댓글1")
+        .parentComment(null)
+        .build();
+
+    Comment childComment = Comment.builder()
+        .commentId(UUID.randomUUID())
+        .post(mockPost)
+        .user(mockUser) // 댓글 작성자 필요
+        .content("대댓글1")
+        .parentComment(parentComment)
+        .build();
 
     Page<Comment> parentCommentPage = new PageImpl<>(List.of(parentComment), commentPageable, 1);
 
@@ -293,8 +331,9 @@ class PostServiceImplTest {
 
     // Mocking
     when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+    when(boardRepository.findById(mockParentBoard.getBoardId())).thenReturn(Optional.of(mockParentBoard));
 
-    // ArgumentCaptor: save(board)에 실제 어떤 board 객체가 전달되었는지 잡기 위함
+    // ArgumentCaptor
     ArgumentCaptor<Board> boardCaptor = ArgumentCaptor.forClass(Board.class);
 
     // when
