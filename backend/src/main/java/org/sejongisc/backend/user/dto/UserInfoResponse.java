@@ -1,11 +1,12 @@
 package org.sejongisc.backend.user.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 import java.util.Collection;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.user.entity.User;
 
 @Getter
 @AllArgsConstructor
@@ -56,4 +57,30 @@ public class UserInfoResponse {
             example = "[\"ROLE_USER\"]"
     )
     private Collection<?> authorities;
+
+  public static UserInfoResponse from(CustomUserDetails user) {
+    if (user == null) {
+      return null;
+    }
+
+    return new UserInfoResponse(
+        user.getUserId(),
+        user.getName(),
+        user.getEmail(),
+        user.getPhoneNumber(),
+        user.getPoint(),
+        user.getRole().name(),
+        user.getAuthorities()
+    );
+  }
+
+  public static UserInfoResponse from(User user) {
+    if (user == null) {
+      return null;
+    }
+
+    CustomUserDetails userDetails = new CustomUserDetails(user);
+
+    return from(userDetails);
+  }
 }

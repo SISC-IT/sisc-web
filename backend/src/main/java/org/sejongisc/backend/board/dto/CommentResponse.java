@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.sejongisc.backend.board.entity.Comment;
-import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.dto.UserInfoResponse;
 
 @ToString
 @AllArgsConstructor
@@ -20,17 +20,17 @@ import org.sejongisc.backend.user.entity.User;
 @Builder
 public class CommentResponse {
     private UUID commentId;
-    private User user;
+    private UserInfoResponse user;
     private UUID postId;
     private String content;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     private List<CommentResponse> replies;
 
-  public static CommentResponse of(Comment comment) {
+  public static CommentResponse from(Comment comment) {
     return CommentResponse.builder()
         .commentId(comment.getCommentId())
-        .user(comment.getUser())
+        .user(UserInfoResponse.from(comment.getUser()))
         .postId(comment.getPost().getPostId())
         .content(comment.getContent())
         .createdDate(comment.getCreatedDate())
@@ -38,10 +38,10 @@ public class CommentResponse {
         .build();
   }
 
-  public static CommentResponse of(Comment comment, List<CommentResponse> replies) {
+  public static CommentResponse from(Comment comment, List<CommentResponse> replies) {
     return CommentResponse.builder()
         .commentId(comment.getCommentId())
-        .user(comment.getUser())
+        .user(UserInfoResponse.from(comment.getUser()))
         .postId(comment.getPost().getPostId())
         .content(comment.getContent())
         .createdDate(comment.getCreatedDate())
