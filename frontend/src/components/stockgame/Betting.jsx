@@ -38,7 +38,7 @@ const Betting = ({ period }) => {
       return;
     }
 
-    if (data.betRoundId === userBets.round.betRoundId) {
+    if (data.betRoundId === userBets.betRoundId) {
       userBets.option === 'RISE' ? setIsBetting('up') : setIsBetting('down');
     } else {
       setIsBetting('none');

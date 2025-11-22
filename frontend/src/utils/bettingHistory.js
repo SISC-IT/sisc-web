@@ -13,11 +13,11 @@ const betHistory = async () => {
 export const getDailyBetHistory = async () => {
   const data = await betHistory();
   if (!data) return [];
-  return data.filter((item) => item.round.scope === 'DAILY');
+  return data.filter((item) => item.roundTitle.includes('DAILY'));
 };
 
 export const getWeeklyBetHistory = async () => {
   const data = await betHistory();
   if (!data) return [];
-  return data.filter((item) => item.round.scope === 'WEEKLY');
+  return data.filter((item) => item.roundTitle.includes('WEEKLY'));
 };
