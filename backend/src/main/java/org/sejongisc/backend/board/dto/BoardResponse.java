@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.sejongisc.backend.board.entity.Board;
-import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.dto.UserInfoResponse;
 
 @ToString
 @AllArgsConstructor
@@ -22,15 +22,15 @@ public class BoardResponse {
 
   private String boardName;
 
-  private User createdBy;
+  private UserInfoResponse createdBy;
 
   private UUID parentBoardId;
 
-  public static BoardResponse of(Board board) {
+  public static BoardResponse from(Board board) {
     return BoardResponse.builder()
         .boardId(board.getBoardId())
         .boardName(board.getBoardName())
-        .createdBy(board.getCreatedBy())
+        .createdBy(UserInfoResponse.from(board.getCreatedBy()))
         .parentBoardId(board.getParentBoard() != null ? board.getParentBoard().getBoardId() : null)
         .build();
   }

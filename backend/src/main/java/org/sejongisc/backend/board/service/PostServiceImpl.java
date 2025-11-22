@@ -23,6 +23,7 @@ import org.sejongisc.backend.board.repository.PostRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.dto.UserInfoResponse;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -235,11 +236,11 @@ public class PostServiceImpl implements PostService {
 
       // 자식 댓글 목록을 CommentResponse DTO 리스트로 변환
       List<CommentResponse> replyResponses = childComments.stream()
-          .map(CommentResponse::of)
+          .map(CommentResponse::from)
           .toList();
 
       // 부모 댓글 DTO를 생성하며, 자식 DTO 리스트를 주입
-      return CommentResponse.of(parent, replyResponses);
+      return CommentResponse.from(parent, replyResponses);
     });
 
     // 첨부 파일 조회
@@ -251,8 +252,8 @@ public class PostServiceImpl implements PostService {
     // PostResponse DTO를 직접 빌드하여 반환
     return PostResponse.builder()
         .postId(post.getPostId())
-        .board(post.getBoard())
-        .user(post.getUser())
+        .board(BoardResponse.from(post.getBoard()))
+        .user(UserInfoResponse.from(post.getUser()))
         .title(post.getTitle())
         .content(post.getContent())
         .bookmarkCount(post.getBookmarkCount())
@@ -302,15 +303,15 @@ public class PostServiceImpl implements PostService {
     List<Board> parentBoards = boardRepository.findAllByParentBoardIsNull();
 
     return parentBoards.stream()
-        .map(BoardResponse::of)
+        .map(BoardResponse::from)
         .toList();
   }
 
   private PostResponse mapToPostResponse(Post post) {
     return PostResponse.builder()
         .postId(post.getPostId())
-        .user(post.getUser())
-        .board(post.getBoard())
+        .user(UserInfoResponse.from(post.getUser()))
+        .board(BoardResponse.from(post.getBoard()))
         .title(post.getTitle())
         .content(post.getContent())
         .bookmarkCount(post.getBookmarkCount())
