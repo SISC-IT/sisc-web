@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Getter
 @Builder
@@ -22,6 +23,15 @@ import java.time.LocalTime;
                 "라운드의 날짜, 시작 시간, 출석 가능한 시간을 설정합니다."
 )
 public class AttendanceRoundRequest {
+
+    @NotNull(message = "세션 ID는 필수입니다")
+    @Schema(
+            description = "회차가 속할 세션의 ID",
+            example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            type = "string",
+            format = "uuid"
+    )
+    private UUID sessionId;
 
     @Schema(
             description = "라운드 진행 날짜 (YYYY-MM-DD 형식). 미제공 시 서버의 현재 날짜를 사용합니다.",
