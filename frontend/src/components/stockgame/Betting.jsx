@@ -59,7 +59,12 @@ const Betting = ({ period }) => {
         setIsBetting('up');
         return res;
       } catch (error) {
-        console.log(error.message);
+        // 409 처리
+        if (error.status === 409) {
+          alert('베팅 가능 기간이 아닙니다.');
+          return;
+        }
+        alert('오류가 발생했습니다.');
         return null;
       }
     }
@@ -79,7 +84,12 @@ const Betting = ({ period }) => {
         setIsBetting('down');
         return res;
       } catch (error) {
-        console.log(error.message);
+        // 409 처리
+        if (error.status === 409) {
+          alert('베팅 가능 기간이 아닙니다.');
+          return;
+        }
+        alert('오류가 발생했습니다.');
         return null;
       }
     }
