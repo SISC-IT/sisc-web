@@ -12,11 +12,16 @@ import DeleteIcon from '../assets/boardCloseIcon.svg';
 import { getTimeAgo } from '../utils/TimeUtils';
 
 const PostDetail = () => {
-  const { id } = useParams();
+  const { postId, team } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  console.log('=== PostDetail 렌더링 ===');
+  console.log('postId:', postId);
+  console.log('team:', team);
+  console.log('location.state:', location.state);
 
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
@@ -65,12 +70,21 @@ const PostDetail = () => {
 
   // 게시글 로딩 및 댓글 로딩
   useEffect(() => {
+    console.log('=== useEffect 실행 ===');
     setLoading(true);
     let currentPost = location.state?.post;
 
+    console.log('currentPost from location.state:', currentPost);
+
     if (!currentPost) {
       const allPosts = getPostsFromStorage();
-      currentPost = allPosts.find((p) => p.id === parseInt(id, 10));
+      console.log('모든 게시글:', allPosts);
+      console.log('찾는 postId:', postId, 'type:', typeof postId);
+      currentPost = allPosts.find((p) => {
+        console.log('비교:', p.id, '===', parseInt(postId, 10));
+        return p.id === parseInt(postId, 10);
+      });
+      console.log('찾은 게시글:', currentPost);
     }
     setPost(currentPost);
     setLoading(false);
@@ -78,9 +92,10 @@ const PostDetail = () => {
     if (currentPost) {
       setComments(getCommentsFromStorage(currentPost.id));
     } else {
+      console.log('❌ 게시글을 찾을 수 없습니다!');
       setComments([]);
     }
-  }, [id, location.state]);
+  }, [postId, location.state]);
 
   // 좋아요 토글
   const handleLike = () => {
@@ -122,7 +137,7 @@ const PostDetail = () => {
       const allPosts = getPostsFromStorage();
       const updatedPosts = allPosts.filter((p) => p.id !== post.id);
       savePostsToStorage(updatedPosts);
-      navigate('/board');
+      navigate(`/board/${team || ''}`);
     }
   };
 

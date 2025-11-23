@@ -8,13 +8,18 @@ import HeartIcon from '../../assets/boardHeart.svg';
 import HeartFilledIcon from '../../assets/boardHeart.fill.svg';
 import { getTimeAgo } from '../../utils/TimeUtils';
 
-const PostItem = React.memo(({ post, onLike, onBookmark }) => {
+const PostItem = React.memo(({ post, onLike, onBookmark, currentTeam }) => {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
-    navigate(`/board/${post.id}`, { state: { post } });
-  };
+    const team = currentTeam || 'all';
+    console.log('=== 게시글 클릭 ===');
+    console.log('post.id:', post.id);
+    console.log('team:', team);
+    console.log('이동할 URL:', `/board/${team}/${post.id}`);
 
+    navigate(`/board/${team}/${post.id}`, { state: { post } });
+  };
   const handleActionClick = (e) => {
     e.stopPropagation();
   };

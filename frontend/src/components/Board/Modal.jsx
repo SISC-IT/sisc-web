@@ -3,7 +3,30 @@ import FolderIcon from '../../assets/boardFolder.svg';
 import CloseIcon from '../../assets/boardCloseIcon.svg';
 import DropdownArrowIcon from '../../assets/boardSelectArrow.svg';
 
-const Modal = ({ title, setTitle, content, setContent, onSave, onClose }) => {
+const handleDragOver = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+};
+
+const handleDrop = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const droppedFiles = Array.from(e.dataTransfer.files);
+  onFileChange({ target: { files: droppedFiles } });
+};
+
+const Modal = ({
+  title,
+  setTitle,
+  content,
+  setContent,
+  selectedFiles,
+  onFileChange,
+  onRemoveFile,
+  onSave,
+  onClose,
+}) => {
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -32,6 +55,8 @@ const Modal = ({ title, setTitle, content, setContent, onSave, onClose }) => {
               <div
                 className={styles.fileSection}
                 onClick={() => document.getElementById('fileUpload').click()}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
               >
                 <img src={FolderIcon} alt="폴더" />
                 <span className={styles.fileText}>파일 추가</span>
@@ -40,6 +65,8 @@ const Modal = ({ title, setTitle, content, setContent, onSave, onClose }) => {
                   id="fileUpload"
                   className={styles.fileInput}
                   style={{ display: 'none' }}
+                  multiple
+                  onChange={onFileChange}
                 />
               </div>
               <div className={styles.divider}></div>
@@ -51,6 +78,28 @@ const Modal = ({ title, setTitle, content, setContent, onSave, onClose }) => {
               />
             </div>
           </div>
+
+          {selectedFiles && selectedFiles.length > 0 && (
+            <div className={styles.fileList}>
+              <label className={styles.label}>
+                첨부 파일 ({selectedFiles.length})
+              </label>
+              {selectedFiles.map((file, index) => (
+                <div key={index} className={styles.fileItem}>
+                  <span className={styles.fileName}>
+                    {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.removeFileButton}
+                    onClick={() => onRemoveFile(index)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className={styles.accessField}>
             <label className={styles.accessLabel}>접근 권한</label>

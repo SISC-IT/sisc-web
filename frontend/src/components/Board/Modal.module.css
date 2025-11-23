@@ -34,7 +34,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: auto;
+  overflow: hidden; /* ✨ auto → hidden으로 변경 (모서리 유지) */
 }
 
 .header {
@@ -43,6 +43,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-md);
+  flex-shrink: 0; /* ✨ 헤더 고정 */
 }
 
 .title {
@@ -69,8 +70,30 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  flex: 0 1 auto;
+  flex: 1; /* ✨ 0 1 auto → 1로 변경 (남은 공간 차지) */
   margin-bottom: var(--spacing-sm);
+  overflow-y: auto; /* ✨ 스크롤 추가 */
+  overflow-x: hidden;
+  padding-right: 8px; /* ✨ 스크롤바 공간 */
+}
+
+/* ✨ 스크롤바 스타일 추가 */
+.form::-webkit-scrollbar {
+  width: 6px;
+}
+
+.form::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+.form::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.form::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .titleField {
@@ -143,6 +166,43 @@
   line-height: 100%;
   color: rgba(175, 175, 175, 1);
   flex-shrink: 0;
+}
+
+/* 파일 목록 */
+.fileList {
+  margin-top: 12px;
+}
+
+.fileItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.fileName {
+  font-size: 14px;
+  color: #333;
+  flex: 1;
+  word-break: break-all; /* ✨ 긴 파일명 줄바꿈 */
+}
+
+.removeFileButton {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 8px;
+  transition: color 0.2s;
+  flex-shrink: 0; /* ✨ 버튼 크기 고정 */
+}
+
+.removeFileButton:hover {
+  color: #ff4444;
 }
 
 .divider {
@@ -259,7 +319,7 @@
   background: rgba(29, 128, 244, 1);
   color: rgba(255, 255, 255, 1);
   align-self: flex-end;
-  flex-shrink: 0;
+  flex-shrink: 0; /* ✨ 버튼 고정 */
   transition: all 0.2s;
 }
 
