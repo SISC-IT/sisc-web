@@ -91,10 +91,8 @@ public class SecurityConfig {
                                     "/api/auth/reissue",
                                     "/v3/api-docs/**",
                                     "/swagger-ui/**",
-
                                     "/api/user/id/find",
                                     "/api/user/password/reset/**",
-
                                     "/api/email/**",
                                     "/swagger-resources/**",
                                     "/webjars/**",

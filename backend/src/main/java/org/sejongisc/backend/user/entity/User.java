@@ -42,7 +42,7 @@ public class User extends BasePostgresEntity{
     @Column(nullable = false)
     private Role role;
 
-    @Column(columnDefinition = "integer default 0")
+    @Column(columnDefinition = "integer default 0",nullable = false)
     private Integer point;
 
     // 포인트 총량 업데이트를 위한 낙관적 락 버전 필드
