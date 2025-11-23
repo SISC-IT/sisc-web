@@ -4,10 +4,68 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true, // ✨ 추가
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// ✨ 요청 인터셉터: 모든 요청에 JWT 자동 추가
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ✨ 응답 인터셉터: 토큰 갱신 로직
+apiClient.interceptors.response.use(
+  (res) => res,
+  async (err) => {
+    const originRequest = err.config;
+
+    // 액세스 토큰 만료 확인
+    if (err.response?.status === 401 && !originRequest._retry) {
+      originRequest._retry = true;
+
+      try {
+        const rt = localStorage.getItem('refreshToken');
+        const res = await axios.post(
+          `${API_BASE_URL}/api/auth/reissue`,
+          { refreshToken: rt },
+          { withCredentials: true }
+        );
+
+        const newAccessToken = res.data.accessToken;
+
+        localStorage.setItem('accessToken', newAccessToken);
+        originRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+        return apiClient(originRequest);
+      } catch (refreshError) {
+        console.error('Token refresh failed: ', refreshError);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    const status = err.response?.status;
+    const message =
+      err.response?.data?.message ||
+      err.response?.statusText ||
+      '오류가 발생했습니다.';
+    return Promise.reject({ status, message, data: err.response?.data });
+  }
+);
 
 // 최상위 부모 게시판 목록 조회
 export const getParentBoards = async () => {
@@ -21,7 +79,6 @@ export const createBoard = async (boardName, parentBoardId = null) => {
     boardName: boardName,
   };
 
-  // parentBoardId가 있으면 추가
   if (parentBoardId) {
     requestBody.parentBoardId = parentBoardId;
   }
@@ -30,15 +87,15 @@ export const createBoard = async (boardName, parentBoardId = null) => {
   return response.data;
 };
 
-// 게시글 목록 조회 - boardId 파라미터 추가
+// 게시글 목록 조회
 export const getPosts = async (boardId) => {
   const response = await apiClient.get('/api/board/posts', {
-    params: { boardId }, // 쿼리 파라미터로 전달
+    params: { boardId },
   });
   return response.data;
 };
 
-// 게시글 검색 - boardId 파라미터 추가
+// 게시글 검색
 export const searchPosts = async (boardId, searchTerm) => {
   const response = await apiClient.get('/api/board/posts/search', {
     params: {
@@ -49,10 +106,10 @@ export const searchPosts = async (boardId, searchTerm) => {
   return response.data;
 };
 
-// 게시글 작성 - boardId 포함
+// 게시글 작성
 export const createPost = async (boardId, postData) => {
-  console.log('createPost 호출됨 - boardId:', boardId); // ✨ 디버깅 로그
-  console.log('createPost 호출됨 - postData:', postData); // ✨ 디버깅 로그
+  console.log('createPost 호출됨 - boardId:', boardId);
+  console.log('createPost 호출됨 - postData:', postData);
 
   if (!postData) {
     throw new Error('postData가 없습니다.');
@@ -71,12 +128,13 @@ export const createPost = async (boardId, postData) => {
   formData.append('title', postData.title);
   formData.append('content', postData.content);
 
-  if (postData.files) {
+  if (postData.files && postData.files.length > 0) {
     postData.files.forEach((file) => {
       formData.append('files', file);
     });
   }
 
+  // ✨ apiClient가 자동으로 Authorization 헤더 추가
   const response = await apiClient.post('/api/board/post', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
