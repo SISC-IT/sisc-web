@@ -15,10 +15,19 @@ import QuantBot from './pages/QuantBot';
 
 import OAuthSuccess from './pages/OAuthSuccess.jsx';
 
+import Main from './pages/external/Main.jsx';
+import Intro from './pages/external/Intro.jsx';
+import Leaders from './pages/external/Leaders.jsx';
+import Portfolio from './pages/external/Portfolio.jsx';
+
 function App() {
   return (
     <>
       <Routes>
+        <Route path="/main" element={<Main />} />
+        <Route path="/main/intro" element={<Intro />} />
+        <Route path="/main/leaders" element={<Leaders />} />
+        <Route path="/main/portfolio" element={<Portfolio />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth/success" element={<OAuthSuccess />} />
