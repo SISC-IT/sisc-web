@@ -5,7 +5,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
-import org.sejongisc.backend.attendance.entity.SessionStatus;
 import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -62,17 +62,14 @@ public class AttendanceSessionControllerTest {
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
                 .attendanceSessionId(UUID.randomUUID())
                 .title("세투연 정규 세션")
-                .tag("금융IT")
-                .startsAt(request.getStartsAt())
-                .windowSeconds(1800)
-                .code("123456")
+                .defaultStartTime(LocalDateTime.now().plusHours(1).toLocalTime())
+                .defaultAvailableMinutes(30)
                 .rewardPoints(10)
-                .latitude(37.5665)
-                .longitude(126.9780)
-                .radiusMeters(100)
-                .visibility(SessionVisibility.PUBLIC)
-                .status(SessionStatus.UPCOMING)
-                .participantCount(0)
+                .location(AttendanceSessionResponse.LocationInfo.builder()
+                        .lat(37.5665)
+                        .lng(126.9780)
+                        .build())
+                .isVisible(true)
                 .build();
 
         when(attendanceSessionService.createSession(any(AttendanceSessionRequest.class))).thenReturn(response);
@@ -83,15 +80,11 @@ public class AttendanceSessionControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("세투연 정규 세션"))
-                .andExpect(jsonPath("$.tag").value("금융IT"))
-                .andExpect(jsonPath("$.code").value("123456"))
                 .andExpect(jsonPath("$.rewardPoints").value(10))
-                .andExpect(jsonPath("$.latitude").value(37.5665))
-                .andExpect(jsonPath("$.longitude").value(126.9780))
-                .andExpect(jsonPath("$.radiusMeters").value(100))
-                .andExpect(jsonPath("$.visibility").value("PUBLIC"))
-                .andExpect(jsonPath("$.status").value("UPCOMING"))
-                .andExpect(jsonPath("$.participantCount").value(0));
+                .andExpect(jsonPath("$.location.lat").value(37.5665))
+                .andExpect(jsonPath("$.location.lng").value(126.9780))
+                .andExpect(jsonPath("$.isVisible").value(true))
+                .andExpect(jsonPath("$.defaultAvailableMinutes").value(30));
     }
 
     @Test
@@ -133,36 +126,6 @@ public class AttendanceSessionControllerTest {
     }
 
     @Test
-    @DisplayName("출석 코드로 세션 조회 성공")
-    @WithMockUser
-    void getSessionByCode_success() throws Exception {
-        //given
-        String code = "123456";
-        AttendanceSessionResponse response = AttendanceSessionResponse.builder()
-                .attendanceSessionId(UUID.randomUUID())
-                .title("세투연 정규 세션")
-                .code(code)
-                .startsAt(LocalDateTime.now().plusMinutes(30))
-                .windowSeconds(1800)
-                .status(SessionStatus.UPCOMING)
-                .participantCount(5)
-                .remainingSeconds(1800L)
-                .checkInAvailable(false)
-                .build();
-
-        when(attendanceSessionService.getSessionByCode(code)).thenReturn(response);
-
-        //then
-        mockMvc.perform(get("/api/attendance/sessions/code/{code}", code))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(code))
-                .andExpect(jsonPath("$.title").value("세투연 정규 세션"))
-                .andExpect(jsonPath("$.participantCount").value(5))
-                .andExpect(jsonPath("$.remainingSeconds").value(1800))
-                .andExpect(jsonPath("$.checkInAvailable").value(false));
-    }
-
-    @Test
     @DisplayName("세션 상세 조회 성공")
     @WithMockUser
     void getSession_success() throws Exception {
@@ -171,11 +134,10 @@ public class AttendanceSessionControllerTest {
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
                 .attendanceSessionId(sessionId)
                 .title("세투연 정규 세션")
-                .code("123456")
-                .startsAt(LocalDateTime.now().plusHours(1))
-                .windowSeconds(1800)
-                .status(SessionStatus.UPCOMING)
-                .participantCount(0)
+                .defaultStartTime(LocalTime.of(10, 0))
+                .defaultAvailableMinutes(30)
+                .rewardPoints(10)
+                .isVisible(true)
                 .build();
 
         when(attendanceSessionService.getSessionById(sessionId)).thenReturn(response);
@@ -184,8 +146,7 @@ public class AttendanceSessionControllerTest {
         mockMvc.perform(get("/api/attendance/sessions/{sessionId}", sessionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.attendanceSessionId").value(sessionId.toString()))
-                .andExpect(jsonPath("$.title").value("세투연 정규 세션"))
-                .andExpect(jsonPath("$.code").value("123456"));
+                .andExpect(jsonPath("$.title").value("세투연 정규 세션"));
     }
 
     @Test
@@ -197,18 +158,18 @@ public class AttendanceSessionControllerTest {
                 AttendanceSessionResponse.builder()
                         .attendanceSessionId(UUID.randomUUID())
                         .title("정규 세션 1")
-                        .code("111111")
-                        .status(SessionStatus.UPCOMING)
-                        .visibility(SessionVisibility.PUBLIC)
-                        .participantCount(10)
+                        .defaultStartTime(LocalTime.of(10, 0))
+                        .defaultAvailableMinutes(30)
+                        .rewardPoints(10)
+                        .isVisible(true)
                         .build(),
                 AttendanceSessionResponse.builder()
                         .attendanceSessionId(UUID.randomUUID())
                         .title("정규 세션 2")
-                        .code("222222")
-                        .status(SessionStatus.OPEN)
-                        .visibility(SessionVisibility.PUBLIC)
-                        .participantCount(5)
+                        .defaultStartTime(LocalTime.of(14, 0))
+                        .defaultAvailableMinutes(30)
+                        .rewardPoints(15)
+                        .isVisible(true)
                         .build()
         );
 
@@ -219,9 +180,7 @@ public class AttendanceSessionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].title").value("정규 세션 1"))
-                .andExpect(jsonPath("$[0].participantCount").value(10))
-                .andExpect(jsonPath("$[1].title").value("정규 세션 2"))
-                .andExpect(jsonPath("$[1].participantCount").value(5));
+                .andExpect(jsonPath("$[1].title").value("정규 세션 2"));
     }
 
     @Test
@@ -233,11 +192,10 @@ public class AttendanceSessionControllerTest {
                 AttendanceSessionResponse.builder()
                         .attendanceSessionId(UUID.randomUUID())
                         .title("활성 세션")
-                        .code("111111")
-                        .status(SessionStatus.OPEN)
-                        .checkInAvailable(true)
-                        .remainingSeconds(900L)
-                        .participantCount(8)
+                        .defaultStartTime(LocalTime.of(10, 0))
+                        .defaultAvailableMinutes(30)
+                        .rewardPoints(10)
+                        .isVisible(true)
                         .build()
         );
 
@@ -247,44 +205,7 @@ public class AttendanceSessionControllerTest {
         mockMvc.perform(get("/api/attendance/sessions/active"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].title").value("활성 세션"))
-                .andExpect(jsonPath("$[0].status").value("OPEN"))
-                .andExpect(jsonPath("$[0].checkInAvailable").value(true))
-                .andExpect(jsonPath("$[0].remainingSeconds").value(900))
-                .andExpect(jsonPath("$[0].participantCount").value(8));
-    }
-
-    @Test
-    @DisplayName("태그별 세션 목록 조회 성공")
-    @WithMockUser
-    void getSessionByTag_success() throws Exception {
-        //given
-        String tag = "금융IT";
-        List<AttendanceSessionResponse> responses = Arrays.asList(
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("금융IT 정규 세션 1")
-                        .tag(tag)
-                        .code("111111")
-                        .participantCount(16)
-                        .build(),
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("금융IT 정규 세션 2")
-                        .tag(tag)
-                        .code("222222")
-                        .participantCount(14)
-                        .build()
-        );
-
-        when(attendanceSessionService.getSessionsByTag(tag)).thenReturn(responses);
-
-        //then
-        mockMvc.perform(get("/api/attendance/sessions/tag/{tag}", tag))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].tag").value(tag))
-                .andExpect(jsonPath("$[1].tag").value(tag));
+                .andExpect(jsonPath("$[0].title").value("활성 세션"));
     }
 
     @Test
@@ -305,14 +226,10 @@ public class AttendanceSessionControllerTest {
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
                 .attendanceSessionId(sessionId)
                 .title("수정된 제목")
-                .tag("수정된 태그")
-                .startsAt(request.getStartsAt())
-                .windowSeconds(3600)
-                .code("123456")
+                .defaultStartTime(LocalTime.of(10, 0))
+                .defaultAvailableMinutes(60)
                 .rewardPoints(10)
-                .visibility(SessionVisibility.PRIVATE)
-                .status(SessionStatus.UPCOMING)
-                .participantCount(0)
+                .isVisible(false)
                 .build();
 
         when(attendanceSessionService.updateSession(eq(sessionId), any(AttendanceSessionRequest.class))).thenReturn(response);
@@ -323,9 +240,8 @@ public class AttendanceSessionControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("수정된 제목"))
-                .andExpect(jsonPath("$.tag").value("수정된 태그"))
                 .andExpect(jsonPath("$.rewardPoints").value(10))
-                .andExpect(jsonPath("$.visibility").value("PRIVATE"));
+                .andExpect(jsonPath("$.isVisible").value(false));
     }
 
     @Test
@@ -368,37 +284,6 @@ public class AttendanceSessionControllerTest {
     }
 
     @Test
-    @DisplayName("상태별 세션 목록 조회 성공 (관리자)")
-    @WithMockUser(roles = "PRESIDENT")
-    void getSessionByStatus_success() throws Exception {
-        //given
-        SessionStatus status = SessionStatus.OPEN;
-        List<AttendanceSessionResponse> responses = Arrays.asList(
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("진행중인 세션 1")
-                        .status(status)
-                        .participantCount(8)
-                        .build(),
-                AttendanceSessionResponse.builder()
-                        .attendanceSessionId(UUID.randomUUID())
-                        .title("진행중인 세션 2")
-                        .status(status)
-                        .participantCount(14)
-                        .build()
-        );
-
-        when(attendanceSessionService.getSessionsByStatus(status)).thenReturn(responses);
-
-        //then
-        mockMvc.perform(get("/api/attendance/sessions/status/{status}", status))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].status").value("OPEN"))
-                .andExpect(jsonPath("$[1].status").value("OPEN"));
-    }
-
-    @Test
     @DisplayName("관리자 전용 기능 접근 실패: 권한 없음")
     @WithMockUser(roles = "TEAM_MEMBER")
     void adminOnlyEndpoints_fail_noPermission() throws Exception {
@@ -420,10 +305,6 @@ public class AttendanceSessionControllerTest {
 
         // 세션 삭제
         mockMvc.perform(delete("/api/attendance/sessions/{sessionId}", sessionId))
-                .andExpect(status().isForbidden());
-
-        // 상태별 조회
-        mockMvc.perform(get("/api/attendance/sessions/status/OPEN"))
                 .andExpect(status().isForbidden());
     }
 }
