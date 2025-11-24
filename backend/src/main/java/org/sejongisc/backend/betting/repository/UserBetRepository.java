@@ -21,8 +21,5 @@ public interface UserBetRepository extends JpaRepository<UserBet, UUID> {
 
     List<UserBet> findAllByRound(BetRound round);
 
-    // JPQL을 사용하여 원자적 업데이트 수행
-    @Modifying(clearAutomatically = true)
-    @Query("UPDATE UserBet u SET u.betStatus = :newStatus WHERE u.userBetId = :id AND u.userId = :userId AND u.betStatus = :oldStatus")
-    int updateStatusToCanceled(@Param("id") UUID id, @Param("userId") UUID userId, @Param("oldStatus") BetStatus oldStatus, @Param("newStatus") BetStatus newStatus);
+
 }

@@ -18,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.sejongisc.backend.betting.dto.UserBetResponse;
+import org.springframework.orm.ObjectOptimisticLockingFailureException; // import 확인
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -208,49 +209,56 @@ public class BettingService {
      */
     @Transactional
     public void cancelUserBet(UUID userId, UUID userBetId) {
-        // 1. 먼저 베팅 정보를 조회 (검증용)
-        UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
+        try {
+            // 1. 엔티티 조회 (UserBet)
+            UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
 
-        // 2. [핵심] 상태를 ACTIVE -> CANCELED로 변경 시도
-        // 이 쿼리는 동시에 여러 요청이 와도 단 하나만 1을 반환합니다. (나머지는 0)
-        int updatedCount = userBetRepository.updateStatusToCanceled(
-                userBetId,
-                userId,
-                BetStatus.ACTIVE,
-                BetStatus.CANCELED // Enum에 CANCELED 추가
-        );
+            // 2. 이미 처리된 상태인지 검증 (중복 방지 1차)
+            if (userBet.getBetStatus() != BetStatus.ACTIVE) {
+                throw new CustomException(ErrorCode.BET_ALREADY_PROCESSED);
+            }
 
-        if (updatedCount == 0) {
-            // 이미 취소되었거나 처리된 베팅임 -> 중복 처리 방지
+            // 3. BetRound 조회 및 검증
+            // (Lazy Loading 문제 방지를 위해 ID로 다시 조회하는 기존 로직 유지 권장)
+            UUID roundId = userBet.getRound().getBetRoundID();
+            BetRound betRound = betRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
+
+            betRound.validate(); // 마감 시간 등 체크
+
+            // 4. 상태 변경 (ACTIVE -> CANCELED)
+            // 여기서 @Version 필드 덕분에 커밋 시점에 버전 충돌 여부를 체크함
+            userBet.cancel(); 
+            userBetRepository.saveAndFlush(userBet); // 명시적 flush로 버전 충돌 즉시 감지
+
+            // 5. 포인트 환불
+            if (!userBet.isFree() && userBet.getStakePoints() > 0) {
+                pointHistoryService.createPointHistory(
+                        userId,
+                        userBet.getStakePoints(),
+                        PointReason.BETTING,
+                        PointOrigin.BETTING,
+                        betRound.getBetRoundID() // targetId 통일 (리뷰 반영)
+                );
+            }
+
+            // 6. 통계 차감
+            int stake = userBet.getStakePoints();
+            if (userBet.getOption() == BetOption.RISE) {
+                betRoundRepository.decrementUpStats(betRound.getBetRoundID(), stake);
+            } else {
+                betRoundRepository.decrementDownStats(betRound.getBetRoundID(), stake);
+            }
+
+            // userBetRepository.save(userBet); // Transactional이라 자동 저장되지만 명시해도 됨
+
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // 동시에 취소 요청이 들어온 경우 하나만 성공하고 나머지는 여기서 걸러짐
             throw new CustomException(ErrorCode.BET_ALREADY_PROCESSED);
         }
+    }       // 삭제(delete)는 하지 않음 (이력 관리를 위해)
 
-        // 3. 상태 변경에 성공한 딱 1개의 요청만 아래 환불/통계 로직 수행
-        BetRound betRound = userBet.getRound();
-        betRound.validate();
-
-        // 포인트 환불
-        if (!userBet.isFree() && userBet.getStakePoints() > 0) {
-            pointHistoryService.createPointHistory(
-                    userId,
-                    userBet.getStakePoints(),
-                    PointReason.BETTING,
-                    PointOrigin.BETTING,
-                    betRound.getBetRoundID() // 밑에서 설명할 targetId 이슈 확인 필요
-            );
-        }
-
-        // 통계 차감
-        int stake = userBet.getStakePoints();
-        if (userBet.getOption() == BetOption.RISE) {
-            betRoundRepository.decrementUpStats(betRound.getBetRoundID(), stake);
-        } else {
-            betRoundRepository.decrementDownStats(betRound.getBetRoundID(), stake);
-        }
-
-        // 삭제(delete)는 하지 않음 (이력 관리를 위해)
-    }
 
     /**
      * 베팅 결과 정산
