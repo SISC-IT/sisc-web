@@ -53,8 +53,8 @@ public class AttendanceRoundResponse {
     private Integer availableMinutes;
 
     @Schema(
-            description = "라운드의 현재 상태. (opened, upcoming, closed 등)",
-            example = "opened"
+            description = "라운드의 현재 상태. (upcoming, active, closed 등)",
+            example = "active"
     )
     private String status;
 
