@@ -129,5 +129,6 @@
 
 .paginationContainer {
   display: flex;
-  margin-left: 230px;
+  /* margin-left: 230px; */
+  justify-content: center;
 }

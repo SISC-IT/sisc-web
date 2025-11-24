@@ -48,14 +48,12 @@ public class AttendanceSessionControllerTest {
         //given
         AttendanceSessionRequest request = AttendanceSessionRequest.builder()
                 .title("세투연 정규세션")
-                .tag("금융IT")
                 .startsAt(LocalDateTime.now().plusHours(1))
                 .windowSeconds(1800)
                 .rewardPoints(10)
                 .latitude(37.5665)
                 .longitude(126.9780)
                 .radiusMeters(100)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
@@ -68,7 +66,6 @@ public class AttendanceSessionControllerTest {
                         .lat(37.5665)
                         .lng(126.9780)
                         .build())
-                .isVisible(true)
                 .build();
 
         when(attendanceSessionService.createSession(any(AttendanceSessionRequest.class))).thenReturn(response);
@@ -136,7 +133,6 @@ public class AttendanceSessionControllerTest {
                 .defaultStartTime(LocalTime.of(10, 0))
                 .defaultAvailableMinutes(30)
                 .rewardPoints(10)
-                .isVisible(true)
                 .build();
 
         when(attendanceSessionService.getSessionById(sessionId)).thenReturn(response);
@@ -160,7 +156,6 @@ public class AttendanceSessionControllerTest {
                         .defaultStartTime(LocalTime.of(10, 0))
                         .defaultAvailableMinutes(30)
                         .rewardPoints(10)
-                        .isVisible(true)
                         .build(),
                 AttendanceSessionResponse.builder()
                         .attendanceSessionId(UUID.randomUUID())
@@ -168,7 +163,6 @@ public class AttendanceSessionControllerTest {
                         .defaultStartTime(LocalTime.of(14, 0))
                         .defaultAvailableMinutes(30)
                         .rewardPoints(15)
-                        .isVisible(true)
                         .build()
         );
 
@@ -194,7 +188,6 @@ public class AttendanceSessionControllerTest {
                         .defaultStartTime(LocalTime.of(10, 0))
                         .defaultAvailableMinutes(30)
                         .rewardPoints(10)
-                        .isVisible(true)
                         .build()
         );
 
@@ -215,11 +208,9 @@ public class AttendanceSessionControllerTest {
         UUID sessionId = UUID.randomUUID();
         AttendanceSessionRequest request = AttendanceSessionRequest.builder()
                 .title("수정된 제목")
-                .tag("수정된 태그")
                 .startsAt(LocalDateTime.now().plusHours(2))
                 .windowSeconds(3600)
                 .rewardPoints(10)
-                .visibility(SessionVisibility.PRIVATE)
                 .build();
 
         AttendanceSessionResponse response = AttendanceSessionResponse.builder()
@@ -228,7 +219,6 @@ public class AttendanceSessionControllerTest {
                 .defaultStartTime(LocalTime.of(10, 0))
                 .defaultAvailableMinutes(60)
                 .rewardPoints(10)
-                .isVisible(false)
                 .build();
 
         when(attendanceSessionService.updateSession(eq(sessionId), any(AttendanceSessionRequest.class))).thenReturn(response);
