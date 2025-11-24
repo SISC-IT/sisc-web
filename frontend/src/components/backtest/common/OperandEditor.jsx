@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import styles from './ConditionCard.module.css';
 import Field from './Field';
 
@@ -101,72 +101,64 @@ export default function OperandEditor({
     );
   }, [value.type, value.code, indicators]);
 
-  useEffect(() => {
-    if (!dict) return;
-    if (value.type !== 'indicator') return;
-    if (value.code) return; // 이미 초기화 된 경우는 건너뜀
-
-    const def = indicators[0];
-    if (!def) return;
-
-    const params = (def.params || []).reduce((acc, p) => {
-      acc[p.name] = p.default ?? '';
-      return acc;
-    }, {});
-    const output = def.outputs?.[0]?.name || 'value';
-    const transforms = (def.transforms || []).reduce((acc, t) => {
-      acc[t.code] = !!t.default;
-      return acc;
-    }, {});
-
-    setValue({
+  // 재사용 가능한 초기화 헬퍼 함수
+  const createDefaultState = useCallback((def) => {
+    if (!def) return null;
+    return {
       type: 'indicator',
       code: def.code,
-      params,
-      output,
-      transforms,
-    });
-  }, [dict, indicators, value.type, value.code, setValue]);
-
-  function setType(next) {
-    if (next === 'indicator') {
-      const def = indicators[0];
-      const params = (def?.params || []).reduce((acc, p) => {
+      params: (def.params || []).reduce((acc, p) => {
         acc[p.name] = p.default ?? '';
         return acc;
-      }, {});
-      const output = def?.outputs?.[0]?.name || 'value';
-      const transforms = (def?.transforms || []).reduce((acc, t) => {
+      }, {}),
+      output: def.outputs?.[0]?.name || 'value',
+      transforms: (def.transforms || []).reduce((acc, t) => {
         acc[t.code] = !!t.default;
         return acc;
-      }, {});
-      setValue({
-        type: 'indicator',
-        code: def?.code,
-        params,
-        output,
-        transforms,
-      });
-    } else if (next === 'price') {
-      setValue({ type: 'price', field: dict.priceFields[0]?.code || 'Close' });
-    } else {
-      setValue({ type: 'const', value: '' });
-    }
-  }
+      }, {}),
+    };
+  }, []);
 
-  function setIndicator(code) {
-    const def = indicators.find((i) => i.code === code);
-    const params = (def?.params || []).reduce((acc, p) => {
-      acc[p.name] = p.default ?? '';
-      return acc;
-    }, {});
-    const output = def?.outputs?.[0]?.name || 'value';
-    const transforms = (def?.transforms || []).reduce((acc, t) => {
-      acc[t.code] = !!t.default;
-      return acc;
-    }, {});
-    setValue({ ...value, type: 'indicator', code, params, output, transforms });
-  }
+  // 초기 indicator 상태 세팅
+  useEffect(() => {
+    if (value.type !== 'indicator') return;
+    if (value.code) return;
+    if (indicators.length === 0) return;
+
+    const defaultState = createDefaultState(indicators[0]);
+    if (defaultState) setValue(defaultState);
+  }, [indicators, value.type, value.code, setValue, createDefaultState]);
+
+  const setType = useCallback(
+    (next) => {
+      if (next === 'indicator') {
+        const def = indicators[0];
+        const defaultState = createDefaultState(def);
+        if (defaultState) {
+          setValue(defaultState);
+        }
+      } else if (next === 'price') {
+        setValue({
+          type: 'price',
+          field: dict.priceFields[0]?.code || 'Close',
+        });
+      } else {
+        setValue({ type: 'const', value: '' });
+      }
+    },
+    [indicators, dict.priceFields, createDefaultState, setValue]
+  );
+
+  const setIndicator = useCallback(
+    (code) => {
+      const def = indicators.find((i) => i.code === code);
+      const defaultState = createDefaultState(def);
+      if (defaultState) {
+        setValue(defaultState);
+      }
+    },
+    [indicators, createDefaultState, setValue]
+  );
 
   return (
     <div className={styles.side}>
