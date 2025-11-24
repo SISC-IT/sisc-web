@@ -3,7 +3,12 @@
     "allow": [
       "Bash(git commit -m \"$(cat <<''EOF''\n[BE] SISC1-XXX [DELETE] Remove unused attendance session APIs\n\nDeleted 3 unused REST APIs confirmed with frontend team:\n- getSessionByCode: GET /api/attendance/sessions/code/{code}\n- getSessionsByTag: GET /api/attendance/sessions/tag/{tag}\n- getSessionsByStatus: GET /api/attendance/sessions/status/{status}\n\nChanges:\n- AttendanceSessionController: Removed 3 API endpoint methods\n- AttendanceSessionService: Removed 3 service methods\n- AttendanceSessionControllerTest: Removed 3 test methods and admin permission test reference\n- AttendanceSessionServiceTest: Removed 3 test methods\n\nAll tests pass successfully.\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git restore:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(xargs:*)",
+      "Bash(./gradlew clean test:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
