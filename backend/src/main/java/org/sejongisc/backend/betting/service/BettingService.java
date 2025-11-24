@@ -229,7 +229,7 @@ public class BettingService {
 
             // 4. 상태 변경 (ACTIVE -> CANCELED)
             // 여기서 @Version 필드 덕분에 커밋 시점에 버전 충돌 여부를 체크함
-            // userBet.cancel(); 
+            userBet.cancel(); 
             userBetRepository.saveAndFlush(userBet); // 명시적 flush로 버전 충돌 즉시 감지
 
             // 5. 포인트 환불
