@@ -93,10 +93,13 @@ export default function OperandEditor({
     return indicatorFilter ? all.filter(indicatorFilter) : all;
   }, [dict, indicatorFilter]);
 
-  const currentDef =
-    (value.type === 'indicator' &&
-      indicators.find((i) => i.code === value.code)) ||
-    indicators[0];
+  const currentDef = useMemo(() => {
+    if (value.type !== 'indicator') return null;
+    if (!value.code) return indicators[0] || null;
+    return (
+      indicators.find((i) => i.code === value.code) || indicators[0] || null
+    );
+  }, [value.type, value.code, indicators]);
 
   useEffect(() => {
     if (!dict) return;
