@@ -227,7 +227,12 @@ public class BettingService {
         }
 
         // 3. 상태 변경에 성공한 딱 1개의 요청만 아래 환불/통계 로직 수행
-        BetRound betRound = userBet.getRound();
+        // [수정] ID를 이용해 BetRound를 직접 다시 조회 (확실한 세션 보장)
+        UUID roundId = userBet.getRound().getBetRoundID(); // ID만 꺼내는 건 에러 안 남
+        BetRound betRound = betRoundRepository.findById(roundId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
+
+        // 이제 안전하게 검증 가능
         betRound.validate();
 
         // 포인트 환불
