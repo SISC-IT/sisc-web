@@ -35,7 +35,7 @@ const BackTest = () => {
       endDate: endDate || null,
       templateId: null,
       strategy: {
-        initialCapital,
+        initialCapital: initialCapital === '' ? null : Number(initialCapital),
         ticker,
         defaultExitDays,
         buyConditions: entryRules,
