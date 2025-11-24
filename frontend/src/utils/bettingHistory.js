@@ -3,7 +3,8 @@ import { api } from '../utils/axios.js';
 const betHistory = async () => {
   try {
     const res = await api.get('/api/user-bets/history');
-    return res.data;
+    // 최신순으로 정렬
+    return res.data.reverse();
   } catch (error) {
     console.log(error.message);
     return null;

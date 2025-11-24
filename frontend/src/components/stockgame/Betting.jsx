@@ -20,12 +20,12 @@ const Betting = ({ period }) => {
         const res = await dailyBet();
         setData(res);
         const history = await getDailyBetHistory();
-        setUserBets(history[0]);
+        setUserBets(history && history.length > 0 ? history[0] : null);
       } else {
         const res = await weeklyBet();
         setData(res);
         const history = await getWeeklyBetHistory();
-        setUserBets(history[0]);
+        setUserBets(history && history.length > 0 ? history[0] : null);
       }
     }
     fetchData();
@@ -45,6 +45,17 @@ const Betting = ({ period }) => {
     }
   }, [data, userBets]);
 
+  const update = async () => {
+    const updatedData =
+      period === 'daily' ? await dailyBet() : await weeklyBet();
+    setData(updatedData);
+    const history =
+      period === 'daily'
+        ? await getDailyBetHistory()
+        : await getWeeklyBetHistory();
+    setUserBets(history && history.length > 0 ? history[0] : null);
+  };
+
   const onClickUpBet = async () => {
     if (isBetting !== 'none') {
       alert('이미 베팅하셨습니다.');
@@ -56,15 +67,16 @@ const Betting = ({ period }) => {
           stakePoints: 0,
           isFree: true,
         });
-        setIsBetting('up');
+        await update();
+        alert('베팅이 완료되었습니다.');
         return res;
       } catch (error) {
         // 409 처리
         if (error.status === 409) {
-          alert('베팅 가능 기간이 아닙니다.');
+          alert('베팅 가능 시간이 아닙니다.');
           return;
         }
-        alert('오류가 발생했습니다.');
+        alert('오류가 발생했습니다. 다시 시도해주세요.');
         return null;
       }
     }
@@ -81,15 +93,16 @@ const Betting = ({ period }) => {
           stakePoints: 0,
           isFree: true,
         });
-        setIsBetting('down');
+        await update();
+        alert('베팅이 완료되었습니다.');
         return res;
       } catch (error) {
         // 409 처리
         if (error.status === 409) {
-          alert('베팅 가능 기간이 아닙니다.');
+          alert('베팅 가능 시간이 아닙니다.');
           return;
         }
-        alert('오류가 발생했습니다.');
+        alert('오류가 발생했습니다. 다시 시도해주세요.');
         return null;
       }
     }
@@ -99,9 +112,10 @@ const Betting = ({ period }) => {
     if (confirm('베팅을 취소하시겠습니까?')) {
       try {
         await api.delete(`/api/user-bets/${userBets.userBetId}`);
-        setIsBetting('none');
+        await update();
+        alert('베팅이 취소되었습니다.');
       } catch (error) {
-        console.log(error);
+        alert(error.message);
       }
     }
   };
