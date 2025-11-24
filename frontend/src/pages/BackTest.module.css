@@ -1,5 +1,6 @@
 .container {
-  margin: 0 auto;
+  margin: auto;
+  width: 90%;
   padding: 80px;
   display: grid;
   gap: 30px;
@@ -8,7 +9,7 @@
 
 .pageTitle {
   margin-bottom: 40px;
-  font-size: 28px;
+  font-size: 36px;
   font-weight: 600;
   color: #171717;
 }

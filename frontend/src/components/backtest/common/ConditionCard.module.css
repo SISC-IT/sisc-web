@@ -1,0 +1,196 @@
+/* --- Card & Layout --- */
+.card {
+  border: 1px solid #e9ecef;
+  border-radius: 14px;
+  background: #fff;
+  padding: 18px;
+  margin-top: 12px;
+}
+
+.cardInner {
+  display: grid;
+  grid-template-columns: 1fr 150px 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 920px) {
+  .cardInner {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Side panels --- */
+.side {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sideTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+/* --- Inputs --- */
+.input,
+.select {
+  width: 70%;
+  height: 40px;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  font-size: 14px;
+  color: #212529;
+  outline: none;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+
+.input:disabled {
+  background: #f8f9fa;
+  color: #868e96;
+}
+
+.select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #adb5bd 50%),
+    linear-gradient(135deg, #adb5bd 50%, transparent 50%),
+    linear-gradient(to right, #fff, #fff);
+  background-position:
+    calc(100% - 18px) 16px,
+    calc(100% - 12px) 16px,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+.input:focus,
+.select:focus {
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+/* --- Params Grid --- */
+.paramGrid {
+  display: grid;
+  grid-template-columns: 0.5fr;
+  gap: 10px 12px;
+}
+
+@media (max-width: 920px) {
+  .paramGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* --- Transforms (checkbox line) --- */
+.transforms {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #eceff1;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #495057;
+  margin-right: 12px;
+  user-select: none;
+}
+.checkbox input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #7048e8;
+}
+
+/* --- Operator box --- */
+.operatorBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #f1f3f5;
+  border-radius: 10px;
+  background: #fcfcfd;
+  padding: 10px 14px;
+  min-width: 120px;
+  gap: 10px;
+}
+
+.operatorBox .select {
+  width: 100%;
+  height: 38px;
+}
+
+/* --- delete row --- */
+.rightWithRemove {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px; /* 좌우 간격은 취향대로 */
+}
+
+/* 우항 편집 영역은 넓게 가져가고 */
+.rightWithRemove > :first-child {
+  flex: 1;
+}
+
+/* 삭제 버튼은 위쪽 오른쪽에 붙게 */
+.removeBtn {
+  border: none;
+  background: transparent;
+  font-size: 20px; /* 기존 값 유지 */
+  line-height: 1;
+  cursor: pointer;
+  /* 카드 안에서 살짝 내려가 보이면 margin-top 조절 */
+  margin-top: 4px;
+}
+
+/* --- Meta / Preview --- */
+.metaRow {
+  margin-top: 6px;
+}
+.meta {
+  color: #868e96;
+  font-size: 12px;
+}
+
+.preview {
+  margin-top: 10px;
+  background: #0b1020;
+  color: #d8e1ff;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow: auto;
+  border: 1px solid #11162a;
+}
+
+/* --- Utility states --- */
+select:disabled,
+input:disabled {
+  cursor: not-allowed;
+}
+
+/* 작은 터치 디테일 */
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
