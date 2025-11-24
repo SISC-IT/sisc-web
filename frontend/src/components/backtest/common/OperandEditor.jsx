@@ -8,7 +8,10 @@ function NumberInput({ value, onChange, min, max, step = 1, placeholder }) {
       className={styles.input}
       type="number"
       value={value ?? ''}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        const num = e.target.value === '' ? '' : Number(e.target.value);
+        onChange(num);
+      }}
       min={min ?? undefined}
       max={max ?? undefined}
       step={step}
