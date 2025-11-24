@@ -10,7 +10,6 @@ import org.sejongisc.backend.attendance.dto.AttendanceCheckInRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceCheckInResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
@@ -61,7 +60,6 @@ public class AttendanceCheckInTimeValidationTest {
                 .startsAt(LocalDateTime.now().plusHours(1))
                 .windowSeconds(1800)
                 .rewardPoints(100)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         var sessionResponse = attendanceSessionService.createSession(sessionRequest);
@@ -143,7 +141,6 @@ public class AttendanceCheckInTimeValidationTest {
                 .startsAt(LocalDateTime.now().plusDays(2))
                 .windowSeconds(1800)
                 .rewardPoints(100)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         var sessionResponse = attendanceSessionService.createSession(sessionRequest);
@@ -212,7 +209,6 @@ public class AttendanceCheckInTimeValidationTest {
                 .startsAt(LocalDateTime.now().plusHours(1))
                 .windowSeconds(1800)
                 .rewardPoints(100)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         var sessionResponse = attendanceSessionService.createSession(sessionRequest);
@@ -283,7 +279,6 @@ public class AttendanceCheckInTimeValidationTest {
                 .startsAt(LocalDateTime.now().plusHours(1))
                 .windowSeconds(1800)
                 .rewardPoints(100)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         var sessionResponse = attendanceSessionService.createSession(sessionRequest);

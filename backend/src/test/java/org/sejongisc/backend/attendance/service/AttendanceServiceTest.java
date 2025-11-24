@@ -71,7 +71,6 @@ public class AttendanceServiceTest {
                 .rewardPoints(10)
                 .location(sessionLocation)
                 .status(SessionStatus.OPEN)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         Attendance savedAttendance = Attendance.builder()

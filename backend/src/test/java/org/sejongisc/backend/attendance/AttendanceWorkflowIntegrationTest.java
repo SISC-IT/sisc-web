@@ -7,7 +7,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.sejongisc.backend.attendance.dto.*;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
@@ -78,11 +77,9 @@ public class AttendanceWorkflowIntegrationTest {
         LocalDateTime sessionStart = LocalDateTime.now().plusHours(1);
         AttendanceSessionRequest sessionRequest = AttendanceSessionRequest.builder()
                 .title("금융 IT팀 정기모임")
-                .tag("금융IT")
                 .startsAt(sessionStart)
                 .windowSeconds(1800)  // 30분
                 .rewardPoints(100)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         AttendanceSessionResponse sessionResponse = attendanceSessionService.createSession(sessionRequest);
@@ -262,7 +259,6 @@ public class AttendanceWorkflowIntegrationTest {
                 .startsAt(LocalDateTime.now().plusHours(1))
                 .windowSeconds(1800)
                 .rewardPoints(50)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         AttendanceSessionResponse sessionResponse = attendanceSessionService.createSession(sessionRequest);
@@ -315,7 +311,6 @@ public class AttendanceWorkflowIntegrationTest {
                 .startsAt(LocalDateTime.now().plusHours(1))
                 .windowSeconds(1800)
                 .rewardPoints(50)
-                .visibility(SessionVisibility.PUBLIC)
                 .build();
 
         AttendanceSessionResponse sessionResponse = attendanceSessionService.createSession(sessionRequest);
