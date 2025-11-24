@@ -134,6 +134,7 @@ const ConditionCard = ({ value, onChange, onRemove }) => {
       isAbsolute: right?.type === 'const',
     };
     onChange(conditionForServer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [left, operator, right]);
 
   if (!dict) return null;

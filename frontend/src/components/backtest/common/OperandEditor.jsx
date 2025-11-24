@@ -43,7 +43,8 @@ function OutputsEditor({ outputs = [], value, onChange }) {
     if (value !== fixed) {
       onChange(fixed);
     }
-  }, [outputs, value, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outputs, value]);
 
   if (!outputs || outputs.length === 0) return null;
 
