@@ -68,8 +68,10 @@ public class AttendanceRoundService {
 
             AttendanceRound saved = attendanceRoundRepository.save(round);
             session.getRounds().add(saved);
+            // 양방향 관계를 DB에 반영하기 위해 세션도 저장
+            attendanceSessionRepository.save(session);
 
-            log.info("✅ 라운드 생성 완료 - sessionId: {}, roundId: {}, roundDate: {}, roundStatus: {}",
+            log.info("✅ 라운드 생성 완료 - sessionId: {}, roundId: {}, roundDate: {}, roundStatus: {}, 세션도 저장됨",
                     sessionId, saved.getRoundId(), saved.getRoundDate(), saved.getRoundStatus());
             return AttendanceRoundResponse.fromEntity(saved);
         } catch (Exception e) {

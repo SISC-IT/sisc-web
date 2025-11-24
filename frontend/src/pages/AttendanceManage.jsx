@@ -71,8 +71,8 @@ const AttendanceManage = () => {
                     id: r.roundId,
                     date: r.roundDate,
                     startTime: r.startTime,
-                    availableMinutes: r.allowedMinutes,
-                    status: r.roundStatus,
+                    availableMinutes: r.availableMinutes,
+                    status: r.status,
                     participants: [],
                   })) : [],
                 };

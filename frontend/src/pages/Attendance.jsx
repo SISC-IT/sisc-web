@@ -58,7 +58,7 @@ const Attendance = () => {
 
         console.log(`⏰ 클라이언트 현재 시간: ${currentTime}, 현재 날짜: ${currentDate}`);
         roundData.forEach((round) => {
-          console.log(`📅 라운드 "${round.roundName}": 날짜=${round.roundDate}, 시작=${round.startTime}, 허용분=${round.allowedMinutes}, 상태=${round.roundStatus}`);
+          console.log(`📅 라운드: 날짜=${round.roundDate}, 시작=${round.startTime}, 허용분=${round.availableMinutes}, 상태=${round.status}`);
         });
       }
 
@@ -114,12 +114,12 @@ const Attendance = () => {
     }
 
     // 라운드 상태 확인
-    if (round.roundStatus === 'UPCOMING') {
+    if (round.status === 'upcoming') {
       alert('아직 출석 시간이 아닙니다. 시작 시간을 기다려주세요.');
       return;
     }
 
-    if (round.roundStatus === 'CLOSED') {
+    if (round.status === 'closed') {
       alert('출석 시간이 종료되었습니다.');
       return;
     }
@@ -289,14 +289,14 @@ const Attendance = () => {
                 ) : (
                   <div style={{ display: 'grid', gap: '10px' }}>
                     {rounds.map((round) => {
-                      const isDisabled = checkingIn || round.roundStatus === 'UPCOMING' || round.roundStatus === 'CLOSED';
+                      const isDisabled = checkingIn || round.status === 'upcoming' || round.status === 'closed';
                       let buttonColor = '#4CAF50';
                       let statusMessage = '';
 
-                      if (round.roundStatus === 'UPCOMING') {
+                      if (round.status === 'upcoming') {
                         buttonColor = '#FFC107';
                         statusMessage = ' (시작 전)';
-                      } else if (round.roundStatus === 'CLOSED') {
+                      } else if (round.status === 'closed') {
                         buttonColor = '#f44336';
                         statusMessage = ' (종료됨)';
                       } else if (checkingIn) {
@@ -321,12 +321,12 @@ const Attendance = () => {
                             opacity: isDisabled ? 0.6 : 1,
                           }}
                           onMouseOver={(e) => {
-                            if (!isDisabled && round.roundStatus === 'ACTIVE') {
+                            if (!isDisabled && round.status === 'active') {
                               e.target.style.backgroundColor = '#45a049';
                             }
                           }}
                           onMouseOut={(e) => {
-                            if (!isDisabled && round.roundStatus === 'ACTIVE') {
+                            if (!isDisabled && round.status === 'active') {
                               e.target.style.backgroundColor = '#4CAF50';
                             }
                           }}
@@ -340,10 +340,10 @@ const Attendance = () => {
                                 {statusMessage}
                               </div>
                               <div style={{ fontSize: '12px' }}>
-                                {round.roundDate} {round.startTime} ({round.allowedMinutes}분)
+                                {round.roundDate} {round.startTime} ({round.availableMinutes}분)
                               </div>
                               <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.9 }}>
-                                상태: {round.roundStatus}
+                                상태: {round.status}
                               </div>
                             </>
                           )}

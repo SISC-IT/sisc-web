@@ -204,9 +204,9 @@ export const attendanceCheckInApi = {
     return response.json();
   },
 
-  // 세션별 출석 조회
+  // 세션별 출석 조회 (관리자용)
   getAttendancesBySession: async (sessionId) => {
-    const response = await fetch(`${API_BASE_URL}/attendances/sessions/${sessionId}`, {
+    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/attendances`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
       },
@@ -215,28 +215,40 @@ export const attendanceCheckInApi = {
     return response.json();
   },
 
-  // 사용자별 출석 조회
-  getAttendancesByUser: async (userId) => {
-    const response = await fetch(`${API_BASE_URL}/attendances/users/${userId}`, {
+  // 내 출석 기록 조회
+  getMyAttendances: async () => {
+    const response = await fetch(`${API_BASE_URL}/history`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
       },
     });
-    if (!response.ok) throw new Error('사용자 출석 조회 실패');
+    if (!response.ok) throw new Error('출석 기록 조회 실패');
     return response.json();
   },
 
+  // 사용자별 출석 조회 (관리자용) - 레거시 메서드 (사용 안함)
+  getAttendancesByUser: async (userId) => {
+    // 현재 백엔드에서 지원하지 않음
+    // /history를 사용하거나 관리자는 getAttendancesBySession 사용
+    throw new Error('이 API는 더 이상 지원되지 않습니다. getMyAttendances() 또는 getAttendancesBySession()을 사용하세요.');
+  },
+
   // 출석 상태 수정 (관리자용)
-  updateAttendanceStatus: async (sessionId, userId, status) => {
+  updateAttendanceStatus: async (sessionId, memberId, status, reason = null) => {
+    const params = new URLSearchParams();
+    params.append('status', status);
+    if (reason) {
+      params.append('reason', reason);
+    }
+
     const response = await fetch(
-      `${API_BASE_URL}/attendances/sessions/${sessionId}/users/${userId}`,
+      `${API_BASE_URL}/sessions/${sessionId}/attendances/${memberId}?${params.toString()}`,
       {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
-        body: JSON.stringify({ status }),
       }
     );
     if (!response.ok) throw new Error('출석 상태 수정 실패');
