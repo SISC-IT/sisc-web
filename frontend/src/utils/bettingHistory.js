@@ -4,7 +4,7 @@ const betHistory = async () => {
   try {
     const res = await api.get('/api/user-bets/history');
     // 최신순으로 정렬
-    return res.data.reverse();
+    return res.data;
   } catch (error) {
     console.log(error.message);
     return null;
