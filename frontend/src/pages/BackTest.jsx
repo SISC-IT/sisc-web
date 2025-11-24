@@ -14,6 +14,7 @@ const BackTest = () => {
   const [endDate, setEndDate] = useState('');
   const [initialCapital, setInitialCapital] = useState();
   const [tickers, setTickers] = useState([]);
+  const [defaultExitDays, setDefaultExitDays] = useState();
   const [entryRules, setEntryRules] = useState([]);
   const [exitRules, setExitRules] = useState([]);
   const [note, setNote] = useState('');
@@ -36,6 +37,7 @@ const BackTest = () => {
       strategy: {
         initialCapital,
         ticker,
+        defaultExitDays,
         buyConditions: entryRules,
         sellConditions: exitRules,
         note,
@@ -92,7 +94,12 @@ const BackTest = () => {
       />
       <StocksCard tickers={tickers} setTickers={setTickers} />
       <EntryRulesCard rules={entryRules} setRules={setEntryRules} />
-      <ExitRulesCard rules={exitRules} setRules={setExitRules} />
+      <ExitRulesCard
+        rules={exitRules}
+        setRules={setExitRules}
+        defaultExitDays={defaultExitDays}
+        setDefaultExitDays={setDefaultExitDays}
+      />
       <NotesCard note={note} setNote={setNote} />
     </div>
   );
