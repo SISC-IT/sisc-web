@@ -3,7 +3,6 @@ package org.sejongisc.backend.attendance.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 
 import java.time.LocalDateTime;
 
@@ -26,14 +25,6 @@ public class AttendanceSessionRequest {
     @NotBlank(message = "제목은 필수입니다")
     @Size(max = 100, message = "제목은 100자 이하여야 합니다")
     private String title;
-
-    @Schema(
-            description = "세션의 분류 태그. 예: '금융IT', '동아리 전체', '스터디'",
-            example = "금융IT",
-            maxLength = 50
-    )
-    @Size(max = 50, message = "태그는 50자 이하여야 합니다")
-    private String tag;
 
     @Schema(
             description = "세션 시작 시간 (ISO 8601 형식). 현재 시간 이후여야 합니다.",
@@ -95,13 +86,5 @@ public class AttendanceSessionRequest {
     @Min(value = 1, message = "반경은 1m 이상이어야 합니다")
     @Max(value = 500, message = "반경은 500m 이하여야 합니다")
     private Integer radiusMeters;
-
-    @Schema(
-            description = "세션의 공개 범위. PUBLIC(공개) 또는 PRIVATE(비공개). " +
-                    "공개 세션은 모든 사용자에게 보이고, 비공개는 관리자에게만 보입니다.",
-            example = "PUBLIC",
-            implementation = SessionVisibility.class
-    )
-    private SessionVisibility visibility;
 }
 

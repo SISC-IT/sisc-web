@@ -8,7 +8,6 @@ import org.sejongisc.backend.attendance.dto.SessionLocationUpdateRequest;
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.Location;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.springframework.stereotype.Service;
@@ -52,13 +51,11 @@ public class AttendanceSessionService {
 
         AttendanceSession session = AttendanceSession.builder()
                 .title(request.getTitle())
-                .tag(request.getTag())
                 .startsAt(request.getStartsAt())
                 .windowSeconds(request.getWindowSeconds())
                 .code(code)
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
-                .visibility(request.getVisibility() != null ? request.getVisibility() : SessionVisibility.PUBLIC)
                 .status(SessionStatus.UPCOMING)
                 .build();
 
@@ -97,13 +94,13 @@ public class AttendanceSessionService {
 
     /**
      * 공개 세션 목록 조회
-     * - 학생들이 볼 수 있는 공개 세션만 조회
+     * - 학생들이 볼 수 있는 모든 세션 조회
      * - 최신 순으로 정렬
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getPublicSessions() {
         List<AttendanceSession> sessions = attendanceSessionRepository
-                .findByVisibilityOrderByStartsAtDesc(SessionVisibility.PUBLIC);
+                .findAllByOrderByStartsAtDesc();
 
         return sessions.stream()
                 .map(this::convertToResponse)
@@ -156,12 +153,10 @@ public class AttendanceSessionService {
 
         session = session.toBuilder()
                 .title(request.getTitle())
-                .tag(request.getTag())
                 .startsAt(request.getStartsAt())
                 .windowSeconds(request.getWindowSeconds())
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
-                .visibility(request.getVisibility())
                 .build();
 
         session = attendanceSessionRepository.save(session);
@@ -305,9 +300,6 @@ public class AttendanceSessionService {
         // defaultStartTime: startsAt에서 시간 부분만 추출
         LocalTime defaultStartTime = session.getStartsAt().toLocalTime();
 
-        // isVisible: 공개 세션이면 true, 비공개면 false
-        Boolean isVisible = session.getVisibility() == SessionVisibility.PUBLIC;
-
         return AttendanceSessionResponse.builder()
                 .attendanceSessionId(session.getAttendanceSessionId())
                 .title(session.getTitle())
@@ -315,7 +307,6 @@ public class AttendanceSessionService {
                 .defaultStartTime(defaultStartTime)
                 .defaultAvailableMinutes(defaultAvailableMinutes)
                 .rewardPoints(session.getRewardPoints())
-                .isVisible(isVisible)
                 .build();
 
     }
