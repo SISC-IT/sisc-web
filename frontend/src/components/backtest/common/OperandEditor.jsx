@@ -36,11 +36,19 @@ function ParamsEditor({ schema = [], values = {}, onChange }) {
 }
 
 function OutputsEditor({ outputs = [], value, onChange }) {
+  useEffect(() => {
+    if (!outputs || outputs.length !== 1) return;
+
+    const fixed = outputs[0].name;
+    if (value !== fixed) {
+      onChange(fixed);
+    }
+  }, [outputs, value, onChange]);
+
   if (!outputs || outputs.length === 0) return null;
 
   if (outputs.length === 1) {
     const fixed = outputs[0].name;
-    if (value !== fixed) onChange(fixed);
     return (
       <Field label="output">
         <input
