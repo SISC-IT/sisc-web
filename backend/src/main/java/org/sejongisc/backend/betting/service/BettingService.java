@@ -204,7 +204,7 @@ public class BettingService {
     }
 
     /**
-     * 사용자 베팅 취소
+     * 사용자 베팅 취소 (수정됨)
      */
     @Transactional
     public void cancelUserBet(UUID userId, UUID userBetId) {
@@ -212,18 +212,28 @@ public class BettingService {
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
 
         BetRound betRound = userBet.getRound();
-        betRound.validate();
+        betRound.validate(); // 마감 시간 지났는지 확인
 
+        // 1. 포인트 환불 (유료 베팅인 경우)
         if (!userBet.isFree() && userBet.getStakePoints() > 0) {
             pointHistoryService.createPointHistory(
                     userId,
                     userBet.getStakePoints(),
-                    PointReason.BETTING,
+                    PointReason.BETTING, // 취소 환불이므로 사유는 그대로 BETTING 사용 (또는 BETTING_CANCEL 추가 고려)
                     PointOrigin.BETTING,
                     userBet.getUserBetId()
             );
         }
 
+        // ✅ 2. [추가] 라운드 통계 차감 (인원수, 총 포인트 감소)
+        int stake = userBet.getStakePoints();
+        if (userBet.getOption() == BetOption.RISE) {
+            betRoundRepository.decrementUpStats(betRound.getBetRoundID(), stake);
+        } else {
+            betRoundRepository.decrementDownStats(betRound.getBetRoundID(), stake);
+        }
+
+        // 3. 베팅 내역 삭제
         userBetRepository.delete(userBet);
     }
 
