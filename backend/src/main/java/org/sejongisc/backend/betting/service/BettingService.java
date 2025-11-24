@@ -208,24 +208,40 @@ public class BettingService {
      */
     @Transactional
     public void cancelUserBet(UUID userId, UUID userBetId) {
+        // 1. 먼저 베팅 정보를 조회 (검증용)
         UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
 
-        BetRound betRound = userBet.getRound();
-        betRound.validate(); // 마감 시간 지났는지 확인
+        // 2. [핵심] 상태를 ACTIVE -> CANCELED로 변경 시도
+        // 이 쿼리는 동시에 여러 요청이 와도 단 하나만 1을 반환합니다. (나머지는 0)
+        int updatedCount = userBetRepository.updateStatusToCanceled(
+                userBetId,
+                userId,
+                BetStatus.ACTIVE,
+                BetStatus.CANCELED // Enum에 CANCELED 추가
+        );
 
-        // 1. 포인트 환불 (유료 베팅인 경우)
+        if (updatedCount == 0) {
+            // 이미 취소되었거나 처리된 베팅임 -> 중복 처리 방지
+            throw new CustomException(ErrorCode.BET_ALREADY_PROCESSED);
+        }
+
+        // 3. 상태 변경에 성공한 딱 1개의 요청만 아래 환불/통계 로직 수행
+        BetRound betRound = userBet.getRound();
+        betRound.validate();
+
+        // 포인트 환불
         if (!userBet.isFree() && userBet.getStakePoints() > 0) {
             pointHistoryService.createPointHistory(
                     userId,
                     userBet.getStakePoints(),
-                    PointReason.BETTING, // 취소 환불이므로 사유는 그대로 BETTING 사용 (또는 BETTING_CANCEL 추가 고려)
+                    PointReason.BETTING,
                     PointOrigin.BETTING,
-                    userBet.getUserBetId()
+                    betRound.getBetRoundID() // 밑에서 설명할 targetId 이슈 확인 필요
             );
         }
 
-        // ✅ 2. [추가] 라운드 통계 차감 (인원수, 총 포인트 감소)
+        // 통계 차감
         int stake = userBet.getStakePoints();
         if (userBet.getOption() == BetOption.RISE) {
             betRoundRepository.decrementUpStats(betRound.getBetRoundID(), stake);
@@ -233,8 +249,7 @@ public class BettingService {
             betRoundRepository.decrementDownStats(betRound.getBetRoundID(), stake);
         }
 
-        // 3. 베팅 내역 삭제
-        userBetRepository.delete(userBet);
+        // 삭제(delete)는 하지 않음 (이력 관리를 위해)
     }
 
     /**
