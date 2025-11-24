@@ -5,7 +5,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

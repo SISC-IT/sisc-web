@@ -54,12 +54,6 @@ public class AttendanceSessionResponse {
     )
     private Integer rewardPoints;
 
-    @Schema(
-            description = "세션의 공개 여부. true(공개) 또는 false(비공개)",
-            example = "true"
-    )
-    private Boolean isVisible;
-
     @Getter
     @Builder
     @NoArgsConstructor

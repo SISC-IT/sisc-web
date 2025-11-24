@@ -1,6 +1,5 @@
 package org.sejongisc.backend.attendance.service;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +11,6 @@ import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.Location;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 

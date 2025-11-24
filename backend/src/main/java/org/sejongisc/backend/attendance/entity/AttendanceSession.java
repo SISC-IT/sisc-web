@@ -3,7 +3,6 @@ package org.sejongisc.backend.attendance.entity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.time.LocalDateTime;
@@ -27,8 +26,6 @@ public class AttendanceSession extends BasePostgresEntity {
     @Column(nullable = false)
     private String title;       // "세투연 9/17"
 
-    private String tag;         // "금융IT 출석", "동아리 전체"
-
     @Column(name = "starts_at", nullable = false)
     private LocalDateTime startsAt;     // 세션 시작 시간
 
@@ -43,9 +40,6 @@ public class AttendanceSession extends BasePostgresEntity {
 
     @Embedded
     private Location location;      // 위치 기반 출석을 위한 GPS 좌표
-
-    @Enumerated(EnumType.STRING)
-    private SessionVisibility visibility;
 
     @Enumerated(EnumType.STRING)
     private SessionStatus status;
