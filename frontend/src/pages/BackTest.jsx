@@ -12,9 +12,9 @@ const BackTest = () => {
   const [strategyName, setStrategyName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [initialCapital, setInitialCapital] = useState();
+  const [initialCapital, setInitialCapital] = useState('');
   const [tickers, setTickers] = useState([]);
-  const [defaultExitDays, setDefaultExitDays] = useState();
+  const [defaultExitDays, setDefaultExitDays] = useState(0);
   const [entryRules, setEntryRules] = useState([]);
   const [exitRules, setExitRules] = useState([]);
   const [note, setNote] = useState('');
