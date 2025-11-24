@@ -1,5 +1,6 @@
 package org.sejongisc.backend.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -52,6 +53,7 @@ public class User extends BasePostgresEntity{
     // User : OAuthAccounts = 1 : N(여러 OAuth를 연결 가능)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
 
     // 기본값 지정
