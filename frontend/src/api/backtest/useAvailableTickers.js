@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-
-const BASE_URL = import.meta.env.VITE_API_URL;
+import { api } from '../../utils/axios';
 
 export default function useAvailableTickers() {
   const [availableTickers, setAvailableTickers] = useState([]);
@@ -13,12 +12,10 @@ export default function useAvailableTickers() {
     async function fetchTickers() {
       setIsLoading(true);
       setError(null);
+
       try {
-        const res = await fetch(`${BASE_URL}/api/backtest/stocks/info`);
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
+        const res = await api.get('/api/backtest/stocks/info');
+        const data = res.data;
 
         if (!cancelled && data && Array.isArray(data.availableTickers)) {
           setAvailableTickers(data.availableTickers);

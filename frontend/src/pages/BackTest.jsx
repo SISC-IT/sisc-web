@@ -5,8 +5,7 @@ import StocksCard from '../components/backtest/StocksCard';
 import EntryRulesCard from '../components/backtest/EntryRulesCard';
 import ExitRulesCard from '../components/backtest/ExitRulesCard';
 import NotesCard from '../components/backtest/NotesCard';
-
-const BASE_URL = import.meta.env.VITE_API_URL;
+import { api } from '../utils/axios';
 
 const BackTest = () => {
   const [strategyName, setStrategyName] = useState('');
@@ -24,8 +23,6 @@ const BackTest = () => {
       alert('하나 이상의 주식을 추가해주세요.');
       return;
     }
-
-    const accessToken = localStorage.getItem('accessToken');
 
     const requests = tickers.map((ticker) => ({
       title: strategyName
@@ -47,25 +44,8 @@ const BackTest = () => {
     try {
       const results = await Promise.all(
         requests.map(async (body) => {
-          const response = await fetch(`${BASE_URL}/api/backtest/runs`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(accessToken
-                ? { Authorization: `Bearer ${accessToken}` }
-                : {}),
-            },
-            body: JSON.stringify(body),
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(
-              errorText || `HTTP error! status: ${response.status}`
-            );
-          }
-
-          return response.json().catch(() => null);
+          const response = await api.post('/api/backtest/runs', body);
+          return response.data ?? null;
         })
       );
 
@@ -73,7 +53,13 @@ const BackTest = () => {
       alert('백테스트 실행을 요청했습니다.');
     } catch (error) {
       console.error('Error running backtest:', error);
-      alert(`백테스트 실행 중 오류가 발생했습니다: ${error.message}`);
+
+      const message =
+        error?.message ||
+        error?.data?.message ||
+        '백테스트 실행 중 알 수 없는 오류가 발생했습니다.';
+
+      alert(`백테스트 실행 중 오류가 발생했습니다: ${message}`);
     }
   };
 
