@@ -24,6 +24,11 @@ const BackTest = () => {
       return;
     }
 
+    if (entryRules.length === 0 || exitRules.length === 0) {
+      alert('매수 및 매도 조건을 하나 이상 추가해주세요.');
+      return;
+    }
+
     const requests = tickers.map((ticker) => ({
       title: strategyName
         ? `${strategyName} (${ticker})`
