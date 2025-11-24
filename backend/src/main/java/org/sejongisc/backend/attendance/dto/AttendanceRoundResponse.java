@@ -64,7 +64,8 @@ public class AttendanceRoundResponse {
      */
     public static AttendanceRoundResponse fromEntity(AttendanceRound round) {
         // 현재 시간 기준으로 라운드 상태를 실시간 계산
-        String statusString = round.calculateCurrentStatus().toString().toLowerCase();
+        // RoundStatus.getValue()를 사용하여 명시적이고 안전한 변환
+        String statusString = round.calculateCurrentStatus().getValue();
 
         return AttendanceRoundResponse.builder()
                 .roundId(round.getRoundId())
