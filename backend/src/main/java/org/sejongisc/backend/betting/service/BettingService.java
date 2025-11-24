@@ -212,13 +212,13 @@ public class BettingService {
         UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
 
-        // 2. [핵심] 상태를 ACTIVE -> CANCELED로 변경 시도
+        // 2. [핵심] 상태를 ACTIVE -> DELETED로 변경 시도
         // 이 쿼리는 동시에 여러 요청이 와도 단 하나만 1을 반환합니다. (나머지는 0)
         int updatedCount = userBetRepository.updateStatusToCanceled(
                 userBetId,
                 userId,
                 BetStatus.ACTIVE,
-                BetStatus.CANCELED // Enum에 CANCELED 추가
+                BetStatus.DELETED //
         );
 
         if (updatedCount == 0) {
