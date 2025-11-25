@@ -1,12 +1,11 @@
 package org.sejongisc.backend.attendance.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -25,14 +24,13 @@ public class AttendanceSession extends BasePostgresEntity {
     private UUID attendanceSessionId;
 
     @Column(nullable = false)
-    private String title;       // "금융 IT팀 세션"
+    private String title;       // "세투연 9/17"
 
-    @Column(name = "default_start_time", nullable = false)
-    @JsonFormat(pattern = "HH:mm:ss")
-    private LocalTime defaultStartTime;     // 기본 시작 시간 (시간만) - 18:30:00
+    @Column(name = "starts_at", nullable = false)
+    private LocalDateTime startsAt;     // 세션 시작 시간
 
-    @Column(name = "default_available_minutes")
-    private Integer defaultAvailableMinutes;      // 출석 인정 시간(분) - 30분
+    @Column(name = "window_seconds")
+    private Integer windowSeconds;      // 체크인 가능 시간(초) - 1800 = 30분
 
     @Column(unique = true, length = 6)
     private String code;            // 6자리 출석 코드 "942715"
@@ -57,19 +55,46 @@ public class AttendanceSession extends BasePostgresEntity {
     private List<Attendance> attendances = new ArrayList<>();
 
     /**
-     * 세션 상태를 반환합니다.
-     * - UPCOMING: 활성화되지 않은 상태
-     * - OPEN: 관리자가 활성화한 상태 (체크인 가능)
-     * - CLOSED: 관리자가 종료한 상태 (체크인 불가)
+     * 현재 세션 상태 계산
      */
-    public SessionStatus getCurrentStatus() {
-        return this.status;
+    public SessionStatus calculateCurrentStatus() {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.isBefore(startsAt)) {
+            return SessionStatus.UPCOMING;
+        } else if (now.isAfter(getEndsAt())) {
+            return SessionStatus.CLOSED;
+        } else {
+            return SessionStatus.OPEN;
+        }
     }
 
     /**
-     * 체크인이 가능한 상태인지 확인합니다.
+     * 세션 종료 시간 계산
      */
     public boolean isCheckInAvailable() {
-        return SessionStatus.OPEN.equals(this.status);
+        LocalDateTime now = LocalDateTime.now();
+        return now.isAfter(startsAt) && now.isBefore(getEndsAt());
+    }
+
+    /**
+     * 세션 종료 시간 계산
+     */
+    public LocalDateTime getEndsAt() {
+        return startsAt.plusSeconds(windowSeconds != null ? windowSeconds : 1800);
+    }
+
+    /**
+     * 남은 시간 계산 (초단위)
+     */
+    public long getRemainingSeconds() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endsAt = getEndsAt();
+
+        if (now.isAfter(endsAt)) {
+            return 0;
+        }
+
+        return java.time.Duration.between(now, endsAt).getSeconds();
     }
 }

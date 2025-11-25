@@ -1,11 +1,10 @@
 package org.sejongisc.backend.attendance.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 
 @Getter
 @Builder
@@ -20,7 +19,7 @@ public class AttendanceSessionRequest {
 
     @Schema(
             description = "세션의 제목/이름",
-            example = "금융 IT팀 세션",
+            example = "2024년 10월 동아리 정기 모임",
             maxLength = 100
     )
     @NotBlank(message = "제목은 필수입니다")
@@ -28,26 +27,25 @@ public class AttendanceSessionRequest {
     private String title;
 
     @Schema(
-            description = "세션의 기본 시작 시간 (HH:MM:SS 형식). " +
-                    "모든 라운드는 이 시간을 기본값으로 사용합니다.",
-            example = "18:30:00",
+            description = "세션 시작 시간 (ISO 8601 형식). 현재 시간 이후여야 합니다.",
+            example = "2024-11-15T14:00:00",
             type = "string",
-            format = "time"
+            format = "date-time"
     )
     @NotNull(message = "시작 시간은 필수입니다")
-    @JsonFormat(pattern = "HH:mm:ss")
-    private LocalTime defaultStartTime;
+    @Future(message = "시작 시간은 현재 시간 이후여야 합니다")
+    private LocalDateTime startsAt;
 
     @Schema(
-            description = "출석 인정 시간 (분 단위). " +
-                    "범위: 1분 ~ 240분(4시간)",
-            example = "30",
-            minimum = "1",
-            maximum = "240"
+            description = "출석 체크인이 가능한 시간 윈도우 (초 단위). " +
+                    "범위: 300초(5분) ~ 14400초(4시간)",
+            example = "1800",
+            minimum = "300",
+            maximum = "14400"
     )
-    @Min(value = 1, message = "최소 1분 이상이어야 합니다")
-    @Max(value = 240, message = "최대 240분(4시간) 설정 가능합니다")
-    private Integer defaultAvailableMinutes;
+    @Min(value = 300, message = "최소 5분 이상이어야 합니다")
+    @Max(value = 14400, message = "최대 4시간 설정 가능합니다")
+    private Integer windowSeconds;
 
     @Schema(
             description = "출석 완료 시 지급할 포인트",

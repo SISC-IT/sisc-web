@@ -50,9 +50,9 @@ public class AttendanceRoundServiceTest {
         LocalTime startTime = LocalTime.of(14, 0);
 
         AttendanceRoundRequest request = AttendanceRoundRequest.builder()
-                .date(roundDate)
+                .roundDate(roundDate)
                 .startTime(startTime)
-                .availableMinutes(30)
+                .allowedMinutes(30)
                 .build();
 
         AttendanceSession session = AttendanceSession.builder()
@@ -80,7 +80,7 @@ public class AttendanceRoundServiceTest {
         // then
         assertAll(
                 () -> assertThat(response.getRoundId()).isNotNull(),
-                () -> assertThat(response.getDate()).isEqualTo(roundDate),
+                () -> assertThat(response.getRoundDate()).isEqualTo(roundDate),
                 () -> assertThat(response.getStartTime()).isEqualTo(startTime),
                 () -> assertThat(response.getAvailableMinutes()).isEqualTo(30)
         );
@@ -95,9 +95,9 @@ public class AttendanceRoundServiceTest {
         // given
         UUID sessionId = UUID.randomUUID();
         AttendanceRoundRequest request = AttendanceRoundRequest.builder()
-                .date(LocalDate.now().plusDays(1))
+                .roundDate(LocalDate.now().plusDays(1))
                 .startTime(LocalTime.of(14, 0))
-                .availableMinutes(30)
+                .allowedMinutes(30)
                 .build();
 
         when(attendanceSessionRepository.findById(sessionId)).thenReturn(Optional.empty());
@@ -132,7 +132,7 @@ public class AttendanceRoundServiceTest {
         // then
         assertAll(
                 () -> assertThat(response.getRoundId()).isEqualTo(roundId),
-                () -> assertThat(response.getDate()).isEqualTo(roundDate),
+                () -> assertThat(response.getRoundDate()).isEqualTo(roundDate),
                 () -> assertThat(response.getStartTime()).isEqualTo(startTime)
         );
     }
@@ -185,8 +185,8 @@ public class AttendanceRoundServiceTest {
         // then
         assertAll(
                 () -> assertThat(responses).hasSize(2),
-                () -> assertThat(responses.get(0).getDate()).isEqualTo(date1),
-                () -> assertThat(responses.get(1).getDate()).isEqualTo(date2)
+                () -> assertThat(responses.get(0).getRoundDate()).isEqualTo(date1),
+                () -> assertThat(responses.get(1).getRoundDate()).isEqualTo(date2)
         );
     }
 
@@ -199,9 +199,9 @@ public class AttendanceRoundServiceTest {
         LocalTime newTime = LocalTime.of(15, 0);
 
         AttendanceRoundRequest request = AttendanceRoundRequest.builder()
-                .date(newDate)
+                .roundDate(newDate)
                 .startTime(newTime)
-                .availableMinutes(45)
+                .allowedMinutes(45)
                 .build();
 
         AttendanceRound existingRound = AttendanceRound.builder()
@@ -226,7 +226,7 @@ public class AttendanceRoundServiceTest {
 
         // then
         assertAll(
-                () -> assertThat(response.getDate()).isEqualTo(newDate),
+                () -> assertThat(response.getRoundDate()).isEqualTo(newDate),
                 () -> assertThat(response.getStartTime()).isEqualTo(newTime),
                 () -> assertThat(response.getAvailableMinutes()).isEqualTo(45)
         );
@@ -285,7 +285,7 @@ public class AttendanceRoundServiceTest {
 
         // then
         assertAll(
-                () -> assertThat(response.getDate()).isEqualTo(targetDate),
+                () -> assertThat(response.getRoundDate()).isEqualTo(targetDate),
                 () -> assertThat(response.getStartTime()).isEqualTo(LocalTime.of(14, 0))
         );
     }
