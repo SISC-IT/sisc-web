@@ -66,8 +66,6 @@ public class AttendanceServiceTest {
                 .attendanceSessionId(sessionId)
                 .title("세투연 정기모임")
                 .code(code)
-                .startsAt(now.minusMinutes(5))
-                .windowSeconds(1800)
                 .rewardPoints(10)
                 .location(sessionLocation)
                 .status(SessionStatus.OPEN)

@@ -59,8 +59,6 @@ public class SessionLocationUpdateTest {
                 .attendanceSessionId(sessionId)
                 .title("테스트 세션")
                 .code("123456")
-                .startsAt(LocalDateTime.now().plusHours(1))
-                .windowSeconds(1800)
                 .location(existingLocation)
                 .status(SessionStatus.UPCOMING)
                 .build();
@@ -105,8 +103,6 @@ public class SessionLocationUpdateTest {
                 .attendanceSessionId(sessionId)
                 .title("테스트 세션")
                 .code("123456")
-                .startsAt(LocalDateTime.now().plusHours(1))
-                .windowSeconds(1800)
                 .location(null) // 기존 위치 없음
                 .status(SessionStatus.UPCOMING)
                 .build();
@@ -174,8 +170,6 @@ public class SessionLocationUpdateTest {
                 .attendanceSessionId(sessionId)
                 .title("테스트 세션")
                 .code("123456")
-                .startsAt(LocalDateTime.now().plusHours(1))
-                .windowSeconds(1800)
                 .location(existingLocation)
                 .status(SessionStatus.UPCOMING)
                 .build();

@@ -59,7 +59,6 @@ public class AttendanceRoundServiceTest {
                 .attendanceSessionId(sessionId)
                 .title("테스트 세션")
                 .code("123456")
-                .startsAt(LocalDateTime.now().plusDays(1))
                 .build();
 
         AttendanceRound savedRound = AttendanceRound.builder()
