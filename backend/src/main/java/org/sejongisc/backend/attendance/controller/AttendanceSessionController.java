@@ -113,13 +113,13 @@ public class AttendanceSessionController {
 
     /**
      * 현재 활성 세션 목록 조회
-     * - 체크인 가능한 세션들만 조회
-     * - 시작시간 ~ 종료 시간 범위 내
+     * - 상태가 OPEN인 세션들만 조회
+     * - 실제 체크인 가능 여부는 라운드의 상태로 판단
      */
     @Operation(
             summary = "활성 세션 목록 조회",
-            description = "현재 체크인이 가능한 활성 세션들을 조회합니다. " +
-                    "세션 시작 시간부터 시간 윈도우 종료까지 범위 내인 세션들만 조회됩니다."
+            description = "현재 활성화된(OPEN 상태) 세션들을 조회합니다. " +
+                    "실제 체크인 가능 여부는 세션 내 라운드의 시간 상태로 판단됩니다."
     )
     @GetMapping("/active")
     public ResponseEntity<List<AttendanceSessionResponse>> getActiveSessions() {

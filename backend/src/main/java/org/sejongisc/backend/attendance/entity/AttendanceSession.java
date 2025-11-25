@@ -57,19 +57,12 @@ public class AttendanceSession extends BasePostgresEntity {
     private List<Attendance> attendances = new ArrayList<>();
 
     /**
-     * 세션 상태를 반환합니다.
-     * - UPCOMING: 활성화되지 않은 상태
-     * - OPEN: 관리자가 활성화한 상태 (체크인 가능)
-     * - CLOSED: 관리자가 종료한 상태 (체크인 불가)
+     * 세션의 현재 상태 반환
+     * - 세션 상태는 수동으로 관리됨 (UPCOMING, OPEN, CLOSED)
+     * - 라운드의 상태는 라운드 엔티티에서 시간 기반으로 계산됨
      */
-    public SessionStatus getCurrentStatus() {
+    public SessionStatus getStatus() {
         return this.status;
     }
 
-    /**
-     * 체크인이 가능한 상태인지 확인합니다.
-     */
-    public boolean isCheckInAvailable() {
-        return SessionStatus.OPEN.equals(this.status);
-    }
 }
