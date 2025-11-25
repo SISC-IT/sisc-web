@@ -55,9 +55,9 @@ public class AttendanceRoundController {
             @Valid @RequestBody AttendanceRoundRequest request) {
         log.info("📋 라운드 생성 요청 도착:");
         log.info("  - sessionId: {}", sessionId);
-        log.info("  - roundDate: {} (타입: {})", request.getRoundDate(), request.getRoundDate() != null ? request.getRoundDate().getClass().getSimpleName() : "null");
+        log.info("  - date: {} (타입: {})", request.getDate(), request.getDate() != null ? request.getDate().getClass().getSimpleName() : "null");
         log.info("  - startTime: {} (타입: {})", request.getStartTime(), request.getStartTime() != null ? request.getStartTime().getClass().getSimpleName() : "null");
-        log.info("  - allowedMinutes: {}", request.getAllowedMinutes());
+        log.info("  - availableMinutes: {}", request.getAvailableMinutes());
 
         if (request.getStartTime() != null) {
             log.info("  - startTime 상세: 시간={}, 분={}, 초={}",
