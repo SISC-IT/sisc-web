@@ -8,8 +8,6 @@ import { useParams } from 'react-router-dom';
 
 const Board = () => {
   const { team } = useParams();
-  console.log('=== Board 렌더링 ===');
-  console.log('현재 team:', team);
 
   const [posts, setPosts] = useState(() => {
     const saved = localStorage.getItem('boardPosts');
@@ -84,8 +82,6 @@ const Board = () => {
 
     // input 초기화
     e.target.value = '';
-
-    console.log('파일 처리 완료');
   };
 
   // 파일 삭제 핸들러
@@ -103,6 +99,7 @@ const Board = () => {
       id: Date.now(),
       likeCount: 0,
       isLiked: false,
+      bookmarkCount: 0,
       isBookmarked: false,
       files: selectedFiles.map((file) => ({
         name: file.name,
@@ -132,7 +129,13 @@ const Board = () => {
     setPosts(
       posts.map((post) =>
         post.id === postId
-          ? { ...post, isBookmarked: !post.isBookmarked }
+          ? {
+              ...post,
+              isBookmarked: !post.isBookmarked,
+              bookmarkCount: post.isBookmarked
+                ? (post.bookmarkCount || 1) - 1
+                : (post.bookmarkCount || 0) + 1,
+            }
           : post
       )
     );
@@ -177,18 +180,15 @@ const Board = () => {
 
       <div className={styles.postsContainer}>
         {filteredPosts.length > 0 ? (
-          filteredPosts.map((post) => {
-            console.log('PostItem 렌더링, post.id:', post.id, 'team:', team);
-            return (
-              <PostItem
-                key={post.id}
-                post={post}
-                currentTeam={team}
-                onLike={handleLike}
-                onBookmark={handleBookmark}
-              />
-            );
-          })
+          filteredPosts.map((post) => (
+            <PostItem
+              key={post.id}
+              post={post}
+              currentTeam={team}
+              onLike={handleLike}
+              onBookmark={handleBookmark}
+            />
+          ))
         ) : (
           <p className={styles.emptyMessage}>게시글이 없습니다.</p>
         )}
@@ -203,7 +203,7 @@ const Board = () => {
           selectedFiles={selectedFiles}
           onFileChange={handleFileChange}
           onRemoveFile={handleRemoveFile}
-          onSave={handleSaved}
+          onSave={handleSave}
           onClose={handleCloseModal}
         />
       )}

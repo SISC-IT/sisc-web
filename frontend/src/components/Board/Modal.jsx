@@ -3,19 +3,6 @@ import FolderIcon from '../../assets/boardFolder.svg';
 import CloseIcon from '../../assets/boardCloseIcon.svg';
 import DropdownArrowIcon from '../../assets/boardSelectArrow.svg';
 
-const handleDragOver = (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-};
-
-const handleDrop = (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-
-  const droppedFiles = Array.from(e.dataTransfer.files);
-  onFileChange({ target: { files: droppedFiles } });
-};
-
 const Modal = ({
   title,
   setTitle,
@@ -27,6 +14,19 @@ const Modal = ({
   onSave,
   onClose,
 }) => {
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    onFileChange({ target: { files: droppedFiles } });
+  };
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
