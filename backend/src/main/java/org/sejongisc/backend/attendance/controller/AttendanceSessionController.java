@@ -34,13 +34,13 @@ public class AttendanceSessionController {
      * 출석 세션 생성 (관리자용)
      * - 6자리 랜덤 코드 자동 생성
      * - GPS 위치 및 반경 설정
-     * - 시간 윈도우 설정
+     * - 기본 시작 시간 및 출석 인정 시간 설정
      */
     @Operation(
             summary = "출석 세션 생성",
             description = "새로운 출석 세션을 생성합니다. (관리자 전용) " +
-                    "6자리 랜덤 코드가 자동 생성되며, GPS 위치 정보, 시간 윈도우, " +
-                    "보상 포인트 등을 설정할 수 있습니다."
+                    "6자리 랜덤 코드가 자동 생성되며, GPS 위치 정보, 기본 시작 시간, " +
+                    "출석 인정 시간, 보상 포인트 등을 설정할 수 있습니다."
     )
     @PostMapping
     @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
@@ -132,13 +132,13 @@ public class AttendanceSessionController {
 
     /**
      * 세션 정보 수정 (관리자용)
-     * - 제목, 시간, 위치, 반경 등 수정 가능
+     * - 제목, 기본 시간, 위치, 반경 등 수정 가능
      * - 코드는 변경 불가
      */
     @Operation(
             summary = "세션 정보 수정",
             description = "세션의 기본 정보를 수정합니다. (관리자 전용) " +
-                    "제목, 태그, 시간, GPS 위치, 반경, 포인트 등을 수정할 수 있으며, " +
+                    "제목, 기본 시작 시간, 출석 인정 시간, GPS 위치, 반경, 포인트 등을 수정할 수 있으며, " +
                     "6자리 코드는 변경할 수 없습니다."
     )
     @PutMapping("/{sessionId}")

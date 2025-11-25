@@ -75,24 +75,27 @@ public class AttendanceService {
         }
 
 
+        // 세션의 활성 라운드를 찾음
         LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(session.getStartsAt())) {
-            throw new IllegalStateException("아직 출석 시간이 아닙니다");
-        }
-
-        LocalDateTime endTime = session.getEndsAt();
-        if (now.isAfter(endTime)) {
-            throw new IllegalStateException("출석 시간이 종료되었습니다");
-        }
+        AttendanceRound activeRound = session.getRounds().stream()
+                .filter(round -> {
+                    LocalDateTime roundStart = LocalDateTime.of(round.getRoundDate(), round.getStartTime());
+                    LocalDateTime roundEnd = roundStart.plusMinutes(round.getAllowedMinutes());
+                    return !now.isBefore(roundStart) && now.isBefore(roundEnd);
+                })
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("현재 진행 중인 라운드가 없습니다"));
 
         // 시작 후 5분 이내는 정상 출석, 이후는 지각
-        LocalDateTime lateThreshold = session.getStartsAt().plusMinutes(5);
+        LocalDateTime roundStart = LocalDateTime.of(activeRound.getRoundDate(), activeRound.getStartTime());
+        LocalDateTime lateThreshold = roundStart.plusMinutes(5);
         AttendanceStatus status = now.isAfter(lateThreshold) ?
                 AttendanceStatus.LATE : AttendanceStatus.PRESENT;
 
         Attendance attendance = Attendance.builder()
                 .user(user)
                 .attendanceSession(session)
+                .attendanceRound(activeRound)
                 .attendanceStatus(status)
                 .checkedAt(now)
                 .awardedPoints(session.getRewardPoints())
@@ -100,6 +103,7 @@ public class AttendanceService {
                 .checkInLocation(userLocation)
                 .deviceInfo(request.getDeviceInfo())
                 .build();
+
 
         attendance = attendanceRepository.save(attendance);
 

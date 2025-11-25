@@ -65,12 +65,25 @@ public class Attendance extends BasePostgresEntity {
 
     /**
      * 지각 여부 판단
+     * - 라운드 기반: 라운드 시작 시간 이후이면 지각
+     * - 세션 기반: 라운드 없이 진행되는 경우는 확인 불가
      */
     public boolean isLate() {
-        if (checkedAt == null || attendanceSession.getStartsAt() == null) {
+        if (checkedAt == null) {
             return false;
         }
-        return checkedAt.isAfter(attendanceSession.getStartsAt());
+
+        // 라운드 기반 체크인인 경우
+        if (attendanceRound != null) {
+            LocalDateTime roundStartTime = LocalDateTime.of(
+                    attendanceRound.getRoundDate(),
+                    attendanceRound.getStartTime()
+            );
+            return checkedAt.isAfter(roundStartTime);
+        }
+
+        // 라운드 없는 경우 지각 판단 불가
+        return false;
     }
 
     /**
