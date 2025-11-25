@@ -80,8 +80,9 @@ const Board = () => {
       return updatedFiles;
     });
 
-    // input 초기화
-    e.target.value = '';
+    if (e.target.value !== undefined) {
+      e.target.value = '';
+    }
   };
 
   // 파일 삭제 핸들러

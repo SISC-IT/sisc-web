@@ -86,8 +86,6 @@ const PostDetail = () => {
       setEditContent(currentPost.content);
     }
 
-    setLoading(false);
-
     if (currentPost) {
       setComments(getCommentsFromStorage(currentPost.id));
     } else {
@@ -114,7 +112,6 @@ const PostDetail = () => {
     setPost(updatedPost);
   };
 
-  // 북마크 토글
   // 북마크 토글
   const handleBookmark = () => {
     const allPosts = getPostsFromStorage();
@@ -211,7 +208,7 @@ const PostDetail = () => {
       const allPosts = getPostsFromStorage();
       const updatedPosts = allPosts.filter((p) => p.id !== post.id);
       savePostsToStorage(updatedPosts);
-      navigate(`/board/${team || ''}`);
+      navigate(`/board/${team || 'all'}`);
     }
   };
 
@@ -359,7 +356,7 @@ const PostDetail = () => {
               <div className={styles.attachmentList}>
                 {editFiles.map((file, index) => (
                   <div
-                    key={`existing-${index}`}
+                    key={`existing-${file.name}-${file.size}`}
                     className={styles.attachmentItem}
                   >
                     <img
