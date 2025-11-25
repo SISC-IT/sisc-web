@@ -4,10 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
-<<<<<<< HEAD
-=======
-import java.time.LocalDateTime;
->>>>>>> e0d7ec6 (refactor: 세션 출석체크 수정)
 import java.time.LocalTime;
 
 @Getter
