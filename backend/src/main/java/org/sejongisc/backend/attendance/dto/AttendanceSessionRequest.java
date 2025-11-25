@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Getter
 @Builder
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @Schema(
         title = "출석 세션 생성/수정 요청",
         description = "관리자가 출석 세션을 생성하거나 수정할 때 사용하는 요청 객체. " +
-                "세션의 기본 정보, 시간, 위치, 포인트 설정을 포함합니다."
+                "세션의 기본 정보, 기본 시간, 위치, 포인트 설정을 포함합니다."
 )
 public class AttendanceSessionRequest {
 
@@ -27,25 +28,24 @@ public class AttendanceSessionRequest {
     private String title;
 
     @Schema(
-            description = "세션 시작 시간 (ISO 8601 형식). 현재 시간 이후여야 합니다.",
-            example = "2024-11-15T14:00:00",
+            description = "세션의 기본 시작 시간 (HH:mm:ss 형식). 시간 단위만 지정합니다.",
+            example = "18:30:00",
             type = "string",
-            format = "date-time"
+            pattern = "HH:mm:ss"
     )
-    @NotNull(message = "시작 시간은 필수입니다")
-    @Future(message = "시작 시간은 현재 시간 이후여야 합니다")
-    private LocalDateTime startsAt;
+    @NotNull(message = "기본 시작 시간은 필수입니다")
+    private LocalTime defaultStartTime;
 
     @Schema(
-            description = "출석 체크인이 가능한 시간 윈도우 (초 단위). " +
-                    "범위: 300초(5분) ~ 14400초(4시간)",
-            example = "1800",
-            minimum = "300",
-            maximum = "14400"
+            description = "출석 인정 시간 (분 단위). " +
+                    "범위: 5분 ~ 240분(4시간)",
+            example = "30",
+            minimum = "5",
+            maximum = "240"
     )
-    @Min(value = 300, message = "최소 5분 이상이어야 합니다")
-    @Max(value = 14400, message = "최대 4시간 설정 가능합니다")
-    private Integer windowSeconds;
+    @Min(value = 5, message = "최소 5분 이상이어야 합니다")
+    @Max(value = 240, message = "최대 4시간 설정 가능합니다")
+    private Integer allowedMinutes;
 
     @Schema(
             description = "출석 완료 시 지급할 포인트",
