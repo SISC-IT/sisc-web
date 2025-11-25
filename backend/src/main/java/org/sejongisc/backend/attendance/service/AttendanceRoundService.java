@@ -35,25 +35,28 @@ public class AttendanceRoundService {
      * 라운드 생성
      */
     public AttendanceRoundResponse createRound(UUID sessionId, AttendanceRoundRequest request) {
-        log.info("📋 라운드 생성 요청: sessionId={}, date={}, startTime={}, availableMinutes={}",
-                sessionId, request.getDate(), request.getStartTime(), request.getAvailableMinutes());
+        log.info("📋 라운드 생성 요청: sessionId={}, roundDate={}, startTime={}, allowedMinutes={}",
+                sessionId, request.getRoundDate(), request.getStartTime(), request.getAllowedMinutes());
 
         AttendanceSession session = attendanceSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
 
         try {
-            // 클라이언트가 제공한 날짜를 사용하고, 없으면 서버의 현재 날짜를 기본값으로 사용
-            LocalDate roundDate = request.getDate() != null ? request.getDate() : LocalDate.now();
+            // 클라이언트가 보낸 날짜 대신 서버의 현재 날짜를 사용하여 시간대 차이 방지
+            LocalDate roundDate = request.getRoundDate();
+            if (roundDate == null) {
+                roundDate = LocalDate.now();
+            }
             LocalTime requestStartTime = request.getStartTime();
 
-            log.info("📅 시간대 정보: 클라이언트 date={}, 사용할 roundDate={}, 요청 startTime={}",
-                    request.getDate(), roundDate, requestStartTime);
+            log.info("📅 시간대 정보: 클라이언트 roundDate={}, 서버 today={}, 요청 startTime={}",
+                    request.getRoundDate(), roundDate, requestStartTime);
 
             AttendanceRound round = AttendanceRound.builder()
                     .attendanceSession(session)
-                    .roundDate(roundDate)  // 클라이언트 날짜를 우선 사용
+                    .roundDate(roundDate)
                     .startTime(requestStartTime)
-                    .allowedMinutes(request.getAvailableMinutes() != null ? request.getAvailableMinutes() : 30)
+                    .allowedMinutes(request.getAllowedMinutes() != null ? request.getAllowedMinutes() : 30)
                     .roundStatus(RoundStatus.UPCOMING)
                     .build();
 
@@ -112,9 +115,9 @@ public class AttendanceRoundService {
                 .orElseThrow(() -> new IllegalArgumentException("라운드를 찾을 수 없습니다: " + roundId));
 
         round.updateRoundInfo(
-                request.getDate(),
+                request.getRoundDate(),
                 request.getStartTime(),
-                request.getAvailableMinutes()
+                request.getAllowedMinutes()
         );
 
         AttendanceRound updated = attendanceRoundRepository.save(round);

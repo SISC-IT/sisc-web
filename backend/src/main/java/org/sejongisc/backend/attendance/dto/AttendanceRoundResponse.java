@@ -35,7 +35,7 @@ public class AttendanceRoundResponse {
             format = "date"
     )
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate date;
+    private LocalDate roundDate;
 
     @Schema(
             description = "라운드 출석 시작 시간",
@@ -69,7 +69,7 @@ public class AttendanceRoundResponse {
 
         return AttendanceRoundResponse.builder()
                 .roundId(round.getRoundId())
-                .date(round.getRoundDate())
+                .roundDate(round.getRoundDate())
                 .startTime(round.getStartTime())
                 .availableMinutes(round.getAllowedMinutes())
                 .status(statusString)
