@@ -40,7 +40,7 @@ public class AttendanceRoundRequest {
             format = "date",
             nullable = true
     )
-    private LocalDate roundDate;
+    private LocalDate date;
 
     @NotNull(message = "시작 시간은 필수입니다")
     @Schema(
@@ -61,5 +61,5 @@ public class AttendanceRoundRequest {
             minimum = "1",
             maximum = "120"
     )
-    private Integer allowedMinutes;
+    private Integer availableMinutes;
 }

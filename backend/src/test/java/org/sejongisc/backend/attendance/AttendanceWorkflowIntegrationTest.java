@@ -96,15 +96,15 @@ public class AttendanceWorkflowIntegrationTest {
         LocalDate round1Date = LocalDate.now();
         LocalTime round1Time = LocalTime.now().minusMinutes(2);
         AttendanceRoundRequest round1Request = AttendanceRoundRequest.builder()
-                .roundDate(round1Date)
+                .date(round1Date)
                 .startTime(round1Time)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round1Response = attendanceRoundService.createRound(sessionId, round1Request);
         UUID roundId1 = round1Response.getRoundId();
         System.out.println("  ✅ 라운드 1 생성: ID=" + roundId1);
-        System.out.println("     - 날짜: " + round1Response.getRoundDate());
+        System.out.println("     - 날짜: " + round1Response.getDate());
         System.out.println("     - 시간: " + round1Response.getStartTime() + " ~ " +
                           round1Response.getStartTime().plusMinutes(round1Response.getAvailableMinutes()));
         System.out.println("     - 상태: " + round1Response.getStatus());
@@ -113,15 +113,15 @@ public class AttendanceWorkflowIntegrationTest {
         LocalDate round2Date = LocalDate.now().plusDays(1);
         LocalTime round2Time = LocalTime.of(14, 0);
         AttendanceRoundRequest round2Request = AttendanceRoundRequest.builder()
-                .roundDate(round2Date)
+                .date(round2Date)
                 .startTime(round2Time)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round2Response = attendanceRoundService.createRound(sessionId, round2Request);
         UUID roundId2 = round2Response.getRoundId();
         System.out.println("  ✅ 라운드 2 생성: ID=" + roundId2);
-        System.out.println("     - 날짜: " + round2Response.getRoundDate());
+        System.out.println("     - 날짜: " + round2Response.getDate());
         System.out.println("     - 상태: " + round2Response.getStatus());
 
         // ===== Step 4: 세션 상세 조회 =====
@@ -137,7 +137,7 @@ public class AttendanceWorkflowIntegrationTest {
         assertThat(roundList).hasSize(2);
         System.out.println("  ✅ 라운드 목록 조회: " + roundList.size() + "개");
         for (AttendanceRoundResponse round : roundList) {
-            System.out.println("     - " + round.getRoundDate() + " " + round.getStartTime() +
+            System.out.println("     - " + round.getDate() + " " + round.getStartTime() +
                              " (상태: " + round.getStatus() + ")");
         }
 
@@ -265,9 +265,9 @@ public class AttendanceWorkflowIntegrationTest {
         UUID sessionId = sessionResponse.getAttendanceSessionId();
 
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(LocalDate.now())
+                .date(LocalDate.now())
                 .startTime(LocalTime.now().minusMinutes(2))
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse roundResponse = attendanceRoundService.createRound(sessionId, roundRequest);
@@ -317,9 +317,9 @@ public class AttendanceWorkflowIntegrationTest {
         UUID sessionId = sessionResponse.getAttendanceSessionId();
 
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(LocalDate.now())
+                .date(LocalDate.now())
                 .startTime(LocalTime.now().minusMinutes(2))
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse roundResponse = attendanceRoundService.createRound(sessionId, roundRequest);

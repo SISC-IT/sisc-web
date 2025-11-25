@@ -73,16 +73,16 @@ public class AttendanceCheckInTimeValidationTest {
         LocalDate today = LocalDate.now();               // 오늘 날짜!
 
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)                        // ✅ 오늘 날짜
+                .date(today)                        // ✅ 오늘 날짜
                 .startTime(roundStartTime)               // ✅ 지금보다 과거 시간
-                .allowedMinutes(30)                      // 30분 동안 출석 가능
+                .availableMinutes(30)                      // 30분 동안 출석 가능
                 .build();
 
         var roundResponse = attendanceRoundService.createRound(sessionId, roundRequest);
         UUID roundId = roundResponse.getRoundId();
 
         System.out.println("  ✅ 라운드 생성 완료:");
-        System.out.println("     - 라운드 날짜: " + roundResponse.getRoundDate());
+        System.out.println("     - 라운드 날짜: " + roundResponse.getDate());
         System.out.println("     - 시작 시간: " + roundResponse.getStartTime());
         System.out.println("     - 종료 시간: " + roundResponse.getStartTime().plusMinutes(30));
         System.out.println("     - 현재 시간: " + LocalTime.now());
@@ -153,16 +153,16 @@ public class AttendanceCheckInTimeValidationTest {
         LocalDate tomorrow = LocalDate.now().plusDays(1);  // 내일 날짜
 
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(tomorrow)                    // ❌ 내일 날짜
+                .date(tomorrow)                    // ❌ 내일 날짜
                 .startTime(roundStartTime)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         var roundResponse = attendanceRoundService.createRound(sessionId, roundRequest);
         UUID roundId = roundResponse.getRoundId();
 
         System.out.println("  ✅ 라운드 생성 완료:");
-        System.out.println("     - 라운드 날짜: " + roundResponse.getRoundDate() + " (내일)");
+        System.out.println("     - 라운드 날짜: " + roundResponse.getDate() + " (내일)");
         System.out.println("     - 현재 날짜: " + LocalDate.now());
 
         // 3️⃣ 사용자 생성
@@ -222,9 +222,9 @@ public class AttendanceCheckInTimeValidationTest {
         LocalDate today = LocalDate.now();
 
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundStartTime)
-                .allowedMinutes(30)                      // 30분만 허용 (이미 지남)
+                .availableMinutes(30)                      // 30분만 허용 (이미 지남)
                 .build();
 
         var roundResponse = attendanceRoundService.createRound(sessionId, roundRequest);
@@ -292,9 +292,9 @@ public class AttendanceCheckInTimeValidationTest {
         LocalDate today = LocalDate.now();
 
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundStartTime)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         var roundResponse = attendanceRoundService.createRound(sessionId, roundRequest);

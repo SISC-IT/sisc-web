@@ -121,9 +121,9 @@ public class AttendanceSystemComprehensiveTest {
         LocalDate today = LocalDate.now();
         LocalTime roundTime1 = LocalTime.now().minusMinutes(2);
         AttendanceRoundRequest round1Request = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundTime1)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round1Response = attendanceRoundService.createRound(sessionId, round1Request);
@@ -134,9 +134,9 @@ public class AttendanceSystemComprehensiveTest {
         // 라운드 2: 지각 범위 (6분 이전 시작)
         LocalTime roundTime2 = LocalTime.now().minusMinutes(6);
         AttendanceRoundRequest round2Request = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundTime2)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round2Response = attendanceRoundService.createRound(sessionId, round2Request);
@@ -227,9 +227,9 @@ public class AttendanceSystemComprehensiveTest {
         // 케이스 1: 정확히 오늘 라운드 (체크인 가능)
         LocalTime validTime = now.minusMinutes(5);
         AttendanceRoundRequest validRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(validTime)
-                .allowedMinutes(20)
+                .availableMinutes(20)
                 .build();
         AttendanceRoundResponse validRound = attendanceRoundService.createRound(sessionId, validRequest);
         System.out.println("✅ 오늘 라운드 (체크인 가능): " + validRound.getStatus());
@@ -238,9 +238,9 @@ public class AttendanceSystemComprehensiveTest {
         // 케이스 2: 내일 라운드 (체크인 불가)
         LocalTime futureTime = now.minusMinutes(5);
         AttendanceRoundRequest futureRequest = AttendanceRoundRequest.builder()
-                .roundDate(today.plusDays(1))
+                .date(today.plusDays(1))
                 .startTime(futureTime)
-                .allowedMinutes(20)
+                .availableMinutes(20)
                 .build();
         AttendanceRoundResponse futureRound = attendanceRoundService.createRound(sessionId, futureRequest);
         System.out.println("✅ 내일 라운드 생성 (상태: " + futureRound.getStatus() + ")");
@@ -292,9 +292,9 @@ public class AttendanceSystemComprehensiveTest {
         LocalDate today = LocalDate.now();
         LocalTime roundTime = LocalTime.now().minusMinutes(2);
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundTime)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round = attendanceRoundService.createRound(sessionId, roundRequest);
@@ -355,9 +355,9 @@ public class AttendanceSystemComprehensiveTest {
         LocalDate today = LocalDate.now();
         LocalTime roundTime = LocalTime.now().minusMinutes(2);
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundTime)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round = attendanceRoundService.createRound(sessionId, roundRequest);
@@ -413,9 +413,9 @@ public class AttendanceSystemComprehensiveTest {
         // 정시 라운드: 시작 후 3분
         LocalTime onTimeStart = LocalTime.now().minusMinutes(3);
         AttendanceRoundRequest onTimeRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(onTimeStart)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse onTimeRound = attendanceRoundService.createRound(sessionId, onTimeRequest);
@@ -437,9 +437,9 @@ public class AttendanceSystemComprehensiveTest {
         // 지각 라운드: 시작 후 8분
         LocalTime lateStart = LocalTime.now().minusMinutes(8);
         AttendanceRoundRequest lateRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(lateStart)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse lateRound = attendanceRoundService.createRound(sessionId, lateRequest);
@@ -484,9 +484,9 @@ public class AttendanceSystemComprehensiveTest {
         LocalDate today = LocalDate.now();
         LocalTime roundTime = LocalTime.now().minusMinutes(2);
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundTime)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round = attendanceRoundService.createRound(sessionId, roundRequest);
@@ -615,9 +615,9 @@ public class AttendanceSystemComprehensiveTest {
         LocalDate today = LocalDate.now();
         LocalTime roundTime = LocalTime.now().minusMinutes(2);
         AttendanceRoundRequest roundRequest = AttendanceRoundRequest.builder()
-                .roundDate(today)
+                .date(today)
                 .startTime(roundTime)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse round = attendanceRoundService.createRound(sessionId, roundRequest);

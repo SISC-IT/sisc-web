@@ -70,14 +70,14 @@ public class AttendanceRoundControllerTest {
         LocalTime startTime = LocalTime.of(14, 0);
 
         AttendanceRoundRequest request = AttendanceRoundRequest.builder()
-                .roundDate(roundDate)
+                .date(roundDate)
                 .startTime(startTime)
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         AttendanceRoundResponse response = AttendanceRoundResponse.builder()
                 .roundId(roundId)
-                .roundDate(roundDate)
+                .date(roundDate)
                 .startTime(startTime)
                 .availableMinutes(30)
                 .status("upcoming")
@@ -92,7 +92,7 @@ public class AttendanceRoundControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roundId").value(roundId.toString()))
-                .andExpect(jsonPath("$.roundDate").value(roundDate.toString()))
+                .andExpect(jsonPath("$.date").value(roundDate.toString()))
                 .andExpect(jsonPath("$.startTime").value("14:00:00"))
                 .andExpect(jsonPath("$.availableMinutes").value(30))
                 .andExpect(jsonPath("$.status").value("upcoming"));
@@ -104,9 +104,9 @@ public class AttendanceRoundControllerTest {
     void createRound_fail_noPermission() throws Exception {
         // given
         AttendanceRoundRequest request = AttendanceRoundRequest.builder()
-                .roundDate(LocalDate.now())
+                .date(LocalDate.now())
                 .startTime(LocalTime.of(14, 0))
-                .allowedMinutes(30)
+                .availableMinutes(30)
                 .build();
 
         // when & then
@@ -126,7 +126,7 @@ public class AttendanceRoundControllerTest {
 
         AttendanceRoundResponse response = AttendanceRoundResponse.builder()
                 .roundId(roundId)
-                .roundDate(roundDate)
+                .date(roundDate)
                 .startTime(startTime)
                 .availableMinutes(30)
                 .status("active")
@@ -152,7 +152,7 @@ public class AttendanceRoundControllerTest {
 
         AttendanceRoundResponse round1 = AttendanceRoundResponse.builder()
                 .roundId(UUID.randomUUID())
-                .roundDate(roundDate)
+                .date(roundDate)
                 .startTime(startTime)
                 .availableMinutes(30)
                 .status("active")
@@ -160,7 +160,7 @@ public class AttendanceRoundControllerTest {
 
         AttendanceRoundResponse round2 = AttendanceRoundResponse.builder()
                 .roundId(UUID.randomUUID())
-                .roundDate(roundDate.plusDays(7))
+                .date(roundDate.plusDays(7))
                 .startTime(startTime)
                 .availableMinutes(30)
                 .status("upcoming")
@@ -186,14 +186,14 @@ public class AttendanceRoundControllerTest {
         LocalTime newStartTime = LocalTime.of(15, 0);
 
         AttendanceRoundRequest request = AttendanceRoundRequest.builder()
-                .roundDate(newDate)
+                .date(newDate)
                 .startTime(newStartTime)
-                .allowedMinutes(45)
+                .availableMinutes(45)
                 .build();
 
         AttendanceRoundResponse response = AttendanceRoundResponse.builder()
                 .roundId(roundId)
-                .roundDate(newDate)
+                .date(newDate)
                 .startTime(newStartTime)
                 .availableMinutes(45)
                 .status("upcoming")
@@ -207,7 +207,7 @@ public class AttendanceRoundControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roundDate").value(newDate.toString()))
+                .andExpect(jsonPath("$.date").value(newDate.toString()))
                 .andExpect(jsonPath("$.startTime").value("15:00:00"))
                 .andExpect(jsonPath("$.availableMinutes").value(45));
     }
@@ -320,7 +320,7 @@ public class AttendanceRoundControllerTest {
 
         AttendanceRoundResponse response = AttendanceRoundResponse.builder()
                 .roundId(roundId)
-                .roundDate(targetDate)
+                .date(targetDate)
                 .startTime(startTime)
                 .availableMinutes(30)
                 .status("active")
