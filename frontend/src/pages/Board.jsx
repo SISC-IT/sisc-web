@@ -203,7 +203,7 @@ const Board = () => {
           selectedFiles={selectedFiles}
           onFileChange={handleFileChange}
           onRemoveFile={handleRemoveFile}
-          onSave={handleSaved}
+          onSave={handleSave}
           onClose={handleCloseModal}
         />
       )}
