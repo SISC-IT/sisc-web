@@ -13,9 +13,9 @@ const PostItem = React.memo(({ post, onLike, onBookmark, currentTeam }) => {
 
   const handleCardClick = () => {
     const team = currentTeam || 'all';
-
     navigate(`/board/${team}/${post.id}`, { state: { post } });
   };
+
   const handleActionClick = (e) => {
     e.stopPropagation();
   };

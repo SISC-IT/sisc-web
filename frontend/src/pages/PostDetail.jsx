@@ -292,6 +292,7 @@ const PostDetail = () => {
               <button
                 className={styles.menuButton}
                 onClick={() => setShowMenu(!showMenu)}
+                aria-label="게시글 메뉴 열기"
               >
                 ⋮
               </button>

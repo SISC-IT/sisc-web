@@ -6,10 +6,9 @@
   margin-bottom: 16px;
   box-sizing: border-box;
   position: relative;
-}
-.postCard {
   cursor: pointer;
 }
+
 .mainContent {
   display: flex;
   gap: 16px;
