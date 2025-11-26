@@ -8,15 +8,14 @@ import org.sejongisc.backend.attendance.dto.SessionLocationUpdateRequest;
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.Location;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -51,13 +50,11 @@ public class AttendanceSessionService {
 
         AttendanceSession session = AttendanceSession.builder()
                 .title(request.getTitle())
-                .tag(request.getTag())
                 .startsAt(request.getStartsAt())
                 .windowSeconds(request.getWindowSeconds())
                 .code(code)
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
-                .visibility(request.getVisibility() != null ? request.getVisibility() : SessionVisibility.PUBLIC)
                 .status(SessionStatus.UPCOMING)
                 .build();
 
@@ -81,19 +78,6 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 출석 코드로 세션 조회
-     * - 학생이 코드 입력 시 사용
-     * - 체크인 가능 여부 자동 계산
-     */
-    @Transactional(readOnly = true)
-    public AttendanceSessionResponse getSessionByCode(String code) {
-        AttendanceSession session = attendanceSessionRepository.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 출석 코드입니다: " + code));
-
-        return convertToResponse(session);
-    }
-
-    /**
      * 모든 세션 목록 조회
      * - 관리자용, 공개/비공개 모두 포함
      * - 최신 순으로 정렬
@@ -108,40 +92,14 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 태그별 세션 목록 조회
-     * - "금융IT", "동아리 전체" 등 태그로 필터링
-     */
-    @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionsByTag(String tag) {
-        List<AttendanceSession> sessions = attendanceSessionRepository.findByTag(tag);
-
-        return sessions.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 상태별 세션 목록 조회
-     * - UPCOMING/OPEN/CLOSED 상태별 필터링
-     */
-    @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionsByStatus(SessionStatus status) {
-        List<AttendanceSession> sessions = attendanceSessionRepository.findByStatus(status);
-
-        return sessions.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
      * 공개 세션 목록 조회
-     * - 학생들이 볼 수 있는 공개 세션만 조회
+     * - 학생들이 볼 수 있는 모든 세션만 조회
      * - 최신 순으로 정렬
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getPublicSessions() {
         List<AttendanceSession> sessions = attendanceSessionRepository
-                .findByVisibilityOrderByStartsAtDesc(SessionVisibility.PUBLIC);
+                .findAllByOrderByStartsAtDesc();
 
         return sessions.stream()
                 .map(this::convertToResponse)
@@ -194,12 +152,10 @@ public class AttendanceSessionService {
 
         session = session.toBuilder()
                 .title(request.getTitle())
-                .tag(request.getTag())
                 .startsAt(request.getStartsAt())
                 .windowSeconds(request.getWindowSeconds())
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
-                .visibility(request.getVisibility())
                 .build();
 
         session = attendanceSessionRepository.save(session);
@@ -323,40 +279,33 @@ public class AttendanceSessionService {
 
     /**
      * AttendanceSession 엔티티를 Response DTO로 변환
-     * - 남은 시간, 체크인 가능 여부, 참여자 수 계산
-     * - 현재 시간 기준으로 동적 정보 생성
+     * - 기본 세션 정보: 제목, 시작 시간, 출석 인정 시간, 보상 포인트
+     * - 위치 정보: location 객체 (lat, lng)
+     * - 공개 여부: isVisible boolean
      */
     private AttendanceSessionResponse convertToResponse(AttendanceSession session) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
-
-        Long remainingSeconds = null;
-        boolean checkInAvailable = false;
-
-        if (now.isBefore(session.getStartsAt())) {
-            remainingSeconds = java.time.Duration.between(now, session.getStartsAt()).getSeconds();
-        } else if (now.isBefore(endTime)) {
-            remainingSeconds = java.time.Duration.between(now, endTime).getSeconds();
-            checkInAvailable = session.getStatus() == SessionStatus.OPEN;
+        // 위치 정보 변환 (location이 존재하면 LocationInfo 객체 생성, 없으면 null)
+        AttendanceSessionResponse.LocationInfo location = null;
+        if (session.getLocation() != null) {
+            location = AttendanceSessionResponse.LocationInfo.builder()
+                    .lat(session.getLocation().getLat())
+                    .lng(session.getLocation().getLng())
+                    .build();
         }
 
-        Long participantCount = attendanceRepository.countByAttendanceSession(session);
+        // defaultAvailableMinutes: windowSeconds를 분 단위로 변환
+        Integer defaultAvailableMinutes = (int) (session.getWindowSeconds() / 60);
+
+        // defaultStartTime: startsAt에서 시간 부분만 추출
+        LocalTime defaultStartTime = session.getStartsAt().toLocalTime();
 
         return AttendanceSessionResponse.builder()
                 .attendanceSessionId(session.getAttendanceSessionId())
                 .title(session.getTitle())
-                .windowSeconds(session.getWindowSeconds())
+                .location(location)
+                .defaultStartTime(defaultStartTime)
+                .defaultAvailableMinutes(defaultAvailableMinutes)
                 .rewardPoints(session.getRewardPoints())
-                .latitude(session.getLocation() != null ? session.getLocation().getLat() : null)
-                .longitude(session.getLocation() != null ? session.getLocation().getLng() : null)
-                .radiusMeters(session.getLocation() != null ? session.getLocation().getRadiusMeters() : null)
-                .visibility(session.getVisibility())
-                .status(session.getStatus())
-                .createdAt(session.getCreatedDate())
-                .updatedAt(session.getUpdatedDate())
-                .remainingSeconds(remainingSeconds)
-                .checkInAvailable(checkInAvailable)
-                .participantCount(participantCount.intValue())
                 .build();
 
     }

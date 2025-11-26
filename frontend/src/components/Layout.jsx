@@ -9,22 +9,25 @@ function Layout() {
   const isRoot = location.pathname === '/';
 
   return (
-    <div style={{ display: 'flex', position: 'relative' }}>
+    <div style={{ display: 'flex', position: 'relative', minHeight: '100vh' }}>
       <Header
         isRoot={isRoot}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         style={{ position: 'fixed' }}
       />
+
       <main
         style={{
           display: 'flex',
-          position: 'relative',
+          flex: 1,
           marginLeft: !isRoot ? '264px' : '0',
           transition: 'margin-left 0.3s ease',
         }}
       >
         <Sidebar isOpen={isSidebarOpen} isRoot={isRoot} />
-        <Outlet />
+        <div style={{ flex: 1 }}>
+          <Outlet />
+        </div>
       </main>
     </div>
   );

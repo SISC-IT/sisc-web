@@ -81,6 +81,7 @@ public enum ErrorCode {
   BET_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 베팅을 찾을 수 없습니다."),
   BET_POINT_TOO_LOW(HttpStatus.CONFLICT, "베팅 포인트는 10 이상이어야 합니다."),
   BET_ROUND_NOT_CLOSED(HttpStatus.CONFLICT, "닫히지 않은 배팅입니다."),
+  BET_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 취소되었거나 처리된 베팅입니다."),
 
   // BOARD
 

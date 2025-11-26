@@ -30,4 +30,14 @@ public interface BetRoundRepository extends JpaRepository<BetRound, UUID> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE BetRound b SET b.downBetCount = b.downBetCount + 1, b.downTotalPoints = b.downTotalPoints + :points WHERE b.betRoundID = :id")
     void incrementDownStats(@Param("id") UUID id, @Param("points") long points);
+
+    // [추가] 상승(UP) 통계 감소 (취소 시)
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE BetRound b SET b.upBetCount = b.upBetCount - 1, b.upTotalPoints = b.upTotalPoints - :points WHERE b.betRoundID = :id")
+    void decrementUpStats(@Param("id") UUID id, @Param("points") long points);
+
+    // [추가] 하락(DOWN) 통계 감소 (취소 시)
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE BetRound b SET b.downBetCount = b.downBetCount - 1, b.downTotalPoints = b.downTotalPoints - :points WHERE b.betRoundID = :id")
+    void decrementDownStats(@Param("id") UUID id, @Param("points") long points);
 }

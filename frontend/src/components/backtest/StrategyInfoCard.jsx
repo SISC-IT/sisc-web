@@ -1,7 +1,17 @@
 import styles from './StrategyInfoCard.module.css';
 import SectionCard from './common/SectionCard';
 
-const StrategyInfoCard = () => {
+const StrategyInfoCard = ({
+  strategyName,
+  setStrategyName,
+  startDate,
+  setStartDate,
+  endDate,
+  setEndDate,
+  initialCapital,
+  setInitialCapital,
+  onRunBacktest,
+}) => {
   return (
     <SectionCard title="전략 기본정보">
       <div>
@@ -10,28 +20,44 @@ const StrategyInfoCard = () => {
             <label className={styles.label}>전략 이름</label>
             <input
               className={styles.input}
-              placeholder="변호를 입력해주세요."
+              placeholder="나만의 전략 이름"
+              value={strategyName}
+              onChange={(e) => setStrategyName(e.target.value)}
             />
           </div>
 
           <div className={styles.field}>
             <label className={styles.label}>시작일</label>
-            <input className={styles.input} placeholder="YYYY / MM / DD" />
+            <input
+              type="date"
+              className={styles.input}
+              placeholder="YYYY-MM-DD"
+              min="1900-01-01"
+              max="2100-12-31"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
 
           <div className={styles.field}>
             <label className={styles.label}>종료일</label>
-            <input className={styles.input} placeholder="YYYY / MM / DD" />
+            <input
+              type="date"
+              className={styles.input}
+              placeholder="YYYY-MM-DD"
+              min="1900-01-01"
+              max="2100-12-31"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
           </div>
         </div>
 
         <div className={styles.fieldGroup}>
           <div className={styles.field}>
             <label className={styles.label}>타임 프레임</label>
-            <select className={styles.select}>
-              <option>D</option>
-              <option>W</option>
-              <option>M</option>
+            <select className={styles.select} disabled={true}>
+              <option>Day</option>
             </select>
           </div>
 
@@ -42,8 +68,10 @@ const StrategyInfoCard = () => {
             <input
               className={styles.input}
               type="text"
-              placeholder="100000"
+              placeholder="0"
               inputMode="numeric"
+              value={initialCapital}
+              onChange={(e) => setInitialCapital(e.target.value)}
             />
           </div>
 
@@ -51,7 +79,9 @@ const StrategyInfoCard = () => {
             <label className={styles.label} aria-hidden="true">
               &nbsp;
             </label>
-            <button className={styles.button}>전략 폴더에 넣기</button>
+            <button className={styles.button} onClick={onRunBacktest}>
+              실행하기
+            </button>
           </div>
         </div>
       </div>

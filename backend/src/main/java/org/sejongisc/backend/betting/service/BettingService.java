@@ -18,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.sejongisc.backend.betting.dto.UserBetResponse;
+import org.springframework.orm.ObjectOptimisticLockingFailureException; // import 확인
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -204,28 +205,60 @@ public class BettingService {
     }
 
     /**
-     * 사용자 베팅 취소
+     * 사용자 베팅 취소 (수정됨)
      */
     @Transactional
     public void cancelUserBet(UUID userId, UUID userBetId) {
-        UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
+        try {
+            // 1. 엔티티 조회 (UserBet)
+            UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
 
-        BetRound betRound = userBet.getRound();
-        betRound.validate();
+            // 2. 이미 처리된 상태인지 검증 (중복 방지 1차)
+            if (userBet.getBetStatus() != BetStatus.ACTIVE) {
+                throw new CustomException(ErrorCode.BET_ALREADY_PROCESSED);
+            }
 
-        if (!userBet.isFree() && userBet.getStakePoints() > 0) {
-            pointHistoryService.createPointHistory(
-                    userId,
-                    userBet.getStakePoints(),
-                    PointReason.BETTING,
-                    PointOrigin.BETTING,
-                    userBet.getUserBetId()
-            );
+            // 3. BetRound 조회 및 검증
+            // (Lazy Loading 문제 방지를 위해 ID로 다시 조회하는 기존 로직 유지 권장)
+            UUID roundId = userBet.getRound().getBetRoundID();
+            BetRound betRound = betRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
+
+            betRound.validate(); // 마감 시간 등 체크
+
+            // 4. 상태 변경 (ACTIVE -> CANCELED)
+            // 여기서 @Version 필드 덕분에 커밋 시점에 버전 충돌 여부를 체크함
+            userBet.cancel(); 
+            userBetRepository.saveAndFlush(userBet); // 명시적 flush로 버전 충돌 즉시 감지
+
+            // 5. 포인트 환불
+            if (!userBet.isFree() && userBet.getStakePoints() > 0) {
+                pointHistoryService.createPointHistory(
+                        userId,
+                        userBet.getStakePoints(),
+                        PointReason.BETTING,
+                        PointOrigin.BETTING,
+                        betRound.getBetRoundID() // targetId 통일 (리뷰 반영)
+                );
+            }
+
+            // 6. 통계 차감
+            int stake = userBet.getStakePoints();
+            if (userBet.getOption() == BetOption.RISE) {
+                betRoundRepository.decrementUpStats(betRound.getBetRoundID(), stake);
+            } else {
+                betRoundRepository.decrementDownStats(betRound.getBetRoundID(), stake);
+            }
+
+            // userBetRepository.save(userBet); // Transactional이라 자동 저장되지만 명시해도 됨
+
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // 동시에 취소 요청이 들어온 경우 하나만 성공하고 나머지는 여기서 걸러짐
+            throw new CustomException(ErrorCode.BET_ALREADY_PROCESSED);
         }
+    }       // 삭제(delete)는 하지 않음 (이력 관리를 위해)
 
-        userBetRepository.delete(userBet);
-    }
 
     /**
      * 베팅 결과 정산
