@@ -18,9 +18,6 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     // 상태별 세션 조회
     List<AttendanceSession> findByStatus(SessionStatus status);
 
-    // 모든 세션을 최신순으로 조회 (관리자용)
-    List<AttendanceSession> findAllByOrderByStartsAtDesc();
-
     // 코드 중복 체크
     boolean existsByCode(String code);
 }

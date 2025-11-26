@@ -65,12 +65,30 @@ public class Attendance extends BasePostgresEntity {
 
     /**
      * 지각 여부 판단
+     * - 라운드 기반: attendanceRound의 startTime 기준
+     * - 세션 기반: attendanceSession의 defaultStartTime 기준 (5분)
      */
     public boolean isLate() {
-        if (checkedAt == null || attendanceSession.getStartsAt() == null) {
+        if (checkedAt == null) {
             return false;
         }
-        return checkedAt.isAfter(attendanceSession.getStartsAt());
+
+        java.time.LocalTime checkTime = checkedAt.toLocalTime();
+        java.time.LocalTime lateThreshold;
+
+        // 라운드 기반 출석인 경우
+        if (attendanceRound != null) {
+            lateThreshold = attendanceRound.getStartTime().plusMinutes(5);
+        }
+        // 세션 기반 출석인 경우
+        else if (attendanceSession != null && attendanceSession.getDefaultStartTime() != null) {
+            lateThreshold = attendanceSession.getDefaultStartTime().plusMinutes(5);
+        }
+        else {
+            return false;
+        }
+
+        return checkTime.isAfter(lateThreshold);
     }
 
     /**
