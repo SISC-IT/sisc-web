@@ -160,6 +160,34 @@ public class BoardController {
     return ResponseEntity.ok(postService.getParentBoards());
   }
 
+
+  // 게시판 생성
+  @Operation(
+          summary = "하위 게시판 목록 조회",
+          description = "하위 게시판 목록을 조회합니다."
+  )
+  @GetMapping("/childs")
+  public ResponseEntity<List<BoardResponse>> getChildBoards(
+          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    return ResponseEntity.ok(postService.getChildBoards());
+  }
+
+  // 게시글 삭제
+  @Operation(
+          summary = "게시판 삭제",
+          description = "게시판 ID를 통해 게시판을 삭제합니다."
+                  + "회장만 삭제할 수 있습니다."
+                  + "관련 첨부파일 및 댓글 등도 함께 삭제됩니다."
+  )
+  @DeleteMapping("/{boardId}")
+  public ResponseEntity<?> deleteBoard(
+          @PathVariable UUID boardId,
+          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postService.deleteBoard(boardId, userId);
+    return ResponseEntity.ok("게시판 삭제가 완료되었습니다.");
+  }
+
   // 좋아요 토글
   @Operation(
       summary = "좋아요 등록 및 취소",
@@ -236,4 +264,7 @@ public class BoardController {
     UUID userId = customUserDetails.getUserId();
     postInteractionService.deleteComment(commentId, userId);
   }
+
+
+
 }
