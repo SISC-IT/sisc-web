@@ -33,4 +33,7 @@ public interface PostService {
 
   // 부모 게시판 목록 조회
   List<BoardResponse> getParentBoards();
+  // 하위 게시판 목록 조회
+  List<BoardResponse> getChildBoards();
+  void deleteBoard(UUID boardId, UUID boardUserId);
 }
