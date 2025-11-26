@@ -26,7 +26,7 @@ public class AttendanceRoundResponse {
             description = "라운드의 고유 ID",
             example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     )
-    private UUID roundId;
+    private UUID id;
 
     @Schema(
             description = "라운드 진행 날짜",
@@ -35,7 +35,7 @@ public class AttendanceRoundResponse {
             format = "date"
     )
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate roundDate;
+    private LocalDate date;
 
     @Schema(
             description = "라운드 출석 시작 시간",
@@ -68,8 +68,8 @@ public class AttendanceRoundResponse {
         String statusString = round.calculateCurrentStatus().getValue();
 
         return AttendanceRoundResponse.builder()
-                .roundId(round.getRoundId())
-                .roundDate(round.getRoundDate())
+                .id(round.getRoundId())
+                .date(round.getRoundDate())
                 .startTime(round.getStartTime())
                 .availableMinutes(round.getAllowedMinutes())
                 .status(statusString)
