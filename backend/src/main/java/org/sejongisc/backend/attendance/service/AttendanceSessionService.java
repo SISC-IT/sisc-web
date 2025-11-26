@@ -13,8 +13,6 @@ import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -37,7 +35,6 @@ public class AttendanceSessionService {
     public AttendanceSessionResponse createSession(AttendanceSessionRequest request) {
         log.info("출석 세션 생성 시작: 제목={}, 기본시간={}, 출석인정시간={}분",
                 request.getTitle(), request.getDefaultStartTime(), request.getAllowedMinutes());
-
 
         String code = generateUniqueCode();
         Location location = null;
@@ -293,7 +290,6 @@ public class AttendanceSessionService {
                 .defaultAvailableMinutes(session.getAllowedMinutes())
                 .rewardPoints(session.getRewardPoints())
                 .build();
-
     }
 
 }

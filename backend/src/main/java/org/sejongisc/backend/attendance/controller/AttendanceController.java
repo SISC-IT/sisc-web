@@ -2,14 +2,11 @@ package org.sejongisc.backend.attendance.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.AttendanceRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.service.AttendanceService;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

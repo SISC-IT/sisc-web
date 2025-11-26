@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceCheckInRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceCheckInResponse;
-import org.sejongisc.backend.attendance.dto.AttendanceRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.entity.*;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
@@ -15,7 +14,6 @@ import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
