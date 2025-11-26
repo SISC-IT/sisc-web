@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import PostItem from '../components/Board/PostItem';
 import Modal from '../components/Board/Modal';
 import SearchBar from '../components/Board/SearchBar';
 import BoardActions from '../components/Board/BoardActions';
+import CategoryTabs from '../components/Board/CategoryTabs';
+import CreateSubBoardModal from '../components/Board/CreateSubBoardModal';
 import styles from './Board.module.css';
 import * as boardApi from '../utils/boardApi';
 
 const Board = () => {
-  const location = useLocation();
-  const { team } = useParams(); // ✨ boardType → team
+  const { team } = useParams();
 
   // State 관리
   const [boardIdMap, setBoardIdMap] = useState({});
@@ -22,18 +23,27 @@ const Board = () => {
   const [sortOption, setSortOption] = useState('latest');
   const [loading, setLoading] = useState(false);
   const [boardsLoaded, setBoardsLoaded] = useState(false);
+  const [activeSubBoard, setActiveSubBoard] = useState('all');
+  const [showSubBoardModal, setShowSubBoardModal] = useState(false);
+  const [subBoardName, setSubBoardName] = useState('');
 
-  // ✨ team 사용
   const currentPath = team ? `/board/${team}` : '/board';
   const currentBoardId = boardIdMap[currentPath];
   const currentBoardName = boardNameMap[currentPath];
+
+  // 하위 게시판 탭 설정
+  const subBoardTabs = [
+    { id: 'all', name: '전체' },
+    { id: 'minutes', name: '회의록' },
+    { id: 'notice', name: '공지' },
+    { id: 'project', name: '프로젝트회의공고' },
+  ];
 
   // 컴포넌트 로드 시 게시판 목록 불러오기
   useEffect(() => {
     loadBoardList();
   }, []);
 
-  // 서버에서 게시판 목록을 불러와서 path와 매핑
   const loadBoardList = async () => {
     try {
       console.log('게시판 목록 불러오는 중...');
@@ -69,7 +79,6 @@ const Board = () => {
         }
       });
 
-      // 전체 게시판
       idMap['/board'] = boards.map((b) => b.boardId);
 
       console.log('생성된 ID 매핑:', idMap);
@@ -84,9 +93,9 @@ const Board = () => {
     }
   };
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     if (!currentBoardId) {
-      console.log('boardId가 없습니다. 경로:', currentPath);
+      console.log('boardId가 없습니다.');
       return;
     }
 
@@ -94,9 +103,7 @@ const Board = () => {
       setLoading(true);
 
       if (Array.isArray(currentBoardId)) {
-        // 전체 게시판
-        console.log('전체 게시판 조회 - 모든 게시판:', currentBoardId);
-
+        console.log('전체 게시판 조회');
         const allPostsPromises = currentBoardId.map((id) =>
           boardApi.getPosts(id).catch((err) => {
             console.error(`게시판 ${id} 조회 실패:`, err);
@@ -111,13 +118,7 @@ const Board = () => {
 
         setPosts(allPosts);
       } else {
-        // 개별 팀 게시판
-        console.log(
-          '게시글 조회 - 게시판:',
-          currentBoardName,
-          '/ ID:',
-          currentBoardId
-        );
+        console.log('게시글 조회 - ID:', currentBoardId);
         const response = await boardApi.getPosts(currentBoardId);
         console.log('받은 게시글:', response);
 
@@ -126,39 +127,18 @@ const Board = () => {
       }
     } catch (error) {
       console.error('게시글 불러오기 실패:', error);
-      console.error('에러 상세:', error.response);
       setPosts([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentBoardId]);
 
-  // team 의존성 추가
-  useEffect(() => {
-    if (boardsLoaded && currentBoardId) {
-      fetchPosts();
-    }
-  }, [team, currentBoardId, boardsLoaded]);
-
-  // 검색어 변경 시
-  useEffect(() => {
-    if (boardsLoaded && currentBoardId) {
-      if (searchTerm) {
-        handleSearch();
-      } else {
-        fetchPosts();
-      }
-    }
-  }, [searchTerm]);
-
-  // 게시글 검색
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!currentBoardId) return;
 
     try {
       setLoading(true);
 
-      // 전체 게시판 검색
       if (Array.isArray(currentBoardId)) {
         const allPostsPromises = currentBoardId.map((id) =>
           boardApi.searchPosts(id, searchTerm).catch(() => [])
@@ -178,29 +158,78 @@ const Board = () => {
     } finally {
       setLoading(false);
     }
+  }, [currentBoardId, searchTerm]);
+
+  // team 변경 시 게시글 가져오기
+  useEffect(() => {
+    if (boardsLoaded && currentBoardId) {
+      fetchPosts();
+    }
+  }, [boardsLoaded, currentBoardId, fetchPosts]);
+
+  // 검색어 변경 시
+  useEffect(() => {
+    if (boardsLoaded && currentBoardId) {
+      if (searchTerm) {
+        handleSearch();
+      } else {
+        fetchPosts();
+      }
+    }
+  }, [searchTerm, boardsLoaded, currentBoardId, handleSearch, fetchPosts]);
+
+  // 탭 변경 핸들러
+  const handleTabChange = (tabId) => {
+    setActiveSubBoard(tabId);
+    console.log('선택된 탭:', tabId);
+
+    if (tabId === 'all') {
+      fetchPosts();
+    } else {
+      console.log(`${tabId} 게시판의 게시글을 가져와야 합니다.`);
+    }
   };
 
-  // 모달 열기
+  // 모달 열기/닫기
   const handleOpenModal = () => {
     setShowModal(true);
   };
 
-  // 모달 닫기
   const handleCloseModal = () => {
     setShowModal(false);
     setTitle('');
     setContent('');
   };
 
+  // 하위 게시판 모달
+  const handleOpenSubBoardModal = () => {
+    setShowSubBoardModal(true);
+  };
+
+  const handleCloseSubBoardModal = () => {
+    setShowSubBoardModal(false);
+    setSubBoardName('');
+  };
+
+  const handleCreateSubBoard = async () => {
+    if (!subBoardName.trim()) {
+      alert('하위 게시판 이름을 입력해주세요.');
+      return;
+    }
+
+    try {
+      await boardApi.createBoard(subBoardName, currentBoardId);
+      alert('하위 게시판이 생성되었습니다!');
+      handleCloseSubBoardModal();
+      loadBoardList();
+    } catch (error) {
+      console.error('하위 게시판 생성 실패:', error);
+      alert('하위 게시판 생성에 실패했습니다.');
+    }
+  };
+
   // 게시글 작성
   const handleSave = async () => {
-    console.log('=== 게시글 저장 시도 ===');
-    console.log('title:', title);
-    console.log('content:', content);
-    console.log('현재 경로:', currentPath);
-    console.log('현재 boardId:', currentBoardId);
-    console.log('게시판 이름:', currentBoardName);
-
     if (Array.isArray(currentBoardId)) {
       alert(
         '전체 게시판에서는 글을 작성할 수 없습니다.\n특정 팀 게시판을 선택해주세요.'
@@ -209,7 +238,7 @@ const Board = () => {
     }
 
     if (!currentBoardId) {
-      alert(`게시판 정보를 찾을 수 없습니다.\n현재 경로: ${currentPath}`);
+      alert(`게시판 정보를 찾을 수 없습니다.`);
       return;
     }
 
@@ -229,15 +258,12 @@ const Board = () => {
         content: content.trim(),
       };
 
-      console.log('전송할 데이터:', { boardId: currentBoardId, ...postData });
-
       await boardApi.createPost(currentBoardId, postData);
       handleCloseModal();
       fetchPosts();
       alert('게시글이 작성되었습니다!');
     } catch (error) {
       console.error('게시글 작성 실패:', error);
-      console.error('에러 상세:', error.response);
       alert('게시글 작성에 실패했습니다.');
     }
   };
@@ -303,22 +329,25 @@ const Board = () => {
 
   return (
     <div className={styles.boardContainer}>
-      {/* 게시판 헤더 */}
       <header className={styles.boardHeader}>
         <h1 className={styles.boardTitle}>{currentBoardName || '게시판'}</h1>
       </header>
 
-      {/* 검색 및 정렬 컨트롤 */}
-      <div className={styles.boardControls}>
-        <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-        <BoardActions
-          sortOption={sortOption}
-          onSortChange={setSortOption}
-          onWrite={handleOpenModal}
-        />
-      </div>
+      <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
 
-      {/* 게시글 목록 */}
+      <CategoryTabs
+        activeTab={activeSubBoard}
+        onTabChange={handleTabChange}
+        tabs={subBoardTabs}
+        onCreateSubBoard={handleOpenSubBoardModal}
+      />
+
+      <BoardActions
+        sortOption={sortOption}
+        onSortChange={setSortOption}
+        onWrite={handleOpenModal}
+      />
+
       <div className={styles.postsContainer}>
         {loading ? (
           <p className={styles.emptyMessage}>로딩 중...</p>
@@ -336,7 +365,6 @@ const Board = () => {
         )}
       </div>
 
-      {/* 게시글 작성 모달 */}
       {showModal && (
         <Modal
           title={title}
@@ -345,6 +373,15 @@ const Board = () => {
           setContent={setContent}
           onSave={handleSave}
           onClose={handleCloseModal}
+        />
+      )}
+
+      {showSubBoardModal && (
+        <CreateSubBoardModal
+          value={subBoardName}
+          onChange={setSubBoardName}
+          onSave={handleCreateSubBoard}
+          onClose={handleCloseSubBoardModal}
         />
       )}
     </div>
