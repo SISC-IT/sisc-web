@@ -181,6 +181,19 @@ const Sidebar = ({ isOpen, isRoot }) => {
                 <>
                   <li>
                     <NavLink
+                      to="/mypage"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      마이페이지
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
                       to="/login"
                       className={({ isActive }) =>
                         isActive
