@@ -1,10 +1,12 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { useState } from 'react';
+import { logout } from '../utils/auth';
 
 const Sidebar = ({ isOpen, isRoot }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const accessToken = localStorage.getItem('accessToken');
 
   const boardList = [
     { name: '전체 게시판', path: '/board' },
@@ -124,36 +126,60 @@ const Sidebar = ({ isOpen, isRoot }) => {
           <div className={styles['menu-section']}>
             <span className={styles['menu-title']}>계정</span>
             <ul>
-              <li>
-                <NavLink
-                  to="/mypage"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                >
-                  마이페이지
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/login"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                >
-                  로그인
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/signup"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                >
-                  회원가입
-                </NavLink>
-              </li>
+              {accessToken ? (
+                <>
+                  <li>
+                    <NavLink
+                      to="/mypage"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      마이페이지
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
+                      to="/"
+                      className={styles['inactive-link']}
+                      onClick={logout}
+                    >
+                      로그아웃
+                    </NavLink>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <NavLink
+                      to="/login"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      로그인
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
+                      to="/signup"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      회원가입
+                    </NavLink>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </nav>
