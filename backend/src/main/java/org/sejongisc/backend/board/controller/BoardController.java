@@ -155,7 +155,7 @@ public class BoardController {
     return ResponseEntity.ok().build();
   }
 
-  // 게시판 생성
+  // 최상위 게시판 목록 조회
   @Operation(
       summary = "부모 게시판 목록 조회",
       description = "최상위 부모 게시판들의 목록을 조회합니다."
@@ -167,7 +167,7 @@ public class BoardController {
   }
 
 
-  // 게시판 생성
+  // 하위 게시판 목록 조회
   @Operation(
           summary = "하위 게시판 목록 조회",
           description = "하위 게시판 목록을 조회합니다."
@@ -178,7 +178,7 @@ public class BoardController {
     return ResponseEntity.ok(postService.getChildBoards());
   }
 
-  // 게시글 삭제
+  // 게시판 삭제
   @Operation(
           summary = "게시판 삭제",
           description = "게시판 ID를 통해 게시판을 삭제합니다."
