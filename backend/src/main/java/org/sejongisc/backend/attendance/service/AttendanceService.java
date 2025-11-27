@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceCheckInRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceCheckInResponse;
-import org.sejongisc.backend.attendance.dto.AttendanceRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.entity.*;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
@@ -15,7 +14,6 @@ import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -288,6 +286,66 @@ public class AttendanceService {
         return attendances.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 라운드 기반 출석 상태 수정 (관리자용)
+     * - roundId, userId, status를 받아 해당 라운드의 출석 상태 변경
+     * - 라운드가 없으면 새로 생성 (예: 결석 처리)
+     */
+    public AttendanceResponse updateAttendanceStatusByRound(UUID roundId, UUID userId, String status, String reason) {
+        log.info("📝 라운드 기반 출석 상태 수정 시작: roundId={}, userId={}, status={}", roundId, userId, status);
+
+        // 1. 라운드 존재 확인
+        AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
+                .orElseThrow(() -> new IllegalArgumentException("라운드를 찾을 수 없습니다: " + roundId));
+
+        // 2. 사용자 존재 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+
+        // 3. 상태 값 검증
+        AttendanceStatus newStatus;
+        try {
+            newStatus = AttendanceStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("잘못된 출석 상태입니다: " + status);
+        }
+
+        log.info("✅ 유효성 검사 완료: roundId={}, userId={}, newStatus={}", roundId, userId, newStatus);
+
+        // 4. 기존 출석 기록 조회
+        Attendance attendance = attendanceRepository.findByAttendanceRound_RoundIdAndUser(roundId, user)
+                .orElse(null);
+
+        if (attendance == null) {
+            // 기존 기록이 없으면 새로 생성 (예: 결석 처리)
+            log.info("📌 새로운 Attendance 레코드 생성: 기존 기록 없음");
+
+            attendance = Attendance.builder()
+                    .user(user)
+                    .attendanceSession(round.getAttendanceSession())
+                    .attendanceRound(round)
+                    .attendanceStatus(newStatus)
+                    .note(reason != null ? reason : "관리자가 추가함")
+                    .checkedAt(java.time.LocalDateTime.now())
+                    .build();
+
+            attendance = attendanceRepository.save(attendance);
+            log.info("💾 새 Attendance 레코드 저장 완료: attendanceId={}", attendance.getAttendanceId());
+        } else {
+            // 기존 기록이 있으면 상태 업데이트
+            log.info("📝 기존 Attendance 레코드 업데이트");
+
+            attendance.updateStatus(newStatus, reason);
+            attendance = attendanceRepository.save(attendance);
+            log.info("✅ Attendance 상태 업데이트 완료: status={}", newStatus);
+        }
+
+        log.info("✅ 라운드 기반 출석 상태 수정 완료: roundId={}, userId={}, status={}",
+                roundId, userId, newStatus);
+
+        return convertToResponse(attendance);
     }
 
     /**
