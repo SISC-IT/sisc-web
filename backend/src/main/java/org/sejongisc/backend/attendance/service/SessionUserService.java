@@ -91,6 +91,7 @@ public class SessionUserService {
                             .attendanceRound(round)
                             .attendanceStatus(AttendanceStatus.ABSENT)
                             .note("세션 중간 참여 - 이전 라운드는 자동 결석 처리")
+                            .checkedAt(java.time.LocalDateTime.now())
                             .build();
 
                     attendanceRepository.save(absentRecord);

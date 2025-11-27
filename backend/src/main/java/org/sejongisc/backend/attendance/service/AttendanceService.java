@@ -304,6 +304,7 @@ public class AttendanceService {
                     .attendanceRound(round)
                     .attendanceStatus(newStatus)
                     .note(reason != null ? reason : "관리자가 추가함")
+                    .checkedAt(java.time.LocalDateTime.now())
                     .build();
 
             attendance = attendanceRepository.save(attendance);

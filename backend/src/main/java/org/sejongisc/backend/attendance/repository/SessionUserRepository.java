@@ -3,6 +3,7 @@ package org.sejongisc.backend.attendance.repository;
 import org.sejongisc.backend.attendance.entity.SessionUser;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -47,12 +48,14 @@ public interface SessionUserRepository extends JpaRepository<SessionUser, UUID> 
     /**
      * 세션의 모든 참여자 삭제
      */
+    @Modifying
     @Query("DELETE FROM SessionUser su WHERE su.attendanceSession.attendanceSessionId = :sessionId")
     void deleteBySessionId(@Param("sessionId") UUID sessionId);
 
     /**
      * 세션에서 특정 사용자 삭제
      */
+    @Modifying
     @Query("DELETE FROM SessionUser su WHERE su.attendanceSession.attendanceSessionId = :sessionId AND su.user.userId = :userId")
     void deleteBySessionIdAndUserId(@Param("sessionId") UUID sessionId, @Param("userId") UUID userId);
 }
