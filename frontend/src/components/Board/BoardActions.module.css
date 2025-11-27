@@ -21,14 +21,15 @@
 }
 
 .boardActions {
-  width: 100%;
+  width: 908px;
   max-width: calc(100% - 20px);
-  padding-right: 20px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--gap);
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 32px;
 }
 

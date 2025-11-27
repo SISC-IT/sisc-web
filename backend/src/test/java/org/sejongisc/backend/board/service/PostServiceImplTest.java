@@ -253,7 +253,6 @@ class PostServiceImplTest {
     when(postBookmarkRepository.existsByUserUserIdAndPostPostId(userId, postId)).thenReturn(false);
 
     // when
-    // 파라미터에 userId 추가됨
     Page<PostResponse> result = postService.getPosts(boardId, userId, page, size);
 
     // then
@@ -301,6 +300,7 @@ class PostServiceImplTest {
     // 댓글 조회 Mocking
     when(commentRepository.findAllByPostPostIdAndParentCommentIsNull(postId, commentPageable))
         .thenReturn(parentCommentPage);
+    // 2. 자식 댓글 조회 Mocking
     when(commentRepository.findByParentComment(parentComment)).thenReturn(List.of(childComment));
 
     // 첨부파일 조회 Mocking
@@ -311,7 +311,6 @@ class PostServiceImplTest {
     when(postBookmarkRepository.existsByUserUserIdAndPostPostId(userId, postId)).thenReturn(true);
 
     // when
-    // 파라미터에 userId 추가됨
     PostResponse result = postService.getPostDetail(postId, userId, page, size);
 
     // then

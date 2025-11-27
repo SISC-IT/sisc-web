@@ -1,7 +1,7 @@
 import styles from './NotesCard.module.css';
 import SectionCard from './common/SectionCard';
 
-const NotesCard = () => {
+const NotesCard = ({ note, setNote }) => {
   return (
     <SectionCard
       title="Note"
@@ -11,6 +11,8 @@ const NotesCard = () => {
         className={styles.textarea}
         placeholder="예) RSI 14 기준 모멘텀 반전 + SMA 장기 추세 필터…"
         rows={5}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
       />
     </SectionCard>
   );

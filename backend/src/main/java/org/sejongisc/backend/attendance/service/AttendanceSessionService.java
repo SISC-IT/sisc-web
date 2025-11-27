@@ -8,15 +8,14 @@ import org.sejongisc.backend.attendance.dto.SessionLocationUpdateRequest;
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.Location;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
-import org.sejongisc.backend.attendance.entity.SessionVisibility;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -36,7 +35,9 @@ public class AttendanceSessionService {
      * - 기본 상태 UPCOMING 으로 설정
      */
     public AttendanceSessionResponse createSession(AttendanceSessionRequest request) {
-        log.info("출석 세션 생성 시작: 제목={}", request.getTitle());
+        log.info("출석 세션 생성 시작: 제목={}, 기본시간={}, 출석인정시간={}분",
+                request.getTitle(), request.getDefaultStartTime(), request.getAllowedMinutes());
+
 
         String code = generateUniqueCode();
         Location location = null;
@@ -51,13 +52,11 @@ public class AttendanceSessionService {
 
         AttendanceSession session = AttendanceSession.builder()
                 .title(request.getTitle())
-                .tag(request.getTag())
-                .startsAt(request.getStartsAt())
-                .windowSeconds(request.getWindowSeconds())
+                .defaultStartTime(request.getDefaultStartTime())
+                .allowedMinutes(request.getAllowedMinutes())
                 .code(code)
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
-                .visibility(request.getVisibility() != null ? request.getVisibility() : SessionVisibility.PUBLIC)
                 .status(SessionStatus.UPCOMING)
                 .build();
 
@@ -81,52 +80,13 @@ public class AttendanceSessionService {
     }
 
     /**
-     * 출석 코드로 세션 조회
-     * - 학생이 코드 입력 시 사용
-     * - 체크인 가능 여부 자동 계산
-     */
-    @Transactional(readOnly = true)
-    public AttendanceSessionResponse getSessionByCode(String code) {
-        AttendanceSession session = attendanceSessionRepository.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 출석 코드입니다: " + code));
-
-        return convertToResponse(session);
-    }
-
-    /**
      * 모든 세션 목록 조회
      * - 관리자용, 공개/비공개 모두 포함
-     * - 최신 순으로 정렬
+     * - 생성 순으로 정렬
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getAllSessions() {
-        List<AttendanceSession> sessions = attendanceSessionRepository.findAllByOrderByStartsAtDesc();
-
-        return sessions.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 태그별 세션 목록 조회
-     * - "금융IT", "동아리 전체" 등 태그로 필터링
-     */
-    @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionsByTag(String tag) {
-        List<AttendanceSession> sessions = attendanceSessionRepository.findByTag(tag);
-
-        return sessions.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 상태별 세션 목록 조회
-     * - UPCOMING/OPEN/CLOSED 상태별 필터링
-     */
-    @Transactional(readOnly = true)
-    public List<AttendanceSessionResponse> getSessionsByStatus(SessionStatus status) {
-        List<AttendanceSession> sessions = attendanceSessionRepository.findByStatus(status);
+        List<AttendanceSession> sessions = attendanceSessionRepository.findAll();
 
         return sessions.stream()
                 .map(this::convertToResponse)
@@ -135,13 +95,12 @@ public class AttendanceSessionService {
 
     /**
      * 공개 세션 목록 조회
-     * - 학생들이 볼 수 있는 공개 세션만 조회
-     * - 최신 순으로 정렬
+     * - 학생들이 볼 수 있는 모든 세션만 조회
+     * - 생성 순으로 정렬
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getPublicSessions() {
-        List<AttendanceSession> sessions = attendanceSessionRepository
-                .findByVisibilityOrderByStartsAtDesc(SessionVisibility.PUBLIC);
+        List<AttendanceSession> sessions = attendanceSessionRepository.findAll();
 
         return sessions.stream()
                 .map(this::convertToResponse)
@@ -150,29 +109,22 @@ public class AttendanceSessionService {
 
     /**
      * 활성 세션 목록 조회
-     * - 현재 체크인 가능한 세션들만 필터링
-     * - 시작 시간 ~ 종료 시간 범위 내 세션
+     * - 현재 체크인 가능한 세션들만 필터링 (라운드 기반)
+     * - 세션의 상태가 OPEN인 세션들만 반환
      */
     @Transactional(readOnly = true)
     public List<AttendanceSessionResponse> getActiveSessions() {
-        LocalDateTime now = LocalDateTime.now();
-        List<AttendanceSession> allSessions = attendanceSessionRepository.findAllByOrderByStartsAtDesc();
+        List<AttendanceSession> allSessions = attendanceSessionRepository.findAll();
 
         return allSessions.stream()
-                 .filter(session -> {
-             if (session.getStatus() != SessionStatus.OPEN) {
-                        return false;
-                    }
-             LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
-                return !now.isBefore(session.getStartsAt()) && now.isBefore(endTime);
-            })
-            .map(this::convertToResponse)
-            .collect(Collectors.toList());
+                .filter(session -> session.getStatus() == SessionStatus.OPEN)
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     /**
      * 세션 정보 수정
-     * - 제목, 시간, 위치, 반경 등 수정 가능
+     * - 제목, 기본시간, 출석인정시간, 위치, 반경 등 수정 가능
      * - 코드는 변경되지 않음 (보안상 이유)
      */
     public AttendanceSessionResponse updateSession(UUID sessionId, AttendanceSessionRequest request) {
@@ -194,12 +146,10 @@ public class AttendanceSessionService {
 
         session = session.toBuilder()
                 .title(request.getTitle())
-                .tag(request.getTag())
-                .startsAt(request.getStartsAt())
-                .windowSeconds(request.getWindowSeconds())
+                .defaultStartTime(request.getDefaultStartTime())
+                .allowedMinutes(request.getAllowedMinutes())
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
-                .visibility(request.getVisibility())
                 .build();
 
         session = attendanceSessionRepository.save(session);
@@ -228,7 +178,7 @@ public class AttendanceSessionService {
     /**
      * 세션 수동 활성화
      * - 세션 상태를 OPEN으로 변경
-     * - 시간과 관계없이 체크인 활성화
+     * - 라운드 기반이므로 세션 상태만 변경
      */
     public void activateSession(UUID sessionId) {
         log.info("출석 세션 활성화 시작: 세션ID={}", sessionId);
@@ -238,7 +188,6 @@ public class AttendanceSessionService {
 
         session = session.toBuilder()
                 .status(SessionStatus.OPEN)
-                .startsAt(LocalDateTime.now())
                 .build();
 
         attendanceSessionRepository.save(session);
@@ -323,40 +272,26 @@ public class AttendanceSessionService {
 
     /**
      * AttendanceSession 엔티티를 Response DTO로 변환
-     * - 남은 시간, 체크인 가능 여부, 참여자 수 계산
-     * - 현재 시간 기준으로 동적 정보 생성
+     * - 기본 세션 정보: 제목, 기본 시작 시간, 출석 인정 시간, 보상 포인트
+     * - 위치 정보: location 객체 (lat, lng)
      */
     private AttendanceSessionResponse convertToResponse(AttendanceSession session) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endTime = session.getStartsAt().plusSeconds(session.getWindowSeconds());
-
-        Long remainingSeconds = null;
-        boolean checkInAvailable = false;
-
-        if (now.isBefore(session.getStartsAt())) {
-            remainingSeconds = java.time.Duration.between(now, session.getStartsAt()).getSeconds();
-        } else if (now.isBefore(endTime)) {
-            remainingSeconds = java.time.Duration.between(now, endTime).getSeconds();
-            checkInAvailable = session.getStatus() == SessionStatus.OPEN;
+        // 위치 정보 변환 (location이 존재하면 LocationInfo 객체 생성, 없으면 null)
+        AttendanceSessionResponse.LocationInfo location = null;
+        if (session.getLocation() != null) {
+            location = AttendanceSessionResponse.LocationInfo.builder()
+                    .lat(session.getLocation().getLat())
+                    .lng(session.getLocation().getLng())
+                    .build();
         }
-
-        Long participantCount = attendanceRepository.countByAttendanceSession(session);
 
         return AttendanceSessionResponse.builder()
                 .attendanceSessionId(session.getAttendanceSessionId())
                 .title(session.getTitle())
-                .windowSeconds(session.getWindowSeconds())
+                .location(location)
+                .defaultStartTime(session.getDefaultStartTime())
+                .defaultAvailableMinutes(session.getAllowedMinutes())
                 .rewardPoints(session.getRewardPoints())
-                .latitude(session.getLocation() != null ? session.getLocation().getLat() : null)
-                .longitude(session.getLocation() != null ? session.getLocation().getLng() : null)
-                .radiusMeters(session.getLocation() != null ? session.getLocation().getRadiusMeters() : null)
-                .visibility(session.getVisibility())
-                .status(session.getStatus())
-                .createdAt(session.getCreatedDate())
-                .updatedAt(session.getUpdatedDate())
-                .remainingSeconds(remainingSeconds)
-                .checkInAvailable(checkInAvailable)
-                .participantCount(participantCount.intValue())
                 .build();
 
     }

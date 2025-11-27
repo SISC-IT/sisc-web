@@ -87,6 +87,7 @@ public class PrimaryDataSourceConfig {
                         "org.sejongisc.backend.point.entity",
                         "org.sejongisc.backend.stock.entity",
                         "org.sejongisc.backend.template.entity",
+                        "org.sejongisc.backend.betting.entity",
                         "org.sejongisc.backend.user.entity"
                 )
                 .persistenceUnit("primary")

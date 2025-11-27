@@ -54,6 +54,10 @@ public class UserBet extends BasePostgresEntity {
 
     private boolean isCorrect;
 
+    //[추가] 낙관적 락을 위한 버전 필드
+    @Version
+    private Long version;
+
     public void win(int reward) {
         this.payoutPoints = reward;
         this.isCorrect = true;
@@ -64,6 +68,11 @@ public class UserBet extends BasePostgresEntity {
         this.payoutPoints = 0;
         this.isCorrect = false;
         this.betStatus = BetStatus.CLOSED;
+    }
+
+    // [추가] 취소 상태 변경 메서드
+    public void cancel() {
+        this.betStatus = BetStatus.DELETED;
     }
 
 }

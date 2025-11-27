@@ -47,6 +47,7 @@ public class BetRound extends BasePostgresEntity {
 
     @Column(nullable = false)
     @Schema(description = "라운드 진행 상태", defaultValue = "false")
+    @Builder.Default
     private boolean status = false; // Todo : Enum 클래스로 변경 고려
 
     @Schema(description = "베팅이 열리는 시각 (유저 참여 시작 시점)")
@@ -78,16 +79,20 @@ public class BetRound extends BasePostgresEntity {
 
     // [추가] 상승(UP) 베팅 통계
     @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
     private int upBetCount = 0;
 
     @Column(nullable = false)
+    @Builder.Default
     private long upTotalPoints = 0;
 
     // [추가] 하락(DOWN) 베팅 통계
     @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
     private int downBetCount = 0;
 
     @Column(nullable = false)
+    @Builder.Default
     private long downTotalPoints = 0;
 
     // 라운드가 현재 진행 중인지 여부 반환

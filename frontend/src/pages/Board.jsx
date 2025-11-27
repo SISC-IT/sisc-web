@@ -4,8 +4,11 @@ import Modal from '../components/Board/Modal';
 import SearchBar from '../components/Board/SearchBar';
 import BoardActions from '../components/Board/BoardActions';
 import styles from './Board.module.css';
+import { useParams } from 'react-router-dom';
 
 const Board = () => {
+  const { team } = useParams();
+
   const [posts, setPosts] = useState(() => {
     const saved = localStorage.getItem('boardPosts');
     if (saved) {
@@ -23,6 +26,7 @@ const Board = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [sortOption, setSortOption] = useState('latest');
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   useEffect(() => {
     localStorage.setItem('boardPosts', JSON.stringify(posts));
@@ -38,6 +42,56 @@ const Board = () => {
     setContent('');
   };
 
+  // 파일 선택 핸들러
+  const handleFileChange = (e) => {
+    const newFiles = Array.from(e.target.files);
+
+    setSelectedFiles((prevFiles) => {
+      const updatedFiles = [...prevFiles];
+      const replacedFileNames = [];
+
+      newFiles.forEach((newFile) => {
+        const sameNameIndex = updatedFiles.findIndex(
+          (f) => f.name === newFile.name
+        );
+
+        if (sameNameIndex !== -1) {
+          // 같은 이름 발견
+          if (updatedFiles[sameNameIndex].size === newFile.size) {
+            // 같은 크기 = 완전 중복 (무시)
+            return;
+          } else {
+            // 다른 크기 = 교체
+            updatedFiles[sameNameIndex] = newFile;
+            replacedFileNames.push(newFile.name);
+            return;
+          }
+        }
+
+        // 새 파일 추가
+        updatedFiles.push(newFile);
+      });
+
+      // 교체된 파일이 있으면 알림
+      if (replacedFileNames.length > 0) {
+        alert(`교체됨: ${replacedFileNames.join(', ')}`);
+      }
+
+      return updatedFiles;
+    });
+
+    if (e.target.value !== undefined) {
+      e.target.value = '';
+    }
+  };
+
+  // 파일 삭제 핸들러
+  const handleRemoveFile = (indexToRemove) => {
+    setSelectedFiles((prevFiles) =>
+      prevFiles.filter((_, index) => index !== indexToRemove)
+    );
+  };
+
   const handleSave = () => {
     const newPost = {
       title,
@@ -46,7 +100,13 @@ const Board = () => {
       id: Date.now(),
       likeCount: 0,
       isLiked: false,
+      bookmarkCount: 0,
       isBookmarked: false,
+      files: selectedFiles.map((file) => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      })),
     };
     setPosts([newPost, ...posts]);
     handleCloseModal();
@@ -70,7 +130,13 @@ const Board = () => {
     setPosts(
       posts.map((post) =>
         post.id === postId
-          ? { ...post, isBookmarked: !post.isBookmarked }
+          ? {
+              ...post,
+              isBookmarked: !post.isBookmarked,
+              bookmarkCount: post.isBookmarked
+                ? (post.bookmarkCount || 1) - 1
+                : (post.bookmarkCount || 0) + 1,
+            }
           : post
       )
     );
@@ -119,6 +185,7 @@ const Board = () => {
             <PostItem
               key={post.id}
               post={post}
+              currentTeam={team}
               onLike={handleLike}
               onBookmark={handleBookmark}
             />
@@ -134,6 +201,9 @@ const Board = () => {
           setTitle={setTitle}
           content={content}
           setContent={setContent}
+          selectedFiles={selectedFiles}
+          onFileChange={handleFileChange}
+          onRemoveFile={handleRemoveFile}
           onSave={handleSave}
           onClose={handleCloseModal}
         />

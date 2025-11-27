@@ -1,5 +1,5 @@
 import styles from './BettingHistory.module.css';
-// import icon1 from '../../assets/at_icon_1.png';
+import icon1 from '../../assets/at_icon_1.png';
 import StockInfoItem from './StockInfoItem';
 import Pagination from './Pagination';
 import { useState, useEffect } from 'react';
@@ -69,40 +69,42 @@ const BettingHistory = ({ type }) => {
       {currentData.map((item, index) => (
         <div
           key={index}
-          className={`${styles['daily-betting-card']} ${item.collect ? styles['correct-card'] : styles['incorrect-card']}`}
+          className={`${styles['daily-betting-card']} ${item.correct ? styles['correct-card'] : styles['incorrect-card']}`}
         >
           <button
-            className={`${styles['result-icon']} ${item.collect ? styles.correct : styles.incorrect}`}
+            className={`${styles['result-icon']} ${item.correct ? styles.correct : styles.incorrect}`}
           >
-            {item.collect ? 'v' : 'x'}
+            {item.correct ? 'v' : 'x'}
           </button>
-          <span className={styles['date']}>{item.round.title}</span>
+          <span className={styles['date']}>{item.roundTitle}</span>
           <div className={styles['stock-info']}>
-            <StockInfoItem label="종목" value={item.round.symbol} />
-            <StockInfoItem
-              label="다음 날 종가"
-              value={item.round.settleClosePrice}
-            />
-            <StockInfoItem label="종가" value={item.round.previousClosePrice} />
+            <StockInfoItem label="종목" value={item.symbol} />
+            <StockInfoItem label="다음 날 종가" value={item.settleClosePrice} />
+            <StockInfoItem label="종가" value={item.previousClosePrice} />
             <div className={styles['stock-change']}>
               <span className={styles['change-value']}>{'->'}</span>
               <span className={styles['change-value']}>
                 {getPercentChange(
-                  item.round.previousClosePrice,
-                  item.round.settleClosePrice
+                  item.previousClosePrice,
+                  item.settleClosePrice
                 )}
                 %
               </span>
             </div>
             {/* 베팅 결과 */}
             <div className={styles['bet-result']}>
-              {/* <div className={styles['bet-point']}>
+              <div className={styles['bet-point']}>
                 <img src={icon1} className={styles['icon']} />+
-                <span>{item.points}P</span>
+                <span>{item.earnedPoints}P</span>
               </div>
               <div className={styles['divider']} />
-              <span>{item.participants}명</span> */}
-              {item.round.resultOption === 'RISE' ? (
+              <span>
+                {item.resultOption === 'RISE'
+                  ? item.upBetCount
+                  : item.downBetCount}
+                명
+              </span>
+              {item.resultOption === 'RISE' ? (
                 <button className={styles['up-button']}>상승 ↑</button>
               ) : (
                 <button className={styles['down-button']}>하락 ↓</button>
