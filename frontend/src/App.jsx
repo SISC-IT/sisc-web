@@ -20,6 +20,9 @@ import Intro from './pages/external/Intro.jsx';
 import Leaders from './pages/external/Leaders.jsx';
 import Portfolio from './pages/external/Portfolio.jsx';
 
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 function App() {
   return (
     <>
@@ -44,6 +47,13 @@ function App() {
           <Route path="/mypage" element={<Mypage />} />
         </Route>
       </Routes>
+      <ToastContainer
+        position="top-center"
+        autoClose={2000}
+        hideProgressBar={false}
+        pauseOnHover
+        theme="light"
+      />
     </>
   );
 }
