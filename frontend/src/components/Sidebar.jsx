@@ -2,6 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { useState } from 'react';
 import { api } from '../utils/axios';
+import { toast } from 'react-toastify';
 
 const Sidebar = ({ isOpen, isRoot }) => {
   const navigate = useNavigate();
@@ -41,13 +42,13 @@ const Sidebar = ({ isOpen, isRoot }) => {
         }
       );
     } catch {
-      alert('오류가 발생했습니다.');
+      toast.error('오류가 발생했습니다.');
     } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       setIsLoggedIn(false);
       navigate('/');
-      alert('로그아웃 되었습니다.');
+      toast.success('로그아웃 되었습니다.');
     }
   };
 
