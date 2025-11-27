@@ -25,7 +25,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
     currentBoard?.name || '전체 게시판'
   );
   const [isLoggedIn, setIsLoggedIn] = useState(
-    localStorage.getItem('accessToken')
+    !!localStorage.getItem('accessToken')
   );
 
   const logout = async () => {
@@ -40,13 +40,14 @@ const Sidebar = ({ isOpen, isRoot }) => {
           },
         }
       );
+    } catch {
+      alert('오류가 발생했습니다.');
+    } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       setIsLoggedIn(false);
       navigate('/');
       alert('로그아웃 되었습니다.');
-    } catch (error) {
-      alert(error.message);
     }
   };
 

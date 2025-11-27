@@ -1,20 +1,14 @@
 import styles from './StockGame.module.css';
 import Betting from '../components/stockgame/Betting';
 import BettingHistory from '../components/stockgame/BettingHistory';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 
 const StockGame = () => {
   const [active, setactive] = useState('progress');
   const [lastGame, setLastGame] = useState('weekly');
-  const nav = useNavigate();
 
-  useEffect(() => {
-    if (!localStorage.getItem('accessToken')) {
-      alert('로그인 후 이용하실 수 있습니다.');
-      nav('/login');
-    }
-  }, []);
+  useAuthGuard();
 
   return (
     <div className={styles['stock-game']}>
