@@ -172,7 +172,7 @@ public class PostServiceImpl implements PostService {
   // 게시물 조회 (해당 게시판의 게시물)
   @Override
   @Transactional(readOnly = true)
-  public Page<PostResponse> getPosts(UUID boardId, int pageNumber, int pageSize) {
+  public Page<PostResponse> getPosts(UUID boardId, UUID userId, int pageNumber, int pageSize) {
     Pageable pageable = PageRequest.of(
         pageNumber,
         pageSize,
@@ -183,16 +183,20 @@ public class PostServiceImpl implements PostService {
     Board board = boardRepository.findById(boardId)
         .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
 
+    // 유저 조회 (좋아요/북마크 여부 확인용)
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
     // 해당 게시판의 게시물 조회
     Page<Post> posts = postRepository.findAllByBoard(board, pageable);
 
-    return posts.map(this::mapToPostResponse);
+    return posts.map(post -> mapToPostResponse(post, user));
   }
 
   // 게시물 검색 (제목/내용)
   @Override
   @Transactional(readOnly = true)
-  public Page<PostResponse> searchPosts(UUID boardId, String keyword, int pageNumber, int pageSize) {
+  public Page<PostResponse> searchPosts(UUID boardId, UUID userId, String keyword, int pageNumber, int pageSize) {
     Pageable pageable = PageRequest.of(
         pageNumber,
         pageSize,
@@ -207,13 +211,17 @@ public class PostServiceImpl implements PostService {
     Page<Post> posts = postRepository.searchByBoardAndKeyword(
         board, keyword, pageable);
 
-    return posts.map(this::mapToPostResponse);
+    // 유저 조회
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+    return posts.map(post -> mapToPostResponse(post, user));
   }
 
   // 게시물 상세 조회
   @Override
   @Transactional(readOnly = true)
-  public PostResponse getPostDetail(UUID postId, int pageNumber, int pageSize) {
+  public PostResponse getPostDetail(UUID postId, UUID userId, int pageNumber, int pageSize) {
     // 게시물 조회
     Post post = postRepository.findById(postId)
         .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
@@ -249,18 +257,11 @@ public class PostServiceImpl implements PostService {
         .map(PostAttachmentResponse::of)
         .toList();
 
-    // PostResponse DTO를 직접 빌드하여 반환
-    return PostResponse.builder()
-        .postId(post.getPostId())
-        .board(BoardResponse.from(post.getBoard()))
-        .user(UserInfoResponse.from(post.getUser()))
-        .title(post.getTitle())
-        .content(post.getContent())
-        .bookmarkCount(post.getBookmarkCount())
-        .likeCount(post.getLikeCount())
-        .commentCount(post.getCommentCount())
-        .createdDate(post.getCreatedDate())
-        .updatedDate(post.getUpdatedDate())
+    // 유저 조회
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+    return getCommonPostBuilder(post, user)
         .comments(commentResponses)
         .attachments(attachmentResponses)
         .build();
@@ -307,7 +308,7 @@ public class PostServiceImpl implements PostService {
         .toList();
   }
 
-  private PostResponse mapToPostResponse(Post post) {
+  private PostResponse.PostResponseBuilder getCommonPostBuilder(Post post, User user) {
     return PostResponse.builder()
         .postId(post.getPostId())
         .user(UserInfoResponse.from(post.getUser()))
@@ -319,6 +320,12 @@ public class PostServiceImpl implements PostService {
         .commentCount(post.getCommentCount())
         .createdDate(post.getCreatedDate())
         .updatedDate(post.getUpdatedDate())
+        .isLiked(postLikeRepository.existsByUserUserIdAndPostPostId(user.getUserId(), post.getPostId()))
+        .isBookmarked(postBookmarkRepository.existsByUserUserIdAndPostPostId(user.getUserId(), post.getPostId()));
+  }
+
+  private PostResponse mapToPostResponse(Post post, User user) {
+    return getCommonPostBuilder(post, user)
         .build();
   }
 }

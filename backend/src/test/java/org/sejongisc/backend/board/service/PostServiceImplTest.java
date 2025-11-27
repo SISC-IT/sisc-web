@@ -38,7 +38,7 @@ import org.sejongisc.backend.board.repository.PostRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.entity.Role; // Role Enum import 필요
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -92,7 +92,7 @@ class PostServiceImplTest {
         .userId(userId)
         .email("test@example.com")
         .name("Tester")
-        .role(Role.TEAM_MEMBER) // 또는 Role.USER (프로젝트 Enum 정의에 맞게)
+        .role(Role.TEAM_MEMBER) // 실제 프로젝트 Enum에 맞게 설정
         .build();
 
     mockParentBoard = Board.builder()
@@ -106,7 +106,7 @@ class PostServiceImplTest {
         .boardId(boardId)
         .boardName("Child Board")
         .parentBoard(mockParentBoard)
-        .createdBy(mockUser) // BoardResponse.from 호출 시 필요
+        .createdBy(mockUser)
         .build();
 
     mockPost = Post.builder()
@@ -245,12 +245,16 @@ class PostServiceImplTest {
 
     // Mocking
     when(boardRepository.findById(boardId)).thenReturn(Optional.of(mockBoard));
+    when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser)); // userId 조회 추가
     when(postRepository.findAllByBoard(mockBoard, pageable)).thenReturn(postPage);
 
+    // 좋아요/북마크 Mocking (mapToPostResponse에서 호출됨)
+    when(postLikeRepository.existsByUserUserIdAndPostPostId(userId, postId)).thenReturn(true);
+    when(postBookmarkRepository.existsByUserUserIdAndPostPostId(userId, postId)).thenReturn(false);
+
     // when
-    // 여기서 mapToPostResponse 내부적으로 UserInfoResponse.from(), BoardResponse.from()이 호출됨
-    // mockUser에 Role 정보가 없으면 NPE 발생 가능 (setUp에서 처리함)
-    Page<PostResponse> result = postService.getPosts(boardId, page, size);
+    // 파라미터에 userId 추가됨
+    Page<PostResponse> result = postService.getPosts(boardId, userId, page, size);
 
     // then
     assertThat(result.getTotalElements()).isEqualTo(1);
@@ -258,6 +262,9 @@ class PostServiceImplTest {
     // DTO 변환 확인
     assertThat(result.getContent().get(0).getUser().getName()).isEqualTo(mockUser.getName());
     assertThat(result.getContent().get(0).getBoard().getBoardName()).isEqualTo(mockBoard.getBoardName());
+    // 좋아요/북마크 상태 확인
+    assertThat(result.getContent().get(0).getIsLiked()).isTrue();
+    assertThat(result.getContent().get(0).getIsBookmarked()).isFalse();
   }
 
   @Test
@@ -272,7 +279,7 @@ class PostServiceImplTest {
     Comment parentComment = Comment.builder()
         .commentId(UUID.randomUUID())
         .post(mockPost)
-        .user(mockUser) // 댓글 작성자 필요 (DTO 변환 위해)
+        .user(mockUser)
         .content("부모댓글1")
         .parentComment(null)
         .build();
@@ -280,7 +287,7 @@ class PostServiceImplTest {
     Comment childComment = Comment.builder()
         .commentId(UUID.randomUUID())
         .post(mockPost)
-        .user(mockUser) // 댓글 작성자 필요
+        .user(mockUser)
         .content("대댓글1")
         .parentComment(parentComment)
         .build();
@@ -289,20 +296,29 @@ class PostServiceImplTest {
 
     // Mocking
     when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
-    // 1. 부모 댓글(parentComment == null) 조회 Mocking
+    when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser)); // userId 조회 추가
+
+    // 댓글 조회 Mocking
     when(commentRepository.findAllByPostPostIdAndParentCommentIsNull(postId, commentPageable))
         .thenReturn(parentCommentPage);
-    // 2. 자식 댓글 조회 Mocking
     when(commentRepository.findByParentComment(parentComment)).thenReturn(List.of(childComment));
-    // 3. 첨부파일 조회 Mocking
+
+    // 첨부파일 조회 Mocking
     when(postAttachmentRepository.findAllByPostPostId(postId)).thenReturn(Collections.emptyList());
 
+    // 좋아요/북마크 Mocking (공통 빌더에서 호출됨)
+    when(postLikeRepository.existsByUserUserIdAndPostPostId(userId, postId)).thenReturn(true);
+    when(postBookmarkRepository.existsByUserUserIdAndPostPostId(userId, postId)).thenReturn(true);
+
     // when
-    PostResponse result = postService.getPostDetail(postId, page, size);
+    // 파라미터에 userId 추가됨
+    PostResponse result = postService.getPostDetail(postId, userId, page, size);
 
     // then
     assertThat(result).isNotNull();
     assertThat(result.getPostId()).isEqualTo(postId);
+    assertThat(result.getIsLiked()).isTrue();
+    assertThat(result.getIsBookmarked()).isTrue();
 
     // 댓글 검증
     Page<CommentResponse> commentPage = result.getComments();

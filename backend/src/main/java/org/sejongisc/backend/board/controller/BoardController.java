@@ -98,8 +98,10 @@ public class BoardController {
   public ResponseEntity<Page<PostResponse>> getPosts(
       @RequestParam UUID boardId,
       @RequestParam(defaultValue = "0") int pageNumber,
-      @RequestParam(defaultValue = "20") int pageSize) {
-    return ResponseEntity.ok(postService.getPosts(boardId, pageNumber, pageSize));
+      @RequestParam(defaultValue = "20") int pageSize,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    return ResponseEntity.ok(postService.getPosts(boardId, userId, pageNumber, pageSize));
   }
 
   // 게시글 검색
@@ -114,8 +116,10 @@ public class BoardController {
       @RequestParam UUID boardId,
       @RequestParam String keyword,
       @RequestParam(defaultValue = "0") int pageNumber,
-      @RequestParam(defaultValue = "20") int pageSize) {
-    return ResponseEntity.ok(postService.searchPosts(boardId, keyword, pageNumber, pageSize));
+      @RequestParam(defaultValue = "20") int pageSize,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    return ResponseEntity.ok(postService.searchPosts(boardId, userId, keyword, pageNumber, pageSize));
   }
 
   // 게시물 상세 조회
@@ -129,8 +133,10 @@ public class BoardController {
   public ResponseEntity<PostResponse> getPostDetail(
       @PathVariable UUID postId,
       @RequestParam(defaultValue = "0") int commentPageNumber,
-      @RequestParam(defaultValue = "20") int commentPageSize) {
-    PostResponse response = postService.getPostDetail(postId, commentPageNumber, commentPageSize);
+      @RequestParam(defaultValue = "20") int commentPageSize,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    PostResponse response = postService.getPostDetail(postId, userId, commentPageNumber, commentPageSize);
     return ResponseEntity.ok(response);
   }
 
