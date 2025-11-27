@@ -51,23 +51,3 @@ export const checkVerificationNumber = async (
 
   return res.data;
 };
-
-export const logout = async () => {
-  const accessToken = localStorage.getItem('accessToken');
-  try {
-    await api.post(
-      '/api/auth/logout',
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    alert('로그아웃 되었습니다.');
-  } catch (error) {
-    alert(error.message);
-  }
-};

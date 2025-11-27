@@ -1,12 +1,11 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { useState } from 'react';
-import { logout } from '../utils/auth';
+import { api } from '../utils/axios';
 
 const Sidebar = ({ isOpen, isRoot }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const accessToken = localStorage.getItem('accessToken');
 
   const boardList = [
     { name: '전체 게시판', path: '/board' },
@@ -25,6 +24,31 @@ const Sidebar = ({ isOpen, isRoot }) => {
   const [selectedBoard, setSelectedBoard] = useState(
     currentBoard?.name || '전체 게시판'
   );
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    localStorage.getItem('accessToken')
+  );
+
+  const logout = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    try {
+      await api.post(
+        '/api/auth/logout',
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      setIsLoggedIn(false);
+      navigate('/');
+      alert('로그아웃 되었습니다.');
+    } catch (error) {
+      alert(error.message);
+    }
+  };
 
   return (
     <div>
@@ -126,7 +150,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
           <div className={styles['menu-section']}>
             <span className={styles['menu-title']}>계정</span>
             <ul>
-              {accessToken ? (
+              {isLoggedIn ? (
                 <>
                   <li>
                     <NavLink
