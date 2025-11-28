@@ -9,8 +9,9 @@ import ResetPasswordModal from './ResetPasswordModal';
 import FindEmailResultModal from './FindEmailResultModal';
 
 import { login } from '../../utils/auth';
-
 import { api } from './../../utils/axios.js';
+import { toast } from 'react-toastify';
+
 const getUserDetails = async () => {
   try {
     const res = await api.get('/api/user/details');
@@ -66,10 +67,7 @@ const LoginForm = () => {
       nav('/');
     } catch (err) {
       console.dir(err);
-      alert(
-        err.data?.errorMessage ||
-          '로그인에 실패하였습니다. 이메일과 비밀번호를 확인해주세요.'
-      );
+      toast.error('로그인에 실패하였습니다. 이메일과 비밀번호를 확인해주세요.');
     }
   };
 
