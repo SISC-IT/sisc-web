@@ -3,10 +3,10 @@ import SessionSelectBox from '../components/attendance/SessionSelectBox';
 import ExcusedTime from '../components/attendance/ExcusedTime';
 import SessionManage from '../components/attendance/SessionManage';
 
-// import { useAuthGuard } from '../hooks/useAuthGuard';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 
 const Attendance = () => {
-  // useAuthGuard();
+  useAuthGuard();
 
   return (
     <div className={styles.container}>
