@@ -13,10 +13,8 @@
 
 .cardLayout {
   display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-areas:
-    'settings roster'
-    'session  .';
+  width: auto;
+
   align-items: start;
   padding: 72px 0px;
   gap: 16px;
@@ -72,14 +70,27 @@
   justify-content: center;
 }
 .iconButton img {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
+}
+.iconGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.text {
+  color: #6a6a6a;
+  font-family: Inter;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
 }
 
 .header h1 {
   color: var(--T2, #171717);
   font-family: Pretendard;
-  font-size: 20px;
+  font-size: 25px;
   font-style: normal;
   font-weight: 700;
   line-height: 146%; /* 29.2px */
@@ -89,17 +100,49 @@
   gap: 6px;
   margin-bottom: 14px;
 }
+
 .inputGroup .label {
   color: #000;
   font-family: Inter;
-  font-size: 14px;
+  font-size: 18px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
 }
 
-input {
-  width: 100%;
+.inputGroup input {
+  width: 300px;
+  height: 44px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+
+  max-width: 100%;
+  padding-left: 12px;
+
+  font-size: 16px;
+  color: #111827;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+input::placeholder {
+  color: #9ca3af;
+}
+input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.modalInputGroup {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.modalInputGroup input {
+  width: 116px;
   height: 44px;
   border-radius: 12px;
   background: #ffffff;
@@ -114,12 +157,4 @@ input {
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
-}
-input::placeholder {
-  color: #9ca3af;
-}
-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }

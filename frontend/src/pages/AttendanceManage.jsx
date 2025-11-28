@@ -12,9 +12,19 @@ import SessionModifyModal from '../components/attendancemanage/SessionModifyModa
 import RoundDayPicker from '../components/attendancemanage/RoundDayPicker';
 
 import { ToastContainer } from 'react-toastify';
+import {
+  getAttendanceSessions,
+  deleteSession,
+  addRound,
+  deleteRound,
+  getRounds,
+  addUser,
+  getUsers,
+} from '../utils/attendanceManage';
 
 const AttendanceContent = () => {
   const {
+    sessions,
     isRoundModifyModalOpen,
     editingRound,
     closeRoundModifyModal,
@@ -26,10 +36,36 @@ const AttendanceContent = () => {
     handleDeleteSession,
     handleDeleteRound,
     isAddRoundsModalOpen,
+    selectedSessionId,
   } = useAttendance();
 
   return (
     <>
+      <button
+        onClick={async () => {
+          console.log(await getAttendanceSessions());
+        }}
+      >
+        세션정보확인(임시)
+      </button>
+      <button
+        onClick={async () => {
+          await addUser(
+            sessions[0].attendanceSessionId,
+            'f54f1697-483b-49d8-8dc1-edb692b9c1b7'
+          );
+        }}
+      >
+        0번 세션에 유저 추가(임시)
+      </button>
+      <button
+        onClick={async () => {
+          console.log(await getUsers(sessions[0].attendanceSessionId));
+        }}
+      >
+        0번 세션 참여자 조회
+      </button>
+
       <div className={styles.cardLayout}>
         <div className={styles.leftColumn}>
           <SessionSettingCard styles={styles} />
@@ -42,6 +78,7 @@ const AttendanceContent = () => {
         <RoundModifyModal
           styles={styles}
           onClose={closeRoundModifyModal}
+          sessionId={selectedSessionId}
           round={editingRound}
           onSave={handleRoundChange}
           onDelete={handleDeleteRound}

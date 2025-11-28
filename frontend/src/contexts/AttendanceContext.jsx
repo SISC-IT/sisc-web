@@ -1,55 +1,70 @@
-import { createContext, useContext, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { useImmer } from 'use-immer';
-import { v4 as uuid } from 'uuid';
+import {
+  addRound,
+  changeRoundData,
+  changeSessionData,
+  createAttendanceSession,
+  deleteRound,
+  deleteSession,
+  getAttendanceSessions,
+  getRounds,
+} from '../utils/attendanceManage';
 
 const AttendanceContext = createContext(null);
 
 // 세션 목 데이터
 const sessionData = [
-  {
-    id: 'session-1',
-    title: '금융 IT팀 세션',
-    // 세션의 기본 위치 정보
-    location: {
-      lat: 37.5499,
-      lng: 127.0751,
-    },
-    defaultStartTime: '18:30:00', // 세션의 기본 시간 설정
-    defaultAvailableMinutes: 30, // 출석 인정 시간 (분 단위)
-    rewardPoints: 100, // 세션의 리워드
-    isVisible: true, // 세션 공개 여부
-    // 세션 회차들
-    rounds: [
-      {
-        id: 'round-1',
-        date: '2025-11-06',
-        startTime: '10:00:00',
-        availableMinutes: 20,
-        status: 'opened',
-        participants: [
-          { memberId: 'member-1', name: '김민준', attendance: '출석' },
-          { memberId: 'member-2', name: '이서연', attendance: '결석' },
-          { memberId: 'member-3', name: '박도윤', attendance: '출석' },
-        ],
-      },
-      {
-        id: 'round-2',
-        date: '2025-11-06',
-        startTime: '11:00:00',
-        availableMinutes: 30,
-        status: 'opened',
-        participants: [
-          { memberId: 'member-1', name: '김민준', attendance: '출석' },
-          { memberId: 'member-2', name: '이서연', attendance: '출석' },
-          { memberId: 'member-3', name: '박도윤', attendance: '결석' },
-        ],
-      },
-    ],
-  },
+  // {
+  //   id: 'session-1',
+  //   title: '금융 IT팀 세션',
+  //   // 세션의 기본 위치 정보
+  //   location: {
+  //     lat: 37.5499,
+  //     lng: 127.0751,
+  //   },
+  //   defaultStartTime: '18:30:00', // 세션의 기본 시간 설정
+  //   defaultAvailableMinutes: 30, // 출석 인정 시간 (분 단위)
+  //   rewardPoints: 100, // 세션의 리워드
+  //   isVisible: true, // 세션 공개 여부
+  //   // 세션 회차들
+  //   rounds: [
+  //     {
+  //       id: 'round-1',
+  //       date: '2025-11-06',
+  //       startTime: '10:00:00',
+  //       availableMinutes: 20,
+  //       status: 'opened',
+  //       participants: [
+  //         { memberId: 'member-1', name: '김민준', attendance: '출석' },
+  //         { memberId: 'member-2', name: '이서연', attendance: '결석' },
+  //         { memberId: 'member-3', name: '박도윤', attendance: '출석' },
+  //       ],
+  //     },
+  //     {
+  //       id: 'round-2',
+  //       date: '2025-11-06',
+  //       startTime: '11:00:00',
+  //       availableMinutes: 30,
+  //       status: 'opened',
+  //       participants: [
+  //         { memberId: 'member-1', name: '김민준', attendance: '출석' },
+  //         { memberId: 'member-2', name: '이서연', attendance: '출석' },
+  //         { memberId: 'member-3', name: '박도윤', attendance: '결석' },
+  //       ],
+  //     },
+  //   ],
+  // },
 ];
 
 export const AttendanceProvider = ({ children }) => {
-  const [sessions, setSessions] = useImmer(sessionData);
+  const [sessions, setSessions] = useImmer([]);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [selectedRound, setSelectedRound] = useState(null);
   const [editingRound, setEditingRound] = useState(null);
@@ -58,6 +73,24 @@ export const AttendanceProvider = ({ children }) => {
   const [isSessionModifyModalOpen, setSessionModifyModalOpen] = useState(false);
 
   const [isAddRoundsModalOpen, setAddRoundsModalOpen] = useState(false);
+
+  const [sessionsVersion, setSessionsVersion] = useState(0);
+  const [roundsVersion, setRoundsVersion] = useState(0);
+
+  // 최초, setSessions가 호출될때마다 모든 세션 불러오기
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const sessionData = await getAttendanceSessions();
+        setSessions(sessionData);
+      } catch (error) {
+        console.error('모든 세션 데이터를 가져오는 데 실패했습니다: ', error);
+        setSessions([]);
+      }
+    };
+    fetchSessions();
+  }, [setSessions]);
 
   const handleAttendanceChange = (memberId, newAttendance) => {
     setSessions((draft) => {
@@ -74,35 +107,52 @@ export const AttendanceProvider = ({ children }) => {
     });
   };
 
-  const handleRoundChange = (updateRoundData) => {
-    setSessions((draft) => {
-      const session = draft.find((s) => s.id === selectedSessionId);
-      if (!session) return;
-      const round = session.rounds.find((r) => r.id === updateRoundData.id);
-      if (round) {
-        round.startTime = updateRoundData.startTime;
-        round.availableMinutes = updateRoundData.availableMinutes;
-      }
-      // 회차 수정 후 정렬
-      if (session.rounds) {
-        session.rounds.sort(
-          (a, b) =>
-            new Date(`${a.date}T${a.startTime}`) -
-            new Date(`${b.date}T${b.startTime}`)
-        );
-      }
-    });
+  const handleRoundChange = async (roundId, updateRoundData) => {
+    // setSessions((draft) => {
+    //   const session = draft.find((s) => s.id === selectedSessionId);
+    //   if (!session) return;
+    //   const round = session.rounds.find((r) => r.id === updateRoundData.id);
+    //   if (round) {
+    //     round.startTime = updateRoundData.startTime;
+    //     round.availableMinutes = updateRoundData.availableMinutes;
+    //   }
+    //   // 회차 수정 후 정렬
+    //   if (session.rounds) {
+    //     session.rounds.sort(
+    //       (a, b) =>
+    //         new Date(`${a.date}T${a.startTime}`) -
+    //         new Date(`${b.date}T${b.startTime}`)
+    //     );
+    //   }
+    // });
+
+    try {
+      await changeRoundData(roundId, updateRoundData);
+
+      setRoundsVersion((v) => v + 1);
+    } catch (error) {
+      console.error('회차 수정에 실패했습니다. ', error);
+    }
   };
 
-  const handleSessionChange = (updateSessionData) => {
-    setSessions((draft) => {
-      const session = draft.find((s) => s.id === updateSessionData.id);
-      if (session) {
-        session.defaultStartTime = updateSessionData.defaultStartTime;
-        session.defaultAvailableMinutes =
-          updateSessionData.defaultAvailableMinutes;
-      }
-    });
+  const handleSessionChange = async (updateSessionData) => {
+    // setSessions((draft) => {
+    //   const session = draft.find((s) => s.id === updateSessionData.id);
+    //   if (session) {
+    //     session.defaultStartTime = updateSessionData.defaultStartTime;
+    //     session.defaultAvailableMinutes =
+    //       updateSessionData.defaultAvailableMinutes;
+    //   }
+    // });
+
+    try {
+      await changeSessionData(updateSessionData);
+
+      const updatedSessions = await getAttendanceSessions();
+      setSessions(updatedSessions || []);
+    } catch (error) {
+      console.error('세션 수정에 실패했습니다. ', error);
+    }
   };
 
   const openRoundModifyModal = () => setRoundModifyModalOpen(true);
@@ -115,88 +165,133 @@ export const AttendanceProvider = ({ children }) => {
 
   const closeAddRoundsModal = () => setAddRoundsModalOpen(false);
 
-  const handleAddSession = (sessionTitle, roundDetails) => {
+  const handleAddSession = async (sessionTitle, sessionDetails) => {
     const newSession = {
-      id: `session-${uuid()}`,
+      // id: `session-${uuid()}`,
       title: sessionTitle,
-      defaultStartTime: `${roundDetails.hh}:${roundDetails.mm}:${roundDetails.ss}`,
-      defaultAvailableMinutes: parseInt(roundDetails.availableTimeMm, 10),
+      defaultStartTime: `${sessionDetails.hh}:${sessionDetails.mm}:${sessionDetails.ss}`,
+      // defaultAvailableMinutes: parseInt(roundDetails.availableTimeMm, 10),
+      allowedMinutes: sessionDetails.availableTimeMm, // 최소 5분 이상이여야 함
       rewardPoints: 100,
-      isVisible: true,
-      rounds: [
-        // {
-        //   id: `round-${uuid()}`,
-        //   date: new Date().toISOString().slice(0, 10),
-        //   startTime: `${roundDetails.hh}:${roundDetails.mm}:${roundDetails.ss}`,
-        //   availableMinutes: parseInt(roundDetails.availableTimeMm, 10),
-        //   status: 'opened',
-        //   participants: [],
-        // },
-      ],
+      // 위도, 경도, 범위 미터는 임시로 지정
+      latitude: 1,
+      longitude: 2,
+      radiusMeters: 3,
+      // isVisible: true,
+      // rounds: [
+      //   {
+      //     id: `round-${uuid()}`,
+      //     date: new Date().toISOString().slice(0, 10),
+      //     startTime: `${roundDetails.hh}:${roundDetails.mm}:${roundDetails.ss}`,
+      //     availableMinutes: parseInt(roundDetails.availableTimeMm, 10),
+      //     status: 'opened',
+      //     participants: [],
+      //   },
+      // ],
     };
-    setSessions((draft) => {
-      draft.push(newSession);
-    });
-  };
-  const handleAddRounds = (sessionId, newRounds) => {
-    setSessions((draft) => {
-      const session = draft.find((session) => session.id === sessionId);
+    // setSessions((draft) => {
+    //   draft.push(newSession);
+    // });
 
-      if (session) {
-        session.rounds.push(...newRounds);
-        // 회차 추가 후 정렬
-        session.rounds.sort(
-          (a, b) =>
-            new Date(`${a.date}T${a.startTime}`) -
-            new Date(`${b.date}T${b.startTime}`)
-        );
-      }
-    });
+    try {
+      await createAttendanceSession(newSession);
+
+      const updatedSessions = await getAttendanceSessions();
+      setSessions(updatedSessions || []);
+    } catch (error) {
+      console.error('세션 추가에 실패했습니다. ', error);
+    }
   };
 
-  const handleDeleteSession = (sessionId) => {
-    setSessions((draft) => {
-      const sessionIndex = draft.findIndex((session) => {
-        return session.id === sessionId;
+  const handleAddRounds = async (sessionId, newRounds) => {
+    // setSessions((draft) => {
+    //   const session = draft.find((session) => session.id === sessionId);
+    //   if (session) {
+    //     session.rounds.push(...newRounds);
+    //     // 회차 추가 후 정렬
+    //     session.rounds.sort(
+    //       (a, b) =>
+    //         new Date(`${a.date}T${a.startTime}`) -
+    //         new Date(`${b.date}T${b.startTime}`)
+    //     );
+    //   }
+    // });
+    try {
+      const addRoundsPromises = newRounds.map((newRound) => {
+        return addRound(sessionId, newRound);
       });
-      if (sessionIndex !== -1) {
-        draft.splice(sessionIndex, 1);
+      await Promise.all(addRoundsPromises);
+      setRoundsVersion((v) => v + 1);
+    } catch (error) {
+      console.error('회차 추가에 실패했습니다. ', error);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId) => {
+    // setSessions((draft) => {
+    //   const sessionIndex = draft.findIndex((session) => {
+    //     return session.id === sessionId;
+    //   });
+    //   if (sessionIndex !== -1) {
+    //     draft.splice(sessionIndex, 1);
+    //   }
+    // });
+
+    // 세션 삭제 시 먼저 해당 세션의 회차들 삭제
+    const roundsToDelete = await getRounds(sessionId);
+    if (roundsToDelete && roundsToDelete.length > 0) {
+      for (const round of roundsToDelete) {
+        await deleteRound(round.id);
       }
-    });
+    }
+    // 세션 삭제
+    await deleteSession(sessionId);
+
+    const updatedSessions = await getAttendanceSessions();
+    setSessions(updatedSessions || []);
 
     // 세션 선택 초기화
     setSelectedSessionId(null);
     setSelectedRound(null);
   };
-  const handleDeleteRound = (roundId) => {
-    setSessions((draft) => {
-      const session = draft.find((session) => {
-        return session.id === selectedSessionId;
-      });
 
-      if (session) {
-        const roundIndex = session.rounds.findIndex(
-          (round) => round.id === roundId
-        );
-        if (roundIndex !== -1) {
-          session.rounds.splice(roundIndex, 1);
-        }
-      }
-    });
+  const handleDeleteRound = async (roundId) => {
+    // setSessions((draft) => {
+    //   const session = draft.find((session) => {
+    //     return session.id === selectedSessionId;
+    //   });
+
+    //   if (session) {
+    //     const roundIndex = session.rounds.findIndex(
+    //       (round) => round.id === roundId
+    //     );
+    //     if (roundIndex !== -1) {
+    //       session.rounds.splice(roundIndex, 1);
+    //     }
+    //   }
+    // });
+
+    try {
+      await deleteRound(roundId);
+
+      setRoundsVersion((v) => v + 1);
+    } catch (error) {
+      console.error('회차 삭제에 실패했습니다. ', error);
+    }
 
     // 회차 선택 초기화
     setSelectedRound(null);
   };
 
   const selectedSession = sessions.find(
-    (session) => session.id === selectedSessionId
+    (session) => session.attendanceSessionId === selectedSessionId
   );
 
-  const selectedRoundData = selectedSession?.rounds.find(
-    (round) => round.id === selectedRound
-  );
+  // const selectedRoundData = selectedSession?.rounds.find(
+  //   (round) => round.roundId === selectedRound
+  // );
 
-  const participants = selectedRoundData?.participants || [];
+  const participants = [];
 
   // 공유할 값들을 객체로 묶기
   const value = {
@@ -226,6 +321,7 @@ export const AttendanceProvider = ({ children }) => {
     isAddRoundsModalOpen,
     openAddRoundsModal,
     closeAddRoundsModal,
+    roundsVersion,
   };
 
   return (
