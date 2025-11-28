@@ -85,9 +85,9 @@ const SignUpForm = () => {
       await sendVerificationNumber({ email: email }, abortRef.current.signal);
 
       setVerificationSent(true);
-      alert('인증번호가 발송되었습니다.');
       toast.success('인증번호가 발송되었습니다.');
-    } catch {
+    } catch (error) {
+      console.log(error);
       toast.error('오류가 발생했습니다.');
     } finally {
       setIsSending(false);
@@ -107,7 +107,8 @@ const SignUpForm = () => {
 
       setVerificationChecked(true);
       toast.success('인증되었습니다.');
-    } catch {
+    } catch (error) {
+      console.log(error);
       toast.error('인증에 실패했습니다.');
     }
   };
@@ -129,11 +130,10 @@ const SignUpForm = () => {
         },
         abortRef.current.signal
       );
-
-      alert('회원가입이 완료되었습니다.');
       toast.success('회원가입이 완료되었습니다.');
       nav('/login');
-    } catch {
+    } catch (error) {
+      console.log(error);
       toast.error('회원가입에 실패하였습니다.');
     }
   };
