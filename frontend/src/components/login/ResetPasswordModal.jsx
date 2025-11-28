@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from '../VerificationModal.module.css';
+import { toast } from 'react-toastify';
 
 const ResetPasswordModal = ({ onClose }) => {
   const [password, setPassword] = useState('');
@@ -8,15 +9,15 @@ const ResetPasswordModal = ({ onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert('비밀번호가 일치하지 않습니다.');
+      toast.error('비밀번호가 일치하지 않습니다.');
       return;
     }
     if (password.length < 8) {
-      alert('비밀번호는 8자 이상이어야 합니다.');
+      toast.error('비밀번호는 8자 이상이어야 합니다.');
       return;
     }
     console.log('비밀번호 재설정 API 호출');
-    alert('비밀번호가 성공적으로 재설정되었습니다.');
+    toast.success('비밀번호가 변경되었습니다.');
     onClose(); // 부모에게 성공 알림
   };
 

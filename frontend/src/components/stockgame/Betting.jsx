@@ -8,6 +8,7 @@ import {
   getWeeklyBetHistory,
 } from '../../utils/bettingHistory';
 import { api } from '../../utils/axios';
+import { toast } from 'react-toastify';
 
 const Betting = ({ period }) => {
   const [isBetting, setIsBetting] = useState('none');
@@ -61,7 +62,7 @@ const Betting = ({ period }) => {
 
   const onClickUpBet = async () => {
     if (isBetting !== 'none') {
-      alert('이미 베팅하셨습니다.');
+      toast.error('이미 베팅하셨습니다.');
     } else if (confirm('상승에 베팅하시겠습니까?')) {
       try {
         const res = await api.post('/api/user-bets', {
@@ -71,15 +72,15 @@ const Betting = ({ period }) => {
           isFree: true,
         });
         await update();
-        alert('베팅이 완료되었습니다.');
+        toast.success('베팅이 완료되었습니다.');
         return res;
       } catch (error) {
         // 409 처리
         if (error.status === 409) {
-          alert('베팅 가능 시간이 아닙니다.');
+          toast.error('베팅 가능 시간이 아닙니다.');
           return;
         }
-        alert('오류가 발생했습니다. 다시 시도해주세요.');
+        toast.error('오류가 발생했습니다. 다시 시도해주세요.');
         return null;
       }
     }
@@ -87,7 +88,7 @@ const Betting = ({ period }) => {
 
   const onClickDownBet = async () => {
     if (isBetting !== 'none') {
-      alert('이미 베팅하셨습니다.');
+      toast.error('이미 베팅하셨습니다.');
     } else if (confirm('하락에 베팅하시겠습니까?')) {
       try {
         const res = await api.post('/api/user-bets', {
@@ -97,15 +98,15 @@ const Betting = ({ period }) => {
           isFree: true,
         });
         await update();
-        alert('베팅이 완료되었습니다.');
+        toast.success('베팅이 완료되었습니다.');
         return res;
       } catch (error) {
         // 409 처리
         if (error.status === 409) {
-          alert('베팅 가능 시간이 아닙니다.');
+          toast.error('베팅 가능 시간이 아닙니다.');
           return;
         }
-        alert('오류가 발생했습니다. 다시 시도해주세요.');
+        toast.error('오류가 발생했습니다. 다시 시도해주세요.');
         return null;
       }
     }
@@ -116,9 +117,9 @@ const Betting = ({ period }) => {
       try {
         await api.delete(`/api/user-bets/${userBets.userBetId}`);
         await update();
-        alert('베팅이 취소되었습니다.');
-      } catch (error) {
-        alert(error.message);
+        toast.success('베팅이 취소되었습니다.');
+      } catch {
+        toast.error('오류가 발생했습니다. 다시 시도해주세요.');
       }
     }
   };

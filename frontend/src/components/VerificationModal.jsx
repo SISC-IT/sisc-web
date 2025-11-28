@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from './VerificationModal.module.css';
+import { toast } from 'react-toastify';
 
 const VerificationModal = ({ title, onClose, onSuccess }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -12,7 +13,7 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
     // 전화번호 형식에 맞지 않을 시 return
     const phoneRegex = /^01[0-9]{1}[0-9]{7,8}$/;
     if (!phoneNumber || !phoneRegex.test(phoneNumber)) {
-      alert('올바른 전화번호 형식을 입력해주세요. (예: 01012345678)');
+      toast.error('올바른 전화번호 형식을 입력해주세요. (예: 01012345678)');
       return;
     }
 
@@ -20,7 +21,7 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
     console.log(`${phoneNumber}로 인증번호 전송 API 호출`);
     // 실제 api 추가
 
-    alert('인증번호가 전송되었습니다.');
+    toast.success('인증번호가 전송되었습니다.');
     setIsCodeSent(true);
     setTimeout(() => setSendButtonDisabled(false), 3000);
   };
@@ -28,7 +29,7 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!verificationCode) {
-      alert('인증번호를 입력해주세요.');
+      toast.error('인증번호를 입력해주세요.');
       return;
     }
     console.log(`${phoneNumber}와 ${verificationCode}로 인증 확인 API 호출`);
@@ -37,11 +38,11 @@ const VerificationModal = ({ title, onClose, onSuccess }) => {
       // <<-- 실제 API 호출 로직: const result = await api.verifyCode(phoneNumber, code) -->>
 
       const mockResult = { email: 'user@example.com', message: '인증 성공' };
-      alert('인증에 성공했습니다!');
+      toast.success('인증에 성공했습니다!');
       onSuccess(mockResult);
     } catch (error) {
       console.error('인증 실패:', error);
-      alert('인증번호가 올바르지 않습니다.');
+      toast.error('인증번호가 올바르지 않습니다.');
     }
   };
 
