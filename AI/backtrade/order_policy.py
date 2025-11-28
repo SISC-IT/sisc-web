@@ -1,4 +1,4 @@
-# backtrader/order_policy.py
+# backtrade/order_policy.py
 # -*- coding: utf-8 -*-
 """
 한국어 주석:
@@ -29,7 +29,7 @@ def decide_order(
         cur_qty: 현재 보유 주식 수량
         avg_price: 현재 보유 평균단가
         fill_price: 이번 체결 기준가 (슬리피지 반영 전)
-        config: BacktestConfig 인스턴스
+        config: BacktradeConfig 인스턴스
     반환값:
         (qty, trade_value)
         qty: 매수/매도 수량

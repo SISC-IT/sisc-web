@@ -1,10 +1,9 @@
-# backtrader/simple_backtrader.py
-# -*- coding: utf-8 -*-
+# backtrade/main.py
 """
 한국어 주석:
 - OHLCV 없이, Transformer 결정 로그(decision_log)의 price만으로
   간소화된 백테스트를 수행하는 환경(Environment) 역할.
-- 수량/포지션 결정은 backtrader/order_policy.py 모듈로 분리됨.
+- 수량/포지션 결정은 backtrade/order_policy.py 모듈로 분리됨.
 """
 
 from __future__ import annotations
@@ -13,7 +12,7 @@ from typing import Optional, Dict, Tuple, List
 import pandas as pd
 import numpy as np
 
-from backtrader.order_policy import decide_order  # 분리된 정책 모듈 import
+from backtrade.order_policy import decide_order  # 분리된 정책 모듈 import
 
 
 # === 설정 클래스 ===
@@ -50,7 +49,7 @@ def _fill_date_from_signal(sig_date: pd.Timestamp, same_day: bool) -> pd.Timesta
 
 
 # === 백테스트 본체 ===
-def backtrader(
+def backtrade(
     decision_log: pd.DataFrame,
     config: Optional[BacktradeConfig] = None,
     run_id: Optional[str] = None,
@@ -62,7 +61,7 @@ def backtrader(
     - 반환: (fills_df, summary)
     """
     if config is None:
-        config = BacktraderConfig()
+        config = BacktradeConfig()
 
     dl = decision_log.copy()
     if not {"ticker", "date", "action", "price"}.issubset(dl.columns):

@@ -1,9 +1,8 @@
 # pipeline/run_pipeline.py 
-# -*- coding: utf-8 -*-
 """
 한국어 주석 (개요):
 - 본 파일은 "주간 자동 파이프라인"의 전체 흐름을 오케스트레이션합니다.
-  (Finder → Transformer → XAI 리포트 → Backtrader → DB 저장)
+  (Finder → Transformer → XAI 리포트 → Backtrade → DB 저장)
 
 [전체 플로우]
 1) Finder
@@ -12,7 +11,7 @@
 2) Transformer
    - 선택된 종목들의 OHLCV 데이터를 DB에서 가져옵니다(fetch_ohlcv).
    - LSTM/Rule 기반 등의 Transformer 로직을 통해 의사결정 로그(DataFrame)를 생성합니다.
-   - 이 의사결정 로그는 XAI와 Backtrader에서 모두 공통으로 사용됩니다.
+   - 이 의사결정 로그는 XAI와 Backtrade에서 모두 공통으로 사용됩니다.
 
 3) XAI (e.g. GROQ 등 LLM 기반 설명 생성)
    - 각 의사결정에 대해 feature_name / feature_score를 기반으로
@@ -20,7 +19,7 @@
    - 결과는 xai_reports 테이블에 먼저 저장됩니다.
    - 이 때 생성된 xai_reports.id를 decision_log(logs_df)에 xai_report_id로 심습니다.
 
-4) Backtrader
+4) Backtrade
    - xai_report_id가 포함된 의사결정 로그(decision_log)를 받아,
      price 컬럼을 "체결 기준가"로 직접 사용해 간소화된 백테스트를 수행합니다.
    - 백테스트 결과(fills_df)는 xai_report_id를 그대로 보존한 상태로 executions 테이블에 저장됩니다.
@@ -35,6 +34,7 @@
 
 import os
 import sys
+import json
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timezone, timedelta
 
@@ -49,9 +49,10 @@ sys.path.append(project_root)
 # ----------------------------------------------------------------------
 # 외부 모듈 import (각 단계별 역할)
 # ----------------------------------------------------------------------
+from daily_data_collection.main import run_data_collection              # 0) 시세/시장 데이터 수집
 from finder.main import run_finder                                # 1) 종목 발굴
 from transformer.main import run_transformer                      # 2) 신호 생성(의사결정 로그 생성)
-from backtrader.run_backtrader import backtrader, BacktradeConfig   # 3) 백트레이딩(간소화 체결 엔진)
+from backtrade.main import backtrade, BacktradeConfig             # 3) 백트레이딩(간소화 체결 엔진)
 from libs.utils.save_executions_to_db import save_executions_to_db  # 3.5) 체결내역 DB 저장
 from xai.run_xai import run_xai                                   # 4) XAI 리포트 텍스트 생성
 from libs.utils.save_reports_to_db import save_reports_to_db      # 4.5) XAI 리포트 DB 저장 (id 반환)
@@ -69,7 +70,7 @@ MARKET_DB_NAME = "db"   # 시세/시장 데이터(DB) 명.
 REPORT_DB_NAME = "db"   # 체결내역 / XAI 리포트를 저장하는 DB 명
 
 # ----------------------------------------------------------------------
-# XAI 및 Backtrader에서 공통으로 요구하는 "결정 로그 필수 컬럼" 정의
+# XAI 및 Backtrade에서 공통으로 요구하는 "결정 로그 필수 컬럼" 정의
 # ----------------------------------------------------------------------
 REQUIRED_LOG_COLS = {
     "ticker",
@@ -84,6 +85,11 @@ REQUIRED_LOG_COLS = {
     "feature_score2",
     "feature_score3",
 }
+
+# ----------------------------------------------------------------------
+# 주간 티커 캐시 파일 경로
+# ----------------------------------------------------------------------
+TICKER_CACHE_PATH = os.path.join(project_root, "weekly_tickers.json")
 
 
 # ======================================================================
@@ -123,6 +129,7 @@ def _to_float(v, fallback: float = 0.0) -> float:
 def run_weekly_finder() -> List[str]:
     """
     Finder 모듈을 실행하여 후보 티커 리스트를 반환합니다.
+    (주에 한 번, 월요일에만 실제 실행)
     """
     print("--- [PIPELINE-STEP 1] Finder 모듈 실행 시작 ---")
     try:
@@ -135,6 +142,33 @@ def run_weekly_finder() -> List[str]:
 
     print(f"--- [PIPELINE-STEP 1] Finder 완료: tickers={tickers} ---")
     return tickers
+
+
+def save_weekly_tickers(tickers: List[str]) -> None:
+    """월요일에 산출한 티커 리스트를 로컬 캐시 파일에 저장."""
+    try:
+        with open(TICKER_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump({"tickers": tickers, "saved_at": _utcnow().isoformat()}, f, ensure_ascii=False)
+        print(f"[INFO] 주간 티커 캐시 저장 완료: {TICKER_CACHE_PATH}")
+    except Exception as e:
+        print(f"[WARN] 주간 티커 캐시 저장 실패: {e}")
+
+
+def load_weekly_tickers() -> List[str]:
+    """캐시 파일에서 주간 티커 리스트를 불러옴."""
+    if not os.path.exists(TICKER_CACHE_PATH):
+        print(f"[WARN] 주간 티커 캐시 파일이 존재하지 않습니다: {TICKER_CACHE_PATH}")
+        return []
+
+    try:
+        with open(TICKER_CACHE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        tickers = data.get("tickers", [])
+        print(f"[INFO] 캐시에서 주간 티커 로드: {tickers}")
+        return tickers
+    except Exception as e:
+        print(f"[WARN] 주간 티커 캐시 로드 실패: {e}")
+        return []
 
 
 # ======================================================================
@@ -152,7 +186,8 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
         print("[WARN] 빈 종목 리스트가 입력되어 Transformer 단계를 건너뜁니다.")
         return pd.DataFrame()
 
-    end_date = datetime.strptime("2024-11-1", "%Y-%m-%d")  # 임시 고정 날짜
+   
+    end_date = datetime.now().date()
     start_date = end_date - timedelta(days=600)
 
     all_ohlcv_df: List[pd.DataFrame] = []
@@ -213,27 +248,27 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
 
 
 # ======================================================================
-# 3) Backtrader: 의사결정 로그 기반 체결/포지션 계산 단계
+# 3) Backtrade: 의사결정 로그 기반 체결/포지션 계산 단계
 # ======================================================================
 
-def run_backtrader(decision_log: pd.DataFrame) -> pd.DataFrame:
+def run_backtrade(decision_log: pd.DataFrame) -> pd.DataFrame:
     """
     Transformer에서 생성된 의사결정 로그(decision_log)의 price 컬럼을
     OHLCV 없이 "체결 기준가"로 직접 사용해 간소화된 백테스트를 수행합니다.
 
     주의:
     - decision_log는 xai_report_id 컬럼을 포함할 수 있으며,
-      backtrader() 구현이 해당 컬럼을 드롭하지 않으면 fills_df에도 그대로 보존됩니다.
+      backtrade() 구현이 해당 컬럼을 드롭하지 않으면 fills_df에도 그대로 보존됩니다.
     """
-    print("--- [PIPELINE-STEP 4] Backtrader 실행 시작 ---")
+    print("--- [PIPELINE-STEP 4] Backtrade 실행 시작 ---")
 
     if decision_log is None or decision_log.empty:
-        print("[WARN] Backtrader: 비어있는 결정 로그가 입력되었습니다. 체결을 수행하지 않습니다.")
+        print("[WARN] Backtrade: 비어있는 결정 로그가 입력되었습니다. 체결을 수행하지 않습니다.")
         return pd.DataFrame()
 
     run_id = _utcnow().strftime("run-%Y%m%d-%H%M%S")
 
-    cfg = BacktraderConfig(
+    cfg = BacktradeConfig(
         initial_cash=100_000.0,
         slippage_bps=5.0,
         commission_bps=3.0,
@@ -242,18 +277,18 @@ def run_backtrader(decision_log: pd.DataFrame) -> pd.DataFrame:
         fill_on_same_day=True,
     )
 
-    fills_df, summary = backtrader(
+    fills_df, summary = backtrade(
         decision_log=decision_log,
         config=cfg,
         run_id=run_id,
     )
 
     if fills_df is None or fills_df.empty:
-        print("[WARN] Backtrader: 생성된 체결 내역이 없습니다.")
+        print("[WARN] Backtrade: 생성된 체결 내역이 없습니다.")
         return pd.DataFrame()
 
     print(
-        f"--- [PIPELINE-STEP 4] Backtrader 완료: "
+        f"--- [PIPELINE-STEP 4] Backtrade 완료: "
         f"trades={len(fills_df)}, "
         f"cash_final={summary.get('cash_final')}, "
         f"pnl_realized_sum={summary.get('pnl_realized_sum')} ---"
@@ -346,22 +381,57 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[ReportRow]:
 
 def run_pipeline() -> Optional[List[ReportRow]]:
     """
-    전체 파이프라인(Finder → Transformer → XAI → Backtrader → DB 저장)을
+    전체 파이프라인(Finder → Transformer → XAI → Backtrade → DB 저장)을
     한 번에 실행하는 엔트리 포인트 함수.
-    """
-    # 1) Finder
-    tickers = run_weekly_finder()
-    if not tickers:
-        print("[STOP] Finder에서 종목을 찾지 못해 파이프라인을 중단합니다.")
-        return None
 
-    # 2) Transformer
+    - Finder: 주 1회, 월요일에만 실제 실행 (티커를 캐시에 저장)
+    - 나머지(Transformer, XAI, Backtrade, DB 저장): 매일 실행
+      → 평일에는 캐시에서 티커를 읽어서 사용
+    """
+    today = datetime.now()  # 서버 로컬 시간 기준 (필요시 timezone 조정 가능)
+    weekday = today.weekday()  # 월=0, 화=1, ..., 일=6
+    #-------------------------------
+    # 0) 주가 데이터 저장 실행
+    #-------------------------------
+    print("--- [PIPELINE-STEP 0] 주가 데이터 수집 실행 시작 ---")
+    try:
+        #run_data_collection()
+        print("--- [PIPELINE-STEP 0] 주가 데이터 수집 실행 완료 ---")
+    except Exception as e:
+        print(f"[WARN] 데이터 수집 실행 중 오류 발생: {e} → 계속 진행합니다.")
+
+    # -------------------------------
+    # 1) Finder: 월요일에만 실행
+    # -------------------------------
+    if weekday == 0:  # 월요일
+        print("[INFO] 오늘은 월요일입니다. Finder를 실행합니다.")
+        tickers = run_weekly_finder()
+        if not tickers:
+            print("[STOP] Finder에서 종목을 찾지 못해 파이프라인을 중단합니다.")
+            return None
+        # 월요일에 산출한 티커를 캐시에 저장
+        save_weekly_tickers(tickers)
+    else:
+        print("[INFO] 오늘은 월요일이 아니므로 Finder를 실행하지 않습니다. 캐시에서 티커를 불러옵니다.")
+        tickers = load_weekly_tickers()
+        if not tickers:
+            print("[WARN] 캐시된 티커가 없어 임시로 Finder를 한 번 실행합니다.")
+            tickers = run_weekly_finder()
+            if not tickers:
+                print("[STOP] 임시 Finder에서도 종목을 찾지 못해 파이프라인을 중단합니다.")
+                return None
+
+    # -------------------------------
+    # 2) Transformer: 매일 실행
+    # -------------------------------
     logs_df = run_signal_transformer(tickers, MARKET_DB_NAME)
     if logs_df is None or logs_df.empty:
         print("[STOP] Transformer에서 유효한 신호를 생성하지 못해 파이프라인을 중단합니다.")
         return None
 
-    # 3) XAI 리포트 생성
+    # -------------------------------
+    # 3) XAI 리포트 생성: 매일 실행 (환경변수 없으면 자동 스킵)
+    # -------------------------------
     reports = run_xai_report(logs_df)
 
     # 3.5) XAI 리포트 DB 저장 → 생성된 id 리스트 수신
@@ -384,10 +454,14 @@ def run_pipeline() -> Optional[List[ReportRow]]:
                 "xai_report_id를 매핑하지 못했습니다. (모두 NULL 처리)"
             )
 
-    # 4) Backtester: xai_report_id 포함 decision_log로 체결 내역 생성
-    fills_df = run_backtrader(logs_df)
+    # -------------------------------
+    # 4) Backtrade: 매일 실행
+    # -------------------------------
+    fills_df = run_backtrade(logs_df)
 
-    # 5) executions 테이블에 체결 내역 저장
+    # -------------------------------
+    # 5) executions 테이블에 체결 내역 저장: 매일 실행
+    # -------------------------------
     try:
         save_executions_to_db(fills_df, REPORT_DB_NAME)
         print("[INFO] 체결 내역을 DB에 저장했습니다.")
@@ -401,7 +475,7 @@ def run_pipeline() -> Optional[List[ReportRow]]:
 # 스크립트 단독 실행 시 테스트용 엔트리 포인트
 # ======================================================================
 if __name__ == "__main__":
-    print(">>> 파이프라인 (Finder → Transformer → XAI → Backtester) 테스트를 시작합니다.")
+    print(">>> 파이프라인 (Finder → Transformer → XAI → Backtrade) 테스트를 시작합니다.")
     final_reports = run_pipeline()
 
     print("\n>>> 최종 반환 결과 (XAI Reports):")
