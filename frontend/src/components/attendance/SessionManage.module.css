@@ -1,0 +1,67 @@
+.card {
+  width: 955px;
+  min-height: 320px;
+  box-sizing: border-box;
+  border: 1px solid #c9bebe;
+  background: #fafbfc;
+  border-radius: 12px;
+  padding: 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 146%;
+  letter-spacing: 0%;
+  color: #000000;
+}
+
+.table {
+  width: 100%;
+
+  border-collapse: collapse;
+  border-spacing: 0px 10px;
+  table-layout: fixed;
+}
+
+.table td:last-child {
+  text-align: right;
+}
+
+.table thead th,
+.table tbody td {
+  text-align: left;
+  padding: 8px 7px;
+  white-space: nowrap;
+  border-bottom: 0.4px solid #6a6a6a;
+  font-family: Inter;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: #000000;
+}
+
+.button {
+  background: linear-gradient(
+    92.89deg,
+    #d8e8ff 6.95%,
+    #d1d8ff 74.81%,
+    #dddeff 107.39%
+  );
+  width: 70px;
+  height: 35px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: #000000;
+}

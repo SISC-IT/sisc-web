@@ -1,0 +1,28 @@
+.card {
+  width: 335px;
+  height: 160px;
+  border: 1px solid #c9bebe;
+  background: #fafbfc;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.excuse {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: #aaaaaa;
+}
+
+.time {
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: #171717;
+}
