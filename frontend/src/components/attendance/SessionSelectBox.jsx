@@ -15,8 +15,8 @@ const SessionSelectBox = () => {
   return (
     <div className={styles.box}>
       <div className={styles.title}>
-        <ClipboardCheck />
-        <span>출석하기</span>
+        <ClipboardCheck aria-hidden="true" />
+        <label htmlFor="session-select">출석하기</label>
       </div>
       <select id="session-select" className={styles.session}>
         <option value="">세션선택</option>
