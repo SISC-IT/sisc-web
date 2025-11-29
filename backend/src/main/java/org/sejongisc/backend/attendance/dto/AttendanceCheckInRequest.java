@@ -32,25 +32,25 @@ public class AttendanceCheckInRequest {
     )
     private UUID roundId;
 
-    @NotNull(message = "위도는 필수입니다")
     @DecimalMin(value = "-90.0", message = "위도는 -90도 이상이어야 합니다")
     @DecimalMax(value = "90.0", message = "위도는 90도 이하여야 합니다")
     @Schema(
-            description = "현재 사용자의 위치 위도 (WGS84 좌표계)",
+            description = "현재 사용자의 위치 위도 (WGS84 좌표계). 세션에 위치 정보가 있으면 필수입니다.",
             example = "37.4979",
             minimum = "-90.0",
-            maximum = "90.0"
+            maximum = "90.0",
+            nullable = true
     )
     private Double latitude;
 
-    @NotNull(message = "경도는 필수입니다")
     @DecimalMin(value = "-180.0", message = "경도는 -180도 이상이어야 합니다")
     @DecimalMax(value = "180.0", message = "경도는 180도 이하여야 합니다")
     @Schema(
-            description = "현재 사용자의 위치 경도 (WGS84 좌표계)",
+            description = "현재 사용자의 위치 경도 (WGS84 좌표계). 세션에 위치 정보가 있으면 필수입니다.",
             example = "127.0276",
             minimum = "-180.0",
-            maximum = "180.0"
+            maximum = "180.0",
+            nullable = true
     )
     private Double longitude;
 
