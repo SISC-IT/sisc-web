@@ -5,7 +5,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "AI/xai/**"
+      - "AI/**"                       # ⬅ xai만 말고 AI 전체 감시 (Dockerfile 포함)
       - ".github/workflows/xai-job.yml"
 
 env:
@@ -43,8 +43,8 @@ jobs:
       - name: Build & Push (xai)
         uses: docker/build-push-action@v6
         with:
-          context: ./AI/xai
-          file: ./AI/xai/Dockerfile
+          context: ./AI                 # ⬅ AI 디렉토리 전체를 컨텍스트로
+          file: ./AI/Dockerfile         # ⬅ Dockerfile 위치
           push: true
           platforms: linux/amd64
           tags: ${{ steps.meta-xai.outputs.tags }}
@@ -54,7 +54,6 @@ jobs:
 
   deploy-xai:
     needs: [build-xai]
-    # workflow_dispatch일 때도 동작, build-xai가 성공했을 때만 실행
     if: ${{ github.event_name == 'workflow_dispatch' || needs.build-xai.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
