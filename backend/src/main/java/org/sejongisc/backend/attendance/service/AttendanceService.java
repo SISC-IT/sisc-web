@@ -37,17 +37,30 @@ public class AttendanceService {
      * - 지각 판별 및 출석 상태 결정
      */
     public AttendanceCheckInResponse checkInByRound(AttendanceCheckInRequest request, UUID userId) {
-        // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+        // 사용자가 존재하면 조회, 없으면 null (익명 사용자 지원)
+        User user = userRepository.findById(userId).orElse(null);
 
         AttendanceRound round = attendanceRoundRepository.findRoundById(request.getRoundId())
                 .orElseThrow(() -> new IllegalArgumentException("라운드를 찾을 수 없습니다: " + request.getRoundId()));
 
         AttendanceSession session = round.getAttendanceSession();
 
-        log.info("라운드 출석 체크인 시작: 사용자={}, 라운드ID={}, 날짜={}",
-                user.getName(), request.getRoundId(), round.getRoundDate());
+        // 익명사용자의 이름 결정
+        String anonymousName = null;
+        if (user == null) {
+            // 사용자가 이름을 입력한 경우 사용
+            if (request.getUserName() != null && !request.getUserName().trim().isEmpty()) {
+                anonymousName = request.getUserName();
+            } else {
+                // 이름 미입력 시 자동 생성 (익명사용자-UUID의 처음 8글자)
+                anonymousName = "익명사용자-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            }
+        }
+
+        String userName = user != null ? user.getName() : anonymousName;
+
+        log.info("라운드 출석 체크인 시작: 사용자={}, 라운드ID={}, 날짜={}, 익명여부={}",
+                userName, request.getRoundId(), round.getRoundDate(), user == null);
 
         // 1. 라운드 시간 검증 - 통일된 로직
         LocalDate checkDate = LocalDate.now();
@@ -59,7 +72,7 @@ public class AttendanceService {
         // 날짜 검증
         if (!checkDate.equals(round.getRoundDate())) {
             log.warn("❌ 출석 날짜 불일치: 라운드ID={}, 사용자={}, 현재날짜={}, 라운드날짜={}",
-                    request.getRoundId(), user.getName(), checkDate, round.getRoundDate());
+                    request.getRoundId(), userName, checkDate, round.getRoundDate());
             return AttendanceCheckInResponse.builder()
                     .roundId(request.getRoundId())
                     .success(false)
@@ -71,7 +84,7 @@ public class AttendanceService {
         boolean isWithinTimeWindow = !checkTime.isBefore(startTime) && checkTime.isBefore(endTime);
         if (!isWithinTimeWindow) {
             log.warn("❌ 출석 시간 초과: 라운드ID={}, 사용자={}, 현재시간={}, 시작={}, 종료={}",
-                    request.getRoundId(), user.getName(), checkTime, startTime, endTime);
+                    request.getRoundId(), userName, checkTime, startTime, endTime);
             return AttendanceCheckInResponse.builder()
                     .roundId(request.getRoundId())
                     .success(false)
@@ -80,25 +93,42 @@ public class AttendanceService {
         }
 
         log.info("✅ 시간 검증 성공: 라운드ID={}, 사용자={}, 시간={}, 범위=[{}~{}]",
-                request.getRoundId(), user.getName(), checkTime, startTime, endTime);
+                request.getRoundId(), userName, checkTime, startTime, endTime);
 
-        // 2. 중복 출석 확인
-        boolean alreadyCheckedIn = attendanceRepository.findByAttendanceRound_RoundIdAndUser(request.getRoundId(), user)
-                .isPresent();
-        if (alreadyCheckedIn) {
-            log.warn("중복 출석 시도: 라운드ID={}, 사용자={}", request.getRoundId(), user.getName());
-            return AttendanceCheckInResponse.builder()
-                    .roundId(request.getRoundId())
-                    .success(false)
-                    .failureReason("이미 출석 체크인하셨습니다")
-                    .build();
+        // 2. 중복 출석 확인 (인증된 사용자 또는 익명사용자 모두)
+        if (user != null) {
+            // 인증된 사용자: user ID로 중복 체크
+            boolean alreadyCheckedIn = attendanceRepository.findByAttendanceRound_RoundIdAndUser(request.getRoundId(), user)
+                    .isPresent();
+            if (alreadyCheckedIn) {
+                log.warn("중복 출석 시도: 라운드ID={}, 사용자={}", request.getRoundId(), userName);
+                return AttendanceCheckInResponse.builder()
+                        .roundId(request.getRoundId())
+                        .success(false)
+                        .failureReason("이미 출석 체크인하셨습니다")
+                        .build();
+            }
+        } else if (request.getUserName() != null && !request.getUserName().trim().isEmpty()) {
+            // 익명 사용자: 입력한 이름으로 중복 체크
+            List<Attendance> existingAttendances = attendanceRepository.findByAttendanceRound_RoundId(request.getRoundId());
+            boolean alreadyCheckedIn = existingAttendances.stream()
+                    .anyMatch(a -> a.getUser() == null &&
+                            request.getUserName().equalsIgnoreCase(a.getAnonymousUserName()));
+            if (alreadyCheckedIn) {
+                log.warn("익명사용자 중복 출석 시도: 라운드ID={}, 이름={}", request.getRoundId(), request.getUserName());
+                return AttendanceCheckInResponse.builder()
+                        .roundId(request.getRoundId())
+                        .success(false)
+                        .failureReason("이미 출석 체크인하셨습니다")
+                        .build();
+            }
         }
 
         // 3. 위치 검증 (세션에 위치 정보가 있는 경우)
         Location userLocation = null;
         if (session.getLocation() != null) {
             if (request.getLatitude() == null || request.getLongitude() == null) {
-                log.warn("위치 정보 누락: 라운드ID={}, 사용자={}", request.getRoundId(), user.getName());
+                log.warn("위치 정보 누락: 라운드ID={}, 사용자={}", request.getRoundId(), userName);
                 return AttendanceCheckInResponse.builder()
                         .roundId(request.getRoundId())
                         .success(false)
@@ -113,7 +143,7 @@ public class AttendanceService {
 
             if (!session.getLocation().isWithRange(userLocation)) {
                 log.warn("위치 불일치: 라운드ID={}, 사용자={}, 거리 초과",
-                        request.getRoundId(), user.getName());
+                        request.getRoundId(), userName);
                 return AttendanceCheckInResponse.builder()
                         .roundId(request.getRoundId())
                         .success(false)
@@ -132,26 +162,27 @@ public class AttendanceService {
 
         // 5. 출석 기록 저장
         Attendance attendance = Attendance.builder()
-                .user(user)
+                .user(user)  // null 가능 (익명 사용자)
                 .attendanceSession(session)
                 .attendanceRound(round)
                 .attendanceStatus(status)
                 .checkedAt(java.time.LocalDateTime.now())
                 .awardedPoints(session.getRewardPoints())
                 .checkInLocation(userLocation)
+                .anonymousUserName(user == null ? anonymousName : null)  // 익명사용자일 경우 이름 저장 (입력 또는 자동생성)
                 .build();
 
-        log.info("💾 Attendance 객체 생성 완료: 사용자={}, 라운드ID={}, 상태={}, 체크인시간={}",
-                user.getName(), request.getRoundId(), status, attendance.getCheckedAt());
+        log.info("💾 Attendance 객체 생성 완료: 사용자={}, 라운드ID={}, 상태={}, 체크인시간={}, 익명이름={}",
+                userName, request.getRoundId(), status, attendance.getCheckedAt(), anonymousName);
 
         attendance = attendanceRepository.save(attendance);
 
         log.info("✅ Attendance 저장 완료: attendanceId={}, 사용자={}, 라운드ID={}, 상태={}",
-                attendance.getAttendanceId(), user.getName(), request.getRoundId(), status);
+                attendance.getAttendanceId(), userName, request.getRoundId(), status);
 
         round.getAttendances().add(attendance);
 
-        log.info("✅ 라운드 출석 체크인 완료: 사용자={}, 상태={}, 저장된ID={}", user.getName(), status, attendance.getAttendanceId());
+        log.info("✅ 라운드 출석 체크인 완료: 사용자={}, 상태={}, 저장된ID={}", userName, status, attendance.getAttendanceId());
 
         long remainingSeconds = java.time.Duration.between(
                 checkTime,
@@ -332,8 +363,9 @@ public class AttendanceService {
     private AttendanceResponse convertToResponse(Attendance attendance) {
         return AttendanceResponse.builder()
                 .attendanceId(attendance.getAttendanceId())
-                .userId(attendance.getUser().getUserId())
-                .userName(attendance.getUser().getName())
+                .userId(attendance.getUser() != null ? attendance.getUser().getUserId() : null)
+                .userName(attendance.getUser() != null ? attendance.getUser().getName() :
+                        (attendance.getAnonymousUserName() != null ? attendance.getAnonymousUserName() : "익명사용자"))
                 .attendanceSessionId(attendance.getAttendanceSession().getAttendanceSessionId())
                 .attendanceRoundId(attendance.getAttendanceRound() != null ?
                         attendance.getAttendanceRound().getRoundId() : null)
