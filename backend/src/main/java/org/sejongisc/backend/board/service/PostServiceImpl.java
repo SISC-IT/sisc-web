@@ -266,20 +266,18 @@ public class PostServiceImpl implements PostService {
     // 부모 댓글을 CommentResponse DTO로 변환
     Page<CommentResponse> commentResponses = parentComments.map(parent -> {
 
-      // 1. 해당 부모 댓글의 자식 댓글 목록을 조회
+      // 해당 부모 댓글의 자식 댓글 목록을 조회
       List<Comment> childComments = commentRepository.findByParentComment(parent);
 
-      // 2. [중요!] 자식 댓글들을 DTO로 만들기 전에, 부모 객체를 강제로 연결해줍니다.
-      // 이 부분이 없으면 DTO 변환 시 parentCommentId가 계속 null로 나옵니다.
+      // 부모 객체 연결
       childComments.forEach(child -> child.setParentComment(parent));
 
-      // 3. 자식 댓글 목록을 CommentResponse DTO 리스트로 변환
-      // 이제 child.getParentComment()가 null이 아니므로 ID가 정상적으로 들어갑니다.
+      // 자식 댓글 목록을 CommentResponse DTO 리스트로 변환
       List<CommentResponse> replyResponses = childComments.stream()
           .map(CommentResponse::from)
           .toList();
 
-      // 4. 부모 댓글 DTO를 생성하며, 자식 DTO 리스트를 주입
+      // 부모 댓글 DTO를 생성하며, 자식 DTO 리스트를 주입
       return CommentResponse.from(parent, replyResponses);
     });
 
