@@ -36,7 +36,7 @@ public interface SessionUserRepository extends JpaRepository<SessionUser, UUID> 
     /**
      * 세션에 특정 사용자가 참여하는지 확인
      */
-    @Query("SELECT CASE WHEN COUNT(su) > 0 THEN true ELSE false END FROM SessionUser su WHERE su.attendanceSession.attendanceSessionId = :sessionId AND su.user.userId = :userId")
+    @Query("SELECT COUNT(su) > 0 FROM SessionUser su WHERE su.attendanceSession.attendanceSessionId = :sessionId AND su.user.userId = :userId")
     boolean existsBySessionIdAndUserId(@Param("sessionId") UUID sessionId, @Param("userId") UUID userId);
 
     /**
