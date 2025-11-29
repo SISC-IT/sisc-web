@@ -186,7 +186,6 @@ def run_signal_transformer(tickers: List[str], db_name: str) -> pd.DataFrame:
         print("[WARN] 빈 종목 리스트가 입력되어 Transformer 단계를 건너뜁니다.")
         return pd.DataFrame()
 
-   
     end_date = datetime.now().date()
     start_date = end_date - timedelta(days=600)
 
@@ -304,6 +303,11 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[ReportRow]:
     """
     Transformer 결정 로그를 입력으로 받아, 각 행(의사결정)에 대한
     XAI 설명 리포트(자연어 텍스트)를 생성합니다.
+
+    반환:
+    - ReportRow 리스트: (ticker, signal, price, date_s, report_text)
+      이 리스트의 순서는 decision_log에서 XAI를 생성한 "행 순서"와 동일합니다.
+      (단, 여기서 일부 행을 스킵할 수도 있으므로, logs_df 행 수와 1:1 대응이라는 보장은 없음)
     """
     print("--- [PIPELINE-STEP 3] XAI 리포트 생성 시작 ---")
 
@@ -335,6 +339,15 @@ def run_xai_report(decision_log: pd.DataFrame) -> List[ReportRow]:
         date_s = _to_iso_date(row.get("date", ""))
         signal = str(row.get("action", ""))   # action → signal
         price = _to_float(row.get("price", 0.0))
+
+        # 한국어 주석:
+        # - ticker / signal / date_s 중 하나라도 비어 있으면
+        #   save_reports_to_db 단계에서 필터링되어 id 개수가 줄어들어
+        #   logs_df 와 xai_ids 길이가 어긋날 수 있다.
+        # - 따라서 여기서부터 필수 값이 비어 있는 행은 XAI 생성 자체를 스킵한다.
+        if not ticker or not signal or not date_s:
+            print(f"[WARN] XAI 입력 값 누락으로 스킵 (ticker={ticker}, signal={signal}, date={date_s})")
+            continue
 
         evidence: List[Dict[str, float]] = []
         for i in (1, 2, 3):
@@ -390,12 +403,13 @@ def run_pipeline() -> Optional[List[ReportRow]]:
     """
     today = datetime.now()  # 서버 로컬 시간 기준 (필요시 timezone 조정 가능)
     weekday = today.weekday()  # 월=0, 화=1, ..., 일=6
+
     #-------------------------------
     # 0) 주가 데이터 저장 실행
     #-------------------------------
     print("--- [PIPELINE-STEP 0] 주가 데이터 수집 실행 시작 ---")
     try:
-        #run_data_collection()
+        # run_data_collection()
         print("--- [PIPELINE-STEP 0] 주가 데이터 수집 실행 완료 ---")
     except Exception as e:
         print(f"[WARN] 데이터 수집 실행 중 오류 발생: {e} → 계속 진행합니다.")
@@ -443,16 +457,51 @@ def run_pipeline() -> Optional[List[ReportRow]]:
         xai_ids = []
 
     # 3.7) logs_df에 xai_report_id 심기
+    # ------------------------------------------------
+    # ✅ 기존: 길이가 다르면 전부 NULL 처리
+    # ❌ 문제: XAI 리포트 수 != logs_df row 수 인 경우가 발생
+    # ✅ 수정: (ticker, date, signal) 키로 매핑해서 가능한 행에만 ID 부여
+    # ------------------------------------------------
     logs_df = logs_df.copy().reset_index(drop=True)
-    if xai_ids and len(xai_ids) == len(logs_df):
-        logs_df["xai_report_id"] = xai_ids
-    else:
-        logs_df["xai_report_id"] = None
-        if xai_ids and len(xai_ids) != len(logs_df):
+
+    # 기본값: 전부 None
+    logs_df["xai_report_id"] = None
+
+    if reports and xai_ids:
+        if len(xai_ids) != len(reports):
             print(
-                f"[WARN] XAI ID 개수({len(xai_ids)})와 decision_log 행 수({len(logs_df)})가 달라 "
-                "xai_report_id를 매핑하지 못했습니다. (모두 NULL 처리)"
+                f"[WARN] XAI ID 개수({len(xai_ids)})와 리포트 행 수({len(reports)})가 달라 "
+                "완전한 1:1 대응은 아닐 수 있습니다. (최소한의 매핑만 수행)"
             )
+
+        # (ticker, date, signal) → xai_id 매핑 딕셔너리 생성
+        mapping: Dict[Tuple[str, str, str], int] = {}
+        for (ticker, signal, price, date_s, _report_text), xai_id in zip(reports, xai_ids):
+            if not ticker or not signal or not date_s:
+                continue
+            key = (str(ticker), str(date_s), str(signal))
+            mapping[key] = xai_id
+
+        if not mapping:
+            print("[WARN] 유효한 XAI 매핑이 없어 xai_report_id를 None으로 유지합니다.")
+        else:
+            def _lookup_xai_id(row: pd.Series) -> Optional[int]:
+                t = str(row.get("ticker", ""))
+                d = _to_iso_date(row.get("date", ""))
+                s = str(row.get("action", ""))
+                return mapping.get((t, d, s))
+
+            logs_df["xai_report_id"] = logs_df.apply(_lookup_xai_id, axis=1)
+
+            # 디버그용: 실제로 몇 개의 row에 ID가 들어갔는지 확인
+            assigned_count = logs_df["xai_report_id"].notna().sum()
+            print(f"[INFO] decision_log에 xai_report_id 매핑 완료 (할당된 row 수: {assigned_count})")
+
+    else:
+        if not reports:
+            print("[INFO] 생성된 XAI 리포트가 없어 xai_report_id는 모두 NULL입니다.")
+        elif not xai_ids:
+            print("[INFO] XAI ID가 비어 있어 xai_report_id는 모두 NULL입니다.")
 
     # -------------------------------
     # 4) Backtrade: 매일 실행

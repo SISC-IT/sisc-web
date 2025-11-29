@@ -80,6 +80,8 @@ def backtrade(
         sig = str(r["action"]).upper()
         sig_price = float(r.get("price", np.nan))
 
+        xai_id = r.get("xai_report_id")
+
         if sig not in ("BUY", "SELL"):
             continue
 
@@ -128,6 +130,7 @@ def backtrade(
 
         records.append({
             "run_id": run_id,
+            "xai_report_id": xai_id,
             "ticker": ticker,
             "signal_date": sig_date.date().isoformat(),
             "signal_price": float(sig_price),
