@@ -1,5 +1,6 @@
 import styles from './MonthlyReport.module.css';
 import logo from '../../assets/logo.png';
+import Report from '../../components/external/Report';
 
 const MonthlyReport = () => {
   return (
@@ -17,6 +18,12 @@ const MonthlyReport = () => {
         <h2 className={styles.subTitle}>
           지난 한 달의 활동과 자료들을 아카이브 형식으로 정리했어요.
         </h2>
+      </div>
+      <div className={styles.reportSection}>
+        <Report />
+        <Report />
+        <Report />
+        <Report />
       </div>
     </div>
   );
