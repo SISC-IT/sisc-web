@@ -1,0 +1,78 @@
+name: Build & Deploy XAI Job
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["main"]
+    paths:
+      - "AI/xai/**"
+      - ".github/workflows/xai-job.yml"
+
+env:
+  IMAGE_XAI: ghcr.io/sisc-it/sisc-web-xai
+
+jobs:
+  build-xai:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Meta (tags/labels) - xai
+        id: meta-xai
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_XAI }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build & Push (xai)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./AI/xai
+          file: ./AI/xai/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta-xai.outputs.tags }}
+          labels: ${{ steps.meta-xai.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-xai:
+    needs: [build-xai]
+    # workflow_dispatch일 때도 동작, build-xai가 성공했을 때만 실행
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.build-xai.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: SSH deploy (pull XAI image only)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
+
+            # XAI 이미지 최신 버전만 받기
+            docker pull ghcr.io/sisc-it/sisc-web-xai:latest
+
+            echo "✅ Pulled latest XAI image: ghcr.io/sisc-it/sisc-web-xai:latest"
