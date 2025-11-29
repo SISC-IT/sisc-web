@@ -14,6 +14,8 @@ import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -60,23 +62,29 @@ public class AttendanceService {
         log.info("라운드 출석 체크인 시작: 사용자={}, 라운드ID={}, 날짜={}, 익명여부={}",
                 userName, request.getRoundId(), round.getRoundDate(), user == null);
 
-        // 1. 라운드 시간 검증 - 상세 로깅
-        java.time.LocalTime checkTime = java.time.LocalTime.now();
-        java.time.LocalDate checkDate = java.time.LocalDate.now();
-        java.time.LocalTime endTime = round.getEndTime();
-        java.time.LocalTime startTime = round.getStartTime();
+        // 1. 라운드 시간 검증 - 통일된 로직
+        LocalDate checkDate = LocalDate.now();
+        LocalTime checkTime = LocalTime.now();
+        LocalTime startTime = round.getStartTime();
+        LocalTime endTime = round.getEndTime();
+        LocalTime lateThreshold = startTime.plusMinutes(5);
 
         // 날짜 검증
-        boolean dateMatch = checkDate.equals(round.getRoundDate());
-        // 시간 검증: startTime <= now < endTime
-        boolean timeInRange = !checkTime.isBefore(startTime) && checkTime.isBefore(endTime);
+        if (!checkDate.equals(round.getRoundDate())) {
+            log.warn("❌ 출석 날짜 불일치: 라운드ID={}, 사용자={}, 현재날짜={}, 라운드날짜={}",
+                    request.getRoundId(), userName, checkDate, round.getRoundDate());
+            return AttendanceCheckInResponse.builder()
+                    .roundId(request.getRoundId())
+                    .success(false)
+                    .failureReason("출석 날짜가 맞지 않습니다")
+                    .build();
+        }
 
-        log.info("📋 시간 검증 상세: 현재날짜={}, 라운드날짜={}, 날짜일치={} | 현재시간={}, 시작={}, 종료={}, 시간범위내={}",
-                checkDate, round.getRoundDate(), dateMatch, checkTime, startTime, endTime, timeInRange);
-
-        if (!round.isCheckInAvailable()) {
-            log.warn("❌ 출석 시간 초과: 라운드ID={}, 사용자={}, 현재시간={}, 시작시간={}, 종료시간={}, 현재날짜={}, 라운드날짜={}, 이유: 날짜일치={}|시간범위={}",
-                    request.getRoundId(), userName, checkTime, startTime, endTime, checkDate, round.getRoundDate(), dateMatch, timeInRange);
+        // 시간 범위 검증: startTime <= now < endTime
+        boolean isWithinTimeWindow = !checkTime.isBefore(startTime) && checkTime.isBefore(endTime);
+        if (!isWithinTimeWindow) {
+            log.warn("❌ 출석 시간 초과: 라운드ID={}, 사용자={}, 현재시간={}, 시작={}, 종료={}",
+                    request.getRoundId(), userName, checkTime, startTime, endTime);
             return AttendanceCheckInResponse.builder()
                     .roundId(request.getRoundId())
                     .success(false)
@@ -84,8 +92,8 @@ public class AttendanceService {
                     .build();
         }
 
-        log.info("✅ 시간 검증 성공: 라운드ID={}, 사용자={}, 라운드날짜={}, 라운드시작={}, 종료={}, 허용분={}, 현재시간={}",
-                request.getRoundId(), userName, round.getRoundDate(), startTime, endTime, round.getAllowedMinutes(), checkTime);
+        log.info("✅ 시간 검증 성공: 라운드ID={}, 사용자={}, 시간={}, 범위=[{}~{}]",
+                request.getRoundId(), userName, checkTime, startTime, endTime);
 
         // 2. 중복 출석 확인 (인증된 사용자 또는 익명사용자 모두)
         if (user != null) {
@@ -145,13 +153,12 @@ public class AttendanceService {
         }
 
         // 4. 출석 상태 판별 (정상/지각)
-        java.time.LocalTime now = java.time.LocalTime.now();
-        java.time.LocalTime lateThreshold = round.getStartTime().plusMinutes(5);
-        AttendanceStatus status = now.isAfter(lateThreshold) ?
+        // 지각 기준: 시작시간 + 5분 이후면 LATE
+        AttendanceStatus status = checkTime.isAfter(lateThreshold) ?
                 AttendanceStatus.LATE : AttendanceStatus.PRESENT;
 
-        log.info("📊 출석 상태 판별: 현재시간={}, 시작시간={}, 지각기준={}, 판별상태={}",
-                now, round.getStartTime(), lateThreshold, status);
+        log.info("📊 출석 상태 판별: 현재시간={}, 시작={}, 지각기준={}, 판별상태={}",
+                checkTime, startTime, lateThreshold, status);
 
         // 5. 출석 기록 저장
         Attendance attendance = Attendance.builder()
@@ -178,8 +185,8 @@ public class AttendanceService {
         log.info("✅ 라운드 출석 체크인 완료: 사용자={}, 상태={}, 저장된ID={}", userName, status, attendance.getAttendanceId());
 
         long remainingSeconds = java.time.Duration.between(
-                java.time.LocalTime.now(),
-                round.getEndTime()
+                checkTime,
+                endTime
         ).getSeconds();
 
         return AttendanceCheckInResponse.builder()
