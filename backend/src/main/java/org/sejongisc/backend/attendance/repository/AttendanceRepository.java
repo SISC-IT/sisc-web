@@ -60,4 +60,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     @Query("SELECT a FROM Attendance a WHERE a.attendanceRound.roundId = :roundId AND a.user = :user")
     Optional<Attendance> findByAttendanceRound_RoundIdAndUser(@Param("roundId") UUID roundId, @Param("user") User user);
 
+    // 세션의 특정 사용자 모든 출석 기록 조회 (라운드 관계없이)
+    @Query("SELECT a FROM Attendance a WHERE a.attendanceSession = :session AND a.user.userId = :userId")
+    List<Attendance> findAllBySessionAndUserId(@Param("session") AttendanceSession session, @Param("userId") UUID userId);
+
 }

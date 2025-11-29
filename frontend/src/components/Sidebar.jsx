@@ -1,6 +1,8 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { useState } from 'react';
+import { api } from '../utils/axios';
+import { toast } from 'react-toastify';
 
 const Sidebar = ({ isOpen, isRoot }) => {
   const navigate = useNavigate();
@@ -23,6 +25,32 @@ const Sidebar = ({ isOpen, isRoot }) => {
   const [selectedBoard, setSelectedBoard] = useState(
     currentBoard?.name || '전체 게시판'
   );
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!localStorage.getItem('accessToken')
+  );
+
+  const logout = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    try {
+      await api.post(
+        '/api/auth/logout',
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+    } catch {
+      toast.error('오류가 발생했습니다.');
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      setIsLoggedIn(false);
+      navigate('/');
+      toast.success('로그아웃 되었습니다.');
+    }
+  };
 
   return (
     <div>
@@ -124,36 +152,73 @@ const Sidebar = ({ isOpen, isRoot }) => {
           <div className={styles['menu-section']}>
             <span className={styles['menu-title']}>계정</span>
             <ul>
-              <li>
-                <NavLink
-                  to="/mypage"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                >
-                  마이페이지
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/login"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                >
-                  로그인
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/signup"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                >
-                  회원가입
-                </NavLink>
-              </li>
+              {isLoggedIn ? (
+                <>
+                  <li>
+                    <NavLink
+                      to="/mypage"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      마이페이지
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
+                      to="/"
+                      className={styles['inactive-link']}
+                      onClick={logout}
+                    >
+                      로그아웃
+                    </NavLink>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <NavLink
+                      to="/mypage"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      마이페이지
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
+                      to="/login"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      로그인
+                    </NavLink>
+                  </li>
+
+                  <li>
+                    <NavLink
+                      to="/signup"
+                      className={({ isActive }) =>
+                        isActive
+                          ? styles['active-link']
+                          : styles['inactive-link']
+                      }
+                    >
+                      회원가입
+                    </NavLink>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </nav>

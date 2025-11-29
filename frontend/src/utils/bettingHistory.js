@@ -4,7 +4,8 @@ const betHistory = async () => {
   try {
     const res = await api.get('/api/user-bets/history');
     // 백엔드에서 최신순으로 정렬된 데이터 반환
-    return res.data;
+    const filterdRes = res.data.filter((r) => r.betStatus !== 'DELETED');
+    return filterdRes;
   } catch (error) {
     console.log(error.message);
     return null;

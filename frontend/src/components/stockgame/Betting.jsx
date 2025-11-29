@@ -38,7 +38,10 @@ const Betting = ({ period }) => {
       return;
     }
 
-    if (data.betRoundId === userBets.betRoundId) {
+    if (
+      data.betRoundId === userBets.betRoundId &&
+      userBets.betStatus !== 'DELETED'
+    ) {
       userBets.option === 'RISE' ? setIsBetting('up') : setIsBetting('down');
     } else {
       setIsBetting('none');
