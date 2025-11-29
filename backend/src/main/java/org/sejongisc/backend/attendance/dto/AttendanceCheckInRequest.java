@@ -38,7 +38,8 @@ public class AttendanceCheckInRequest {
             description = "현재 사용자의 위치 위도 (WGS84 좌표계). 세션에 위치 정보가 있으면 필수입니다.",
             example = "37.4979",
             minimum = "-90.0",
-            maximum = "90.0"
+            maximum = "90.0",
+            nullable = true
     )
     private Double latitude;
 
@@ -48,7 +49,8 @@ public class AttendanceCheckInRequest {
             description = "현재 사용자의 위치 경도 (WGS84 좌표계). 세션에 위치 정보가 있으면 필수입니다.",
             example = "127.0276",
             minimum = "-180.0",
-            maximum = "180.0"
+            maximum = "180.0",
+            nullable = true
     )
     private Double longitude;
 }
