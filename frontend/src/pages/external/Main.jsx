@@ -1,5 +1,5 @@
 import styles from './Main.module.css';
-import image from '../../assets/external-image.png';
+import image from '../../assets/external/external-image.png';
 import Logo from '../../assets/logo.png';
 import { Link } from 'react-router-dom';
 
@@ -17,6 +17,9 @@ const Main = () => {
           </li>
           <li>
             <Link to="/main/portfolio">운용 포트폴리오</Link>
+          </li>
+          <li>
+            <Link to="/main/monthly-report">월간 세투연</Link>
           </li>
           <li>
             <Link to="/">웹사이트</Link>

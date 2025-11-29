@@ -19,6 +19,7 @@ import Main from './pages/external/Main.jsx';
 import Intro from './pages/external/Intro.jsx';
 import Leaders from './pages/external/Leaders.jsx';
 import Portfolio from './pages/external/Portfolio.jsx';
+import MonthlyReport from './pages/external/MonthlyReport.jsx';
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -31,6 +32,7 @@ function App() {
         <Route path="/main/intro" element={<Intro />} />
         <Route path="/main/leaders" element={<Leaders />} />
         <Route path="/main/portfolio" element={<Portfolio />} />
+        <Route path="/main/monthly-report" element={<MonthlyReport />} />s
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth/success" element={<OAuthSuccess />} />

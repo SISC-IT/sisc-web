@@ -1,0 +1,67 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+}
+
+.header {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.82)),
+    url('../../assets/external/monthly-report.png') center no-repeat;
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.logoSection {
+  display: inline-flex;
+  height: 56px;
+  padding: 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: 37px;
+  background: rgba(51, 159, 255, 0.12);
+}
+
+.logo {
+  width: 26px;
+  height: 26px;
+  filter: brightness(0) saturate(1) invert(82%) sepia(12%) saturate(400%)
+    hue-rotate(175deg) brightness(110%) contrast(90%);
+}
+
+.logoName {
+  color: rgba(192, 225, 255, 1);
+  font-size: 20px;
+  font-style: normal;
+  line-height: 100%;
+  letter-spacing: -0.8px;
+}
+
+.title {
+  color: #fff;
+  text-align: center;
+  font-size: 40px;
+  font-weight: normal;
+  line-height: 150%;
+  margin: 0;
+  word-break: keep-all;
+}
+
+.strong {
+  color: #339fff;
+  font-weight: normal;
+}
+
+.subTitle {
+  color: #d9d9d9;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 150%;
+  margin: 0;
+}
