@@ -158,9 +158,11 @@ public class BacktestingEngine {
             }
             // 백테스팅 메인 반복문 종료
 
+            // 자산 곡선 JSON 변환
+            String assetCurveJson = objectMapper.writeValueAsString(dailyPortfolioValue);
             // 최종 지표 계산 및 저장
             backtestRunMetricsRepository.save(
-                calculateMetrics(backtestRun, initialCapital, tradeLogs, dailyPortfolioValue, dailyReturns, maxDrawdown, tradesCount)
+                calculateMetrics(backtestRun, initialCapital, tradeLogs, dailyPortfolioValue, dailyReturns, maxDrawdown, tradesCount, assetCurveJson)
             );
             backtestRun.setStatus(BacktestStatus.COMPLETED);
 
@@ -179,7 +181,7 @@ public class BacktestingEngine {
     // ----------------------------------------------------------------------
     private BacktestRunMetrics calculateMetrics(BacktestRun backtestRun, BigDecimal initialCapital,
                                                 List<TradeLog> tradeLogs, List<BigDecimal> dailyPortfolioValue,
-                                                List<BigDecimal> dailyReturns, BigDecimal maxDrawdown, int tradesCount) {
+                                                List<BigDecimal> dailyReturns, BigDecimal maxDrawdown, int tradesCount, String assetCurveJson) {
         // 총 수익률 계산 - 백분율로 변환
         BigDecimal totalReturnPct = dailyPortfolioValue.getLast()       // 최종 포트폴리오 가치
             .divide(initialCapital, 8, RoundingMode.HALF_UP)      // 초기 자본 대비 비율, 소수점 8자리 반올림
@@ -193,7 +195,7 @@ public class BacktestingEngine {
         // 평균 보유 기간 계산
         BigDecimal avgHoldDays = calculateAvgHoldDays(tradeLogs);
 
-        return BacktestRunMetrics.fromDto(backtestRun, totalReturnPct, maxDrawdownPct, sharpeRatio, avgHoldDays, tradesCount);
+        return BacktestRunMetrics.fromDto(backtestRun, totalReturnPct, maxDrawdownPct, sharpeRatio, avgHoldDays, tradesCount, assetCurveJson);
     }
 
     private BigDecimal calculateSharpeRatio(List<BigDecimal> dailyReturns) {
@@ -227,7 +229,7 @@ public class BacktestingEngine {
         for (TradeLog log : tradeLogs) {
             if (log.type == TradeLog.Type.BUY) {
                 currentBuyTime = log.time;
-            } else if (log.type == TradeLog.Type.SELL && currentBuyTime != null) {
+            } else if ((log.type == TradeLog.Type.SELL || log.type == TradeLog.Type.SELL_FORCED) && currentBuyTime != null) {
                 long days = java.time.temporal.ChronoUnit.DAYS.between(currentBuyTime.toLocalDate(), log.time.toLocalDate());
                 holdDurations.add(days);
                 currentBuyTime = null;
