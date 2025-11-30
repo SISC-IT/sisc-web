@@ -12,6 +12,7 @@ import org.sejongisc.backend.stock.entity.Execution;
 import org.sejongisc.backend.stock.entity.XaiReport;
 import org.sejongisc.backend.stock.repository.ExecutionRepository;
 import org.sejongisc.backend.stock.repository.XaiReportRepository;
+import org.sejongisc.backend.stock.repository.projection.PortfolioOverviewProjection;
 import org.sejongisc.backend.stock.repository.projection.PortfolioSimpleProjection;
 import org.sejongisc.backend.stock.repository.projection.PositionProjection;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,10 @@ public class QuantBotService {
                     null    // pnlRate
             ).setPnl()) // 계산 자동 수행
             .toList();
+  }
+
+  public PortfolioOverviewProjection getPortfolioOverview() {
+    return executionRepository.getPortfolioOverview();
   }
 }
 

@@ -7,6 +7,7 @@ import io.lettuce.core.dynamic.annotation.Param;
 import org.sejongisc.backend.stock.dto.HoldingDto;
 import org.sejongisc.backend.stock.dto.TradeLogDto;
 import org.sejongisc.backend.stock.entity.Execution;
+import org.sejongisc.backend.stock.repository.projection.PortfolioOverviewProjection;
 import org.sejongisc.backend.stock.repository.projection.PortfolioSimpleProjection;
 import org.sejongisc.backend.stock.repository.projection.PositionProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -65,4 +66,14 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
         ORDER BY ticker
     """, nativeQuery = true)
   List<PositionProjection> findAllPositions();
+
+  @Query(value = """
+        SELECT
+            (SELECT date FROM portfolio_summary ORDER BY date ASC LIMIT 1)            AS startDate,
+            (SELECT date FROM portfolio_summary ORDER BY date DESC LIMIT 1)           AS endDate,
+            (SELECT total_asset FROM portfolio_summary ORDER BY date DESC LIMIT 1)    AS lastTotalAsset,
+            (SELECT initial_capital FROM portfolio_summary ORDER BY date ASC LIMIT 1) AS initialCapital
+        """,
+          nativeQuery = true)
+  PortfolioOverviewProjection getPortfolioOverview();
 }

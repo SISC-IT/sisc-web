@@ -8,6 +8,7 @@ import org.sejongisc.backend.stock.dto.PositionDto;
 import org.sejongisc.backend.stock.dto.TradeLogDto;
 import org.sejongisc.backend.stock.dto.XaiReportResponse;
 import org.sejongisc.backend.stock.entity.XaiReport;
+import org.sejongisc.backend.stock.repository.projection.PortfolioOverviewProjection;
 import org.sejongisc.backend.stock.repository.projection.PortfolioSimpleProjection;
 import org.sejongisc.backend.stock.service.QuantBotService;
 import org.springframework.http.ResponseEntity;
@@ -151,6 +152,29 @@ public class QuantBotController {
       return ResponseEntity.noContent().build();
     }
     return ResponseEntity.ok(positions);
+  }
+
+  @GetMapping("/portfolio-overview")
+  @Operation(
+          summary = "자산현황",
+          description = """
+          ## 인증(JWT): **필요**
+          
+          ## 설명
+          - 현재 자산의 금액, 원금, 총 수익률, 시작, 최근 일자를 반환합니다 
+          
+          ## 요청 파라미터
+          - **요청 파라미터 없음**
+          
+          ## 반환값 (List<PositionDto>)
+          -     LocalDate startDate
+                LocalDate endDate();
+                BigDecimal lastTotalAsset();
+                BigDecimal initialCapital();
+          """
+  )
+  public PortfolioOverviewProjection getPortfolioOverview() {
+    return quantBotService.getPortfolioOverview();
   }
 }
 
