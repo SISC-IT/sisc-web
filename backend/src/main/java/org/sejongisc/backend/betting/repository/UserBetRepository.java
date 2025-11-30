@@ -13,7 +13,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserBetRepository extends JpaRepository<UserBet, UUID> {
-    boolean existsByRoundAndUserId(BetRound round, UUID userId);
+    // boolean existsByRoundAndUserId(BetRound round, UUID userId);
+
+    // ✅ [추가] 상태(Active)인 베팅이 있는지 확인하는 메서드
+    boolean existsByRoundAndUserIdAndBetStatus(BetRound round, UUID userId, BetStatus betStatus);
 
     Optional<UserBet> findByUserBetIdAndUserId(UUID userBetId, UUID userId);
 
