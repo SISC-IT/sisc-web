@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(
-        name = "session_user",
+        name = "attendance_session_user",
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"session_id", "user_id"},
                 name = "uk_session_user"
