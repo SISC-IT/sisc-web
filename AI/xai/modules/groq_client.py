@@ -1,19 +1,23 @@
+# AI/xai/modules/groq_client.py
 from groq import Groq
 import re
 
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
+
 def clean_strikethrough(text: str) -> str:
     """~~취소선~~ 내부 내용까지 완전히 제거."""
     # ~~...~~ 패턴 전체 삭제
-    cleaned = re.sub(r"~~.*?~~", "", text)
+    cleaned = re.sub(r"~~.*?~~", "", text, flags=re.DOTALL)
     # 중복 공백 정리 (optional)
     return re.sub(r"\s{2,}", " ", cleaned).strip()
+
 
 def build_xai_prompt(payload: dict) -> str:
     """
     Evidence 기반 XAI 리포트 생성을 위한 최적화 프롬프트 템플릿.
-    payload 형식:
+
+    payload 예:
         {
             "ticker": "AAPL",
             "date": "2024-01-10",
@@ -81,7 +85,7 @@ def ask_groq(prompt_payload: dict, api_key: str, model: str = DEFAULT_MODEL) -> 
     """최적화된 프롬프트 기반 Groq 리포트 생성."""
     client = Groq(api_key=api_key)
 
-    # 최적화 프롬프트 구성
+    # dict 기반 XAI 프롬프트 생성
     prompt = build_xai_prompt(prompt_payload)
 
     chat = client.chat.completions.create(
