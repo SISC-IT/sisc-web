@@ -8,11 +8,12 @@ import HeartIcon from '../../assets/boardHeart.svg';
 import HeartFilledIcon from '../../assets/boardHeart.fill.svg';
 import { getTimeAgo } from '../../utils/TimeUtils';
 
-const PostItem = React.memo(({ post, onLike, onBookmark }) => {
+const PostItem = React.memo(({ post, onLike, onBookmark, currentTeam }) => {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
-    navigate(`/board/${post.id}`, { state: { post } });
+    const team = currentTeam || 'all';
+    navigate(`/board/${team}/${post.id}`, { state: { post } });
   };
 
   const handleActionClick = (e) => {
@@ -20,11 +21,7 @@ const PostItem = React.memo(({ post, onLike, onBookmark }) => {
   };
 
   return (
-    <div
-      className={styles.postItem}
-      onClick={handleCardClick}
-      style={{ cursor: 'pointer' }}
-    >
+    <div className={styles.postItem} onClick={handleCardClick}>
       <div className={styles.mainContent}>
         <div className={styles.leftSection}>
           <img src={ProfileIcon} className={styles.authorImage} alt="프로필" />
@@ -71,7 +68,5 @@ const PostItem = React.memo(({ post, onLike, onBookmark }) => {
     </div>
   );
 });
-
-PostItem.displayName = 'PostItem';
 
 export default PostItem;

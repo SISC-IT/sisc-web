@@ -64,5 +64,8 @@ public class AttendanceSessionResponse {
 
         @Schema(description = "경도", example = "127.0751")
         private Double lng;
+
+        @Schema(description = "출석 인정 반경 (미터)", example = "100")
+        private Integer radiusMeters;
     }
 }

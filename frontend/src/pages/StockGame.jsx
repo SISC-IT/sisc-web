@@ -2,10 +2,13 @@ import styles from './StockGame.module.css';
 import Betting from '../components/stockgame/Betting';
 import BettingHistory from '../components/stockgame/BettingHistory';
 import { useState } from 'react';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 
 const StockGame = () => {
   const [active, setactive] = useState('progress');
   const [lastGame, setLastGame] = useState('weekly');
+
+  useAuthGuard();
 
   return (
     <div className={styles['stock-game']}>

@@ -45,4 +45,16 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
             "ORDER BY round_date ASC " +
             "LIMIT 1 OFFSET :offset", nativeQuery = true)
     Optional<AttendanceRound> findNthRoundInSession(@Param("sessionId") UUID sessionId, @Param("offset") int offset);
+
+    /**
+     * 세션의 특정 날짜 이전의 모든 라운드 조회
+     * - 세션에 유저 추가 시, 이전 라운드들에 자동으로 결석 처리하기 위해 사용
+     */
+    @Query("SELECT r FROM AttendanceRound r " +
+            "WHERE r.attendanceSession.attendanceSessionId = :sessionId " +
+            "AND r.roundDate < :date " +
+            "ORDER BY r.roundDate ASC")
+    List<AttendanceRound> findBySession_SessionIdAndRoundDateBefore(
+            @Param("sessionId") UUID sessionId,
+            @Param("date") LocalDate date);
 }

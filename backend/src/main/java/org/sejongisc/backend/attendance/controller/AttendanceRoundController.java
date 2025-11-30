@@ -7,10 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.AttendanceCheckInRequest;
-import org.sejongisc.backend.attendance.dto.AttendanceCheckInResponse;
-import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
-import org.sejongisc.backend.attendance.dto.AttendanceRoundResponse;
+import org.sejongisc.backend.attendance.dto.*;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
@@ -250,5 +247,30 @@ public class AttendanceRoundController {
                 put("error", "라운드를 찾을 수 없습니다");
             }});
         }
+    }
+
+    /**
+     * 라운드의 출석 상태 수정 (관리자용)
+     * PUT /api/attendance/rounds/{roundId}/attendances/{userId}
+     */
+    @Operation(
+            summary = "출석 상태 수정",
+            description = "특정 라운드의 사용자 출석 상태를 수정합니다. (관리자 전용) " +
+                    "출석(PRESENT), 지각(LATE), 결석(ABSENT), 공결(EXCUSED) 중 하나의 상태로 변경할 수 있습니다."
+    )
+    @PutMapping("/rounds/{roundId}/attendances/{userId}")
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
+    public ResponseEntity<AttendanceResponse> updateAttendanceStatus(
+            @PathVariable UUID roundId,
+            @PathVariable UUID userId,
+            @Valid @RequestBody AttendanceStatusUpdateRequest request) {
+        log.info("출석 상태 수정 요청: roundId={}, userId={}, 새로운상태={}, 사유={}",
+                roundId, userId, request.getStatus(), request.getReason());
+
+        AttendanceResponse response = attendanceService.updateAttendanceStatusByRound(roundId, userId, request.getStatus(), request.getReason());
+
+        log.info("출석 상태 수정 완료: roundId={}, userId={}", roundId, userId);
+
+        return ResponseEntity.ok(response);
     }
 }

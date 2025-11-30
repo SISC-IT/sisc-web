@@ -8,4 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BoardRepository extends JpaRepository<Board, UUID> {
 
   List<Board> findAllByParentBoardIsNull();
+  List<Board> findAllByParentBoardIsNotNull();
+  List<Board> findAllByParentBoard_BoardId(UUID parentBoardId);
+
 }

@@ -28,6 +28,8 @@ public class PostResponse {
   private Integer bookmarkCount;
   private Integer likeCount;
   private Integer commentCount;
+  private Boolean isLiked;
+  private Boolean isBookmarked;
   private LocalDateTime createdDate;
   private LocalDateTime updatedDate;
   private Page<CommentResponse> comments;

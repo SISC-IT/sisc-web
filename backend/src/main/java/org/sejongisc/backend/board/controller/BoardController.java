@@ -98,8 +98,10 @@ public class BoardController {
   public ResponseEntity<Page<PostResponse>> getPosts(
       @RequestParam UUID boardId,
       @RequestParam(defaultValue = "0") int pageNumber,
-      @RequestParam(defaultValue = "20") int pageSize) {
-    return ResponseEntity.ok(postService.getPosts(boardId, pageNumber, pageSize));
+      @RequestParam(defaultValue = "20") int pageSize,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    return ResponseEntity.ok(postService.getPosts(boardId, userId, pageNumber, pageSize));
   }
 
   // 게시글 검색
@@ -114,8 +116,10 @@ public class BoardController {
       @RequestParam UUID boardId,
       @RequestParam String keyword,
       @RequestParam(defaultValue = "0") int pageNumber,
-      @RequestParam(defaultValue = "20") int pageSize) {
-    return ResponseEntity.ok(postService.searchPosts(boardId, keyword, pageNumber, pageSize));
+      @RequestParam(defaultValue = "20") int pageSize,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    return ResponseEntity.ok(postService.searchPosts(boardId, userId, keyword, pageNumber, pageSize));
   }
 
   // 게시물 상세 조회
@@ -129,8 +133,10 @@ public class BoardController {
   public ResponseEntity<PostResponse> getPostDetail(
       @PathVariable UUID postId,
       @RequestParam(defaultValue = "0") int commentPageNumber,
-      @RequestParam(defaultValue = "20") int commentPageSize) {
-    PostResponse response = postService.getPostDetail(postId, commentPageNumber, commentPageSize);
+      @RequestParam(defaultValue = "20") int commentPageSize,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    PostResponse response = postService.getPostDetail(postId, userId, commentPageNumber, commentPageSize);
     return ResponseEntity.ok(response);
   }
 
@@ -149,7 +155,7 @@ public class BoardController {
     return ResponseEntity.ok().build();
   }
 
-  // 게시판 생성
+  // 최상위 게시판 목록 조회
   @Operation(
       summary = "부모 게시판 목록 조회",
       description = "최상위 부모 게시판들의 목록을 조회합니다."
@@ -158,6 +164,34 @@ public class BoardController {
   public ResponseEntity<List<BoardResponse>> getParentBoards(
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(postService.getParentBoards());
+  }
+
+
+  // 하위 게시판 목록 조회
+  @Operation(
+          summary = "하위 게시판 목록 조회",
+          description = "하위 게시판 목록을 조회합니다."
+  )
+  @GetMapping("/childs")
+  public ResponseEntity<List<BoardResponse>> getChildBoards(
+          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    return ResponseEntity.ok(postService.getChildBoards());
+  }
+
+  // 게시판 삭제
+  @Operation(
+          summary = "게시판 삭제",
+          description = "게시판 ID를 통해 게시판을 삭제합니다."
+                  + "회장만 삭제할 수 있습니다."
+                  + "관련 첨부파일 및 댓글 등도 함께 삭제됩니다."
+  )
+  @DeleteMapping("/{boardId}")
+  public ResponseEntity<?> deleteBoard(
+          @PathVariable UUID boardId,
+          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postService.deleteBoard(boardId, userId);
+    return ResponseEntity.ok("게시판 삭제가 완료되었습니다.");
   }
 
   // 좋아요 토글
@@ -236,4 +270,7 @@ public class BoardController {
     UUID userId = customUserDetails.getUserId();
     postInteractionService.deleteComment(commentId, userId);
   }
+
+
+
 }
