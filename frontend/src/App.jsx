@@ -11,7 +11,7 @@ import Mypage from './pages/Mypage';
 import AttendanceManage from './pages/AttendanceManage';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
-import QuantBot from './pages/QuantBot';
+import QuantTradingDashboard from './pages/QuantTradingDashboard';
 
 import OAuthSuccess from './pages/OAuthSuccess.jsx';
 
@@ -41,7 +41,7 @@ function App() {
           <Route path="/board" element={<Board />} />
           <Route path="/board/:team" element={<Board />} />
           <Route path="/board/:team/:postId" element={<PostDetail />} />
-          <Route path="/quant-bot" element={<QuantBot />} />
+          <Route path="/quant-bot" element={<QuantTradingDashboard />} />
           <Route path="/stock-game" element={<StockGame />} />
           <Route path="/back-test" element={<BackTest />} />
           <Route path="/mypage" element={<Mypage />} />
