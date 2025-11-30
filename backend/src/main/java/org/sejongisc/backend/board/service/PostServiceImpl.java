@@ -265,8 +265,12 @@ public class PostServiceImpl implements PostService {
 
     // 부모 댓글을 CommentResponse DTO로 변환
     Page<CommentResponse> commentResponses = parentComments.map(parent -> {
+
       // 해당 부모 댓글의 자식 댓글 목록을 조회
       List<Comment> childComments = commentRepository.findByParentComment(parent);
+
+      // 부모 객체 연결
+      childComments.forEach(child -> child.setParentComment(parent));
 
       // 자식 댓글 목록을 CommentResponse DTO 리스트로 변환
       List<CommentResponse> replyResponses = childComments.stream()

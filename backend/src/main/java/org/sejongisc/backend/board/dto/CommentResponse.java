@@ -25,9 +25,14 @@ public class CommentResponse {
     private String content;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
+    private UUID parentCommentId;
     private List<CommentResponse> replies;
 
   public static CommentResponse from(Comment comment) {
+    UUID parentId = (comment.getParentComment() != null)
+        ? comment.getParentComment().getCommentId()
+        : null;
+
     return CommentResponse.builder()
         .commentId(comment.getCommentId())
         .user(UserInfoResponse.from(comment.getUser()))
@@ -35,10 +40,15 @@ public class CommentResponse {
         .content(comment.getContent())
         .createdDate(comment.getCreatedDate())
         .updatedDate(comment.getUpdatedDate())
+        .parentCommentId(parentId)
         .build();
   }
 
   public static CommentResponse from(Comment comment, List<CommentResponse> replies) {
+    UUID parentCommentId = (comment.getParentComment() != null)
+        ? comment.getParentComment().getCommentId()
+        : null;
+
     return CommentResponse.builder()
         .commentId(comment.getCommentId())
         .user(UserInfoResponse.from(comment.getUser()))
@@ -46,6 +56,7 @@ public class CommentResponse {
         .content(comment.getContent())
         .createdDate(comment.getCreatedDate())
         .updatedDate(comment.getUpdatedDate())
+        .parentCommentId(parentCommentId)
         .replies(replies)
         .build();
   }

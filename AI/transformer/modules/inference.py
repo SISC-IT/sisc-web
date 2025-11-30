@@ -61,7 +61,7 @@ def run_inference(
     """
     tickers = finder_df["ticker"].astype(str).tolist()
     if raw_data is None or raw_data.empty:
-        print("[INFER] raw_data empty -> empty logs")
+        print("[INFER] raw_data empty -> empty logs") 
         return {"logs": pd.DataFrame(columns=[
             "ticker","date","action","price","weight",
             "feature1","feature2","feature3",
