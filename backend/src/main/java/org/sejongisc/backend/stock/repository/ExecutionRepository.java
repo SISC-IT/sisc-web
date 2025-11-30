@@ -48,9 +48,9 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
   @Query(value = """
     SELECT 
         total_asset AS totalAsset,
-        date AS date
+        created_at  AS createdAt
     FROM portfolio_summary
-    ORDER BY date ASC
+    ORDER BY created_at DESC
 """, nativeQuery = true)
   List<PortfolioSimpleProjection> findSimpleSummary();
 
