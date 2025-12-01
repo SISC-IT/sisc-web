@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.*;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
 import org.sejongisc.backend.attendance.service.SessionUserService;
+import org.sejongisc.backend.user.service.UserService;
+import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,7 +30,7 @@ public class AttendanceSessionController {
 
     private final AttendanceSessionService attendanceSessionService;
     private final SessionUserService sessionUserService;
-
+    private final UserService userService;
     /**
      * 출석 세션 생성 (관리자용)
      * - 6자리 랜덤 코드 자동 생성
@@ -314,5 +316,29 @@ public class AttendanceSessionController {
         log.info("세션 참여자 조회 완료: 세션ID={}, 참여자 수={}", sessionId, users.size());
 
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/get-users")
+    @Operation(
+            summary = "유저 목록 반환",
+            description = """
+          ## 인증(JWT): **필요**
+          
+          ## 설명
+          - 모든 유저의 id와 이름을 반환 
+          
+          ## 요청 파라미터
+          - **요청 파라미터 없음**
+          
+          ## 반환값 
+          -     UUID userId
+                String name
+                String email
+          """
+    )
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT') or hasRole('TEAM_LEADER')")
+    public ResponseEntity<?> getUsers(){
+        List<UserIdNameProjection> userProjectionList = userService.getUserProjectionList();
+        return ResponseEntity.ok(userProjectionList);
     }
 }
