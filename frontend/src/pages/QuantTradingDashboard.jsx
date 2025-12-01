@@ -126,7 +126,7 @@ function StrategyEquityChart({
 
   const data = safeList
     .map((a) => {
-      const dateStr = a.createdAt ?? a.created_at;
+      const dateStr = a.date ?? a.date;
       const d = dateStr ? new Date(dateStr) : null;
       const ymd = d
         ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
@@ -157,7 +157,7 @@ function StrategyEquityChart({
       clickableDates.length > 0 &&
       !clickableDates.includes(date)
     ) {
-      console.log('해당 날짜에는 매매 로그가 없습니다:', date);
+      // //console.log('해당 날짜에는 매매 로그가 없습니다:', date);
       return;
     }
 
@@ -333,16 +333,16 @@ export default function QuantTradingDashboard() {
   // --- 0️⃣ 포트폴리오 요약 API ---
   useEffect(() => {
     const fetchOverview = async () => {
-      console.log(
-        '📌 [overview] 요청 시작 → GET /api/quant-bot/portfolio-overview'
-      );
+      // console.log(
+      //   '📌 [overview] 요청 시작 → GET /api/quant-bot/portfolio-overview'
+      // );
       setOverviewLoading(true);
       setOverviewError(null);
 
       try {
         const res = await api.get('/api/quant-bot/portfolio-overview');
-        console.log('📌 [overview] 응답 코드:', res.status);
-        console.log('📌 [overview] 응답 데이터:', res.data);
+        // console.log('📌 [overview] 응답 코드:', res.status);
+        // console.log('📌 [overview] 응답 데이터:', res.data);
 
         if (!res.data) {
           setOverview(null);
@@ -368,14 +368,14 @@ export default function QuantTradingDashboard() {
   // --- 0.5️⃣ 자산 곡선 API ---
   useEffect(() => {
     const fetchAssets = async () => {
-      console.log('📌 [assets] 요청 시작 → GET /api/quant-bot/assets');
+      // console.log('📌 [assets] 요청 시작 → GET /api/quant-bot/assets');
       setAssetsLoading(true);
       setAssetsError(null);
 
       try {
         const res = await api.get('/api/quant-bot/assets');
-        console.log('📌 [assets] 응답 코드:', res.status);
-        console.log('📌 [assets] 응답 데이터:', res.data);
+        // console.log('📌 [assets] 응답 코드:', res.status);
+        // console.log('📌 [assets] 응답 데이터:', res.data);
 
         if (Array.isArray(res.data)) {
           setAssets(res.data);
@@ -402,13 +402,13 @@ export default function QuantTradingDashboard() {
   // --- 1️⃣ 포지션 API ---
   useEffect(() => {
     const fetchPositions = async () => {
-      console.log('📌 [positions] 요청 시작 → GET /api/quant-bot/positions');
+      // console.log('📌 [positions] 요청 시작 → GET /api/quant-bot/positions');
 
       try {
         const res = await api.get('/api/quant-bot/positions');
 
-        console.log('📌 [positions] 응답 코드:', res.status);
-        console.log('📌 [positions] 응답 데이터:', res.data);
+        // console.log('📌 [positions] 응답 코드:', res.status);
+        // console.log('📌 [positions] 응답 데이터:', res.data);
 
         if (Array.isArray(res.data)) {
           setPositions(res.data);
@@ -428,13 +428,13 @@ export default function QuantTradingDashboard() {
   // --- 2️⃣ 매매 로그 API ---
   useEffect(() => {
     const fetchLogs = async () => {
-      console.log('📌 [logs] 요청 시작 → GET /api/quant-bot/logs');
+      // console.log('📌 [logs] 요청 시작 → GET /api/quant-bot/logs');
 
       try {
         const res = await api.get('/api/quant-bot/logs');
 
-        console.log('📌 [logs] 응답 코드:', res.status);
-        console.log('📌 [logs] 응답 데이터:', res.data);
+        // console.log('📌 [logs] 응답 코드:', res.status);
+        // console.log('📌 [logs] 응답 데이터:', res.data);
 
         if (Array.isArray(res.data)) {
           setTrades(res.data);
@@ -462,9 +462,9 @@ export default function QuantTradingDashboard() {
 
   // --- 3️⃣ 리포트 불러오기 ---
   const handleReportClick = async (id) => {
-    console.log(
-      `📌 [report] 요청 시작 → GET /api/quant-bot/report?executionId=${id}`
-    );
+    // console.log(
+    //   `📌 [report] 요청 시작 → GET /api/quant-bot/report?executionId=${id}`
+    // );
 
     setModalOpen(true);
     setReportData(null);
@@ -474,8 +474,8 @@ export default function QuantTradingDashboard() {
         params: { executionId: id },
       });
 
-      console.log('📌 [report] 응답 코드:', res.status);
-      console.log('📌 [report] 응답 데이터:', res.data);
+      // console.log('📌 [report] 응답 코드:', res.status);
+      // console.log('📌 [report] 응답 데이터:', res.data);
 
       setReportData(res.data);
     } catch (err) {
