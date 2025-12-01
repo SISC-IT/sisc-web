@@ -57,4 +57,16 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
     List<AttendanceRound> findBySession_SessionIdAndRoundDateBefore(
             @Param("sessionId") UUID sessionId,
             @Param("date") LocalDate date);
+
+    /**
+     * 세션의 특정 날짜 이후의 모든 라운드 조회
+     * - 세션에 유저 추가 시, 미래 라운드들에 자동으로 PENDING 처리하기 위해 사용
+     */
+    @Query("SELECT r FROM AttendanceRound r " +
+            "WHERE r.attendanceSession.attendanceSessionId = :sessionId " +
+            "AND r.roundDate >= :date " +
+            "ORDER BY r.roundDate ASC")
+    List<AttendanceRound> findBySession_SessionIdAndRoundDateAfterOrEqual(
+            @Param("sessionId") UUID sessionId,
+            @Param("date") LocalDate date);
 }

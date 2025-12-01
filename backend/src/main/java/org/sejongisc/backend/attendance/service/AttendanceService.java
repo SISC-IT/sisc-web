@@ -82,11 +82,12 @@ public class AttendanceService {
         log.info("✅ 시간 검증 성공: 라운드ID={}, 사용자={}, 시간={}, 범위=[{}~{}]",
                 request.getRoundId(), user.getName(), checkTime, startTime, endTime);
 
-        // 2. 중복 출석 확인
-        boolean alreadyCheckedIn = attendanceRepository.findByAttendanceRound_RoundIdAndUser(request.getRoundId(), user)
-                .isPresent();
-        if (alreadyCheckedIn) {
-            log.warn("중복 출석 시도: 라운드ID={}, 사용자={}", request.getRoundId(), user.getName());
+        // 2. 기존 출석 기록 확인 (PENDING 제외하고 실제 체크인한 기록만 중복으로 취급)
+        Attendance existingAttendance = attendanceRepository.findByAttendanceRound_RoundIdAndUser(request.getRoundId(), user)
+                .orElse(null);
+        if (existingAttendance != null && existingAttendance.getAttendanceStatus() != AttendanceStatus.PENDING) {
+            log.warn("중복 출석 시도: 라운드ID={}, 사용자={}, 기존상태={}",
+                    request.getRoundId(), user.getName(), existingAttendance.getAttendanceStatus());
             return AttendanceCheckInResponse.builder()
                     .roundId(request.getRoundId())
                     .success(false)
@@ -332,8 +333,8 @@ public class AttendanceService {
     private AttendanceResponse convertToResponse(Attendance attendance) {
         return AttendanceResponse.builder()
                 .attendanceId(attendance.getAttendanceId())
-                .userId(attendance.getUser().getUserId())
-                .userName(attendance.getUser().getName())
+                .userId(attendance.getUser() != null ? attendance.getUser().getUserId() : null)
+                .userName(attendance.getUser() != null ? attendance.getUser().getName() : "익명")
                 .attendanceSessionId(attendance.getAttendanceSession().getAttendanceSessionId())
                 .attendanceRoundId(attendance.getAttendanceRound() != null ?
                         attendance.getAttendanceRound().getRoundId() : null)

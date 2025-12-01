@@ -103,6 +103,38 @@ public class SessionUserService {
             log.info("✅ 과거 라운드 자동 결석 처리 완료: 처리된 라운드 수={}", pastRounds.size());
         }
 
+        // 6. ⭐ 미래 라운드들에 대해 자동으로 PENDING 상태 처리
+        List<AttendanceRound> futureRounds = attendanceRoundRepository.findBySession_SessionIdAndRoundDateAfterOrEqual(
+                sessionId,
+                LocalDate.now()
+        );
+
+        if (!futureRounds.isEmpty()) {
+            log.info("📅 미래 라운드 PENDING 처리: 미래 라운드 수={}", futureRounds.size());
+
+            for (AttendanceRound round : futureRounds) {
+                // 이미 해당 라운드에 출석 기록이 있는지 확인
+                boolean alreadyExists = attendanceRepository.findByAttendanceRound_RoundIdAndUser(round.getRoundId(), user)
+                        .isPresent();
+
+                if (!alreadyExists) {
+                    // 새로운 Attendance 레코드 생성 (PENDING 상태)
+                    Attendance pendingRecord = Attendance.builder()
+                            .user(user)
+                            .attendanceSession(session)
+                            .attendanceRound(round)
+                            .attendanceStatus(AttendanceStatus.PENDING)
+                            .build();
+
+                    attendanceRepository.save(pendingRecord);
+                    log.info("  - PENDING 기록 생성: roundId={}, date={}, userName={}",
+                            round.getRoundId(), round.getRoundDate(), user.getName());
+                }
+            }
+
+            log.info("✅ 미래 라운드 PENDING 처리 완료: 처리된 라운드 수={}", futureRounds.size());
+        }
+
         log.info("✅ 세션에 사용자 추가 완료: sessionId={}, userId={}, userName={}",
                 sessionId, userId, user.getName());
 
