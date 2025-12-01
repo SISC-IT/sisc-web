@@ -8,8 +8,10 @@ import {
 import { useImmer } from 'use-immer';
 import {
   addRound,
+  addUser,
   changeRoundData,
   changeSessionData,
+  changeUserAttendance,
   createAttendanceSession,
   deleteRound,
   deleteSession,
@@ -70,12 +72,13 @@ export const AttendanceProvider = ({ children }) => {
   const [editingRound, setEditingRound] = useState(null);
   const [isRoundModifyModalOpen, setRoundModifyModalOpen] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
+
   const [isSessionModifyModalOpen, setSessionModifyModalOpen] = useState(false);
-
   const [isAddRoundsModalOpen, setAddRoundsModalOpen] = useState(false);
+  const [isAddUsersModalOpen, setAddUsersModalOpen] = useState(false);
 
-  const [sessionsVersion, setSessionsVersion] = useState(0);
   const [roundsVersion, setRoundsVersion] = useState(0);
+  const [roundAttendanceVersion, setRoundAttendanceVersion] = useState(0);
 
   // 최초, setSessions가 호출될때마다 모든 세션 불러오기
 
@@ -92,19 +95,29 @@ export const AttendanceProvider = ({ children }) => {
     fetchSessions();
   }, [setSessions]);
 
-  const handleAttendanceChange = (memberId, newAttendance) => {
-    setSessions((draft) => {
-      const session = draft.find((s) => s.id === selectedSessionId);
-      if (!session) return;
-      const round = session.rounds.find((r) => r.id === selectedRound);
-      if (!round) return;
-      const participant = round.participants.find(
-        (p) => p.memberId === memberId
-      );
-      if (participant) {
-        participant.attendance = newAttendance;
-      }
-    });
+  const handleAttendanceChange = async (memberId, newAttendance) => {
+    // setSessions((draft) => {
+    //   const session = draft.find((s) => s.id === selectedSessionId);
+    //   if (!session) return;
+    //   const round = session.rounds.find((r) => r.id === selectedRound);
+    //   if (!round) return;
+    //   const participant = round.participants.find(
+    //     (p) => p.memberId === memberId
+    //   );
+    //   if (participant) {
+    //     participant.attendance = newAttendance;
+    //   }
+    // });
+    try {
+      await changeUserAttendance(selectedRound, memberId, {
+        status: newAttendance,
+        reason: '관리자에 의한 출석 상태 변경',
+      });
+
+      setRoundAttendanceVersion((prev) => prev + 1);
+    } catch (error) {
+      console.error('유저 출석 상태 변경에 실패했습니다. ', error);
+    }
   };
 
   const handleRoundChange = async (roundId, updateRoundData) => {
@@ -161,8 +174,10 @@ export const AttendanceProvider = ({ children }) => {
   const openSessionModifyModal = () => setSessionModifyModalOpen(true);
   const closeSessionModifyModal = () => setSessionModifyModalOpen(false);
 
-  const openAddRoundsModal = () => setAddRoundsModalOpen(true);
+  const openAddUsersModal = () => setAddUsersModalOpen(true);
+  const closeAddUsersModal = () => setAddUsersModalOpen(false);
 
+  const openAddRoundsModal = () => setAddRoundsModalOpen(true);
   const closeAddRoundsModal = () => setAddRoundsModalOpen(false);
 
   const handleAddSession = async (sessionTitle, sessionDetails) => {
@@ -283,15 +298,14 @@ export const AttendanceProvider = ({ children }) => {
     setSelectedRound(null);
   };
 
-  const selectedSession = sessions.find(
-    (session) => session.attendanceSessionId === selectedSessionId
-  );
-
-  // const selectedRoundData = selectedSession?.rounds.find(
-  //   (round) => round.roundId === selectedRound
-  // );
-
-  const participants = [];
+  const handleAddUsers = async (sessionId, userId) => {
+    try {
+      await addUser(sessionId, userId);
+      setRoundAttendanceVersion((prev) => prev + 1);
+    } catch (error) {
+      console.error('유저 추가에 실패했습니다. ', error);
+    }
+  };
 
   // 공유할 값들을 객체로 묶기
   const value = {
@@ -315,13 +329,18 @@ export const AttendanceProvider = ({ children }) => {
     handleSessionChange,
     handleAddSession,
     handleAddRounds,
-    participants,
+
     handleDeleteSession,
     handleDeleteRound,
     isAddRoundsModalOpen,
     openAddRoundsModal,
     closeAddRoundsModal,
     roundsVersion,
+    roundAttendanceVersion,
+    openAddUsersModal,
+    closeAddUsersModal,
+    isAddUsersModalOpen,
+    handleAddUsers,
   };
 
   return (

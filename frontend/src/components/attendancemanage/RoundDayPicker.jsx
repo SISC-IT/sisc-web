@@ -3,7 +3,6 @@ import styles from '../VerificationModal.module.css';
 
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
-import { v4 as uuid } from 'uuid';
 import { useAttendance } from '../../contexts/AttendanceContext';
 
 const RoundDayPicker = () => {

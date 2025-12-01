@@ -18,6 +18,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
     openSessionModifyModal,
     openAddRoundsModal,
     roundsVersion,
+    openAddUsersModal,
   } = useAttendance();
 
   const [currentDisplayedRounds, setCurrentDisplayedRounds] = useState([]);
@@ -50,21 +51,38 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
       <div className={commonStyles.header}>
         <h1>세션 관리</h1>
 
-        <button
-          className={commonStyles.iconButton}
-          onClick={() => {
-            if (!currentSession) {
-              alert('세션을 먼저 선택해주세요.');
-              return;
-            }
-            openAddRoundsModal();
-          }}
-        >
-          <div className={commonStyles.iconGroup}>
-            <img src={calendarAddIcon} alt="회차 추가" />
-            <div className={commonStyles.text}>출석일자 추가</div>
-          </div>
-        </button>
+        <div className={commonStyles.buttonGroup}>
+          <button
+            className={commonStyles.iconButton}
+            onClick={() => {
+              if (!currentSession) {
+                alert('세션을 먼저 선택해주세요.');
+                return;
+              }
+              openAddRoundsModal();
+            }}
+          >
+            <div className={commonStyles.iconGroup}>
+              <img src={calendarAddIcon} alt="회차 추가" />
+              <div className={commonStyles.text}>출석일자 추가</div>
+            </div>
+          </button>
+          <button
+            className={commonStyles.iconButton}
+            onClick={() => {
+              if (!currentSession) {
+                alert('세션을 먼저 선택해주세요.');
+                return;
+              }
+              openAddUsersModal();
+            }}
+          >
+            <div className={commonStyles.iconGroup}>
+              <img src={calendarAddIcon} alt="사용자 추가" />
+              <div className={commonStyles.text}>세션에 사용자 추가</div>
+            </div>
+          </button>
+        </div>
       </div>
       <div className={styles.selectGroup}>
         <select

@@ -141,3 +141,63 @@ export const getUsers = async (sessionId) => {
     throw err;
   }
 };
+
+// 세션 출석 기록 조회
+export const getAttendance = async () => {
+  try {
+    const res = await api.get(`/api/attendance/history`);
+    return res.data;
+  } catch (err) {
+    console.error('출석 조회 중 오류 발생', err);
+    throw err;
+  }
+};
+
+// 특정 세션 출석 기록 조회
+export const getSessionAttendance = async (sessionId) => {
+  try {
+    const res = await api.get(
+      `/api/attendance/sessions/${sessionId}/attendances`
+    );
+    return res.data;
+  } catch (err) {
+    console.error('특정 세션의 출석 조회 중 오류 발생', err);
+    throw err;
+  }
+};
+
+// 출석 상태 수정
+export const changeUserAttendance = async (roundId, userId, statusDetails) => {
+  try {
+    const res = await api.put(
+      `/api/attendance/rounds/${roundId}/attendances/${userId}`,
+      statusDetails
+    );
+    return res.data;
+  } catch (err) {
+    console.error('출석 상태 수정 중 오류 발생', err);
+    throw err;
+  }
+};
+
+// 라운드 별 출석 조회
+export const getRoundUserAttendance = async (roundId) => {
+  try {
+    const res = await api.get(`/api/attendance/rounds/${roundId}/attendances`);
+    return res.data;
+  } catch (err) {
+    console.error('라운드별 출석 조회 중 오류 발생', err);
+    throw err;
+  }
+};
+
+// 전체 유저 조회
+export const getUserList = async () => {
+  try {
+    const res = await api.get('/api/attendance/sessions/get-users');
+    return res.data;
+  } catch (err) {
+    console.error('모든 유저 데이터 조회 중 오류 발생', err);
+    throw err;
+  }
+};

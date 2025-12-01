@@ -183,3 +183,72 @@ h1 {
 }
 .modifyButtonGroup button:disabled {
 }
+
+/* 세션에 사용자 추가 모달 디자인 */
+.modalContent {
+  padding: 0 24px 10px 24px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.selectInput {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  outline: none;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.selectInput:focus {
+  border-color: #3b82f6; /* 파란색 포커스 */
+}
+
+/* 버튼 그룹 스타일 */
+.modifyButtonGroup {
+  padding: 24px;
+  display: flex;
+  justify-content: flex-end; /* 오른쪽 정렬 */
+}
+
+.button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+}
+
+.submitButton {
+  background-color: #3b82f6; /* 디자인상의 파란색 */
+  color: white;
+  width: 100%; /* 버튼을 꽉 채우고 싶으면 width 추가, 아니면 제거 */
+}
+
+.submitButton:hover {
+  background-color: #2563eb;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
