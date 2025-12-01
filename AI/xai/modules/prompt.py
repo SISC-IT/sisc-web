@@ -1,3 +1,4 @@
+# AI/xai/modules/prompt.py
 from typing import List, Dict, Any
 from .analysis import kdate, analyze_feature_series, consolidate_evidence
 def build_short_prompt(decision: Dict[str, Any], evidence: List[Dict[str, Any]], context_data: List[Dict[str, Any]]) -> str:
