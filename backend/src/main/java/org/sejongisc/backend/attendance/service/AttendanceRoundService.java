@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundResponse;
-import org.sejongisc.backend.attendance.entity.AttendanceRound;
-import org.sejongisc.backend.attendance.entity.AttendanceSession;
-import org.sejongisc.backend.attendance.entity.RoundStatus;
+import org.sejongisc.backend.attendance.entity.*;
+import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
+import org.sejongisc.backend.attendance.repository.SessionUserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +30,9 @@ public class AttendanceRoundService {
 
     private final AttendanceRoundRepository attendanceRoundRepository;
     private final AttendanceSessionRepository attendanceSessionRepository;
+    private final SessionUserRepository sessionUserRepository;
+    private final AttendanceRepository attendanceRepository;
+
 
     /**
      * 라운드 생성
@@ -74,8 +77,25 @@ public class AttendanceRoundService {
             // 양방향 관계를 DB에 반영하기 위해 세션도 저장
             attendanceSessionRepository.save(session);
 
-            log.info("✅ 라운드 생성 완료 - sessionId: {}, roundId: {}, roundDate: {}, roundStatus: {}",
-                    sessionId, saved.getRoundId(), saved.getRoundDate(), saved.getRoundStatus());
+            // ⭐ 라운드 생성 시 세션의 모든 SessionUser에 대해 PENDING 상태의 Attendance 미리 생성
+            log.info("📝 세션 사용자에 대한 PENDING 출석 기록 생성 시작: sessionId={}, roundId={}",
+                    sessionId, saved.getRoundId());
+
+            List<SessionUser> sessionUsers = sessionUserRepository.findBySessionId(sessionId);
+            for (SessionUser sessionUser : sessionUsers) {
+                Attendance pendingAttendance = Attendance.builder()
+                        .user(sessionUser.getUser())
+                        .attendanceSession(session)
+                        .attendanceRound(saved)
+                        .attendanceStatus(AttendanceStatus.PENDING)
+                        .build();
+                attendanceRepository.save(pendingAttendance);
+                log.info("  ✓ PENDING 출석 기록 생성: userId={}, userName={}, roundId={}",
+                        sessionUser.getUser().getUserId(), sessionUser.getUser().getName(), saved.getRoundId());
+            }
+
+            log.info("✅ 라운드 생성 완료 - sessionId: {}, roundId: {}, roundDate: {}, roundStatus: {}, 생성된PENDING개수: {}",
+                    sessionId, saved.getRoundId(), saved.getRoundDate(), saved.getRoundStatus(), sessionUsers.size());
             return AttendanceRoundResponse.fromEntity(saved);
         } catch (Exception e) {
             log.error("❌ 라운드 생성 중 오류 발생: sessionId={}, error={}", sessionId, e.getMessage(), e);
