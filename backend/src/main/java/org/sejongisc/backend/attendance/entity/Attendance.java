@@ -12,7 +12,6 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,25 +37,32 @@ public class Attendance extends BasePostgresEntity {
     private AttendanceRound attendanceRound;
 
     @Enumerated(EnumType.STRING)
+    @lombok.Setter
     private AttendanceStatus attendanceStatus;
 
     @CreationTimestamp
     @Column(name = "checked_at")
+    @lombok.Setter
     private LocalDateTime checkedAt;
 
     @Column(name = "awarded_points")
+    @lombok.Setter
     private Integer awardedPoints;
 
     @Column(length = 500)
+    @lombok.Setter
     private String note;
 
     @Embedded
+    @lombok.Setter
     private Location checkInLocation;
 
     @Column(name = "device_info")
+    @lombok.Setter
     private String deviceInfo;
 
     @Column(name = "anonymous_user_name", length = 100)
+    @lombok.Setter
     private String anonymousUserName;
 
     // 지각 여부 계산 / 상태 업데이트

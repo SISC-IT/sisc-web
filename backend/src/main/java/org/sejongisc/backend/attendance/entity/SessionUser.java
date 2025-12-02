@@ -29,7 +29,6 @@ import java.util.UUID;
         }
 )
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -42,14 +41,15 @@ public class SessionUser extends BasePostgresEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
+    @JsonBackReference
     private AttendanceSession attendanceSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonBackReference
     private User user;
 
     @Column(name = "user_name", length = 100, nullable = false)
+    @lombok.Setter
     private String userName;  // 저장 시점의 user.name 캐시 (나중에 user.name이 변경되어도 유지)
 
     /**
