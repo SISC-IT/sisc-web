@@ -1,0 +1,164 @@
+name: Build & Deploy (prod via SSM, tag-based)
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "v*"            # ⬅ v1.0.0 이런 태그 push 시 배포
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  REPO: sisc-it/sisc-web
+  IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
+  IMAGE_FRONT: ghcr.io/sisc-it/sisc-web-front
+  AWS_REGION: ap-northeast-2
+  TARGET_DIR: /home/ec2-user/apps/sisc-web   # EC2에서 docker-compose 있는 경로
+  EC2_TAG_KEY: App
+  EC2_TAG_VALUE: sisc-web-prod              # ⬅ 배포 대상 EC2 태그 값
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      back: ${{ steps.filter.outputs.back }}
+      front: ${{ steps.filter.outputs.front }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect path changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            back:
+              - 'backend/**'
+            front:
+              - 'frontend/**'
+
+  build-back:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Meta (tags/labels) - backend
+        id: meta-back
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BACK }}
+          tags: |
+            type=raw,value=latest
+            type=ref,event=tag   # ⬅ git 태그 이름으로도 이미지 태깅
+
+      - name: Build & Push (backend)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta-back.outputs.tags }}
+          labels: ${{ steps.meta-back.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-front:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Meta (tags/labels) - frontend
+        id: meta-front
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_FRONT }}
+          tags: |
+            type=raw,value=latest
+            type=ref,event=tag
+
+      - name: Build & Push (frontend)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta-front.outputs.tags }}
+          labels: ${{ steps.meta-front.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [changes, build-back, build-front]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write        # ⬅ OIDC로 AWS Role Assume
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}   # ⬅ GitHub용 IAM Role ARN
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy via SSM (tag-based)
+        run: |
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy sisc-web (tag: ${{ github.ref_name }})" \
+            --targets "Key=tag:${{ env.EC2_TAG_KEY }},Values=${{ env.EC2_TAG_VALUE }}" \
+            --parameters 'commands=[
+              "cd ${TARGET_DIR}",
+              "echo \"${GHCR_READ_TOKEN}\" | docker login ghcr.io -u \"${GHCR_READ_USER}\" --password-stdin",
+              "docker compose pull",
+              "docker compose up -d --remove-orphans"
+            ]' \
+            --output text
+        env:
+          TARGET_DIR: ${{ env.TARGET_DIR }}
+          GHCR_READ_USER: ${{ secrets.GHCR_READ_USER }}
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
