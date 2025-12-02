@@ -1,5 +1,6 @@
 package org.sejongisc.backend.attendance.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
@@ -45,6 +46,7 @@ public class SessionUser extends BasePostgresEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonBackReference
     private User user;
 
     @Column(name = "user_name", length = 100, nullable = false)

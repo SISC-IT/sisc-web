@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
