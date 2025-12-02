@@ -50,7 +50,12 @@ public class AttendanceSession extends BasePostgresEntity {
     @Builder.Default
     private List<AttendanceRound> rounds = new ArrayList<>();
 
-    @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @JsonManagedReference
+    @Builder.Default
+    private List<SessionUser> sessionUsers = new ArrayList<>();
+
+    @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
     @Builder.Default
     private List<Attendance> attendances = new ArrayList<>();
