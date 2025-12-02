@@ -35,8 +35,6 @@ const AddUsersModal = () => {
     };
   }, [closeAddUsersModal]);
 
-  console.log(selectedUserId);
-
   const handleComplete = () => {
     const currentSession = sessions.find(
       (s) => s.attendanceSessionId === selectedSessionId
@@ -79,10 +77,11 @@ const AddUsersModal = () => {
             <select
               id="userSelect"
               className={styles.selectInput}
+              value={selectedUserId || ''}
               onChange={(e) => setSelectedUserId(e.target.value)}
             >
               <option value="" disabled>
-                유저를 선택하세요
+                ------ 유저를 선택하세요 ------
               </option>
               {users &&
                 users.map((user) => (

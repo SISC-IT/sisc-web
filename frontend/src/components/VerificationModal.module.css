@@ -184,9 +184,8 @@ h1 {
 .modifyButtonGroup button:disabled {
 }
 
-/* 세션에 사용자 추가 모달 디자인 */
 .modalContent {
-  padding: 0 24px 10px 24px;
+  padding: 10px 10px 30px;
 }
 
 .inputGroup {
@@ -213,14 +212,7 @@ h1 {
 }
 
 .selectInput:focus {
-  border-color: #3b82f6; /* 파란색 포커스 */
-}
-
-/* 버튼 그룹 스타일 */
-.modifyButtonGroup {
-  padding: 24px;
-  display: flex;
-  justify-content: flex-end; /* 오른쪽 정렬 */
+  border-color: #3b82f6;
 }
 
 .button {
@@ -230,16 +222,6 @@ h1 {
   border-radius: 6px;
   cursor: pointer;
   border: none;
-}
-
-.submitButton {
-  background-color: #3b82f6; /* 디자인상의 파란색 */
-  color: white;
-  width: 100%; /* 버튼을 꽉 채우고 싶으면 width 추가, 아니면 제거 */
-}
-
-.submitButton:hover {
-  background-color: #2563eb;
 }
 
 @keyframes fadeIn {

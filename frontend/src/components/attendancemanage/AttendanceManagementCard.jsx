@@ -26,7 +26,6 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     const fetchUsers = async () => {
       if (selectedSessionId && selectedRound) {
         const userList = await getRoundUserAttendance(selectedRound);
-        console.log(userList);
         // const sortedUsers = (userList || []).sort(
         //   (a, b) =>
         //     new Date(`${a.date}T${a.startTime}`) -
@@ -52,7 +51,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
               <th>이름</th>
               <th>상태</th>
               <th>변경</th>
-              <th>횟수</th>
+              <th>이메일</th>
             </tr>
           </thead>
           <tbody>
@@ -83,7 +82,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
                       <option value="PENDING">미정</option>
                     </select>
                   </td>
-                  <td>-</td>
+                  <td>{user.email}</td>
                 </tr>
               ))
             ) : (
