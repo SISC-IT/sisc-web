@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './BackTest.module.css';
 import StrategyInfoCard from '../components/backtest/StrategyInfoCard';
 import StocksCard from '../components/backtest/StocksCard';
@@ -18,6 +19,8 @@ const BackTest = () => {
   const [entryRules, setEntryRules] = useState([]);
   const [exitRules, setExitRules] = useState([]);
   const [note, setNote] = useState('');
+
+  const navigate = useNavigate();
 
   const handleRunBacktest = async () => {
     if (tickers.length === 0) {
@@ -55,6 +58,19 @@ const BackTest = () => {
         })
       );
 
+      const firstResult = results[0];
+
+      if (!firstResult) {
+        toast.error('실행 결과를 받지 못했습니다.');
+        return;
+      }
+
+      // 결과 페이지로 이동 + state로 결과 전달
+      navigate('/backtest/result', {
+        state: {
+          result: firstResult,
+        },
+      });
       toast.success('백테스트 실행을 요청했습니다.');
     } catch (error) {
       console.error('Error running backtest:', error);
