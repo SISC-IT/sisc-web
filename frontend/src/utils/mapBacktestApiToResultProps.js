@@ -20,6 +20,9 @@ export function mapBacktestApiToResultProps(apiResponse) {
   const metricsRaw = apiResponse.backtestRunMetricsResponse || {};
   const params = safeParseParamsJson(run.paramsJson);
 
+  // 백엔드가 params.strategy 안에 넣을 수도 있고, 지금처럼 루트에 바로 넣을 수도 있으니 둘 다 대응
+  const strategyParams = params.strategy ?? params;
+
   // 1) 제목: run.title이 있으면 우선 사용, 없으면 템플릿 title 사용
   const title =
     run.title || (run.template && run.template.title) || '백테스트 결과';
@@ -27,14 +30,16 @@ export function mapBacktestApiToResultProps(apiResponse) {
   // 2) 기간 라벨: "YYYY-MM-DD ~ YYYY-MM-DD"
   const rangeLabel = `${run.startDate} ~ ${run.endDate}`;
 
-  // 3) 통화 / 초기자본은 paramsJson 안에 있다고 가정 (없으면 기본값)
-  const baseCurrency =
-    (params && params.strategy && params.strategy.baseCurrency) || 'KRW';
+  // 3) 통화 / 초기자본
+  const baseCurrency = strategyParams.baseCurrency || '$';
 
-  const startCapital =
-    params && params.strategy && params.strategy.initialCapital
-      ? params.strategy.initialCapital
-      : undefined;
+  let startCapital;
+  if (strategyParams.initialCapital != null) {
+    const n = Number(strategyParams.initialCapital);
+    startCapital = Number.isFinite(n) ? n : undefined;
+  } else {
+    startCapital = undefined;
+  }
 
   // 4) 지표(메트릭) 매핑
   const metrics = {
@@ -48,9 +53,13 @@ export function mapBacktestApiToResultProps(apiResponse) {
       typeof metricsRaw.avgHoldDays === 'number' ? metricsRaw.avgHoldDays : 0,
     tradesCount:
       typeof metricsRaw.tradesCount === 'number' ? metricsRaw.tradesCount : 0,
+    assetCurveJson:
+      typeof metricsRaw.assetCurveJson === 'string'
+        ? metricsRaw.assetCurveJson
+        : null,
   };
 
-  // 5) 템플릿 정보 매핑 (지금은 1개만 있다고 가정)
+  // 5) 템플릿 정보 매핑
   const templates = run.template
     ? [
         {
@@ -61,8 +70,6 @@ export function mapBacktestApiToResultProps(apiResponse) {
       ]
     : [];
 
-  // 6) series는 아직 응답에 없어서 undefined로 두면,
-  //    BacktestResultsWithTemplates 내부에서 mock series를 사용할 수 있게 할 수도 있음
   return {
     title,
     rangeLabel,
@@ -70,6 +77,5 @@ export function mapBacktestApiToResultProps(apiResponse) {
     startCapital,
     metrics,
     templates,
-    // series: apiResponse.equitySeries ? ... : undefined // 나중에 equity curve 내려오면 여기서 매핑
   };
 }
