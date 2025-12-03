@@ -1,88 +1,5 @@
 // boardApi.js
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
-// ==================== Axios 인스턴스 설정 ====================
-
-export const plainAxios = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-});
-
-// 메인 인스턴스 (인터셉터 있음)
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 요청 인터셉터: JWT 자동 추가
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        const response = await plainAxios.post(
-          '/api/auth/reissue',
-          { refreshToken },
-          { withCredentials: true }
-        );
-
-        const newAccessToken = response.data.accessToken;
-        localStorage.setItem('accessToken', newAccessToken);
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        console.error('토큰 갱신 실패:', refreshError);
-
-        if (refreshError.response?.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          alert('로그인 세션이 만료되었습니다. 다시 로그인 해주세요.');
-          window.location.href = '/login';
-          return Promise.reject(new Error('로그인 세션이 만료되었습니다.'));
-        }
-
-        return Promise.reject(refreshError);
-      }
-    }
-
-    const status = error.response?.status;
-    const message =
-      error.response?.data?.message ||
-      error.response?.statusText ||
-      '오류가 발생했습니다.';
-
-    return Promise.reject({ status, message, data: error.response?.data });
-  }
-);
+import { api } from './axios';
 
 // ==================== 게시판 API ====================
 
@@ -91,7 +8,7 @@ apiClient.interceptors.response.use(
  * GET /api/board/parents
  */
 export const getParentBoards = async () => {
-  const response = await apiClient.get('/api/board/parents');
+  const response = await api.get('/api/board/parents');
   return response.data;
 };
 
@@ -101,7 +18,7 @@ export const getParentBoards = async () => {
  * @param {string|null} parentBoardId - 특정 부모 게시판의 자식만 필터링 (선택)
  */
 export const getSubBoards = async (parentBoardId = null) => {
-  const response = await apiClient.get('/api/board/childs');
+  const response = await api.get('/api/board/childs');
 
   // parentBoardId가 제공되면 해당 부모의 자식만 필터링
   if (parentBoardId) {
@@ -127,7 +44,7 @@ export const createBoard = async (boardName, parentBoardId = null) => {
     requestBody.parentBoardId = parentBoardId;
   }
 
-  const response = await apiClient.post('/api/board', requestBody);
+  const response = await api.post('/api/board', requestBody);
   return response.data;
 };
 
@@ -141,7 +58,7 @@ export const createBoard = async (boardName, parentBoardId = null) => {
  * @param {number} pageSize - 페이지 크기
  */
 export const getPosts = async (boardId, pageNumber = 0, pageSize = 20) => {
-  const response = await apiClient.get('/api/board/posts', {
+  const response = await api.get('/api/board/posts', {
     params: { boardId, pageNumber, pageSize },
   });
   return response.data;
@@ -161,7 +78,7 @@ export const searchPosts = async (
   pageNumber = 0,
   pageSize = 20
 ) => {
-  const response = await apiClient.get('/api/board/posts/search', {
+  const response = await api.get('/api/board/posts/search', {
     params: { boardId, keyword, pageNumber, pageSize },
   });
   return response.data;
@@ -188,7 +105,7 @@ export const createPost = async (boardId, postData) => {
     });
   }
 
-  const response = await apiClient.post('/api/board/post', formData, {
+  const response = await api.post('/api/board/post', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
@@ -206,7 +123,7 @@ export const getPost = async (
   commentPageNumber = 0,
   commentPageSize = 20
 ) => {
-  const response = await apiClient.get(`/api/board/post/${postId}`, {
+  const response = await api.get(`/api/board/post/${postId}`, {
     params: { commentPageNumber, commentPageSize },
   });
   return response.data;
@@ -236,7 +153,7 @@ export const updatePost = async (postId, boardId, postData) => {
     });
   }
 
-  const response = await apiClient.put(`/api/board/post/${postId}`, formData, {
+  const response = await api.put(`/api/board/post/${postId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
@@ -248,7 +165,7 @@ export const updatePost = async (postId, boardId, postData) => {
  * @param {string} postId - 게시글 ID
  */
 export const deletePost = async (postId) => {
-  const response = await apiClient.delete(`/api/board/post/${postId}`);
+  const response = await api.delete(`/api/board/post/${postId}`);
   return response.data;
 };
 
@@ -260,7 +177,7 @@ export const deletePost = async (postId) => {
  * @param {string} postId - 게시글 ID
  */
 export const toggleLike = async (postId) => {
-  const response = await apiClient.post(`/api/board/${postId}/like`);
+  const response = await api.post(`/api/board/${postId}/like`);
   return response.data;
 };
 
@@ -270,7 +187,7 @@ export const toggleLike = async (postId) => {
  * @param {string} postId - 게시글 ID
  */
 export const toggleBookmark = async (postId) => {
-  const response = await apiClient.post(`/api/board/${postId}/bookmark`);
+  const response = await api.post(`/api/board/${postId}/bookmark`);
   return response.data;
 };
 
@@ -291,7 +208,7 @@ export const createComment = async (commentData) => {
     requestBody.parentCommentId = commentData.parentCommentId;
   }
 
-  const response = await apiClient.post('/api/board/comment', requestBody);
+  const response = await api.post('/api/board/comment', requestBody);
   return response.data;
 };
 
@@ -308,17 +225,18 @@ export const updateComment = async (commentId, commentData) => {
     parentCommentId: commentData.parentCommentId ?? null,
   };
 
-  const response = await apiClient.put(`/api/board/comment/${commentId}`, body);
+  const response = await api.put(`/api/board/comment/${commentId}`, body);
   return response.data;
 };
+
 /*
  * 댓글 삭제
  * DELETE /api/board/comment/{commentId}
  * @param {string} commentId - 댓글 ID
  */
 export const deleteComment = async (commentId) => {
-  const response = await apiClient.delete(`/api/board/comment/${commentId}`);
+  const response = await api.delete(`/api/board/comment/${commentId}`);
   return response.data;
 };
 
-export default apiClient;
+export default api;

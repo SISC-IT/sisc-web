@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './SearchBar.module.css';
 import SearchArrowIcon from '../../assets/boardSearchArrow.svg';
 
-const SearchBar = ({ searchTerm, onSearchChange }) => {
+const SearchBar = ({ onSearch }) => {
+  const [inputValue, setInputValue] = useState('');
+
   const handleSearch = () => {
-    if (searchTerm.trim()) {
-      // 검색은 Board.jsx에서 searchTerm 변경 시 자동 실행됨
+    if (inputValue.trim()) {
+      onSearch(inputValue);
     }
   };
 
@@ -20,18 +22,13 @@ const SearchBar = ({ searchTerm, onSearchChange }) => {
       <input
         type="text"
         placeholder="검색어를 입력하세요"
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         className={styles.searchInput}
-        aria-label="검색"
       />
-      <button
-        onClick={handleSearch}
-        className={styles.searchButton}
-        aria-label="검색 버튼"
-      >
-        <img src={SearchArrowIcon} alt="" />
+      <button onClick={handleSearch} className={styles.searchButton}>
+        <img src={SearchArrowIcon} alt="검색" />
       </button>
     </div>
   );

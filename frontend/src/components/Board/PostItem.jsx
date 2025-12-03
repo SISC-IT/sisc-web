@@ -39,9 +39,7 @@ const PostItem = ({ post, onLike, onBookmark }) => {
       return;
     }
 
-    const path = teamPath
-      ? `/board/${teamPath}/post/${postId}`
-      : `/board/post/${postId}`;
+    const path = `/board/${teamPath}/post/${postId}`;
 
     navigate(path, { state: { post } });
   };
