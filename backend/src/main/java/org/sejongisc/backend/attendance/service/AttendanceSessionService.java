@@ -270,7 +270,7 @@ public class AttendanceSessionService {
     /**
      * AttendanceSession 엔티티를 Response DTO로 변환
      * - 기본 세션 정보: 제목, 기본 시작 시간, 출석 인정 시간, 보상 포인트
-     * - 위치 정보: location 객체 (lat, lng)
+     * - 위치 정보: location 객체 (lat, lng, radiusMeters)
      */
     private AttendanceSessionResponse convertToResponse(AttendanceSession session) {
         // 위치 정보 변환 (location이 존재하면 LocationInfo 객체 생성, 없으면 null)
@@ -279,6 +279,7 @@ public class AttendanceSessionService {
             location = AttendanceSessionResponse.LocationInfo.builder()
                     .lat(session.getLocation().getLat())
                     .lng(session.getLocation().getLng())
+                    .radiusMeters(session.getLocation().getRadiusMeters())
                     .build();
         }
 
