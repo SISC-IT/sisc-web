@@ -1,4 +1,4 @@
-import styles from './NotesCard.module.css';
+import styles from './BacktestCard.module.css';
 import SectionCard from './common/SectionCard';
 
 const NotesCard = ({ note, setNote }) => {
