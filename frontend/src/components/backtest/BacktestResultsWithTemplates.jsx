@@ -34,8 +34,8 @@ function MetricCard({ label, value, sub }) {
   return (
     <div className={styles.metricCard}>
       <div className={styles.metricLabel}>{label}</div>
+      <div className={styles.metricSub}>{sub}</div>
       <div className={styles.metricValue}>{value}</div>
-      {sub ? <div className={styles.metricSub}>{sub}</div> : null}
     </div>
   );
 }
@@ -187,11 +187,17 @@ export default function BacktestResultsWithTemplates(props) {
             <MetricCard
               label="평균 보유일수"
               value={avgHoldDays != null ? `${avgHoldDays.toFixed(1)} 일` : '-'}
+              sub="Average Hold Days"
             />
-            <MetricCard label="거래 횟수" value={formatNumber(tradesCount)} />
+            <MetricCard
+              label="거래 횟수"
+              value={formatNumber(tradesCount)}
+              sub="Trades Count"
+            />
             <MetricCard
               label="초기 자본"
               value={formatCurrency(startCapital, baseCurrency)}
+              sub="Initial Capital"
             />
           </div>
 

@@ -80,15 +80,16 @@
   color: #6b7280;
 }
 
-.metricValue {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #111827;
-}
-
 .metricSub {
   font-size: 0.75rem;
   color: #9ca3af;
+}
+
+.metricValue {
+  margin-top: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #111827;
 }
 
 /* ---------- Card 공통 ---------- */
