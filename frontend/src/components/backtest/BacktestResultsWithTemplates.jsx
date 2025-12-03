@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import styles from './BacktestResultsWithTemplates.module.css';
 import {
   LineChart,
   Line,
@@ -7,7 +8,6 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import styles from './BacktestResultsWithTemplates.module.css';
 
 function formatCurrency(value, currency) {
   if (value == null) return '-';
