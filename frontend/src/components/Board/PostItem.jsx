@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import styles from './PostItem.module.css';
 import ProfileIcon from '../../assets/board_profile.svg';
 import BookmarkIcon from '../../assets/boardBookMark.svg';
@@ -8,15 +8,61 @@ import HeartIcon from '../../assets/boardHeart.svg';
 import HeartFilledIcon from '../../assets/boardHeart.fill.svg';
 import { getTimeAgo } from '../../utils/TimeUtils';
 
-const PostItem = React.memo(({ post, onLike, onBookmark }) => {
+const PostItem = ({ post, onLike, onBookmark }) => {
   const navigate = useNavigate();
+  const { team } = useParams();
+
+  const postId = post.postId || post.id;
 
   const handleCardClick = () => {
-    navigate(`/board/${post.id}`, { state: { post } });
+    if (!postId) {
+      console.error('게시글 ID를 찾을 수 없습니다:', post);
+      alert('게시글 ID를 찾을 수 없습니다.');
+      return;
+    }
+
+    const nameToPath = {
+      증권1팀: 'securities-1',
+      증권2팀: 'securities-2',
+      증권3팀: 'securities-3',
+      자산운용: 'asset-management',
+      금융IT: 'finance-it',
+      매크로: 'macro',
+      트레이딩: 'trading',
+    };
+
+    const boardName = post.boardName || post.board?.boardName;
+    const teamPath = nameToPath[boardName] || team;
+
+    const path = teamPath
+      ? `/board/${teamPath}/post/${postId}`
+      : `/board/post/${postId}`;
+
+    navigate(path, { state: { post } });
   };
 
-  const handleActionClick = (e) => {
+  const handleBookmarkClick = (e) => {
     e.stopPropagation();
+    e.preventDefault();
+
+    if (!postId) {
+      console.error('북마크 실패: 게시글 ID 없음');
+      return;
+    }
+
+    onBookmark(postId);
+  };
+
+  const handleLikeClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (!postId) {
+      console.error('좋아요 실패: 게시글 ID 없음');
+      return;
+    }
+
+    onLike(postId);
   };
 
   return (
@@ -41,10 +87,10 @@ const PostItem = React.memo(({ post, onLike, onBookmark }) => {
           <div className={styles.content}>{post.content}</div>
         </div>
 
-        <div className={styles.actions} onClick={handleActionClick}>
+        <div className={styles.actions}>
           <button
             className={styles.actionButton}
-            onClick={() => onBookmark(post.id)}
+            onClick={handleBookmarkClick}
             aria-label="북마크"
           >
             <img
@@ -55,7 +101,7 @@ const PostItem = React.memo(({ post, onLike, onBookmark }) => {
           </button>
           <button
             className={styles.actionButton}
-            onClick={() => onLike(post.id)}
+            onClick={handleLikeClick}
             aria-label="좋아요"
           >
             <img
@@ -70,8 +116,8 @@ const PostItem = React.memo(({ post, onLike, onBookmark }) => {
       </div>
     </div>
   );
-});
+};
 
 PostItem.displayName = 'PostItem';
 
-export default PostItem;
+export default React.memo(PostItem);

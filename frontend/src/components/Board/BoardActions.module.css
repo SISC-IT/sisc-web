@@ -22,8 +22,7 @@
 
 .boardActions {
   width: 100%;
-  max-width: calc(100% - 20px);
-  padding-right: 20px;
+  max-width: 100%;
   box-sizing: border-box;
   display: flex;
   align-items: center;

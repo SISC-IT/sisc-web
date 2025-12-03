@@ -58,6 +58,7 @@ apiClient.interceptors.response.use(
         console.error('토큰 갱신 실패:', refreshError);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        alert('로그인 세션이 만료되었습니다. 다시 로그인 해주세요.');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -81,6 +82,25 @@ apiClient.interceptors.response.use(
  */
 export const getParentBoards = async () => {
   const response = await apiClient.get('/api/board/parents');
+  return response.data;
+};
+
+/*
+ * 하위 게시판 목록 조회
+ * GET /api/board/childs
+ * @param {string|null} parentBoardId - 특정 부모 게시판의 자식만 필터링 (선택)
+ */
+export const getSubBoards = async (parentBoardId = null) => {
+  const response = await apiClient.get('/api/board/childs');
+
+  // parentBoardId가 제공되면 해당 부모의 자식만 필터링
+  if (parentBoardId) {
+    return response.data.filter(
+      (board) => board.parentBoardId === parentBoardId
+    );
+  }
+
+  // 제공되지 않으면 모든 하위 게시판 반환
   return response.data;
 };
 
@@ -190,6 +210,13 @@ export const getPost = async (
  * @param {object} postData - { title, content, files }
  */
 export const updatePost = async (postId, boardId, postData) => {
+  console.log('게시글 수정 요청:', { postId, boardId, postData });
+
+  if (!boardId) {
+    console.error('boardId가 없습니다.');
+    throw new Error('boardId is required');
+  }
+
   const formData = new FormData();
   formData.append('boardId', boardId);
   formData.append('title', postData.title);
@@ -200,6 +227,13 @@ export const updatePost = async (postId, boardId, postData) => {
       formData.append('files', file);
     });
   }
+
+  console.log('FormData 내용:', {
+    boardId,
+    title: postData.title,
+    content: postData.content,
+    filesCount: postData.files?.length || 0,
+  });
 
   const response = await apiClient.put(`/api/board/post/${postId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -267,20 +301,13 @@ export const createComment = async (commentData) => {
  * @param {object} commentData - { postId, content, parentCommentId? }
  */
 export const updateComment = async (commentId, commentData) => {
-  const requestBody = {
+  const body = {
     postId: commentData.postId,
     content: commentData.content,
+    parentCommentId: commentData.parentCommentId ?? null,
   };
 
-  if (commentData.parentCommentId) {
-    requestBody.parentCommentId = commentData.parentCommentId;
-  }
-
-  const response = await apiClient.put(
-    `/api/board/comment/${commentId}`,
-    requestBody
-  );
-  return response.data;
+  return await apiClient.put(`/api/board/comment/${commentId}`, body);
 };
 
 /*
