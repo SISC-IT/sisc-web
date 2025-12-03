@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import styles from './StocksCard.module.css';
+import styles from './BacktestCard.module.css';
 import SectionCard from './common/SectionCard';
 import useAvailableTickers from '../../api/backtest/useAvailableTickers';
 import { toast } from 'react-toastify';
