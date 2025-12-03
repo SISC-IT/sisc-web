@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import PostItem from '../components/Board/PostItem';
 import Modal from '../components/Board/Modal';
@@ -28,9 +28,15 @@ const Board = () => {
   const [subBoardName, setSubBoardName] = useState('');
   const [subBoardTabs, setSubBoardTabs] = useState([]);
 
+  const prevPostsRef = useRef(posts);
+
   const currentPath = team ? `/board/${team}` : '/board';
   const currentBoardId = boardIdMap[currentPath];
   const currentBoardName = boardNameMap[currentPath];
+
+  useEffect(() => {
+    prevPostsRef.current = posts;
+  }, [posts]);
 
   useEffect(() => {
     loadBoardList();
@@ -182,12 +188,6 @@ const Board = () => {
 
   useEffect(() => {
     if (boardsLoaded && currentBoardId) {
-      fetchPosts();
-    }
-  }, [boardsLoaded, currentBoardId, fetchPosts]);
-
-  useEffect(() => {
-    if (boardsLoaded && currentBoardId) {
       if (searchTerm) {
         handleSearch();
       } else {
@@ -217,6 +217,7 @@ const Board = () => {
     },
     [currentBoardId]
   );
+
   const handleOpenModal = () => {
     setShowModal(true);
   };
@@ -255,7 +256,6 @@ const Board = () => {
       }));
       setSubBoardTabs(tabs);
 
-      // 첫 번째 하위 게시판 자동 선택
       if (tabs.length > 0) {
         setActiveSubBoard(tabs[0].id);
       }
@@ -264,6 +264,7 @@ const Board = () => {
       alert('하위 게시판 생성에 실패했습니다.');
     }
   };
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
@@ -323,12 +324,10 @@ const Board = () => {
   };
 
   const handleLike = useCallback(async (postId) => {
-    let prevPosts = null;
+    const snapshot = prevPostsRef.current;
 
-    setPosts((currentPosts) => {
-      prevPosts = [...currentPosts];
-
-      return currentPosts.map((post) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) => {
         if ((post.postId || post.id) === postId) {
           return {
             ...post,
@@ -337,25 +336,23 @@ const Board = () => {
           };
         }
         return post;
-      });
-    });
+      })
+    );
 
     try {
       await boardApi.toggleLike(postId);
     } catch (error) {
       console.error('좋아요 처리 실패:', error);
       alert('좋아요 처리에 실패했습니다.');
-      if (prevPosts) setPosts(prevPosts);
+      setPosts(snapshot);
     }
   }, []);
 
   const handleBookmark = useCallback(async (postId) => {
-    let prevPosts = null;
+    const snapshot = prevPostsRef.current;
 
-    setPosts((currentPosts) => {
-      prevPosts = [...currentPosts];
-
-      return currentPosts.map((post) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) => {
         if ((post.postId || post.id) === postId) {
           return {
             ...post,
@@ -366,15 +363,15 @@ const Board = () => {
           };
         }
         return post;
-      });
-    });
+      })
+    );
 
     try {
       await boardApi.toggleBookmark(postId);
     } catch (error) {
       console.error('북마크 처리 실패:', error);
       alert('북마크 처리에 실패했습니다.');
-      if (prevPosts) setPosts(prevPosts);
+      setPosts(snapshot);
     }
   }, []);
 

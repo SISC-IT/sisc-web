@@ -34,6 +34,7 @@ const buildCommentTree = (flatComments) => {
 
   return roots;
 };
+
 const extractRawComments = (data) => {
   if (!data?.comments) {
     return [];
@@ -227,8 +228,14 @@ const PostDetail = () => {
   const refreshPostAndComments = async () => {
     const updatedPost = await boardApi.getPost(postId);
     setPost(updatedPost);
+
+    setEditTitle(updatedPost.title);
+    setEditContent(updatedPost.content);
+
     const raw = extractRawComments(updatedPost);
     setComments(buildCommentTree(raw));
+
+    return updatedPost;
   };
 
   useEffect(() => {
@@ -319,17 +326,16 @@ const PostDetail = () => {
     }
   };
 
-  const handleEdit = () => {
-    setIsEdit(true);
-    setShowMenu(false);
+  const handleEdit = async () => {
+    await refreshPostAndComments();
     setEditFiles(post.attachments || []);
     setNewFiles([]);
+    setIsEdit(true);
+    setShowMenu(false);
   };
 
   const handleCancelEdit = () => {
     setIsEdit(false);
-    setEditTitle(post.title);
-    setEditContent(post.content);
     setNewFiles([]);
   };
 
@@ -385,8 +391,6 @@ const PostDetail = () => {
       setNewFiles([]);
 
       await refreshPostAndComments();
-      setEditTitle(post.title);
-      setEditContent(post.content);
     } catch (error) {
       console.error('게시글 수정 실패:', error);
       alert(

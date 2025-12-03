@@ -5,6 +5,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 // ==================== Axios 인스턴스 설정 ====================
 
+export const plainAxios = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+});
+
+// 메인 인스턴스 (인터셉터 있음)
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -27,7 +33,6 @@ apiClient.interceptors.request.use(
   }
 );
 
-// 응답 인터셉터: 401 에러 시 토큰 갱신
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -43,8 +48,8 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await axios.post(
-          `${API_BASE_URL}/api/auth/reissue`,
+        const response = await plainAxios.post(
+          '/api/auth/reissue',
           { refreshToken },
           { withCredentials: true }
         );
@@ -56,10 +61,15 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         console.error('토큰 갱신 실패:', refreshError);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        alert('로그인 세션이 만료되었습니다. 다시 로그인 해주세요.');
-        window.location.href = '/login';
+
+        if (refreshError.response?.status === 401) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          alert('로그인 세션이 만료되었습니다. 다시 로그인 해주세요.');
+          window.location.href = '/login';
+          return Promise.reject(new Error('로그인 세션이 만료되었습니다.'));
+        }
+
         return Promise.reject(refreshError);
       }
     }
@@ -210,8 +220,6 @@ export const getPost = async (
  * @param {object} postData - { title, content, files }
  */
 export const updatePost = async (postId, boardId, postData) => {
-  console.log('게시글 수정 요청:', { postId, boardId, postData });
-
   if (!boardId) {
     console.error('boardId가 없습니다.');
     throw new Error('boardId is required');
@@ -227,13 +235,6 @@ export const updatePost = async (postId, boardId, postData) => {
       formData.append('files', file);
     });
   }
-
-  console.log('FormData 내용:', {
-    boardId,
-    title: postData.title,
-    content: postData.content,
-    filesCount: postData.files?.length || 0,
-  });
 
   const response = await apiClient.put(`/api/board/post/${postId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -307,9 +308,9 @@ export const updateComment = async (commentId, commentData) => {
     parentCommentId: commentData.parentCommentId ?? null,
   };
 
-  return await apiClient.put(`/api/board/comment/${commentId}`, body);
+  const response = await apiClient.put(`/api/board/comment/${commentId}`, body);
+  return response.data;
 };
-
 /*
  * 댓글 삭제
  * DELETE /api/board/comment/{commentId}

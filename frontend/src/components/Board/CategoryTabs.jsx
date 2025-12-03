@@ -5,7 +5,7 @@ const CategoryTabs = ({ activeTab, onTabChange, tabs, onCreateSubBoard }) => {
   return (
     <div className={styles.categoryTabsRow}>
       <div className={styles.tabsLeft}>
-        {tabs.map((tab) => (
+        {tabs?.map((tab) => (
           <button
             key={tab.id}
             className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}

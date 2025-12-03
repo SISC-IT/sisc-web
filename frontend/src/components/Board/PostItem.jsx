@@ -34,6 +34,11 @@ const PostItem = ({ post, onLike, onBookmark }) => {
     const boardName = post.boardName || post.board?.boardName;
     const teamPath = nameToPath[boardName] || team;
 
+    if (!teamPath) {
+      alert('게시판 정보를 찾을 수 없습니다.');
+      return;
+    }
+
     const path = teamPath
       ? `/board/${teamPath}/post/${postId}`
       : `/board/post/${postId}`;
