@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -6,24 +6,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
 } from 'recharts';
 import styles from './BacktestResultsWithTemplates.module.css';
-
-// 간단한 mock series (서버에서 series 안 내려오는 경우 대비용)
-function buildMockSeries() {
-  const points = [];
-  let equity = 1000000;
-  for (let i = 0; i < 40; i += 1) {
-    const change = (Math.random() - 0.4) * 15000;
-    equity = Math.max(800000, equity + change);
-    points.push({
-      date: `D+${i + 1}`,
-      equity: Math.round(equity),
-    });
-  }
-  return points;
-}
 
 function formatCurrency(value, currency) {
   if (value == null) return '-';
@@ -33,7 +17,7 @@ function formatCurrency(value, currency) {
 
 function formatPercent(value) {
   if (value == null) return '-';
-  return `${(value * 100).toFixed(2)}%`;
+  return `${value.toFixed(2)}%`;
 }
 
 function formatNumber(value) {
@@ -127,10 +111,9 @@ export default function BacktestResultsWithTemplates(props) {
   const {
     title,
     rangeLabel,
-    baseCurrency = 'KRW',
+    baseCurrency = '$',
     startCapital,
     metrics = {},
-    series,
     templates = [],
     onClickTemplate,
     onClickSaveTemplate,
@@ -138,15 +121,36 @@ export default function BacktestResultsWithTemplates(props) {
     onClickDeleteTemplate,
   } = props;
 
-  const hasSeries = Array.isArray(series) && series.length > 0;
+  const [yMode, setYMode] = useState('multiple');
 
-  const equitySeries = useMemo(
-    () => (hasSeries ? series : buildMockSeries()),
-    [hasSeries, series]
-  );
+  const {
+    totalReturn,
+    maxDrawdown,
+    sharpeRatio,
+    avgHoldDays,
+    tradesCount,
+    assetCurveJson,
+  } = metrics;
 
-  const { totalReturn, maxDrawdown, sharpeRatio, avgHoldDays, tradesCount } =
-    metrics;
+  const equitySeries = useMemo(() => {
+    if (!assetCurveJson) return [];
+
+    try {
+      const arr = JSON.parse(assetCurveJson);
+      if (!Array.isArray(arr)) return [];
+
+      return arr.map((v, idx) => {
+        const equity = Number(v);
+        const day = idx + 1;
+        const sc = Number(startCapital);
+        const multiple = Number.isFinite(sc) && sc !== 0 ? equity / sc : null;
+        return { day, equity, multiple };
+      });
+    } catch (e) {
+      console.error('Failed to parse assetCurveJson', e);
+      return [];
+    }
+  }, [assetCurveJson, startCapital]);
 
   return (
     <div className={styles.wrapper}>
@@ -154,17 +158,9 @@ export default function BacktestResultsWithTemplates(props) {
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>{title || '백테스트 결과'}</h1>
-          {rangeLabel && <p className={styles.rangeLabel}>{rangeLabel}</p>}
-        </div>
-        <div className={styles.headerRight}>
-          <div className={styles.capitalBox}>
-            <div className={styles.capitalLabel}>초기 자본</div>
-            <div className={styles.capitalValue}>
-              {startCapital != null
-                ? formatCurrency(startCapital, baseCurrency)
-                : '-'}
-            </div>
-          </div>
+          {rangeLabel && (
+            <p className={styles.rangeLabel}>{rangeLabel} • 기준통화 USD</p>
+          )}
         </div>
       </header>
 
@@ -193,31 +189,83 @@ export default function BacktestResultsWithTemplates(props) {
               value={avgHoldDays != null ? `${avgHoldDays.toFixed(1)} 일` : '-'}
             />
             <MetricCard label="거래 횟수" value={formatNumber(tradesCount)} />
+            <MetricCard
+              label="초기 자본"
+              value={formatCurrency(startCapital, baseCurrency)}
+            />
           </div>
 
           {/* 자산 곡선 차트 */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <div className={styles.cardTitle}>자산 곡선</div>
-              <div className={styles.cardSubTitle}>
-                {hasSeries ? '실제 결과' : '샘플 데이터'}
+              <div>
+                <div className={styles.cardTitle}>자산 곡선</div>
+                <div className={styles.cardSubTitle}>
+                  {assetCurveJson
+                    ? '실제 결과'
+                    : '자산 곡선 데이터가 없습니다.'}
+                </div>
+              </div>
+              {/* Y축 단위 선택 */}
+              <div>
+                <select
+                  value={yMode}
+                  onChange={(e) => setYMode(e.target.value)}
+                  className={styles.yModeSelect}
+                >
+                  <option value="multiple">배율 (초기 자본 대비)</option>
+                  <option value="equity">자산 값 ({baseCurrency})</option>
+                </select>
               </div>
             </div>
             <div className={styles.chartContainer}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={equitySeries}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
+                  <XAxis dataKey="day" tickFormatter={(v) => `${v}일`} />
                   <YAxis
-                    dataKey="equity"
-                    tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`}
+                    dataKey={yMode === 'multiple' ? 'multiple' : 'equity'}
+                    tickFormatter={(v) => {
+                      if (v == null) return '';
+                      if (yMode === 'multiple') {
+                        return `${v.toFixed(2)}x`;
+                      }
+                      return `${v.toLocaleString()} ${baseCurrency}`;
+                    }}
+                    domain={['auto', 'auto']}
                   />
                   <Tooltip
-                    formatter={(value) => `${Number(value).toLocaleString()}원`}
+                    formatter={(value, props) => {
+                      const payload = props?.payload;
+                      if (!payload) return value;
+
+                      const equity = payload.equity;
+                      const multiple = payload.multiple;
+
+                      if (yMode === 'multiple') {
+                        const multipleLabel = `${Number(multiple).toFixed(2)}x`;
+                        const equityLabel =
+                          equity != null
+                            ? `${equity.toLocaleString()} ${baseCurrency}`
+                            : '';
+                        return [`${multipleLabel} (${equityLabel})`, '자산'];
+                      }
+
+                      const equityLabel =
+                        equity != null
+                          ? `${equity.toLocaleString()} ${baseCurrency}`
+                          : '';
+                      const multipleLabel =
+                        multiple != null ? `${multiple.toFixed(2)}x` : '';
+                      return [
+                        `${equityLabel}${multipleLabel ? ` (${multipleLabel})` : ''}`,
+                        '자산',
+                      ];
+                    }}
+                    labelFormatter={(label) => `${label}일차`}
                   />
                   <Line
                     type="monotone"
-                    dataKey="equity"
+                    dataKey={yMode === 'multiple' ? 'multiple' : 'equity'}
                     dot={false}
                     strokeWidth={2}
                   />
