@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './PostDetail.module.css';
+import styles from '../../../pages/PostDetail.module.css';
 import FileAttachmentList from './FileAttachmentList';
 
 const PostEditForm = ({
@@ -16,38 +16,39 @@ const PostEditForm = ({
   onCancel,
 }) => {
   return (
-    <>
-      <div className={styles.titleWrapper}>
-        <input
-          className={styles.editTitleInput}
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="제목을 입력하세요"
-        />
-      </div>
+    <div className={styles.editFormContainer}>
+      {/* 제목 */}
+      <input
+        type="text"
+        className={styles.editTitleInput}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="제목을 입력하세요"
+      />
 
-      <div className={styles.divider} />
+      {/* 구분선 */}
+      <div className={styles.editDivider} />
 
+      {/* 내용 */}
       <textarea
         className={styles.editContentTextarea}
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="내용을 입력하세요"
-        rows={10}
       />
 
-      <div className={styles.attachments}>
-        <h3 className={styles.attachmentTitle}>
-          첨부 파일 ({editFiles.length + newFiles.length})
-        </h3>
+      {/* 파일 영역 */}
+      <div className={styles.editFileSection}>
+        <h4 className={styles.attachmentTitle}>첨부파일 관리</h4>
 
+        {/* 기존 파일 */}
         <FileAttachmentList
           files={editFiles}
           isEditMode={true}
           onRemove={onRemoveExistingFile}
         />
 
+        {/* 새 파일 */}
         <FileAttachmentList
           files={newFiles}
           isEditMode={true}
@@ -55,32 +56,35 @@ const PostEditForm = ({
           onRemove={onRemoveNewFile}
         />
 
+        {/* 파일 추가 버튼 */}
         <div className={styles.fileAddSection}>
           <input
             type="file"
-            id="editFileUpload"
             multiple
             onChange={onAddNewFile}
-            className={styles.hiddenInput}
+            style={{ display: 'none' }}
+            id="file-upload"
           />
-          <button
+          <label
+            htmlFor="file-upload"
             className={styles.addFileButton}
-            onClick={() => document.getElementById('editFileUpload').click()}
+            style={{ display: 'block', textAlign: 'center' }}
           >
-            파일 추가
-          </button>
+            + 파일 추가하기
+          </label>
         </div>
       </div>
 
+      {/* 버튼 */}
       <div className={styles.editButtons}>
-        <button className={styles.saveButton} onClick={onSave}>
+        <button onClick={onSave} className={styles.saveButton}>
           저장
         </button>
-        <button className={styles.cancelButton} onClick={onCancel}>
+        <button onClick={onCancel} className={styles.cancelButton}>
           취소
         </button>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -4,9 +4,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import * as boardApi from '../utils/boardApi';
 import styles from './PostDetail.module.css';
 
-import PostView from '../components/PostDetail/PostView';
-import PostEditForm from '../components/PostDetail/PostEditForm';
-import CommentSection from '../components/PostDetail/CommentSection';
+import PostView from '../components/Board/PostDetail/PostView';
+import PostEditForm from '../components/Board/PostDetail/PostEditForm';
+import CommentSection from '../components/Board/PostDetail/CommentSection';
 
 const buildCommentTree = (flatComments) => {
   const map = new Map();

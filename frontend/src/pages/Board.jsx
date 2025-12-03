@@ -28,6 +28,10 @@ const Board = () => {
   const [subBoardName, setSubBoardName] = useState('');
   const [subBoardTabs, setSubBoardTabs] = useState([]);
 
+  // 페이지네이션 state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
+
   const prevPostsRef = useRef(posts);
 
   const currentPath = team ? `/board/${team}` : '/board';
@@ -86,7 +90,6 @@ const Board = () => {
     }
   };
 
-  // [수정] 기본 게시글 로드 로직 (검색어가 없을 때)
   const fetchPosts = useCallback(async () => {
     if (!currentBoardId) return;
 
@@ -112,6 +115,9 @@ const Board = () => {
         const postsData = response.content || [];
         setPosts(Array.isArray(postsData) ? postsData : []);
       }
+
+      // 게시글 로드 후 페이지를 1로 리셋
+      setCurrentPage(1);
     } catch (error) {
       console.error('게시글 불러오기 실패:', error);
       setPosts([]);
@@ -148,6 +154,9 @@ const Board = () => {
           const postsData = response.content || [];
           setPosts(postsData);
         }
+
+        // 검색 후 페이지를 1로 리셋
+        setCurrentPage(1);
       } catch (error) {
         console.error('검색 실패:', error);
         alert('검색에 실패했습니다.');
@@ -158,7 +167,6 @@ const Board = () => {
     [currentBoardId, fetchPosts]
   );
 
-  // 하위 게시판 및 초기 게시글 로드
   useEffect(() => {
     const loadSubBoards = async () => {
       if (currentBoardId && !Array.isArray(currentBoardId)) {
@@ -173,14 +181,13 @@ const Board = () => {
             setSubBoardTabs(tabs);
             setActiveSubBoard(tabs[0].id);
 
-            // 첫 번째 탭의 게시글 로드
             const response = await boardApi.getPosts(tabs[0].id);
             const postsData = response.content || [];
             setPosts(Array.isArray(postsData) ? postsData : []);
+            setCurrentPage(1);
           } else {
             setSubBoardTabs([]);
             setActiveSubBoard(null);
-            // 하위 게시판 없으면 전체 게시글 로드
             fetchPosts();
           }
         } catch (error) {
@@ -190,7 +197,6 @@ const Board = () => {
           fetchPosts();
         }
       } else {
-        // 전체 보기 모드인 경우
         setSubBoardTabs([]);
         setActiveSubBoard(null);
         fetchPosts();
@@ -214,6 +220,7 @@ const Board = () => {
         const response = await boardApi.getPosts(tabId);
         const postsData = response.content || [];
         setPosts(Array.isArray(postsData) ? postsData : []);
+        setCurrentPage(1); // 탭 변경 시 페이지 리셋
       } catch (error) {
         console.error('탭 변경 중 오류:', error);
         setPosts([]);
@@ -381,6 +388,12 @@ const Board = () => {
     }
   }, []);
 
+  // 정렬 옵션 변경 핸들러 (페이지 리셋 포함)
+  const handleSortChange = (option) => {
+    setSortOption(option);
+    setCurrentPage(1);
+  };
+
   const sortedPosts = [...posts].sort((a, b) => {
     if (sortOption === 'latest') {
       const dateA = new Date(a.createdDate || a.date);
@@ -397,6 +410,18 @@ const Board = () => {
     }
     return 0;
   });
+
+  // 페이지네이션 계산
+  const indexOfLastPost = currentPage * itemsPerPage;
+  const indexOfFirstPost = indexOfLastPost - itemsPerPage;
+  const currentPosts = sortedPosts.slice(indexOfFirstPost, indexOfLastPost);
+  const totalPages = Math.ceil(sortedPosts.length / itemsPerPage);
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (!boardsLoaded) {
     return (
@@ -425,7 +450,6 @@ const Board = () => {
         <h1 className={styles.boardTitle}>{currentBoardName || '게시판'}</h1>
       </header>
 
-      {/* [수정] SearchBar에 handleSearch 전달 (props 이름: onSearch) */}
       <SearchBar onSearch={handleSearch} />
 
       {!Array.isArray(currentBoardId) && (
@@ -439,15 +463,15 @@ const Board = () => {
 
       <BoardActions
         sortOption={sortOption}
-        onSortChange={setSortOption}
+        onSortChange={handleSortChange}
         onWrite={handleOpenModal}
       />
 
       <div className={styles.postsContainer}>
         {loading ? (
           <p className={styles.emptyMessage}>로딩 중...</p>
-        ) : sortedPosts.length > 0 ? (
-          sortedPosts.map((post) => (
+        ) : currentPosts.length > 0 ? (
+          currentPosts.map((post) => (
             <PostItem
               key={post.postId || post.id}
               post={post}
@@ -459,6 +483,39 @@ const Board = () => {
           <p className={styles.emptyMessage}>게시글이 없습니다.</p>
         )}
       </div>
+
+      {/* 페이지네이션 컨트롤 */}
+      {!loading && sortedPosts.length > 0 && (
+        <div className={styles.pagination}>
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={styles.pageButton}
+          >
+            이전
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              className={`${styles.pageButton} ${
+                currentPage === page ? styles.active : ''
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={styles.pageButton}
+          >
+            다음
+          </button>
+        </div>
+      )}
 
       {showModal && (
         <Modal

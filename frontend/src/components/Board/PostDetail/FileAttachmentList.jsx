@@ -1,6 +1,6 @@
 import React from 'react';
-import styles from './PostDetail.module.css';
-import FolderIcon from '../../assets/boardFolder.svg';
+import styles from '../../../pages/PostDetail.module.css';
+import FolderIcon from '../../../assets/boardFolder.svg';
 
 const FileAttachmentList = ({
   files,
