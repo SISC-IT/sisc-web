@@ -9,6 +9,7 @@ import org.sejongisc.backend.backtest.entity.BacktestStatus;
 import org.sejongisc.backend.template.entity.Template;
 
 import java.time.LocalDate;
+import java.util.List;
 
 
 @Getter
@@ -18,4 +19,5 @@ import java.time.LocalDate;
 public class BacktestResponse {
   private BacktestRun backtestRun;
   private BacktestRunMetricsResponse backtestRunMetricsResponse;
+  private List<String> availableTickers;
 }

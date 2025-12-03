@@ -21,6 +21,7 @@ public class BacktestRunMetricsResponse {
   private BigDecimal sharpeRatio;       // 샤프 지수
   private BigDecimal avgHoldDays;       // 평균 보유 기간
   private int tradesCount;              // 총 거래 횟수
+  private String assetCurveJson;
 
   public static BacktestRunMetricsResponse fromEntity(BacktestRunMetrics backtestRunMetrics) {
     return BacktestRunMetricsResponse.builder()
@@ -30,6 +31,7 @@ public class BacktestRunMetricsResponse {
         .sharpeRatio(backtestRunMetrics.getSharpeRatio())
         .avgHoldDays(backtestRunMetrics.getAvgHoldDays())
         .tradesCount(backtestRunMetrics.getTradesCount())
+        .assetCurveJson(backtestRunMetrics.getAssetCurveJson())
         .build();
   }
 }

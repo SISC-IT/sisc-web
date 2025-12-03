@@ -13,3 +13,33 @@
 .button:hover {
   opacity: 0.9;
 }
+
+.defaultExitRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.defaultExitLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.defaultExitInput {
+  width: 80px;
+  height: auto;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #d0d4dc;
+  font-size: 14px;
+}
+
+.defaultExitHint {
+  font-size: 12px;
+  color: #6b7280;
+}

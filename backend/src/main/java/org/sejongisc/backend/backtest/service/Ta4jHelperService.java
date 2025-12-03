@@ -3,6 +3,7 @@ package org.sejongisc.backend.backtest.service;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.backtest.dto.StrategyCondition;
 import org.sejongisc.backend.backtest.dto.StrategyOperand;
+import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.stock.entity.PriceData;
 import org.springframework.stereotype.Service;
 import org.ta4j.core.BarSeries;
@@ -32,10 +33,10 @@ public class Ta4jHelperService {
      */
     public BarSeries createBarSeries(List<PriceData> priceDataList) {
         // BarSeries 이름에 Ticker 추가
-        BarSeries series = new BaseBarSeries(priceDataList.get(0).getTicker());
+        BarSeries series = new BaseBarSeries(priceDataList.getFirst().getTicker());
         for (PriceData p : priceDataList) {
             series.addBar(
-                p.getDate().atStartOfDay(ZoneId.systemDefault()),
+                p.getDate().atStartOfDay(ZoneId.of("Asia/Seoul")),      // 시작 시간을 한국 시간대로 설정
                 p.getOpen(), p.getHigh(), p.getLow(), p.getClosePrice(), p.getVolume()
             );
         }
@@ -47,9 +48,7 @@ public class Ta4jHelperService {
      * "isAbsolute" 로직을 포함합니다.
      */
     public Rule buildCombinedRule(List<StrategyCondition> conditions, BarSeries series, Map<String, Indicator<Num>> indicatorCache) {
-        if (series.isEmpty()) {
-            throw new IllegalArgumentException("Cannot build rules on an empty series.");
-        }
+        // 기본 참/거짓 Rule 생성
         Num sampleNum = series.getBar(0).getClosePrice();
         Num one = sampleNum.numOf(1);
         Num zero = sampleNum.numOf(0);

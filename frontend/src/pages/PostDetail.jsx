@@ -218,6 +218,12 @@ const PostDetail = () => {
   const [editFiles, setEditFiles] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
 
+  const [isEdit, setIsEdit] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editFiles, setEditFiles] = useState([]);
+  const [newFiles, setNewFiles] = useState([]);
+
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
 

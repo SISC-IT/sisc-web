@@ -73,7 +73,7 @@ public class PrimaryDataSourceConfig {
         Map<String, Object> jpaProps = new HashMap<>();
         jpaProps.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         // ddl-auto는 yml로 관리 권장
-        // jpaProps.put("hibernate.hbm2ddl.auto", "update");
+        jpaProps.put("hibernate.hbm2ddl.auto", "update");
 
         return builder
                 .dataSource(dataSource)
@@ -87,6 +87,7 @@ public class PrimaryDataSourceConfig {
                         "org.sejongisc.backend.point.entity",
                         "org.sejongisc.backend.stock.entity",
                         "org.sejongisc.backend.template.entity",
+                        "org.sejongisc.backend.betting.entity",
                         "org.sejongisc.backend.user.entity"
                 )
                 .persistenceUnit("primary")

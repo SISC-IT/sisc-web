@@ -2,9 +2,11 @@ package org.sejongisc.backend.board.service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.board.dto.BoardRequest;
+import org.sejongisc.backend.board.dto.BoardResponse;
 import org.sejongisc.backend.board.dto.CommentResponse;
 import org.sejongisc.backend.board.dto.PostAttachmentResponse;
 import org.sejongisc.backend.board.dto.PostRequest;
@@ -22,6 +24,8 @@ import org.sejongisc.backend.board.repository.PostRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.dto.UserInfoResponse;
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -167,10 +171,34 @@ public class PostServiceImpl implements PostService {
     postRepository.delete(post);
   }
 
+  // 게시판 삭제
+  @Override
+  @Transactional
+  public void deleteBoard(UUID boardId, UUID boardUserId) {
+    User user = userRepository.findById(boardUserId).orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    if(!user.getRole().equals(Role.PRESIDENT)){
+      throw new CustomException(ErrorCode.INVALID_BOARD_OWNER);
+    }
+    //상위 게시판이면 하위 게시판 목록을 조회
+    // 1. 부모 + 자식 boardId 목록 만들기
+    List<UUID> targetBoardIds = Stream.concat(
+            Stream.of(boardId), // 자신 포함
+            boardRepository.findAllByParentBoard_BoardId(boardId).stream()
+                    .map(Board::getBoardId)
+    ).toList();
+
+    // 2. 각 boardId마다 postId/userId 조회해서 삭제
+    targetBoardIds.stream()
+            .flatMap(id -> postRepository.findPostIdAndUserIdByBoardId(id).stream())
+            .forEach(row -> deletePost(row.getPostId(), row.getUserId()));
+    targetBoardIds.forEach(boardRepository::deleteById);
+    return;
+  }
+
   // 게시물 조회 (해당 게시판의 게시물)
   @Override
   @Transactional(readOnly = true)
-  public Page<PostResponse> getPosts(UUID boardId, int pageNumber, int pageSize) {
+  public Page<PostResponse> getPosts(UUID boardId, UUID userId, int pageNumber, int pageSize) {
     Pageable pageable = PageRequest.of(
         pageNumber,
         pageSize,
@@ -181,16 +209,20 @@ public class PostServiceImpl implements PostService {
     Board board = boardRepository.findById(boardId)
         .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
 
+    // 유저 조회 (좋아요/북마크 여부 확인용)
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
     // 해당 게시판의 게시물 조회
     Page<Post> posts = postRepository.findAllByBoard(board, pageable);
 
-    return posts.map(this::mapToPostResponse);
+    return posts.map(post -> mapToPostResponse(post, user));
   }
 
   // 게시물 검색 (제목/내용)
   @Override
   @Transactional(readOnly = true)
-  public Page<PostResponse> searchPosts(UUID boardId, String keyword, int pageNumber, int pageSize) {
+  public Page<PostResponse> searchPosts(UUID boardId, UUID userId, String keyword, int pageNumber, int pageSize) {
     Pageable pageable = PageRequest.of(
         pageNumber,
         pageSize,
@@ -205,13 +237,17 @@ public class PostServiceImpl implements PostService {
     Page<Post> posts = postRepository.searchByBoardAndKeyword(
         board, keyword, pageable);
 
-    return posts.map(this::mapToPostResponse);
+    // 유저 조회
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+    return posts.map(post -> mapToPostResponse(post, user));
   }
 
   // 게시물 상세 조회
   @Override
   @Transactional(readOnly = true)
-  public PostResponse getPostDetail(UUID postId, int pageNumber, int pageSize) {
+  public PostResponse getPostDetail(UUID postId, UUID userId, int pageNumber, int pageSize) {
     // 게시물 조회
     Post post = postRepository.findById(postId)
         .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
@@ -229,16 +265,20 @@ public class PostServiceImpl implements PostService {
 
     // 부모 댓글을 CommentResponse DTO로 변환
     Page<CommentResponse> commentResponses = parentComments.map(parent -> {
+
       // 해당 부모 댓글의 자식 댓글 목록을 조회
       List<Comment> childComments = commentRepository.findByParentComment(parent);
 
+      // 부모 객체 연결
+      childComments.forEach(child -> child.setParentComment(parent));
+
       // 자식 댓글 목록을 CommentResponse DTO 리스트로 변환
       List<CommentResponse> replyResponses = childComments.stream()
-          .map(CommentResponse::of)
+          .map(CommentResponse::from)
           .toList();
 
       // 부모 댓글 DTO를 생성하며, 자식 DTO 리스트를 주입
-      return CommentResponse.of(parent, replyResponses);
+      return CommentResponse.from(parent, replyResponses);
     });
 
     // 첨부 파일 조회
@@ -247,24 +287,18 @@ public class PostServiceImpl implements PostService {
         .map(PostAttachmentResponse::of)
         .toList();
 
-    // PostResponse DTO를 직접 빌드하여 반환
-    return PostResponse.builder()
-        .postId(post.getPostId())
-        .board(post.getBoard())
-        .user(post.getUser())
-        .title(post.getTitle())
-        .content(post.getContent())
-        .bookmarkCount(post.getBookmarkCount())
-        .likeCount(post.getLikeCount())
-        .commentCount(post.getCommentCount())
-        .createdDate(post.getCreatedDate())
-        .updatedDate(post.getUpdatedDate())
+    // 유저 조회
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+    return getCommonPostBuilder(post, user)
         .comments(commentResponses)
         .attachments(attachmentResponses)
         .build();
   }
 
   // 게시판 생성
+  @Override
   @Transactional
   public void createBoard(BoardRequest request, UUID userId) {
     User user = userRepository.findById(userId)
@@ -293,11 +327,32 @@ public class PostServiceImpl implements PostService {
     boardRepository.save(board);
   }
 
-  private PostResponse mapToPostResponse(Post post) {
+  // 부모 게시판 조회
+  @Override
+  @Transactional(readOnly = true)
+  public List<BoardResponse> getParentBoards() {
+    List<Board> parentBoards = boardRepository.findAllByParentBoardIsNull();
+
+    return parentBoards.stream()
+        .map(BoardResponse::from)
+        .toList();
+  }
+
+  // 하위 게시판 조회
+  @Transactional(readOnly = true)
+  public List<BoardResponse> getChildBoards() {
+    List<Board> childBoards = boardRepository.findAllByParentBoardIsNotNull();
+
+    return childBoards.stream()
+        .map(BoardResponse::from)
+        .toList();
+  }
+
+  private PostResponse.PostResponseBuilder getCommonPostBuilder(Post post, User user) {
     return PostResponse.builder()
         .postId(post.getPostId())
-        .user(post.getUser())
-        .board(post.getBoard())
+        .user(UserInfoResponse.from(post.getUser()))
+        .board(BoardResponse.from(post.getBoard()))
         .title(post.getTitle())
         .content(post.getContent())
         .bookmarkCount(post.getBookmarkCount())
@@ -305,6 +360,12 @@ public class PostServiceImpl implements PostService {
         .commentCount(post.getCommentCount())
         .createdDate(post.getCreatedDate())
         .updatedDate(post.getUpdatedDate())
+        .isLiked(postLikeRepository.existsByUserUserIdAndPostPostId(user.getUserId(), post.getPostId()))
+        .isBookmarked(postBookmarkRepository.existsByUserUserIdAndPostPostId(user.getUserId(), post.getPostId()));
+  }
+
+  private PostResponse mapToPostResponse(Post post, User user) {
+    return getCommonPostBuilder(post, user)
         .build();
   }
 }

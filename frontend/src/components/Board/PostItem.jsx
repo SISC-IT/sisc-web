@@ -71,11 +71,7 @@ const PostItem = ({ post, onLike, onBookmark }) => {
   };
 
   return (
-    <div
-      className={styles.postItem}
-      onClick={handleCardClick}
-      style={{ cursor: 'pointer' }}
-    >
+    <div className={styles.postItem} onClick={handleCardClick}>
       <div className={styles.mainContent}>
         <div className={styles.leftSection}>
           <img src={ProfileIcon} className={styles.authorImage} alt="프로필" />

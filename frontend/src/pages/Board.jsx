@@ -444,6 +444,7 @@ const Board = () => {
             <PostItem
               key={post.postId || post.id}
               post={post}
+              currentTeam={team}
               onLike={handleLike}
               onBookmark={handleBookmark}
             />

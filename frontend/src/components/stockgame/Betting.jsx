@@ -1,47 +1,126 @@
 import styles from './Betting.module.css';
-// import icon1 from '../../assets/at_icon_1.png';
+import icon1 from '../../assets/at_icon_1.png';
 import StockInfoItem from './StockInfoItem';
 import { useState, useEffect } from 'react';
 import { dailyBet, weeklyBet } from '../../utils/bettingInfo';
+import {
+  getDailyBetHistory,
+  getWeeklyBetHistory,
+} from '../../utils/bettingHistory';
+import { api } from '../../utils/axios';
+import { toast } from 'react-toastify';
 
-const DailyBetting = ({ period }) => {
+const Betting = ({ period }) => {
   const [isBetting, setIsBetting] = useState('none');
-  // const data = period === 'daily' ? mockDailyBet : mockWeeklyBet;
-  // const data = period === 'daily' ? dailyBet() : weeklyBet();
   const [data, setData] = useState(null);
+  const [userBets, setUserBets] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
       if (period === 'daily') {
         const res = await dailyBet();
         setData(res);
+        const history = await getDailyBetHistory();
+        setUserBets(history && history.length > 0 ? history[0] : null);
       } else {
         const res = await weeklyBet();
         setData(res);
+        const history = await getWeeklyBetHistory();
+        setUserBets(history && history.length > 0 ? history[0] : null);
       }
     }
     fetchData();
   }, [period]);
 
-  const onClickUpBet = () => {
-    if (isBetting !== 'none') {
-      alert('이미 베팅하셨습니다.');
-    } else if (confirm('상승에 베팅하시겠습니까?')) {
-      setIsBetting('up');
-    }
-  };
-
-  const onClickDownBet = () => {
-    if (isBetting !== 'none') {
-      alert('이미 베팅하셨습니다.');
-    } else if (confirm('하락에 베팅하시겠습니까?')) {
-      setIsBetting('down');
-    }
-  };
-
-  const onClickCancelBet = () => {
-    if (confirm('베팅을 취소하시겠습니까?')) {
+  // userBets 또는 data가 바뀔 때 베팅 여부 체크
+  useEffect(() => {
+    if (!data || !userBets) {
       setIsBetting('none');
+      return;
+    }
+
+    if (
+      data.betRoundId === userBets.betRoundId &&
+      userBets.betStatus !== 'DELETED'
+    ) {
+      userBets.option === 'RISE' ? setIsBetting('up') : setIsBetting('down');
+    } else {
+      setIsBetting('none');
+    }
+  }, [data, userBets]);
+
+  const update = async () => {
+    const updatedData =
+      period === 'daily' ? await dailyBet() : await weeklyBet();
+    setData(updatedData);
+    const history =
+      period === 'daily'
+        ? await getDailyBetHistory()
+        : await getWeeklyBetHistory();
+    setUserBets(history && history.length > 0 ? history[0] : null);
+  };
+
+  const onClickUpBet = async () => {
+    if (isBetting !== 'none') {
+      toast.error('이미 베팅하셨습니다.');
+    } else if (confirm('상승에 베팅하시겠습니까?')) {
+      try {
+        const res = await api.post('/api/user-bets', {
+          roundId: data.betRoundId,
+          option: 'RISE',
+          stakePoints: 0,
+          isFree: true,
+        });
+        await update();
+        toast.success('베팅이 완료되었습니다.');
+        return res;
+      } catch (error) {
+        // 409 처리
+        if (error.status === 409) {
+          toast.error('베팅 가능 시간이 아닙니다.');
+          return;
+        }
+        toast.error('오류가 발생했습니다. 다시 시도해주세요.');
+        return null;
+      }
+    }
+  };
+
+  const onClickDownBet = async () => {
+    if (isBetting !== 'none') {
+      toast.error('이미 베팅하셨습니다.');
+    } else if (confirm('하락에 베팅하시겠습니까?')) {
+      try {
+        const res = await api.post('/api/user-bets', {
+          roundId: data.betRoundId,
+          option: 'FALL',
+          stakePoints: 0,
+          isFree: true,
+        });
+        await update();
+        toast.success('베팅이 완료되었습니다.');
+        return res;
+      } catch (error) {
+        // 409 처리
+        if (error.status === 409) {
+          toast.error('베팅 가능 시간이 아닙니다.');
+          return;
+        }
+        toast.error('오류가 발생했습니다. 다시 시도해주세요.');
+        return null;
+      }
+    }
+  };
+
+  const onClickCancelBet = async () => {
+    if (confirm('베팅을 취소하시겠습니까?')) {
+      try {
+        await api.delete(`/api/user-bets/${userBets.userBetId}`);
+        await update();
+        toast.success('베팅이 취소되었습니다.');
+      } catch {
+        toast.error('오류가 발생했습니다. 다시 시도해주세요.');
+      }
     }
   };
 
@@ -58,12 +137,12 @@ const DailyBetting = ({ period }) => {
         <div className={styles['bet-info']}>
           {/* 상승 베팅 */}
           <div className={styles['upper-bet']}>
-            {/* <div className={styles['bet-point']}>
+            <div className={styles['bet-point']}>
               <img src={icon1} className={styles['icon']} />
-              <span>+{data.upperBet}P</span>
+              <span>+{data.upTotalPoints}P</span>
             </div>
             <div className={styles['divider']} />
-            <span>{data.upBetCount}명</span> */}
+            <span>{data.upBetCount}명</span>
             <button
               className={`${styles['up-button']} ${isBetting === 'up' && styles.upActive}`}
               onClick={onClickUpBet}
@@ -74,12 +153,12 @@ const DailyBetting = ({ period }) => {
           </div>
           {/* 하락 베팅 */}
           <div className={styles['lower-bet']}>
-            {/* <div className={styles['bet-point']}>
+            <div className={styles['bet-point']}>
               <img src={icon1} className={styles['icon']} />
-              <span>-{data.lowerBet}P</span>
+              <span>-{data.downTotalPoints}P</span>
             </div>
             <div className={styles['divider']} />
-            <span>{data.downBetCount}명</span> */}
+            <span>{data.downBetCount}명</span>
             <button
               className={`${styles['down-button']} ${isBetting === 'down' && styles.downActive}`}
               onClick={onClickDownBet}
@@ -101,4 +180,4 @@ const DailyBetting = ({ period }) => {
   );
 };
 
-export default DailyBetting;
+export default Betting;

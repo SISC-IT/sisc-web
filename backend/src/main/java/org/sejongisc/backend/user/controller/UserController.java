@@ -14,12 +14,15 @@ import org.sejongisc.backend.auth.dto.SignupRequest;
 import org.sejongisc.backend.auth.dto.SignupResponse;
 import org.sejongisc.backend.user.dto.*;
 import org.sejongisc.backend.user.service.UserService;
+import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -327,5 +330,9 @@ public class UserController {
         userService.resetPasswordByToken(req.resetToken(), req.newPassword());
         return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다. 다시 로그인해 주세요."));
     }
+
+
+
+
 
 }

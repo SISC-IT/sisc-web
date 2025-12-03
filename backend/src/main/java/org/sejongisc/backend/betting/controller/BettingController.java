@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.betting.dto.BetRoundResponse;
 import org.sejongisc.backend.betting.dto.UserBetRequest;
 import org.sejongisc.backend.betting.entity.BetRound;
 import org.sejongisc.backend.betting.entity.Scope;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.sejongisc.backend.betting.dto.UserBetResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,11 +49,11 @@ public class BettingController {
             }
     )
     @GetMapping("/bet-rounds/{scope}")
-    public ResponseEntity<BetRound> getTodayBetRound(
+    public ResponseEntity<BetRoundResponse> getTodayBetRound(
             @Parameter(description = "라운드 범위 (Scope): DAILY 또는 WEEKLY", example = "DAILY")
             @PathVariable Scope scope
     ) {
-        Optional<BetRound> betRound = bettingService.getActiveRound(scope);
+        Optional<BetRoundResponse> betRound = bettingService.getActiveRoundResponse(scope);
 
         return betRound
                 .map(ResponseEntity::ok)
@@ -90,12 +92,12 @@ public class BettingController {
             }
     )
     @PostMapping("/user-bets")
-    public ResponseEntity<UserBet> postUserBet(
+    public ResponseEntity<UserBetResponse> postUserBet(
             @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UserBetRequest userBetRequest) {
 
-        UserBet userBet = bettingService.postUserBet(principal.getUserId(), userBetRequest);
+        UserBetResponse userBet = bettingService.postUserBet(principal.getUserId(), userBetRequest);
         return ResponseEntity.ok(userBet);
     }
 
@@ -134,11 +136,11 @@ public class BettingController {
             }
     )
     @GetMapping("/user-bets/history")
-    public ResponseEntity<List<UserBet>> getAllUserBets(
+    public ResponseEntity<List<UserBetResponse>> getAllUserBets(
             @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails principal) {
 
-        List<UserBet> userBets = bettingService.getAllMyBets(principal.getUserId());
+        List<UserBetResponse> userBets = bettingService.getAllMyBets(principal.getUserId());
         return ResponseEntity.ok(userBets);
     }
 }

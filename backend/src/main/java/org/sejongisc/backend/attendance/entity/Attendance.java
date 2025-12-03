@@ -2,10 +2,7 @@ package org.sejongisc.backend.attendance.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.sejongisc.backend.user.entity.User;
@@ -40,37 +37,62 @@ public class Attendance extends BasePostgresEntity {
     private AttendanceRound attendanceRound;
 
     @Enumerated(EnumType.STRING)
+    @lombok.Setter
     private AttendanceStatus attendanceStatus;
 
     @CreationTimestamp
     @Column(name = "checked_at")
+    @lombok.Setter
     private LocalDateTime checkedAt;
 
     @Column(name = "awarded_points")
+    @lombok.Setter
     private Integer awardedPoints;
 
     @Column(length = 500)
+    @lombok.Setter
     private String note;
 
     @Embedded
+    @lombok.Setter
     private Location checkInLocation;
 
     @Column(name = "device_info")
+    @lombok.Setter
     private String deviceInfo;
 
     @Column(name = "anonymous_user_name", length = 100)
+    @lombok.Setter
     private String anonymousUserName;
 
     // 지각 여부 계산 / 상태 업데이트
 
     /**
      * 지각 여부 판단
+     * - 라운드 기반: attendanceRound의 startTime 기준
+     * - 세션 기반: attendanceSession의 defaultStartTime 기준 (5분)
      */
     public boolean isLate() {
-        if (checkedAt == null || attendanceSession.getStartsAt() == null) {
+        if (checkedAt == null) {
             return false;
         }
-        return checkedAt.isAfter(attendanceSession.getStartsAt());
+
+        java.time.LocalTime checkTime = checkedAt.toLocalTime();
+        java.time.LocalTime lateThreshold;
+
+        // 라운드 기반 출석인 경우
+        if (attendanceRound != null) {
+            lateThreshold = attendanceRound.getStartTime().plusMinutes(5);
+        }
+        // 세션 기반 출석인 경우
+        else if (attendanceSession != null && attendanceSession.getDefaultStartTime() != null) {
+            lateThreshold = attendanceSession.getDefaultStartTime().plusMinutes(5);
+        }
+        else {
+            return false;
+        }
+
+        return checkTime.isAfter(lateThreshold);
     }
 
     /**

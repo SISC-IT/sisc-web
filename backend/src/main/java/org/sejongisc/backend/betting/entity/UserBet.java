@@ -52,18 +52,27 @@ public class UserBet extends BasePostgresEntity {
     @Column(nullable = false)
     private BetStatus betStatus;
 
-    private boolean isCollect;
+    private boolean isCorrect;
+
+    //[추가] 낙관적 락을 위한 버전 필드
+    @Version
+    private Long version;
 
     public void win(int reward) {
         this.payoutPoints = reward;
-        this.isCollect = true;
+        this.isCorrect = true;
         this.betStatus = BetStatus.CLOSED;
     }
 
     public void lose() {
         this.payoutPoints = 0;
-        this.isCollect = false;
+        this.isCorrect = false;
         this.betStatus = BetStatus.CLOSED;
+    }
+
+    // [추가] 취소 상태 변경 메서드
+    public void cancel() {
+        this.betStatus = BetStatus.DELETED;
     }
 
 }

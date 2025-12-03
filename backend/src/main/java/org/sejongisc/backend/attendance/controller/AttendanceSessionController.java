@@ -5,11 +5,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
-import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
-import org.sejongisc.backend.attendance.dto.SessionLocationUpdateRequest;
-import org.sejongisc.backend.attendance.entity.SessionStatus;
+import org.sejongisc.backend.attendance.dto.*;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
+import org.sejongisc.backend.attendance.service.SessionUserService;
+import org.sejongisc.backend.user.service.UserService;
+import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,7 +29,8 @@ import java.util.UUID;
 public class AttendanceSessionController {
 
     private final AttendanceSessionService attendanceSessionService;
-
+    private final SessionUserService sessionUserService;
+    private final UserService userService;
     /**
      * 출석 세션 생성 (관리자용)
      * - 6자리 랜덤 코드 자동 생성
@@ -49,7 +50,7 @@ public class AttendanceSessionController {
 
         AttendanceSessionResponse response = attendanceSessionService.createSession(request);
 
-        log.info("출석 세션 생성 완료: 세션ID={}, 코드={}", response.getAttendanceSessionId(), response.getCode());
+        log.info("출석 세션 생성 완료: 세션ID={}", response.getAttendanceSessionId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -245,5 +246,99 @@ public class AttendanceSessionController {
         log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 세션에 사용자 추가 (관리자용)
+     * - 사용자를 세션에 추가
+     * - 중복 참여 방지
+     * - 자동으로 이전 라운드들에 결석 처리
+     */
+    @Operation(
+            summary = "세션에 사용자 추가",
+            description = "사용자를 출석 세션에 추가합니다. (관리자 전용) " +
+                    "이미 참여 중인 사용자는 추가할 수 없으며, 추가 시 이전 라운드들은 자동으로 결석 처리됩니다."
+    )
+    @PostMapping("/{sessionId}/users")
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
+    public ResponseEntity<SessionUserResponse> addUserToSession(
+            @PathVariable UUID sessionId,
+            @Valid @RequestBody SessionUserRequest request) {
+        log.info("세션에 사용자 추가: 세션ID={}, 사용자ID={}", sessionId, request.getUserId());
+
+        SessionUserResponse response = sessionUserService.addUserToSession(sessionId, request.getUserId());
+
+        log.info("세션에 사용자 추가 완료: 세션ID={}, 사용자명={}", sessionId, response.getUserName());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 세션에서 사용자 제거 (관리자용)
+     * - 사용자를 세션에서 제거
+     * - 해당 사용자의 모든 출석 기록도 함께 삭제
+     */
+    @Operation(
+            summary = "세션에서 사용자 제거",
+            description = "사용자를 출석 세션에서 제거합니다. (관리자 전용) " +
+                    "⚠️ 주의: 해당 사용자의 해당 세션에서의 모든 출석 기록이 함께 삭제됩니다."
+    )
+    @DeleteMapping("/{sessionId}/users/{userId}")
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
+    public ResponseEntity<Void> removeUserFromSession(
+            @PathVariable UUID sessionId,
+            @PathVariable UUID userId) {
+        log.info("세션에서 사용자 제거: 세션ID={}, 사용자ID={}", sessionId, userId);
+
+        sessionUserService.removeUserFromSession(sessionId, userId);
+
+        log.info("세션에서 사용자 제거 완료: 세션ID={}, 사용자ID={}", sessionId, userId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 세션 참여자 조회
+     * - 세션에 참여 중인 모든 사용자 목록
+     * - 참여 순서대로 정렬
+     */
+    @Operation(
+            summary = "세션 참여자 조회",
+            description = "세션에 참여 중인 모든 사용자 목록을 조회합니다. " +
+                    "각 사용자의 ID, 이름, 참여 시간 등의 정보가 포함됩니다."
+    )
+    @GetMapping("/{sessionId}/users")
+    public ResponseEntity<List<SessionUserResponse>> getSessionUsers(@PathVariable UUID sessionId) {
+        log.info("세션 참여자 조회: 세션ID={}", sessionId);
+
+        List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId);
+
+        log.info("세션 참여자 조회 완료: 세션ID={}, 참여자 수={}", sessionId, users.size());
+
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/get-users")
+    @Operation(
+            summary = "유저 목록 반환",
+            description = """
+          ## 인증(JWT): **필요**
+          
+          ## 설명
+          - 모든 유저의 id와 이름을 반환 
+          
+          ## 요청 파라미터
+          - **요청 파라미터 없음**
+          
+          ## 반환값 
+          -     UUID userId
+                String name
+                String email
+          """
+    )
+    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT') or hasRole('TEAM_LEADER')")
+    public ResponseEntity<?> getUsers(){
+        List<UserIdNameProjection> userProjectionList = userService.getUserProjectionList();
+        return ResponseEntity.ok(userProjectionList);
     }
 }

@@ -47,6 +47,7 @@ public class BetRound extends BasePostgresEntity {
 
     @Column(nullable = false)
     @Schema(description = "라운드 진행 상태", defaultValue = "false")
+    @Builder.Default
     private boolean status = false; // Todo : Enum 클래스로 변경 고려
 
     @Schema(description = "베팅이 열리는 시각 (유저 참여 시작 시점)")
@@ -76,6 +77,24 @@ public class BetRound extends BasePostgresEntity {
     @Schema(description = "정산 종가 (결과 비교용)")
     private BigDecimal settleClosePrice;
 
+    // [추가] 상승(UP) 베팅 통계
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    private int upBetCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private long upTotalPoints = 0;
+
+    // [추가] 하락(DOWN) 베팅 통계
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    private int downBetCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private long downTotalPoints = 0;
+
     // 라운드가 현재 진행 중인지 여부 반환
     public boolean isOpen() {
         return this.status;
@@ -94,6 +113,17 @@ public class BetRound extends BasePostgresEntity {
     // 베팅 불가
     public void close() {
         this.status = false;
+    }
+
+    // [추가] 예상 배당률 조회 (예시: 전체 포인트 / 해당 옵션 포인트)
+    public BigDecimal getEstimatedRewardMultiplier(BetOption option) {
+        long totalPool = upTotalPoints + downTotalPoints;
+        long optionPool = (option == BetOption.RISE) ? upTotalPoints : downTotalPoints;
+
+        if (optionPool == 0) return BigDecimal.valueOf(1.0); // 기본 배율
+
+        // 공식: (전체 베팅 포인트 / 내 옵션 포인트) * 수수료 등 보정
+        return BigDecimal.valueOf((double) totalPool / optionPool);
     }
 
     // "베팅 가능한 상태인지 검증

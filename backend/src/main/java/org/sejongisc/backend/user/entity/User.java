@@ -1,5 +1,6 @@
 package org.sejongisc.backend.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,7 +43,7 @@ public class User extends BasePostgresEntity{
     @Column(nullable = false)
     private Role role;
 
-    @Column(columnDefinition = "integer default 0")
+    @Column(columnDefinition = "integer default 0",nullable = false)
     private Integer point;
 
     // 포인트 총량 업데이트를 위한 낙관적 락 버전 필드
@@ -52,6 +53,7 @@ public class User extends BasePostgresEntity{
     // User : OAuthAccounts = 1 : N(여러 OAuth를 연결 가능)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<UserOauthAccount> oauthAccounts = new ArrayList<>();
 
     // 기본값 지정

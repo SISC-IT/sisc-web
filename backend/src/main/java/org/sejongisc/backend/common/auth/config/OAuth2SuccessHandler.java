@@ -108,11 +108,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String domain = isProd ? "sisc-web.duckdns.org" : "localhost";
 
 
+
         // 6.  HttpOnly 쿠키로 refreshToken 저장
         ResponseCookie accessCookie = ResponseCookie.from("access", accessToken)
                 .httpOnly(true)
                 .secure(secure)    // 로컬=false, 배포=true
                 .sameSite(sameSite)  // 로컬= "Lax", 배포="None"
+                .domain(domain)
                 .path("/")
                 .maxAge(60L * 60)  // 1 hour
                 .build();
@@ -121,6 +123,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite(sameSite)
+                .domain(domain)
                 .path("/")
                 .maxAge(60L * 60 * 24 * 14) // 2 weeks
                 .build();

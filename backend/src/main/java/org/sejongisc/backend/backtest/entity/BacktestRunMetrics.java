@@ -5,9 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Entity
 @Getter
@@ -37,4 +38,26 @@ public class BacktestRunMetrics {
 
   @Column(nullable = false)
   private int tradesCount;              // 총 거래 횟수
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "asset_curve", columnDefinition = "jsonb")
+  private String assetCurveJson;
+
+  public static BacktestRunMetrics fromDto(BacktestRun backtestRun,
+                                           BigDecimal totalReturn,
+                                           BigDecimal maxDrawdown,
+                                           BigDecimal sharpeRatio,
+                                           BigDecimal avgHoldDays,
+                                           int tradesCount,
+                                           String assetCurveJson) {
+    return BacktestRunMetrics.builder()
+        .backtestRun(backtestRun)
+        .totalReturn(totalReturn)
+        .maxDrawdown(maxDrawdown)
+        .sharpeRatio(sharpeRatio)
+        .avgHoldDays(avgHoldDays)
+        .tradesCount(tradesCount)
+        .assetCurveJson(assetCurveJson)
+        .build();
+  }
 }

@@ -52,9 +52,17 @@ public enum ErrorCode {
 
   // EMAIL
   EMAIL_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "이메일 인증 코드를 찾을 수 없습니다"),
+
   EMAIL_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "인증 코드가 일치하지 않습니다."),
-  EMAIL_INVALID_EMAIL(HttpStatus.BAD_REQUEST, "유효하지 않은 이메일입니다"),
+
+  EMAIL_INVALID_EMAIL(HttpStatus.BAD_REQUEST, "유효하지 않은 이메일입니다."),
+
   EMAIL_ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "24시간 이내에 이미 인증된 이메일입니다."),
+
+  // QUANTBOT
+  EXECUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 퀀트봇 실행 내역이 존재하지 않습니다."),
+
+  XAI_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 XAI 리포트가 존재하지 않습니다."),
 
   // USER
 
@@ -73,10 +81,13 @@ public enum ErrorCode {
   BET_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 베팅을 찾을 수 없습니다."),
   BET_POINT_TOO_LOW(HttpStatus.CONFLICT, "베팅 포인트는 10 이상이어야 합니다."),
   BET_ROUND_NOT_CLOSED(HttpStatus.CONFLICT, "닫히지 않은 배팅입니다."),
+  BET_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 취소되었거나 처리된 베팅입니다."),
 
   // BOARD
 
   POST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 게시물을 찾을 수 없습니다."),
+
+  INVALID_BOARD_OWNER(HttpStatus.FORBIDDEN, "게시판 수정/삭제 권한이 없습니다."),
 
   INVALID_POST_OWNER(HttpStatus.FORBIDDEN, "게시물 수정/삭제 권한이 없습니다."),
 
@@ -91,6 +102,9 @@ public enum ErrorCode {
   BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 게시판을 찾을 수 없습니다."),
 
   INVALID_BOARD_TYPE(HttpStatus.BAD_REQUEST, "상위 게시판에는 글을 작성할 수 없습니다.");
+
+
+
 
   private final HttpStatus status;
   private final String message;

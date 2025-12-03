@@ -9,8 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.sejongisc.backend.board.entity.Board;
-import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.dto.UserInfoResponse;
 import org.springframework.data.domain.Page;
 
 @ToString
@@ -22,13 +21,15 @@ import org.springframework.data.domain.Page;
 public class PostResponse {
 
   private UUID postId;
-  private Board board;
-  private User user;
+  private BoardResponse board;
+  private UserInfoResponse user;
   private String title;
   private String content;
   private Integer bookmarkCount;
   private Integer likeCount;
   private Integer commentCount;
+  private Boolean isLiked;
+  private Boolean isBookmarked;
   private LocalDateTime createdDate;
   private LocalDateTime updatedDate;
   private Page<CommentResponse> comments;

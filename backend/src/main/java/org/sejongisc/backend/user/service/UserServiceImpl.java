@@ -6,6 +6,7 @@ import org.sejongisc.backend.auth.service.EmailService;
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
+import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -92,6 +93,7 @@ public class UserServiceImpl implements UserService {
                 .email(dto.getEmail())
                 .passwordHash(encodedPw)
                 .role(role)
+                .point(0)
                 .phoneNumber(dto.getPhoneNumber())
                 .build();
 
@@ -353,5 +355,10 @@ public class UserServiceImpl implements UserService {
 
                     return savedUser;
                 });
+    }
+
+    @Override
+    public List<UserIdNameProjection> getUserProjectionList() {
+        return userRepository.findAllUserIdAndName();
     }
 }
