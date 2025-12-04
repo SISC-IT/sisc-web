@@ -1,6 +1,16 @@
 import { useState, useMemo } from 'react';
 import styles from './BacktestResultsWithTemplates.module.css';
 import {
+  formatCurrency,
+  formatPercent,
+  formatNumber,
+  formatSharpe,
+  addDaysToDate,
+  formatDateYYYYMMDD,
+  formatTwoDecimal,
+  formatCurrencyTwoDecimal,
+} from '../../utils/backtestingFormat';
+import {
   LineChart,
   Line,
   ResponsiveContainer,
@@ -9,28 +19,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-function formatCurrency(value, currency) {
-  if (value == null) return '-';
-  // 필요하면 Intl.NumberFormat으로 바꿔도 됨
-  return `${value.toLocaleString()} ${currency || ''}`.trim();
-}
-
-function formatPercent(value) {
-  if (value == null) return '-';
-  return `${value.toFixed(2)}%`;
-}
-
-function formatNumber(value) {
-  if (value == null) return '-';
-  return value.toLocaleString();
-}
-
-function formatSharpe(value) {
-  if (value == null) return '-';
-  return value.toFixed(2);
-}
-
-function MetricCard({ label, value, sub }) {
+export function MetricCard({ label, value, sub }) {
   return (
     <div className={styles.metricCard}>
       <div className={styles.metricLabel}>{label}</div>
@@ -119,6 +108,7 @@ export default function BacktestResultsWithTemplates(props) {
     onClickSaveTemplate,
     onClickEditTemplate,
     onClickDeleteTemplate,
+    startDate,
   } = props;
 
   const [yMode, setYMode] = useState('multiple');
@@ -144,13 +134,17 @@ export default function BacktestResultsWithTemplates(props) {
         const day = idx + 1;
         const sc = Number(startCapital);
         const multiple = Number.isFinite(sc) && sc !== 0 ? equity / sc : null;
-        return { day, equity, multiple };
+
+        const dateObj =
+          typeof startDate === 'string' ? addDaysToDate(startDate, idx) : null;
+        const dateLabel = dateObj ? formatDateYYYYMMDD(dateObj) : null;
+        return { day, equity, multiple, date: dateLabel };
       });
     } catch (e) {
       console.error('Failed to parse assetCurveJson', e);
       return [];
     }
-  }, [assetCurveJson, startCapital]);
+  }, [assetCurveJson, startCapital, startDate]);
 
   return (
     <div className={styles.wrapper}>
@@ -240,7 +234,7 @@ export default function BacktestResultsWithTemplates(props) {
                     domain={['auto', 'auto']}
                   />
                   <Tooltip
-                    formatter={(value, props) => {
+                    formatter={(value, name, props) => {
                       const payload = props?.payload;
                       if (!payload) return value;
 
@@ -248,27 +242,42 @@ export default function BacktestResultsWithTemplates(props) {
                       const multiple = payload.multiple;
 
                       if (yMode === 'multiple') {
-                        const multipleLabel = `${Number(multiple).toFixed(2)}x`;
+                        const m = multiple ?? value;
+                        const multipleLabel =
+                          m != null ? `${formatTwoDecimal(m)}x` : '';
                         const equityLabel =
                           equity != null
-                            ? `${equity.toLocaleString()} ${baseCurrency}`
+                            ? formatCurrencyTwoDecimal(equity, baseCurrency)
                             : '';
-                        return [`${multipleLabel} (${equityLabel})`, '자산'];
+                        return [
+                          `${multipleLabel}${equityLabel ? ` (${equityLabel})` : ''}`,
+                          '자산',
+                        ];
                       }
 
+                      const e = equity ?? value;
                       const equityLabel =
-                        equity != null
-                          ? `${equity.toLocaleString()} ${baseCurrency}`
+                        e != null
+                          ? formatCurrencyTwoDecimal(e, baseCurrency)
                           : '';
                       const multipleLabel =
-                        multiple != null ? `${multiple.toFixed(2)}x` : '';
+                        multiple != null
+                          ? `${formatTwoDecimal(multiple)}x`
+                          : '';
+
                       return [
                         `${equityLabel}${multipleLabel ? ` (${multipleLabel})` : ''}`,
                         '자산',
                       ];
                     }}
-                    labelFormatter={(label) => `${label}일차`}
+                    labelFormatter={(label, payload) => {
+                      const first = payload && payload[0] && payload[0].payload;
+                      const dateLabel = first?.date;
+                      if (dateLabel) return dateLabel;
+                      return `${label}일차`;
+                    }}
                   />
+
                   <Line
                     type="monotone"
                     dataKey={yMode === 'multiple' ? 'multiple' : 'equity'}

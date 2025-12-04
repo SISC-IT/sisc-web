@@ -73,6 +73,8 @@ export function mapBacktestApiToResultProps(apiResponse) {
   return {
     title,
     rangeLabel,
+    startDate: run.startDate,
+    endDate: run.endDate,
     baseCurrency,
     startCapital,
     metrics,
