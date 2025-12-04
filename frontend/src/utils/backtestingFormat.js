@@ -50,3 +50,37 @@ export function formatCurrencyTwoDecimal(value, currency) {
     maximumFractionDigits: 2,
   })} ${currency || ''}`.trim();
 }
+
+// CSV 다운로드 헬퍼
+export function downloadEquityCsv(filename, data) {
+  if (!data || data.length === 0) return;
+
+  const header = 'day,date,equity,multiple\n';
+  const rows = data
+    .map((p) => {
+      const day = p.day ?? '';
+      const date = p.date ?? '';
+      const equity =
+        p.equity != null && Number.isFinite(Number(p.equity))
+          ? Number(p.equity)
+          : '';
+      const multiple =
+        p.multiple != null && Number.isFinite(Number(p.multiple))
+          ? Number(p.multiple)
+          : '';
+      return [day, date, equity, multiple].join(',');
+    })
+    .join('\n');
+
+  const blob = new Blob([header + rows], {
+    type: 'text/csv;charset=utf-8;',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
