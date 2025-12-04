@@ -66,8 +66,22 @@
   margin: 0;
 }
 
+.countSection {
+  background-color: #000000;
+  padding-left: 50px;
+  padding-top: 30px;
+}
+
+.count {
+  font-style: SemiBold;
+  font-size: 20px;
+  line-height: 150%;
+  letter-spacing: 0%;
+  color: #7e7e7e;
+}
+
 .reportSection {
-  padding: 50px;
+  padding: 30px 50px;
   background-color: #000000;
   flex: 1;
   display: grid;

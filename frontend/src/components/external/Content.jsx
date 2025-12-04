@@ -12,30 +12,41 @@ const Content = () => {
     if (current < pages.length - 2) setCurrent(current + 2);
   };
   return (
-    <div className={styles.container}>
-      {/* 좌측 화살표 */}
-      <button
-        className={styles.arrowBtn}
-        onClick={goPrev}
-        disabled={current === 0}
-      >
-        <span className={styles.leftArrowIcon}></span>
-      </button>
-
-      {/* 이미지 페이지 */}
-      <div className={styles.pageSection}>
-        <img src={pages[current]} className={styles.page} alt="report" />
-        <img src={pages[current + 1]} className={styles.page} alt="report" />
+    <div className={styles.content}>
+      <div className={styles.progressWrapper}>
+        <div
+          className={styles.progressBar}
+          style={{
+            width: `${((current + 2) / pages.length) * 100}%`,
+          }}
+        />
       </div>
 
-      {/* 우측 화살표 */}
-      <button
-        className={styles.arrowBtn}
-        onClick={goNext}
-        disabled={current === pages.length - 1}
-      >
-        <span className={styles.rightArrowIcon}></span>
-      </button>
+      <div className={styles.container}>
+        {/* 좌측 화살표 */}
+        <button
+          className={styles.arrowBtn}
+          onClick={goPrev}
+          disabled={current === 0}
+        >
+          <span className={styles.leftArrowIcon}></span>
+        </button>
+
+        {/* 이미지 페이지 */}
+        <div className={styles.pageSection}>
+          <img src={pages[current]} className={styles.page} alt="report" />
+          <img src={pages[current + 1]} className={styles.page} alt="report" />
+        </div>
+
+        {/* 우측 화살표 */}
+        <button
+          className={styles.arrowBtn}
+          onClick={goNext}
+          disabled={current === pages.length - 1}
+        >
+          <span className={styles.rightArrowIcon}></span>
+        </button>
+      </div>
     </div>
   );
 };
