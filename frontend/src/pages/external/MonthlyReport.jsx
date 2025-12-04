@@ -19,6 +19,11 @@ const MonthlyReport = () => {
           지난 한 달의 활동과 자료들을 아카이브 형식으로 정리했어요.
         </h2>
       </div>
+      <div className={styles.countSection}>
+        <span className={styles.count}>
+          <strong style={{ color: '#339FFF' }}>4개</strong>의 게시물
+        </span>
+      </div>
       <div className={styles.reportSection}>
         <Report />
         <Report />
