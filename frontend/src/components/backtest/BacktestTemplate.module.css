@@ -1,0 +1,94 @@
+/* ---------- Templates ---------- */
+
+.emptyTemplateBox {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: #f3f4f6;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.templateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.templateItem {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.templateMain {
+  flex: 1;
+  text-align: left;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.templateMain:hover {
+  background-color: #eef2ff;
+  border-color: #4f46e5;
+}
+
+.templateName {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.templateUpdatedAt {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.templateActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.templateActionBtn,
+.templateActionBtnDanger {
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.75rem;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.templateActionBtn {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.templateActionBtn:hover {
+  background-color: #d1d5db;
+}
+
+.templateActionBtnDanger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.templateActionBtnDanger:hover {
+  background-color: #fecaca;
+}
+
+@media (max-width: 640px) {
+  .templateActions {
+    flex-direction: row;
+  }
+}
