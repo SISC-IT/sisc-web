@@ -1,0 +1,42 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-around;
+}
+
+.arrowBtn {
+  width: 41px;
+  height: 41px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* 화살표 */
+.leftArrowIcon {
+  width: 10px;
+  height: 10px;
+  border-left: 3px solid #3b82f6;
+  border-bottom: 3px solid #3b82f6;
+  transform: rotate(45deg);
+  margin-left: 4px; /* 가운데 보정 */
+}
+.rightArrowIcon {
+  width: 10px;
+  height: 10px;
+  border-left: 3px solid #3b82f6;
+  border-bottom: 3px solid #3b82f6;
+  transform: rotate(-135deg);
+  margin-right: 4px; /* 가운데 보정 */
+}
+
+.page {
+  height: 700px;
+}

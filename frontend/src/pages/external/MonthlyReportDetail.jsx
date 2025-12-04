@@ -1,6 +1,7 @@
 import styles from './MonthlyReportDetail.module.css';
 import logo from '../../assets/logo.png';
 import { useNavigate } from 'react-router-dom';
+import Content from '../../components/external/Content';
 
 const MonthlyReportDetail = () => {
   const nav = useNavigate();
@@ -13,7 +14,9 @@ const MonthlyReportDetail = () => {
         <img src={logo} alt="로고" className={styles.logo} />
         <span className={styles.title}>월간 세투연</span>
       </header>
-      <div className={styles.content}></div>
+      <div className={styles.content}>
+        <Content />
+      </div>
     </div>
   );
 };
