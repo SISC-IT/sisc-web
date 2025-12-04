@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import styles from './BacktestRunResults.module.css';
-import TemplateList from './BacktestTemplate';
+import BacktestTemplate from './BacktestTemplate';
 import {
   formatCurrency,
   formatPercent,
@@ -10,6 +10,7 @@ import {
   formatDateYYYYMMDD,
   formatTwoDecimal,
   formatCurrencyTwoDecimal,
+  downloadEquityCsv,
 } from '../../utils/backtestingFormat';
 import {
   LineChart,
@@ -46,6 +47,7 @@ const BacktestRunResults = (props) => {
   } = props;
 
   const [yMode, setYMode] = useState('multiple');
+  const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
 
   const {
     totalReturn,
@@ -80,6 +82,11 @@ const BacktestRunResults = (props) => {
     }
   }, [assetCurveJson, startCapital, startDate]);
 
+  const handleDownloadCsv = () => {
+    const safeTitle = (title || 'backtest-result').replace(/\s+/g, '-');
+    downloadEquityCsv(`${safeTitle}-equity.csv`, equitySeries);
+  };
+
   return (
     <div className={styles.wrapper}>
       <header className={styles.header}>
@@ -89,159 +96,163 @@ const BacktestRunResults = (props) => {
             <p className={styles.rangeLabel}>{rangeLabel} • 기준통화 USD</p>
           )}
         </div>
+
+        {/* 우측 액션 버튼 영역 */}
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={handleDownloadCsv}
+          >
+            CSV 내보내기
+          </button>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => setTemplateModalOpen(true)}
+          >
+            템플릿에 저장 / 불러오기
+          </button>
+        </div>
       </header>
 
       <main className={styles.main}>
-        <section className={styles.leftColumn}>
-          {/* 지표 카드 */}
-          <div className={styles.metricsGrid}>
-            <MetricCard
-              label="누적 수익률"
-              value={formatPercent(totalReturn)}
-              sub="Total Return"
-            />
-            <MetricCard
-              label="최대 낙폭"
-              value={formatPercent(maxDrawdown)}
-              sub="Max Drawdown"
-            />
-            <MetricCard
-              label="샤프 지수"
-              value={formatSharpe(sharpeRatio)}
-              sub="Sharpe Ratio"
-            />
-            <MetricCard
-              label="평균 보유일수"
-              value={avgHoldDays != null ? `${avgHoldDays.toFixed(1)} 일` : '-'}
-              sub="Average Hold Days"
-            />
-            <MetricCard
-              label="거래 횟수"
-              value={formatNumber(tradesCount)}
-              sub="Trades Count"
-            />
-            <MetricCard
-              label="초기 자본"
-              value={formatCurrency(startCapital, baseCurrency)}
-              sub="Initial Capital"
-            />
-          </div>
+        {/* 지표 카드 */}
+        <div className={styles.metricsGrid}>
+          <MetricCard
+            label="누적 수익률"
+            value={formatPercent(totalReturn)}
+            sub="Total Return"
+          />
+          <MetricCard
+            label="최대 낙폭"
+            value={formatPercent(maxDrawdown)}
+            sub="Max Drawdown"
+          />
+          <MetricCard
+            label="샤프 지수"
+            value={formatSharpe(sharpeRatio)}
+            sub="Sharpe Ratio"
+          />
+          <MetricCard
+            label="평균 보유일수"
+            value={avgHoldDays != null ? `${avgHoldDays.toFixed(1)} 일` : '-'}
+            sub="Average Hold Days"
+          />
+          <MetricCard
+            label="거래 횟수"
+            value={formatNumber(tradesCount)}
+            sub="Trades Count"
+          />
+          <MetricCard
+            label="초기 자본"
+            value={formatCurrency(startCapital, baseCurrency)}
+            sub="Initial Capital"
+          />
+        </div>
 
-          {/* 자산 곡선 차트 */}
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div>
-                <div className={styles.cardTitle}>자산 곡선</div>
-                <div className={styles.cardSubTitle}>
-                  {assetCurveJson
-                    ? '실제 결과'
-                    : '자산 곡선 데이터가 없습니다.'}
-                </div>
-              </div>
-
-              <div>
-                <select
-                  value={yMode}
-                  onChange={(e) => setYMode(e.target.value)}
-                  className={styles.yModeSelect}
-                >
-                  <option value="multiple">배율 (초기 자본 대비)</option>
-                  <option value="equity">자산 값 ({baseCurrency})</option>
-                </select>
+        {/* 자산 곡선 차트 */}
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>자산 곡선</div>
+              <div className={styles.cardSubTitle}>
+                {assetCurveJson ? '실제 결과' : '자산 곡선 데이터가 없습니다.'}
               </div>
             </div>
-            <div className={styles.chartContainer}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={equitySeries}>
-                  <XAxis dataKey="day" tickFormatter={(v) => `${v}일`} />
-                  <YAxis
-                    dataKey={yMode === 'multiple' ? 'multiple' : 'equity'}
-                    tickFormatter={(v) => {
-                      if (v == null) return '';
-                      if (yMode === 'multiple') {
-                        return `${v.toFixed(2)}x`;
-                      }
-                      return `${v.toLocaleString()} ${baseCurrency}`;
-                    }}
-                    domain={['auto', 'auto']}
-                  />
-                  <Tooltip
-                    formatter={(value, name, props) => {
-                      const payload = props?.payload;
-                      if (!payload) return value;
 
-                      const equity = payload.equity;
-                      const multiple = payload.multiple;
+            <div>
+              <select
+                value={yMode}
+                onChange={(e) => setYMode(e.target.value)}
+                className={styles.yModeSelect}
+              >
+                <option value="multiple">배율 (초기 자본 대비)</option>
+                <option value="equity">자산 값 ({baseCurrency})</option>
+              </select>
+            </div>
+          </div>
+          <div className={styles.chartContainer}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={equitySeries}>
+                <XAxis dataKey="day" tickFormatter={(v) => `${v}일`} />
+                <YAxis
+                  dataKey={yMode === 'multiple' ? 'multiple' : 'equity'}
+                  tickFormatter={(v) => {
+                    if (v == null) return '';
+                    if (yMode === 'multiple') {
+                      return `${v.toFixed(2)}x`;
+                    }
+                    return `${v.toLocaleString()} ${baseCurrency}`;
+                  }}
+                  domain={['auto', 'auto']}
+                />
+                <Tooltip
+                  formatter={(value, name, props) => {
+                    const payload = props?.payload;
+                    if (!payload) return value;
 
-                      if (yMode === 'multiple') {
-                        const m = multiple ?? value;
-                        const multipleLabel =
-                          m != null ? `${formatTwoDecimal(m)}x` : '';
-                        const equityLabel =
-                          equity != null
-                            ? formatCurrencyTwoDecimal(equity, baseCurrency)
-                            : '';
-                        return [
-                          `${multipleLabel}${equityLabel ? ` (${equityLabel})` : ''}`,
-                          '자산',
-                        ];
-                      }
+                    const equity = payload.equity;
+                    const multiple = payload.multiple;
 
-                      const e = equity ?? value;
-                      const equityLabel =
-                        e != null
-                          ? formatCurrencyTwoDecimal(e, baseCurrency)
-                          : '';
+                    if (yMode === 'multiple') {
+                      const m = multiple ?? value;
                       const multipleLabel =
-                        multiple != null
-                          ? `${formatTwoDecimal(multiple)}x`
+                        m != null ? `${formatTwoDecimal(m)}x` : '';
+                      const equityLabel =
+                        equity != null
+                          ? formatCurrencyTwoDecimal(equity, baseCurrency)
                           : '';
-
                       return [
-                        `${equityLabel}${multipleLabel ? ` (${multipleLabel})` : ''}`,
+                        `${multipleLabel}${equityLabel ? ` (${equityLabel})` : ''}`,
                         '자산',
                       ];
-                    }}
-                    labelFormatter={(label, payload) => {
-                      const first = payload && payload[0] && payload[0].payload;
-                      const dateLabel = first?.date;
-                      if (dateLabel) return dateLabel;
-                      return `${label}일차`;
-                    }}
-                  />
+                    }
 
-                  <Line
-                    type="monotone"
-                    dataKey={yMode === 'multiple' ? 'multiple' : 'equity'}
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+                    const e = equity ?? value;
+                    const equityLabel =
+                      e != null
+                        ? formatCurrencyTwoDecimal(e, baseCurrency)
+                        : '';
+                    const multipleLabel =
+                      multiple != null ? `${formatTwoDecimal(multiple)}x` : '';
+
+                    return [
+                      `${equityLabel}${multipleLabel ? ` (${multipleLabel})` : ''}`,
+                      '자산',
+                    ];
+                  }}
+                  labelFormatter={(label, payload) => {
+                    const first = payload && payload[0] && payload[0].payload;
+                    const dateLabel = first?.date;
+                    if (dateLabel) return dateLabel;
+                    return `${label}일차`;
+                  }}
+                />
+
+                <Line
+                  type="monotone"
+                  dataKey={yMode === 'multiple' ? 'multiple' : 'equity'}
+                  dot={false}
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        </section>
-
-        {/* 우측: 템플릿 리스트 */}
-        <aside className={styles.rightColumn}>
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div className={styles.cardTitle}>템플릿</div>
-              <div className={styles.cardSubTitle}>
-                전략을 저장하고 다시 실행할 수 있습니다.
-              </div>
-            </div>
-
-            <TemplateList
-              templates={templates}
-              onClickTemplate={onClickTemplate}
-              onClickSaveTemplate={onClickSaveTemplate}
-              onClickEditTemplate={onClickEditTemplate}
-              onClickDeleteTemplate={onClickDeleteTemplate}
-            />
-          </div>
-        </aside>
+        </div>
       </main>
+
+      {/* 템플릿 모달 */}
+      {isTemplateModalOpen && (
+        <BacktestTemplate
+          setTemplateModalOpen={setTemplateModalOpen}
+          templates={templates}
+          onClickTemplate={onClickTemplate}
+          onClickSaveTemplate={onClickSaveTemplate}
+          onClickEditTemplate={onClickEditTemplate}
+          onClickDeleteTemplate={onClickDeleteTemplate}
+        />
+      )}
     </div>
   );
 };
