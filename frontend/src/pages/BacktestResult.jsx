@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './BacktestResult.module.css';
 import { useState } from 'react';
-import BacktestResultsWithTemplates from '../components/backtest/BacktestResultsWithTemplates';
+import BacktestRunResults from '../components/backtest/BacktestRunResults';
 import { mapBacktestApiToResultProps } from '../utils/mapBacktestApiToResultProps';
 import { api } from '../utils/axios';
 import { toast } from 'react-toastify';
@@ -93,8 +93,7 @@ const BacktestResult = () => {
         </button>
       </div>
 
-      {/* 실제 결과 UI */}
-      <BacktestResultsWithTemplates {...mappedProps} />
+      <BacktestRunResults {...mappedProps} />
     </div>
   );
 };
