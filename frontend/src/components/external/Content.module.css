@@ -38,5 +38,20 @@
 }
 
 .page {
-  height: 700px;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 3 / 4; /* 이미지 비율 */
+  height: auto;
+}
+
+@media (max-width: 1200px) {
+  .page {
+    max-width: 420px;
+  }
+}
+
+@media (max-width: 950px) {
+  .page {
+    max-width: 300px;
+  }
 }
