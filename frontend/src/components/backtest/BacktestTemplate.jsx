@@ -9,13 +9,7 @@ const BacktestTemplate = ({
   onClickEditTemplate,
   onClickDeleteTemplate,
 }) => {
-  if (!templates || templates.length === 0) {
-    return (
-      <div className={styles.emptyTemplateBox}>
-        아직 저장된 템플릿이 없습니다.
-      </div>
-    );
-  }
+  const handleClose = () => setTemplateModalOpen(false);
 
   return (
     <div className={styles.modalOverlay} onClick={handleClose}>
@@ -30,16 +24,12 @@ const BacktestTemplate = ({
 
           <button
             type="button"
-            className={styles.templateMain}
-            onClick={() => onClickTemplate && onClickTemplate(tpl)}
+            className={styles.modalCloseBtn}
+            onClick={handleClose}
           >
-            <div className={styles.templateName}>{tpl.name}</div>
-            {tpl.updatedAt ? (
-              <div className={styles.templateUpdatedAt}>
-                최근 수정: {tpl.updatedAt}
-              </div>
-            ) : null}
+            ×
           </button>
+        </div>
 
         <div className={styles.modalBody}>
           <TemplateList
