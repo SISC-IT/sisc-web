@@ -42,7 +42,7 @@ const Content = () => {
         <button
           className={styles.arrowBtn}
           onClick={goNext}
-          disabled={current === pages.length - 1}
+          disabled={current >= pages.length - 2}
         >
           <span className={styles.rightArrowIcon}></span>
         </button>
