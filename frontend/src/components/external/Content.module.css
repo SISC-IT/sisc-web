@@ -49,6 +49,7 @@
   transform: rotate(45deg);
   margin-left: 4px; /* 가운데 보정 */
 }
+
 .rightArrowIcon {
   width: 10px;
   height: 10px;
@@ -56,6 +57,11 @@
   border-bottom: 3px solid #3b82f6;
   transform: rotate(-135deg);
   margin-right: 4px; /* 가운데 보정 */
+}
+
+.arrowBtn:disabled {
+  cursor: default;
+  opacity: 0.4;
 }
 
 .page {
