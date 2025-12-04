@@ -3,6 +3,7 @@
   flex-direction: column;
   width: 100vw;
   height: 100vh;
+  gap: 40px;
 }
 
 .header {
@@ -26,4 +27,8 @@
   line-height: 100%;
   letter-spacing: -0.04em;
   color: #ffffff;
+}
+
+.content {
+  flex: 1;
 }
