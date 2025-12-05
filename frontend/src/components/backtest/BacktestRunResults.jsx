@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import styles from './BacktestRunResults.module.css';
-import BacktestTemplateModal from './BacktestTemplateModalModal';
+import BacktestTemplateModal from './BacktestTemplateModal';
 import {
   formatCurrency,
   formatPercent,
