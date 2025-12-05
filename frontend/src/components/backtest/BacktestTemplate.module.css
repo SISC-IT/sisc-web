@@ -1,30 +1,33 @@
 .modalOverlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 264px;
+  right: 0;
+  bottom: 0;
   background-color: rgba(15, 23, 42, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 40;
+  z-index: 200;
 }
 
 .modal {
   background-color: #ffffff;
   border-radius: 0.75rem;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
-  width: 480px;
-  max-width: 90vw;
+  width: 60%;
+  max-width: 70%;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  padding: 1rem;
 }
 
 .modalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.9rem 1.2rem;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 0.9rem 0.6rem;
 }
 
 .modalHeaderLeft {
@@ -55,15 +58,22 @@
 }
 
 .modalBody {
-  padding: 1rem 1.2rem;
+  padding: 0.9rem 0.6rem;
   overflow-y: auto;
 }
 
+.modalBodyGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
 .modalFooter {
-  padding: 0.8rem 1.2rem;
+  padding: 0.9rem 0.6rem;
   border-top: 1px solid #e5e7eb;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .closeButton {
