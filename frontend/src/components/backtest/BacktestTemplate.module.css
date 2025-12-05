@@ -68,9 +68,73 @@
   gap: 1rem;
 }
 
+.newTemplateSection,
+.templateListSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.newTemplateForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.textInput {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid #d1d5db;
+  font-size: 0.9rem;
+}
+
+.primaryButton {
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.4rem;
+  border: none;
+  background-color: #4f46e5;
+  color: #ffffff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondaryButton {
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.4rem;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #111827;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .modalFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 0.9rem 0.6rem;
   border-top: 1px solid #e5e7eb;
+  gap: 0.75rem;
+}
+
+.footerDescription {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.footerActions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -91,6 +155,17 @@
     color 0.15s ease,
     border-color 0.15s ease,
     transform 0.05s ease;
+}
+
+.templateListHeader {
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.templateListScroll {
+  margin-top: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .closeButton:hover {
