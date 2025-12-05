@@ -247,10 +247,27 @@ const BacktestRunResults = (props) => {
         <BacktestTemplate
           setTemplateModalOpen={setTemplateModalOpen}
           templates={templates}
-          onClickTemplate={onClickTemplate}
-          onClickSaveTemplate={onClickSaveTemplate}
-          onClickEditTemplate={onClickEditTemplate}
-          onClickDeleteTemplate={onClickDeleteTemplate}
+          onCreateTemplate={(name) => {
+            onClickTemplate;
+            // TODO: POST /templates ... 후 templates 다시 로드
+            name;
+          }}
+          onRenameTemplate={(id, newName) => {
+            onClickEditTemplate(
+              // TODO: PUT/PATCH /templates/{id}
+              id,
+              newName
+            );
+          }}
+          onDeleteTemplate={(id) => {
+            onClickDeleteTemplate; // TODO: DELETE /templates/{id}
+            id;
+          }}
+          onSaveToTemplate={(id) => {
+            onClickSaveTemplate;
+            // TODO: 현재 backtest 결과를 해당 템플릿에 저장하는 API 호출
+            id;
+          }}
         />
       )}
     </div>

@@ -141,7 +141,7 @@
 
 .cardHeader {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
   gap: 0.5rem;
   justify-content: space-between;
