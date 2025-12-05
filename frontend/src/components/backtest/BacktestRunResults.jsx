@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import styles from './BacktestRunResults.module.css';
-import BacktestTemplate from './BacktestTemplate';
+import BacktestTemplateModal from './BacktestTemplateModalModal';
 import {
   formatCurrency,
   formatPercent,
@@ -244,7 +244,7 @@ const BacktestRunResults = (props) => {
 
       {/* 템플릿 모달 */}
       {isTemplateModalOpen && (
-        <BacktestTemplate
+        <BacktestTemplateModal
           setTemplateModalOpen={setTemplateModalOpen}
           templates={templates}
           onCreateTemplate={(name) => {

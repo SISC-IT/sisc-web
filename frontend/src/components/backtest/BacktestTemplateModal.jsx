@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import styles from './BacktestTemplate.module.css';
+import styles from './BacktestTemplateModal.module.css';
 import TemplateList from './TemplateList';
 
-const BacktestTemplate = ({
+const BacktestTemplateModal = ({
   setTemplateModalOpen,
   templates = [],
   // API 연결 시 사용할 콜백들
@@ -131,4 +131,4 @@ const BacktestTemplate = ({
   );
 };
 
-export default BacktestTemplate;
+export default BacktestTemplateModal;
