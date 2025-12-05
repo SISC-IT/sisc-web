@@ -87,6 +87,37 @@
   background-color: #fecaca;
 }
 
+.templateItemSelected {
+  border-left: 3px solid #4f46e5;
+  background-color: #eef2ff;
+}
+
+.templateText {
+  text-align: left;
+}
+
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.editInput {
+  flex: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.35rem;
+  border: 1px solid #d1d5db;
+  font-size: 0.85rem;
+}
+
+.iconButton {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.2rem;
+}
+
 @media (max-width: 640px) {
   .templateActions {
     flex-direction: row;
