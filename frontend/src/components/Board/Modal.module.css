@@ -34,7 +34,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden; /* ✨ auto → hidden으로 변경 (모서리 유지) */
+  overflow: hidden;
 }
 
 .header {
@@ -43,7 +43,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-md);
-  flex-shrink: 0; /* ✨ 헤더 고정 */
+  flex-shrink: 0;
 }
 
 .title {
@@ -70,14 +70,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  flex: 1; /* ✨ 0 1 auto → 1로 변경 (남은 공간 차지) */
+  flex: 1;
   margin-bottom: var(--spacing-sm);
-  overflow-y: auto; /* ✨ 스크롤 추가 */
+  overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 8px; /* ✨ 스크롤바 공간 */
+  padding-right: 8px;
 }
 
-/* ✨ 스크롤바 스타일 추가 */
 .form::-webkit-scrollbar {
   width: 6px;
 }
@@ -168,7 +167,6 @@
   flex-shrink: 0;
 }
 
-/* 파일 목록 */
 .fileList {
   margin-top: 12px;
 }
@@ -187,7 +185,7 @@
   font-size: 14px;
   color: #333;
   flex: 1;
-  word-break: break-all; /* ✨ 긴 파일명 줄바꿈 */
+  word-break: break-all;
 }
 
 .removeFileButton {
@@ -198,7 +196,7 @@
   cursor: pointer;
   padding: 0 8px;
   transition: color 0.2s;
-  flex-shrink: 0; /* ✨ 버튼 크기 고정 */
+  flex-shrink: 0;
 }
 
 .removeFileButton:hover {
@@ -319,7 +317,7 @@
   background: rgba(29, 128, 244, 1);
   color: rgba(255, 255, 255, 1);
   align-self: flex-end;
-  flex-shrink: 0; /* ✨ 버튼 고정 */
+  flex-shrink: 0;
   transition: all 0.2s;
 }
 
