@@ -1,6 +1,7 @@
 package org.sejongisc.backend.template.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
@@ -23,6 +24,7 @@ public class Template extends BasePostgresEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id", nullable = false)
+  @JsonIgnore   // TODO : 추후 isPublic 필드에 따른 직렬화 제어 필요
   private User user;
 
   private String title;           // 템플릿 제목

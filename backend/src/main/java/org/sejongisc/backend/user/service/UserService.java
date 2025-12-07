@@ -5,7 +5,9 @@ import org.sejongisc.backend.auth.dto.SignupResponse;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.auth.oauth.OauthUserInfo;
+import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,4 +32,5 @@ public interface UserService {
 
     User upsertOAuthUser(String provider, String providerId, String email, String name);
 
+    List<UserIdNameProjection> getUserProjectionList();
 }

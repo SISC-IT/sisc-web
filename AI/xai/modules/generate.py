@@ -1,3 +1,4 @@
+# AI/xai/modules/generate.py
 from typing import List, Dict, Any
 from .prompt import build_short_prompt
 from .groq_client import ask_groq

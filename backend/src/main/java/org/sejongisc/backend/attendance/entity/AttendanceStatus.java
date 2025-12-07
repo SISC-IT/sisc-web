@@ -1,6 +1,7 @@
 package org.sejongisc.backend.attendance.entity;
 
 public enum AttendanceStatus {
+    PENDING("미정"),         // 라운드 예정 중 - 아직 체크인 안 됨
     PRESENT("출석"),         // 정상 출석
     LATE("지각"),             // 지각 출석
     ABSENT("결석"),           // 미출석

@@ -64,7 +64,7 @@ public class StockDataSourceConfig {
         jpaProps.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         jpaProps.put("hibernate.default_schema", "public");
         // ddl-auto는 yml로 관리 권장
-        // jpaProps.put("hibernate.hbm2ddl.auto", "none");
+        jpaProps.put("hibernate.hbm2ddl.auto", "none");
 
         return builder
                 .dataSource(dataSource)

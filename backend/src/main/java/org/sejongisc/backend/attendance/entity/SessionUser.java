@@ -1,10 +1,8 @@
 package org.sejongisc.backend.attendance.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.sejongisc.backend.user.entity.User;
 
@@ -43,6 +41,7 @@ public class SessionUser extends BasePostgresEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
+    @JsonBackReference
     private AttendanceSession attendanceSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -50,6 +49,7 @@ public class SessionUser extends BasePostgresEntity {
     private User user;
 
     @Column(name = "user_name", length = 100, nullable = false)
+    @lombok.Setter
     private String userName;  // 저장 시점의 user.name 캐시 (나중에 user.name이 변경되어도 유지)
 
     /**

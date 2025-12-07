@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
@@ -50,16 +51,17 @@ public class AttendanceService {
                 user.getName(), request.getRoundId(), round.getRoundDate());
 
         // 1. 라운드 시간 검증 - 통일된 로직
-        LocalDate checkDate = LocalDate.now();
-        LocalTime checkTime = LocalTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate checkDate = now.toLocalDate();
+        LocalTime checkTime = now.toLocalTime();
         LocalTime startTime = round.getStartTime();
         LocalTime endTime = round.getEndTime();
         LocalTime lateThreshold = startTime.plusMinutes(5);
 
         // 날짜 검증
         if (!checkDate.equals(round.getRoundDate())) {
-            log.warn("❌ 출석 날짜 불일치: 라운드ID={}, 사용자={}, 현재날짜={}, 라운드날짜={}",
-                    request.getRoundId(), user.getName(), checkDate, round.getRoundDate());
+            log.warn("❌ 출석 날짜 불일치: 라운드ID={}, 사용자={}, 현재시간={}, 라운드날짜={}",
+                    request.getRoundId(), user.getName(), now, round.getRoundDate());
             return AttendanceCheckInResponse.builder()
                     .roundId(request.getRoundId())
                     .success(false)
@@ -71,7 +73,7 @@ public class AttendanceService {
         boolean isWithinTimeWindow = !checkTime.isBefore(startTime) && checkTime.isBefore(endTime);
         if (!isWithinTimeWindow) {
             log.warn("❌ 출석 시간 초과: 라운드ID={}, 사용자={}, 현재시간={}, 시작={}, 종료={}",
-                    request.getRoundId(), user.getName(), checkTime, startTime, endTime);
+                    request.getRoundId(), user.getName(), now, startTime, endTime);
             return AttendanceCheckInResponse.builder()
                     .roundId(request.getRoundId())
                     .success(false)
@@ -79,14 +81,15 @@ public class AttendanceService {
                     .build();
         }
 
-        log.info("✅ 시간 검증 성공: 라운드ID={}, 사용자={}, 시간={}, 범위=[{}~{}]",
-                request.getRoundId(), user.getName(), checkTime, startTime, endTime);
+        log.info("✅ 시간 검증 성공: 라운드ID={}, 사용자={}, 현재시간={}, 범위=[{}~{}]",
+                request.getRoundId(), user.getName(), now, startTime, endTime);
 
-        // 2. 중복 출석 확인
-        boolean alreadyCheckedIn = attendanceRepository.findByAttendanceRound_RoundIdAndUser(request.getRoundId(), user)
-                .isPresent();
-        if (alreadyCheckedIn) {
-            log.warn("중복 출석 시도: 라운드ID={}, 사용자={}", request.getRoundId(), user.getName());
+        // 2. 기존 출석 기록 확인 (PENDING 제외하고 실제 체크인한 기록만 중복으로 취급)
+        Attendance existingAttendance = attendanceRepository.findByAttendanceRound_RoundIdAndUser(request.getRoundId(), user)
+                .orElse(null);
+        if (existingAttendance != null && existingAttendance.getAttendanceStatus() != AttendanceStatus.PENDING) {
+            log.warn("중복 출석 시도: 라운드ID={}, 사용자={}, 기존상태={}",
+                    request.getRoundId(), user.getName(), existingAttendance.getAttendanceStatus());
             return AttendanceCheckInResponse.builder()
                     .roundId(request.getRoundId())
                     .success(false)
@@ -332,8 +335,8 @@ public class AttendanceService {
     private AttendanceResponse convertToResponse(Attendance attendance) {
         return AttendanceResponse.builder()
                 .attendanceId(attendance.getAttendanceId())
-                .userId(attendance.getUser().getUserId())
-                .userName(attendance.getUser().getName())
+                .userId(attendance.getUser() != null ? attendance.getUser().getUserId() : null)
+                .userName(attendance.getUser() != null ? attendance.getUser().getName() : "익명")
                 .attendanceSessionId(attendance.getAttendanceSession().getAttendanceSessionId())
                 .attendanceRoundId(attendance.getAttendanceRound() != null ?
                         attendance.getAttendanceRound().getRoundId() : null)

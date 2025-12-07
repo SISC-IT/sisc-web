@@ -1,0 +1,21 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 270px;
+}
+
+.card {
+  width: 270px;
+  height: 345px;
+  border-radius: 8px;
+}
+
+.title {
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 100%;
+  letter-spacing: 0%;
+  color: rgba(255, 255, 255, 1);
+  word-break: keep-all;
+}

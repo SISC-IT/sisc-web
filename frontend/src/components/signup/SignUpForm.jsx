@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
+import { toast } from 'react-toastify';
 
 import {
   sendVerificationNumber,
@@ -84,9 +85,10 @@ const SignUpForm = () => {
       await sendVerificationNumber({ email: email }, abortRef.current.signal);
 
       setVerificationSent(true);
-      alert('인증번호가 발송되었습니다.');
-    } catch (err) {
-      alert(err.data?.errorMessage || '전송 오류가 발생했습니다.');
+      toast.success('인증번호가 발송되었습니다.');
+    } catch (error) {
+      console.log(error);
+      toast.error('오류가 발생했습니다.');
     } finally {
       setIsSending(false);
     }
@@ -104,9 +106,10 @@ const SignUpForm = () => {
       );
 
       setVerificationChecked(true);
-      alert('인증되었습니다.');
-    } catch (err) {
-      alert(err.response?.data?.message || '인증에 실패했습니다.');
+      toast.success('인증되었습니다.');
+    } catch (error) {
+      console.log(error);
+      toast.error('인증에 실패했습니다.');
     }
   };
 
@@ -127,11 +130,11 @@ const SignUpForm = () => {
         },
         abortRef.current.signal
       );
-
-      alert('회원가입이 완료되었습니다.');
+      toast.success('회원가입이 완료되었습니다.');
       nav('/login');
-    } catch (err) {
-      alert(err.data?.errorMessage || '회원가입에 실패하였습니다.');
+    } catch (error) {
+      console.log(error);
+      toast.error('회원가입에 실패하였습니다.');
     }
   };
 

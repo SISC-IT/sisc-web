@@ -11,7 +11,7 @@ import Mypage from './pages/Mypage';
 import AttendanceManage from './pages/AttendanceManage';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
-import QuantBot from './pages/QuantBot';
+import QuantTradingDashboard from './pages/QuantTradingDashboard';
 
 import OAuthSuccess from './pages/OAuthSuccess.jsx';
 
@@ -19,6 +19,8 @@ import Main from './pages/external/Main.jsx';
 import Intro from './pages/external/Intro.jsx';
 import Leaders from './pages/external/Leaders.jsx';
 import Portfolio from './pages/external/Portfolio.jsx';
+import MonthlyReport from './pages/external/MonthlyReport.jsx';
+import MonthlyReportDetail from './pages/external/MonthlyReportDetail.jsx';
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -31,6 +33,11 @@ function App() {
         <Route path="/main/intro" element={<Intro />} />
         <Route path="/main/leaders" element={<Leaders />} />
         <Route path="/main/portfolio" element={<Portfolio />} />
+        <Route path="/main/monthly-report" element={<MonthlyReport />} />
+        <Route
+          path="/main/monthly-report-detail"
+          element={<MonthlyReportDetail />}
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth/success" element={<OAuthSuccess />} />
@@ -41,7 +48,7 @@ function App() {
           <Route path="/board" element={<Board />} />
           <Route path="/board/:team" element={<Board />} />
           <Route path="/board/:team/:postId" element={<PostDetail />} />
-          <Route path="/quant-bot" element={<QuantBot />} />
+          <Route path="/quant-bot" element={<QuantTradingDashboard />} />
           <Route path="/stock-game" element={<StockGame />} />
           <Route path="/back-test" element={<BackTest />} />
           <Route path="/mypage" element={<Mypage />} />

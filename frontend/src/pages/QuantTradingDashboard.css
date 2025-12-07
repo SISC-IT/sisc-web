@@ -1,0 +1,315 @@
+/* 기본 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f4f5f8;
+  color: #111827;
+}
+
+/* 메인 레이아웃 */
+.main-content-only {
+  padding: 32px 40px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+/* Summary */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.summary-main {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.summary-sub {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.summary-value-highlight {
+  color: #059669;
+}
+
+/* Holdings + Chart */
+.content-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.holdings-card,
+.chart-card {
+  background: #fff;
+  padding: 20px 22px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.holding-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.holding-item:last-child {
+  border-bottom: none;
+}
+
+.holding-symbol {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.holding-shares {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.holding-right {
+  text-align: right;
+}
+
+.holding-amount {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.holding-pnl {
+  font-size: 12px;
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+.chart-placeholder {
+  height: 220px;
+  border-radius: 12px;
+  background: repeating-linear-gradient(
+    45deg,
+    #f3f4f6,
+    #f3f4f6 6px,
+    #e5e7eb 6px,
+    #e5e7eb 12px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+}
+
+/* History */
+.history-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 22px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 40px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.history-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.history-filter {
+  display: flex;
+  gap: 8px;
+}
+
+.select {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+}
+
+/* Trade Cards */
+.trade-card {
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  margin-bottom: 12px;
+}
+
+.trade-card.sell {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.trade-row {
+  display: flex;
+  margin-bottom: 6px;
+}
+
+.trade-row:last-child {
+  margin-bottom: 0;
+}
+
+.trade-label {
+  width: 56px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.trade-value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.trade-value.positive {
+  color: #16a34a;
+}
+
+.trade-value.negative {
+  color: #dc2626;
+}
+
+/* 반응형 */
+@media (max-width: 1024px) {
+  .main-content-only {
+    padding: 24px 20px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .content-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Modal Overlay --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+/* --- Modal Container --- */
+.modal-container {
+  background: #fff;
+  width: 420px;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* --- Modal Header --- */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-close-btn {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+}
+
+/* --- Modal Content --- */
+.modal-item {
+  margin: 14px 0;
+}
+
+.modal-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.modal-value {
+  margin-top: 4px;
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.modal-textarea {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: pre-wrap;
+  margin-top: 6px;
+}
+
+/* --- Report Button --- */
+.report-btn {
+  margin-top: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #1d4ed8;
+  color: white;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.report-btn:hover {
+  background: #1e40af;
+}
+
+.chart-wrapper {
+  width: 100%;
+  height: 220px;
+}

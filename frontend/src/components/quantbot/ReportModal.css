@@ -1,0 +1,191 @@
+/* 전체 오버레이 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+/* 모달 박스 */
+.modal-container {
+  width: 85%;
+  max-width: 1100px;
+  max-height: 80vh; /* 화면 밖으로 안 나가게 */
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* 상단 헤더 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* 로딩 영역 */
+.modal-loading {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 내용 레이아웃 (좌: 정보, 우: 리포트) */
+.modal-content {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* 내부 스크롤용 */
+  margin-top: 20px;
+  gap: 24px;
+}
+
+/* 왼쪽 정보 패널 */
+.modal-left {
+  width: 26%;
+  min-width: 200px;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.label {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.value {
+  font-weight: 500;
+}
+
+/* 오른쪽 리포트 패널 */
+.modal-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.report-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* 여기 안에서만 스크롤 */
+.report-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* 마크다운 기본 스타일 */
+.report-body h1,
+.report-body h2,
+.report-body h3,
+.report-body h4 {
+  margin: 14px 0 8px;
+  font-weight: 700;
+}
+
+.report-body h1 {
+  font-size: 20px;
+}
+.report-body h2 {
+  font-size: 18px;
+}
+.report-body h3 {
+  font-size: 16px;
+}
+
+.report-body p {
+  margin: 6px 0;
+  line-height: 1.6;
+}
+
+.report-body strong {
+  font-weight: 700;
+}
+
+.report-body ul,
+.report-body ol {
+  margin: 6px 0 6px 20px;
+}
+
+.report-body li {
+  margin: 2px 0;
+}
+
+.report-body code {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  background: #f3f4f6;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+/* 페이드 인 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 모바일 대응: 세로로 쌓기 */
+@media (max-width: 768px) {
+  .modal-container {
+    width: 95%;
+    max-height: 90vh;
+    padding: 16px;
+  }
+
+  .modal-content {
+    flex-direction: column;
+  }
+
+  .modal-left {
+    width: 100%;
+  }
+}
