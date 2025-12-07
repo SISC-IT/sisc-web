@@ -13,7 +13,8 @@ import java.util.UUID;
 @Repository
 public interface BacktestRunRepository extends JpaRepository<BacktestRun, Long> {
   @Query("SELECT br FROM BacktestRun br " +
-         "JOIN FETCH br.template t " +
+         "LEFT JOIN FETCH br.template t " +
+         "JOIN FETCH br.user u " +
          "WHERE t.templateId = :templateTemplateId " +
          "ORDER BY br.startedAt DESC")
   List<BacktestRun> findByTemplate_TemplateIdWithTemplate(@Param("templateTemplateId") UUID templateTemplateId);
