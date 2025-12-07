@@ -46,3 +46,23 @@ export async function saveBacktestRunToTemplate(backtestRunId, payload) {
   const res = await api.patch(`/api/backtest/runs/${backtestRunId}`, payload);
   return res.data;
 }
+
+// 특정 템플릿 상세 + 해당 템플릿에 저장된 backtestRun 목록 조회 (GET /api/backtest/templates/{templateId})
+export async function fetchBacktestTemplateDetail(templateId) {
+  const res = await api.get(`/api/backtest/templates/${templateId}`);
+
+  const template = res.data?.template ?? null;
+  const backtestRunsRaw = res.data?.backtestRuns ?? [];
+
+  const runs = Array.isArray(backtestRunsRaw)
+    ? backtestRunsRaw.map((run) => ({
+        id: run.id,
+        title: run.title,
+        startDate: run.startDate,
+        endDate: run.endDate,
+        status: run.status,
+      }))
+    : [];
+
+  return { template, runs };
+}
