@@ -108,7 +108,7 @@ const BacktestRunResults = (props) => {
             className={styles.primaryButton}
             onClick={() => setTemplateModalOpen(true)}
           >
-            템플릿에 저장 / 불러오기
+            템플릿에 저장
           </button>
         </div>
       </header>
