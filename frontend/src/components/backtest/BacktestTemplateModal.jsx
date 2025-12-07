@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import styles from './BacktestTemplateModal.module.css';
+import { useBacktestTemplates } from '../../api/backtest/useBacktestTemplates';
 import TemplateList from './TemplateList';
+import { ImSpinner } from 'react-icons/im';
 
 const BacktestTemplateModal = ({
   setTemplateModalOpen,
-  templates = [],
   // API 연결 시 사용할 콜백들
   onCreateTemplate, // (name: string) => void
   onRenameTemplate, // (id: string | number, newName: string) => void
@@ -13,6 +14,8 @@ const BacktestTemplateModal = ({
 }) => {
   const [selectedId, setSelectedId] = useState(null);
   const [newName, setNewName] = useState('');
+
+  const { templates, isLoading, error } = useBacktestTemplates();
 
   const handleClose = () => {
     setTemplateModalOpen(false);
@@ -90,13 +93,28 @@ const BacktestTemplateModal = ({
               </div>
 
               <div className={styles.templateListScroll}>
-                <TemplateList
-                  templates={templates}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                  onRename={onRenameTemplate}
-                  onDelete={onDeleteTemplate}
-                />
+                {isLoading && (
+                  <div className={styles.loadingState}>
+                    <ImSpinner className={styles.spinner} />
+                    <span>템플릿 불러오는 중...</span>
+                  </div>
+                )}
+
+                {error && !isLoading && (
+                  <div className={styles.errorMessage}>
+                    템플릿을 불러오는 중 오류가 발생했습니다.
+                  </div>
+                )}
+
+                {!isLoading && !error && (
+                  <TemplateList
+                    templates={templates}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    onRename={onRenameTemplate}
+                    onDelete={onDeleteTemplate}
+                  />
+                )}
               </div>
             </div>
           </div>

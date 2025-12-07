@@ -176,3 +176,33 @@
 .closeButton:active {
   transform: translateY(1px);
 }
+
+.errorMessage {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c53030;
+}
+
+/* 로딩 상태 컨테이너: 가운데 정렬 + 약간 여백 */
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: #6b7280; /* 회색 텍스트 */
+}
+
+/* 스피너 아이콘에 회전 애니메이션 */
+.spinner {
+  font-size: 1.2rem;
+  animation: spin 0.8s linear infinite;
+}
+
+/* 회전 키프레임 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
