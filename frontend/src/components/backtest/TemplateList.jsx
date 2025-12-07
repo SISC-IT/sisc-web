@@ -2,12 +2,16 @@ import { useState } from 'react';
 import styles from './TemplateList.module.css';
 import { formatKoreanDateTime } from '../../utils/dateFormat';
 
+import { LuPencil } from 'react-icons/lu';
+import { FaRegTrashCan } from 'react-icons/fa6';
+import { LuCheck, LuX } from 'react-icons/lu';
+
 const TemplateList = ({
   templates = [],
   selectedId,
-  onSelect, // (id) => void
-  onRename, // (id, newName) => void
-  onDelete, // (id) => void
+  onSelect,
+  onRename,
+  onDelete,
 }) => {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
@@ -22,7 +26,7 @@ const TemplateList = ({
 
   const startEdit = (tpl) => {
     setEditingId(tpl.templateId);
-    setEditName(tpl.name || '');
+    setEditName(tpl.name || tpl.title || '');
   };
 
   const cancelEdit = () => {
@@ -33,9 +37,7 @@ const TemplateList = ({
   const confirmEdit = (tpl) => {
     const trimmed = editName.trim();
     if (!trimmed) return;
-    if (onRename) {
-      onRename(tpl.templateId, trimmed);
-    }
+    onRename?.(tpl.templateId, trimmed);
     setEditingId(null);
     setEditName('');
   };
@@ -52,64 +54,79 @@ const TemplateList = ({
             className={`${styles.templateItem} ${
               isSelected ? styles.templateItemSelected : ''
             }`}
+            onClick={() => {
+              if (!isEditing) onSelect?.(tpl.templateId);
+            }}
           >
-            {/* 메인 영역: 선택 / 이름 편집 */}
-            <button
-              type="button"
-              className={styles.templateMain}
-              onClick={() => onSelect && onSelect(tpl.templateId)}
-            >
+            {/* 왼쪽 영역 -------------------------------- */}
+            <div className={styles.leftArea}>
               {isEditing ? (
-                <div className={styles.editRow}>
+                <div
+                  className={styles.editRow}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <input
                     className={styles.editInput}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                   />
+                </div>
+              ) : (
+                <div className={styles.textBlock}>
+                  <div className={styles.templateName}>
+                    {tpl.name || tpl.title}
+                  </div>
+                  <div className={styles.templateUpdatedAt}>
+                    업데이트:{' '}
+                    {tpl.updatedAt ? formatKoreanDateTime(tpl.updatedAt) : '-'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 오른쪽 영역 -------------------------------- */}
+            <div
+              className={styles.rightArea}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {isEditing ? (
+                <>
                   <button
                     type="button"
                     className={styles.iconButton}
                     onClick={() => confirmEdit(tpl)}
                   >
-                    ✓
+                    <LuCheck size={16} />
                   </button>
+
                   <button
                     type="button"
                     className={styles.iconButton}
                     onClick={cancelEdit}
                   >
-                    ✕
+                    <LuX size={16} />
                   </button>
-                </div>
+                </>
               ) : (
-                <div className={styles.templateText}>
-                  <div className={styles.templateName}>{tpl.name}</div>
-                  <div className={styles.templateUpdatedAt}>
-                    업데이트: {formatKoreanDateTime(tpl.updatedAt)}
-                  </div>
-                </div>
-              )}
-            </button>
+                <>
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    onClick={() => startEdit(tpl)}
+                  >
+                    <LuPencil size={18} />
+                  </button>
 
-            {/* 우측 액션 버튼들 */}
-            {!isEditing && (
-              <div className={styles.templateActions}>
-                <button
-                  type="button"
-                  className={styles.templateActionBtn}
-                  onClick={() => startEdit(tpl)}
-                >
-                  수정
-                </button>
-                <button
-                  type="button"
-                  className={styles.templateActionBtnDanger}
-                  onClick={() => onDelete && onDelete(tpl.templateId)}
-                >
-                  삭제
-                </button>
-              </div>
-            )}
+                  <button
+                    type="button"
+                    className={styles.iconButtonDanger}
+                    onClick={() => onDelete?.(tpl.templateId)}
+                  >
+                    <FaRegTrashCan size={18} />
+                  </button>
+                </>
+              )}
+            </div>
           </li>
         );
       })}
