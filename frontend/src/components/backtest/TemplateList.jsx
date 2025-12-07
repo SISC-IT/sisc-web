@@ -20,7 +20,7 @@ const TemplateList = ({
   }
 
   const startEdit = (tpl) => {
-    setEditingId(tpl.id);
+    setEditingId(tpl.templateId);
     setEditName(tpl.name || '');
   };
 
@@ -33,7 +33,7 @@ const TemplateList = ({
     const trimmed = editName.trim();
     if (!trimmed) return;
     if (onRename) {
-      onRename(tpl.id, trimmed);
+      onRename(tpl.templateId, trimmed);
     }
     setEditingId(null);
     setEditName('');
@@ -42,12 +42,12 @@ const TemplateList = ({
   return (
     <ul className={styles.templateList}>
       {templates.map((tpl) => {
-        const isSelected = selectedId === tpl.id;
-        const isEditing = editingId === tpl.id;
+        const isSelected = selectedId === tpl.templateId;
+        const isEditing = editingId === tpl.templateId;
 
         return (
           <li
-            key={tpl.id}
+            key={tpl.templateId}
             className={`${styles.templateItem} ${
               isSelected ? styles.templateItemSelected : ''
             }`}
@@ -56,7 +56,7 @@ const TemplateList = ({
             <button
               type="button"
               className={styles.templateMain}
-              onClick={() => onSelect && onSelect(tpl.id)}
+              onClick={() => onSelect && onSelect(tpl.templateId)}
             >
               {isEditing ? (
                 <div className={styles.editRow}>
@@ -103,7 +103,7 @@ const TemplateList = ({
                 <button
                   type="button"
                   className={styles.templateActionBtnDanger}
-                  onClick={() => onDelete && onDelete(tpl.id)}
+                  onClick={() => onDelete && onDelete(tpl.templateId)}
                 >
                   삭제
                 </button>
