@@ -132,7 +132,7 @@ const BacktestTemplateBrowserModal = ({ onClose, onOpenRun }) => {
               <div className={styles.templateListHeader}>
                 <span className={styles.sectionTitle}>
                   {selectedTemplate
-                    ? `저장된 백테스트 결과 (${selectedTemplate.title})`
+                    ? `${selectedTemplate.title}에 저장된 백테스트 결과 `
                     : '저장된 백테스트 결과'}
                 </span>
               </div>
