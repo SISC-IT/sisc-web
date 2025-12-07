@@ -58,7 +58,6 @@ const TemplateList = ({
               if (!isEditing) onSelect?.(tpl.templateId);
             }}
           >
-            {/* 왼쪽 영역 -------------------------------- */}
             <div className={styles.leftArea}>
               {isEditing ? (
                 <div
@@ -73,18 +72,17 @@ const TemplateList = ({
                 </div>
               ) : (
                 <div className={styles.textBlock}>
-                  <div className={styles.templateName}>
-                    {tpl.name || tpl.title}
-                  </div>
+                  <div className={styles.templateName}>{tpl.title}</div>
                   <div className={styles.templateUpdatedAt}>
                     업데이트:{' '}
-                    {tpl.updatedAt ? formatKoreanDateTime(tpl.updatedAt) : '-'}
+                    {tpl.updatedDate
+                      ? formatKoreanDateTime(tpl.updatedDate)
+                      : '-'}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 오른쪽 영역 -------------------------------- */}
             <div
               className={styles.rightArea}
               onClick={(e) => e.stopPropagation()}
