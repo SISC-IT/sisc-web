@@ -10,7 +10,6 @@ const BacktestResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // BackTest에서 navigate('/backtest/result', { state: { result: firstResult } }) 로 넘긴 값
   const initialResult = location.state?.result;
 
   const [rawResult, setRawResult] = useState(initialResult || null);
@@ -93,7 +92,8 @@ const BacktestResult = () => {
         </button>
       </div>
 
-      <BacktestRunResults {...mappedProps} />
+      {/* runId를 같이 내려줌 */}
+      <BacktestRunResults {...mappedProps} runId={runId} />
     </div>
   );
 };

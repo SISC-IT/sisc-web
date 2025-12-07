@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import styles from './TemplateList.module.css';
 import { formatKoreanDateTime } from '../../utils/dateFormat';
-
-import { LuPencil } from 'react-icons/lu';
+import { LuPencil, LuCheck, LuX } from 'react-icons/lu';
 import { FaRegTrashCan } from 'react-icons/fa6';
-import { LuCheck, LuX } from 'react-icons/lu';
 
 const TemplateList = ({
   templates = [],
@@ -15,6 +13,7 @@ const TemplateList = ({
 }) => {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [isSubmittingId, setIsSubmittingId] = useState(null);
 
   if (!templates || templates.length === 0) {
     return (
@@ -26,20 +25,43 @@ const TemplateList = ({
 
   const startEdit = (tpl) => {
     setEditingId(tpl.templateId);
-    setEditName(tpl.name || tpl.title || '');
+    setEditName(tpl.title || '');
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName('');
+    setIsSubmittingId(null);
   };
 
-  const confirmEdit = (tpl) => {
+  const confirmEdit = async (tpl) => {
     const trimmed = editName.trim();
-    if (!trimmed) return;
-    onRename?.(tpl.templateId, trimmed);
-    setEditingId(null);
-    setEditName('');
+    if (!trimmed || trimmed === tpl.title) {
+      cancelEdit();
+      return;
+    }
+
+    if (!onRename) {
+      cancelEdit();
+      return;
+    }
+
+    try {
+      setIsSubmittingId(tpl.templateId);
+      await onRename(tpl.templateId, trimmed);
+    } finally {
+      cancelEdit();
+    }
+  };
+
+  const handleDeleteClick = async (tpl) => {
+    if (!onDelete) return;
+    try {
+      setIsSubmittingId(tpl.templateId);
+      await onDelete(tpl.templateId);
+    } finally {
+      setIsSubmittingId(null);
+    }
   };
 
   return (
@@ -47,6 +69,7 @@ const TemplateList = ({
       {templates.map((tpl) => {
         const isSelected = selectedId === tpl.templateId;
         const isEditing = editingId === tpl.templateId;
+        const isBusy = isSubmittingId === tpl.templateId;
 
         return (
           <li
@@ -58,6 +81,7 @@ const TemplateList = ({
               if (!isEditing) onSelect?.(tpl.templateId);
             }}
           >
+            {/* 왼쪽 영역 */}
             <div className={styles.leftArea}>
               {isEditing ? (
                 <div
@@ -68,6 +92,7 @@ const TemplateList = ({
                     className={styles.editInput}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
+                    disabled={isBusy}
                   />
                 </div>
               ) : (
@@ -83,6 +108,7 @@ const TemplateList = ({
               )}
             </div>
 
+            {/* 오른쪽 영역 */}
             <div
               className={styles.rightArea}
               onClick={(e) => e.stopPropagation()}
@@ -93,6 +119,8 @@ const TemplateList = ({
                     type="button"
                     className={styles.iconButton}
                     onClick={() => confirmEdit(tpl)}
+                    disabled={isBusy}
+                    title="수정 완료"
                   >
                     <LuCheck size={16} />
                   </button>
@@ -101,6 +129,8 @@ const TemplateList = ({
                     type="button"
                     className={styles.iconButton}
                     onClick={cancelEdit}
+                    disabled={isBusy}
+                    title="수정 취소"
                   >
                     <LuX size={16} />
                   </button>
@@ -111,6 +141,8 @@ const TemplateList = ({
                     type="button"
                     className={styles.iconButton}
                     onClick={() => startEdit(tpl)}
+                    disabled={isBusy}
+                    title="이름 수정"
                   >
                     <LuPencil size={18} />
                   </button>
@@ -118,7 +150,9 @@ const TemplateList = ({
                   <button
                     type="button"
                     className={styles.iconButtonDanger}
-                    onClick={() => onDelete?.(tpl.templateId)}
+                    onClick={() => handleDeleteClick(tpl)}
+                    disabled={isBusy}
+                    title="삭제"
                   >
                     <FaRegTrashCan size={18} />
                   </button>
