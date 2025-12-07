@@ -29,6 +29,6 @@ export function useBacktestTemplates() {
     isLoading,
     error,
     reload: loadTemplates,
-    setTemplates, // 필요하면 외부에서 직접 수정할 수 있게
+    setTemplates,
   };
 }

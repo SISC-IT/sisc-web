@@ -3,41 +3,106 @@ import styles from './BacktestTemplateModal.module.css';
 import { useBacktestTemplates } from '../../api/backtest/useBacktestTemplates';
 import TemplateList from './TemplateList';
 import { ImSpinner } from 'react-icons/im';
+import { toast } from 'react-toastify';
+import {
+  patchBacktestTemplateTitle,
+  deleteBacktestTemplate,
+  createBacktestTemplate,
+  saveBacktestRunToTemplate,
+} from '../../api/backtest/useTemplateApi';
 
 const BacktestTemplateModal = ({
   setTemplateModalOpen,
-  // API 연결 시 사용할 콜백들
-  onCreateTemplate, // (name: string) => void
-  onRenameTemplate, // (id: string | number, newName: string) => void
-  onDeleteTemplate, // (id: string | number) => void
-  onSaveToTemplate, // (id: string | number) => void
+  runId,
+  runSavePayload,
 }) => {
   const [selectedId, setSelectedId] = useState(null);
   const [newName, setNewName] = useState('');
 
-  const { templates, isLoading, error } = useBacktestTemplates();
+  const { templates, isLoading, error, reload } = useBacktestTemplates();
 
   const handleClose = () => {
     setTemplateModalOpen(false);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    if (onCreateTemplate) {
-      onCreateTemplate(trimmed);
+
+    try {
+      await createBacktestTemplate(trimmed);
+      toast.success('템플릿이 생성되었습니다.');
+      setNewName('');
+      await reload();
+    } catch (err) {
+      console.error('템플릿 생성 실패', err);
+      toast.error('템플릿 생성 중 오류가 발생했습니다.');
     }
-    setNewName('');
-    // 새로 만든 템플릿을 선택하고 싶다면, API 응답에서 id 받아서
-    // 부모에서 templates 갱신 후, selectedId를 거기서 세팅해주면 됨
   };
 
-  const handleSave = () => {
+  // 선택한 템플릿에 현재 run 저장
+  const handleSave = async () => {
     if (!selectedId) return;
-    if (onSaveToTemplate) {
-      onSaveToTemplate(selectedId);
+
+    try {
+      if (!runId) {
+        toast.error('백테스트 ID를 찾을 수 없습니다.');
+        return;
+      }
+
+      if (!runSavePayload) {
+        toast.error('템플릿에 저장할 백테스트 정보가 없습니다.');
+        return;
+      }
+
+      const { title, startDate, endDate, strategy } = runSavePayload;
+
+      const body = {
+        templateId: selectedId,
+        backtestRunId: runId,
+        title,
+        startDate,
+        endDate,
+        strategy,
+        backtestRunIds: [runId],
+      };
+
+      await saveBacktestRunToTemplate(runId, body);
+
+      toast.success('현재 백테스트 결과가 템플릿에 저장되었습니다.');
+      setTemplateModalOpen(false);
+    } catch (err) {
+      console.error('템플릿 저장 실패', err);
+      toast.error('템플릿 저장 중 오류가 발생했습니다.');
     }
-    setTemplateModalOpen(false);
+  };
+
+  const handleRename = async (templateId, newTitle) => {
+    try {
+      await patchBacktestTemplateTitle(templateId, newTitle);
+      toast.success('템플릿 이름이 수정되었습니다.');
+      await reload();
+    } catch (error) {
+      console.error('템플릿 수정 실패:', error);
+      toast.error('템플릿 수정 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDelete = async (templateId) => {
+    const ok = window.confirm('이 템플릿을 삭제하시겠습니까?');
+    if (!ok) return;
+
+    try {
+      await deleteBacktestTemplate(templateId);
+      toast.success('템플릿이 삭제되었습니다.');
+      if (selectedId === templateId) {
+        setSelectedId(null);
+      }
+      await reload();
+    } catch (error) {
+      console.error('템플릿 삭제 실패:', error);
+      toast.error('템플릿 삭제 중 오류가 발생했습니다.');
+    }
   };
 
   return (
@@ -111,8 +176,8 @@ const BacktestTemplateModal = ({
                     templates={templates}
                     selectedId={selectedId}
                     onSelect={setSelectedId}
-                    onRename={onRenameTemplate}
-                    onDelete={onDeleteTemplate}
+                    onRename={handleRename}
+                    onDelete={handleDelete}
                   />
                 )}
               </div>

@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react';
 import styles from './BacktestRunResults.module.css';
 import BacktestTemplateModal from './BacktestTemplateModal';
-import { api } from '../../utils/axios';
-import { toast } from 'react-toastify';
 import {
   formatCurrency,
   formatPercent,
@@ -40,12 +38,10 @@ const BacktestRunResults = (props) => {
     baseCurrency = '$',
     startCapital,
     metrics = {},
-    templates = [],
-    onClickTemplate,
-    onClickSaveTemplate,
-    onClickEditTemplate,
-    onClickDeleteTemplate,
     startDate,
+    endDate,
+    strategy,
+    runId,
   } = props;
 
   const [yMode, setYMode] = useState('multiple');
@@ -99,7 +95,6 @@ const BacktestRunResults = (props) => {
           )}
         </div>
 
-        {/* 우측 액션 버튼 영역 */}
         <div className={styles.headerActions}>
           <button
             type="button"
@@ -244,76 +239,16 @@ const BacktestRunResults = (props) => {
         </div>
       </main>
 
-      {/* 템플릿 모달 */}
+      {/* 템플릿 모달: runId만 내려줌 */}
       {isTemplateModalOpen && (
         <BacktestTemplateModal
           setTemplateModalOpen={setTemplateModalOpen}
-          templates={templates}
-          onCreateTemplate={async (name) => {
-            try {
-              const body = {
-                title: name,
-                description: `${name} 템플릿입니다.`,
-                isPublic: false,
-              };
-
-              const res = await api.post('/api/backtest/templates', body);
-
-              const createdTemplate = res.data?.template;
-              toast.success('템플릿이 생성되었습니다.');
-
-              if (onClickTemplate && createdTemplate) {
-                onClickTemplate(createdTemplate);
-              }
-            } catch (error) {
-              console.error('템플릿 생성 실패:', error);
-              toast.error(
-                error.message || '템플릿 생성 중 오류가 발생했습니다.'
-              );
-            }
-          }}
-          // 템플릿 이름 변경
-          onRenameTemplate={async (id, newName) => {
-            try {
-              if (!onClickEditTemplate) return;
-              // 실제로는 여기서 PUT/PATCH /api/backtest/templates/{id} 호출을 넣을 수 있음
-              await onClickEditTemplate(id, newName);
-              toast.success('템플릿 이름이 수정되었습니다.');
-            } catch (error) {
-              console.error('템플릿 수정 실패:', error);
-              toast.error(
-                error.message || '템플릿 수정 중 오류가 발생했습니다.'
-              );
-            }
-          }}
-          // 템플릿 삭제
-          onDeleteTemplate={async (id) => {
-            try {
-              if (!onClickDeleteTemplate) return;
-              // 실제로는 여기서 DELETE /api/backtest/templates/{id} 호출 예정
-              await onClickDeleteTemplate(id);
-              toast.success('템플릿이 삭제되었습니다.');
-            } catch (error) {
-              console.error('템플릿 삭제 실패:', error);
-              toast.error(
-                error.message || '템플릿 삭제 중 오류가 발생했습니다.'
-              );
-            }
-          }}
-          // 선택한 템플릿에 현재 백테스트 결과 저장
-          onSaveToTemplate={async (id) => {
-            try {
-              if (!onClickSaveTemplate) return;
-              // 나중에 "해당 템플릿에 이번 backtestRun을 연결"하는 API 호출 로직 자리
-              await onClickSaveTemplate(id);
-              toast.success('현재 백테스트 결과가 템플릿에 저장되었습니다.');
-              setTemplateModalOpen(false);
-            } catch (error) {
-              console.error('템플릿 저장 실패:', error);
-              toast.error(
-                error.message || '템플릿에 저장 중 오류가 발생했습니다.'
-              );
-            }
+          runId={runId}
+          runSavePayload={{
+            title,
+            startDate,
+            endDate,
+            strategy,
           }}
         />
       )}
