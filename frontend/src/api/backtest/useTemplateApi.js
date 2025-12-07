@@ -66,3 +66,11 @@ export async function fetchBacktestTemplateDetail(templateId) {
 
   return { template, runs };
 }
+
+// 백테스트 실행 결과 삭제 (DELETE /api/backtest/runs/{backtestRunId})
+export async function deleteBacktestRun(backtestRunId) {
+  const res = await api.delete(`/api/backtest/runs/${backtestRunId}`, {
+    data: { backtestRunId },
+  });
+  return res.data;
+}
