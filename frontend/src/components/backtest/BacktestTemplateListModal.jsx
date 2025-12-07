@@ -5,7 +5,7 @@ import {
   fetchBacktestTemplateDetail,
   deleteBacktestRun,
 } from '../../api/backtest/useTemplateApi';
-import { toastConfirm } from '../../utils/toastConfirm';
+import { toastConfirm, dismissConfirmToasts } from '../../utils/toastConfirm';
 import { ImSpinner } from 'react-icons/im';
 import { toast } from 'react-toastify';
 import { FaRegTrashCan } from 'react-icons/fa6';
@@ -79,8 +79,13 @@ const BacktestTemplateListModal = ({ onClose, onOpenRun }) => {
     onOpenRun?.(selectedRunId);
   };
 
+  const handleInternalClose = () => {
+    dismissConfirmToasts();
+    onClose?.();
+  };
+
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <div className={styles.modalOverlay} onClick={handleInternalClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* 헤더 */}
         <div className={styles.modalHeader}>
@@ -95,7 +100,7 @@ const BacktestTemplateListModal = ({ onClose, onOpenRun }) => {
           <button
             type="button"
             className={styles.modalCloseBtn}
-            onClick={onClose}
+            onClick={handleInternalClose}
           >
             ×
           </button>
