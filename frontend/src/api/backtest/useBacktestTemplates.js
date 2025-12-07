@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchBacktestTemplates } from './getTemplateList';
+import { fetchBacktestTemplates } from './useTemplateApi';
 
 export function useBacktestTemplates() {
   const [templates, setTemplates] = useState([]);
