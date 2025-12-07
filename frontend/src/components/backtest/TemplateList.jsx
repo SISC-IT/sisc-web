@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from './TemplateList.module.css';
+import { formatKoreanDateTime } from '../../utils/dateFormat';
 
 const TemplateList = ({
   templates = [],
@@ -84,7 +85,7 @@ const TemplateList = ({
                 <div className={styles.templateText}>
                   <div className={styles.templateName}>{tpl.name}</div>
                   <div className={styles.templateUpdatedAt}>
-                    업데이트: {tpl.updatedAt ? tpl.updatedAt : '-'}
+                    업데이트: {formatKoreanDateTime(tpl.updatedAt)}
                   </div>
                 </div>
               )}
