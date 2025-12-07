@@ -13,7 +13,7 @@ import {
 } from '../../api/backtest/useTemplateApi';
 
 const BacktestTemplateSaveModal = ({
-  setTemplateModalOpen,
+  setTemplateSaveModalOpen,
   runId,
   runSavePayload,
 }) => {
@@ -23,7 +23,7 @@ const BacktestTemplateSaveModal = ({
   const { templates, isLoading, error, reload } = useBacktestTemplates();
 
   const handleClose = () => {
-    setTemplateModalOpen(false);
+    setTemplateSaveModalOpen(false);
   };
 
   const handleCreate = async () => {
@@ -71,7 +71,7 @@ const BacktestTemplateSaveModal = ({
       await saveBacktestRunToTemplate(runId, body);
 
       toast.success('현재 백테스트 결과가 템플릿에 저장되었습니다.');
-      setTemplateModalOpen(false);
+      setTemplateSaveModalOpen(false);
     } catch (err) {
       console.error('템플릿 저장 실패', err);
       toast.error('템플릿 저장 중 오류가 발생했습니다.');
