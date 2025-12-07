@@ -272,3 +272,29 @@
   font-size: 0.75rem;
   color: #9ca3af;
 }
+
+/* 오른쪽 삭제 아이콘과 텍스트를 한 줄에 */
+.runItemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* 삭제 아이콘 버튼 */
+.iconButtonDanger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #dc2626;
+}
+
+.iconButtonDanger:hover {
+  color: #b91c1c;
+}
+
+.iconButtonDanger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
