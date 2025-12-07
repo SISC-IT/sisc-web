@@ -8,8 +8,8 @@ export async function fetchBacktestTemplates() {
 
   return raw.map((t) => ({
     templateId: t.templateId,
-    name: t.title,
-    updatedAt: t.updatedDate,
+    title: t.title,
+    updatedDate: t.updatedDate,
     isPublic: t.isPublic,
     description: t.description,
   }));
