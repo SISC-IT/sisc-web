@@ -103,12 +103,10 @@
   color: #111827;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .templateUpdatedAt {
   margin-top: 4px;
   font-size: 0.75rem;
   color: #9ca3af;
-  white-space: nowrap;
 }
