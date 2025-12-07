@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import styles from './BacktestRunResults.module.css';
-import BacktestTemplateModal from './BacktestTemplateModal';
-import BacktestTemplateBrowserModal from './BacktestTemplateBrowserModal';
+import BacktestTemplateSaveModal from './BacktestTemplateSaveModal';
+import BacktestTemplateListModal from './BacktestTemplateListModal';
 import {
   formatCurrency,
   formatPercent,
@@ -47,8 +47,8 @@ const BacktestRunResults = (props) => {
   } = props;
 
   const [yMode, setYMode] = useState('multiple');
-  const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
-  const [isTemplateBrowserOpen, setTemplateBrowserOpen] = useState(false);
+  const [isTemplateSaveModalOpen, setTemplateSaveModalOpen] = useState(false);
+  const [isTemplateListModalOpen, setTemplateListModalOpen] = useState(false);
 
   const {
     totalReturn,
@@ -109,14 +109,14 @@ const BacktestRunResults = (props) => {
           <button
             type="button"
             className={styles.secondaryButton}
-            onClick={() => setTemplateBrowserOpen(true)}
+            onClick={() => setTemplateListModalOpen(true)}
           >
             템플릿 목록 열기
           </button>
           <button
             type="button"
             className={styles.primaryButton}
-            onClick={() => setTemplateModalOpen(true)}
+            onClick={() => setTemplateSaveModalOpen(true)}
           >
             템플릿에 저장
           </button>
@@ -250,9 +250,9 @@ const BacktestRunResults = (props) => {
       </main>
 
       {/* 템플릿 모달: runId만 내려줌 */}
-      {isTemplateModalOpen && (
-        <BacktestTemplateModal
-          setTemplateModalOpen={setTemplateModalOpen}
+      {isTemplateSaveModalOpen && (
+        <BacktestTemplateSaveModal
+          setTemplateSaveModalOpen={setTemplateSaveModalOpen}
           runId={runId}
           runSavePayload={{
             title,
@@ -263,13 +263,13 @@ const BacktestRunResults = (props) => {
         />
       )}
 
-      {/* 🔥 템플릿 목록에서 저장된 run 불러오는 모달 */}
-      {isTemplateBrowserOpen && (
-        <BacktestTemplateBrowserModal
-          onClose={() => setTemplateBrowserOpen(false)}
+      {/* 템플릿 목록에서 저장된 run 불러오는 모달 */}
+      {isTemplateListModalOpen && (
+        <BacktestTemplateListModal
+          onClose={() => setTemplateListModalOpen(false)}
           onOpenRun={(selectedRunId) => {
             onOpenSavedRun?.(selectedRunId);
-            setTemplateBrowserOpen(false);
+            setTemplateListModalOpen(false);
           }}
         />
       )}
