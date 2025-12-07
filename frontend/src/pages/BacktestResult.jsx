@@ -11,7 +11,6 @@ const BacktestResult = () => {
   const navigate = useNavigate();
 
   const initialResult = location.state?.result;
-
   const [rawResult, setRawResult] = useState(initialResult || null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(null);
@@ -54,6 +53,22 @@ const BacktestResult = () => {
       setRawResult(response.data);
     } catch (error) {
       console.error('Failed to refresh backtest status', error);
+      toast.error('백테스트 상태를 다시 조회하는 중 오류가 발생했습니다.');
+      setRefreshError(error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  async function handleOpenSavedRun(selectedRunId) {
+    try {
+      setIsRefreshing(true);
+      setRefreshError(null);
+      const response = await api.get(`/api/backtest/runs/${selectedRunId}`);
+      setRawResult(response.data);
+    } catch (error) {
+      console.error('Failed to open saved backtest run', error);
+      toast.error('저장된 백테스트 실행을 여는 중 오류가 발생했습니다.');
       setRefreshError(error);
     } finally {
       setIsRefreshing(false);
@@ -93,7 +108,11 @@ const BacktestResult = () => {
       </div>
 
       {/* runId를 같이 내려줌 */}
-      <BacktestRunResults {...mappedProps} runId={runId} />
+      <BacktestRunResults
+        {...mappedProps}
+        runId={runId}
+        onOpenSavedRun={handleOpenSavedRun}
+      />
     </div>
   );
 };

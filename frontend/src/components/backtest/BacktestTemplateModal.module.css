@@ -206,3 +206,69 @@
     transform: rotate(360deg);
   }
 }
+
+/* 템플릿/런이 없을 때 공통 빈 상태 박스 */
+.emptyTemplateBox {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: #f3f4f6;
+  font-size: 0.85rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* 좌측 템플릿 목록 / 우측 백테스트 결과 목록 공통 리스트 스타일 */
+.templateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* 리스트 아이템 기본 스타일 */
+.templateItem {
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.05s ease;
+}
+
+.templateItem:hover {
+  border-color: #a5b4fc;
+  background-color: #f9fafb;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+/* 선택된 아이템 */
+.templateItemSelected {
+  border-color: #6366f1;
+  background-color: #eef2ff;
+}
+
+/* 리스트 내부 텍스트 블록(제목 + 부가 정보) */
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* 템플릿 이름 / 백테스트 제목 */
+.templateName {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+/* 템플릿 업데이트 날짜 / 백테스트 기간 등 보조 텍스트 */
+.templateUpdatedAt {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}

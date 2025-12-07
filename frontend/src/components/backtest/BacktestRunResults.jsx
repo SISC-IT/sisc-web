@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import styles from './BacktestRunResults.module.css';
 import BacktestTemplateModal from './BacktestTemplateModal';
+import BacktestTemplateBrowserModal from './BacktestTemplateBrowserModal';
 import {
   formatCurrency,
   formatPercent,
@@ -42,10 +43,12 @@ const BacktestRunResults = (props) => {
     endDate,
     strategy,
     runId,
+    onOpenSavedRun,
   } = props;
 
   const [yMode, setYMode] = useState('multiple');
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
+  const [isTemplateBrowserOpen, setTemplateBrowserOpen] = useState(false);
 
   const {
     totalReturn,
@@ -102,6 +105,13 @@ const BacktestRunResults = (props) => {
             onClick={handleDownloadCsv}
           >
             CSV 내보내기
+          </button>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() => setTemplateBrowserOpen(true)}
+          >
+            템플릿 목록 열기
           </button>
           <button
             type="button"
@@ -249,6 +259,17 @@ const BacktestRunResults = (props) => {
             startDate,
             endDate,
             strategy,
+          }}
+        />
+      )}
+
+      {/* 🔥 템플릿 목록에서 저장된 run 불러오는 모달 */}
+      {isTemplateBrowserOpen && (
+        <BacktestTemplateBrowserModal
+          onClose={() => setTemplateBrowserOpen(false)}
+          onOpenRun={(selectedRunId) => {
+            onOpenSavedRun?.(selectedRunId);
+            setTemplateBrowserOpen(false);
           }}
         />
       )}
