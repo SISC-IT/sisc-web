@@ -4,7 +4,7 @@ import { useBacktestTemplates } from '../../api/backtest/useBacktestTemplates';
 import TemplateList from './TemplateList';
 import { ImSpinner } from 'react-icons/im';
 import { toast } from 'react-toastify';
-import { toastConfirm } from '../../utils/toastConfirm';
+import { toastConfirm, dismissConfirmToasts } from '../../utils/toastConfirm';
 import {
   patchBacktestTemplateTitle,
   deleteBacktestTemplate,
@@ -23,6 +23,7 @@ const BacktestTemplateSaveModal = ({
   const { templates, isLoading, error, reload } = useBacktestTemplates();
 
   const handleClose = () => {
+    dismissConfirmToasts();
     setTemplateSaveModalOpen(false);
   };
 
