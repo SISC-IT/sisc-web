@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import styles from './BacktestTemplateModal.module.css';
+import styles from './BacktestTemplateSaveModal.module.css';
 import { useBacktestTemplates } from '../../api/backtest/useBacktestTemplates';
 import TemplateList from './TemplateList';
 import { ImSpinner } from 'react-icons/im';
 import { toast } from 'react-toastify';
+import { toastConfirm } from '../../utils/toastConfirm';
 import {
   patchBacktestTemplateTitle,
   deleteBacktestTemplate,
@@ -11,7 +12,7 @@ import {
   saveBacktestRunToTemplate,
 } from '../../api/backtest/useTemplateApi';
 
-const BacktestTemplateModal = ({
+const BacktestTemplateSaveModal = ({
   setTemplateModalOpen,
   runId,
   runSavePayload,
@@ -89,7 +90,10 @@ const BacktestTemplateModal = ({
   };
 
   const handleDelete = async (templateId) => {
-    const ok = window.confirm('이 템플릿을 삭제하시겠습니까?');
+    const ok = await toastConfirm('이 템플릿을 삭제하시겠습니까?', {
+      title: '템플릿 삭제',
+      confirmText: '삭제',
+    });
     if (!ok) return;
 
     try {
@@ -214,4 +218,4 @@ const BacktestTemplateModal = ({
   );
 };
 
-export default BacktestTemplateModal;
+export default BacktestTemplateSaveModal;

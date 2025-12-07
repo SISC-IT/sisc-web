@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react';
-import styles from './BacktestTemplateModal.module.css';
+import { useState, useEffect, useCallback } from 'react';
+import styles from './BacktestTemplateSaveModal.module.css';
 import { useBacktestTemplates } from '../../api/backtest/useBacktestTemplates';
+import {
+  fetchBacktestTemplateDetail,
+  deleteBacktestRun,
+} from '../../api/backtest/useTemplateApi';
+import { toastConfirm } from '../../utils/toastConfirm';
 import { ImSpinner } from 'react-icons/im';
 import { toast } from 'react-toastify';
-import { fetchBacktestTemplateDetail } from '../../api/backtest/useTemplateApi';
+import { FaRegTrashCan } from 'react-icons/fa6';
 
-const BacktestTemplateBrowserModal = ({ onClose, onOpenRun }) => {
+const BacktestTemplateListModal = ({ onClose, onOpenRun }) => {
   const { templates, isLoading, error } = useBacktestTemplates();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
@@ -14,34 +19,60 @@ const BacktestTemplateBrowserModal = ({ onClose, onOpenRun }) => {
   const [runs, setRuns] = useState([]);
   const [isRunsLoading, setRunsLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState(null);
+  const [isDeletingRunId, setIsDeletingRunId] = useState(null);
+
+  // 공용 reload 함수 (effect + 삭제 후 재사용)
+  const reloadRunsForTemplate = useCallback(async (templateId) => {
+    if (!templateId) return;
+
+    try {
+      setRunsLoading(true);
+      setSelectedRunId(null);
+
+      const { template, runs } = await fetchBacktestTemplateDetail(templateId);
+
+      setSelectedTemplate(template);
+      setRuns(runs || []);
+    } catch (err) {
+      console.error('Failed to load runs for template', err);
+      toast.error('템플릿의 백테스트 목록을 불러오는 중 오류가 발생했습니다.');
+      setSelectedTemplate(null);
+      setRuns([]);
+    } finally {
+      setRunsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!selectedTemplateId) return;
+    reloadRunsForTemplate(selectedTemplateId);
+  }, [selectedTemplateId, reloadRunsForTemplate]);
 
-    async function loadRuns() {
-      try {
-        setRunsLoading(true);
-        setSelectedRunId(null);
+  const handleDeleteRun = async (runId) => {
+    const ok = await toastConfirm('이 백테스트 결과를 삭제하시겠습니까?', {
+      title: '백테스트 결과 삭제',
+      confirmText: '삭제',
+      cancelText: '취소',
+    });
 
-        const { template, runs } =
-          await fetchBacktestTemplateDetail(selectedTemplateId);
+    if (!ok) return;
 
-        setSelectedTemplate(template);
-        setRuns(runs);
-      } catch (err) {
-        console.error('Failed to load runs for template', err);
-        toast.error(
-          '템플릿의 백테스트 목록을 불러오는 중 오류가 발생했습니다.'
-        );
-        setSelectedTemplate(null);
-        setRuns([]);
-      } finally {
-        setRunsLoading(false);
+    try {
+      setIsDeletingRunId(runId);
+      await deleteBacktestRun(runId);
+
+      toast.success('백테스트 결과가 삭제되었습니다.');
+
+      if (selectedTemplateId) {
+        await reloadRunsForTemplate(selectedTemplateId);
       }
+    } catch (err) {
+      console.error('Failed to delete backtest run', err);
+      toast.error('백테스트 결과 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeletingRunId(null);
     }
-
-    loadRuns();
-  }, [selectedTemplateId]);
+  };
 
   const handleOpen = () => {
     if (!selectedRunId) return;
@@ -161,6 +192,8 @@ const BacktestTemplateBrowserModal = ({ onClose, onOpenRun }) => {
                   <ul className={styles.templateList}>
                     {runs.map((run) => {
                       const isSelectedRun = selectedRunId === run.id;
+                      const isDeleting = isDeletingRunId === run.id;
+
                       return (
                         <li
                           key={run.id}
@@ -169,14 +202,28 @@ const BacktestTemplateBrowserModal = ({ onClose, onOpenRun }) => {
                           }`}
                           onClick={() => setSelectedRunId(run.id)}
                         >
-                          <div className={styles.textBlock}>
-                            <div className={styles.templateName}>
-                              {run.title}
+                          <div className={styles.runItemRow}>
+                            <div className={styles.textBlock}>
+                              <div className={styles.templateName}>
+                                {run.title}
+                              </div>
+                              <div className={styles.templateUpdatedAt}>
+                                기간: {run.startDate} ~ {run.endDate}
+                              </div>
                             </div>
-                            <div className={styles.templateUpdatedAt}>
-                              기간: {run.startDate} ~ {run.endDate}
-                            </div>
-                            {/* 필요하면 status, 수익률 등 추가 가능 */}
+
+                            <button
+                              type="button"
+                              className={styles.iconButtonDanger}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRun(run.id);
+                              }}
+                              disabled={isDeleting}
+                              title="이 백테스트 결과 삭제"
+                            >
+                              <FaRegTrashCan size={16} />
+                            </button>
                           </div>
                         </li>
                       );
@@ -217,4 +264,4 @@ const BacktestTemplateBrowserModal = ({ onClose, onOpenRun }) => {
   );
 };
 
-export default BacktestTemplateBrowserModal;
+export default BacktestTemplateListModal;
