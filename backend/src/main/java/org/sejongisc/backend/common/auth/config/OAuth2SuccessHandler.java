@@ -101,11 +101,25 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // 5. RefreshToken 저장(DB or Redis)
         refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
 
-        boolean isProd = Arrays.asList(env.getActiveProfiles()).contains("prod");
+        String[] activeProfiles = env.getActiveProfiles();
 
+        boolean isProd = Arrays.asList(activeProfiles).contains("prod");
+        boolean isDev  = Arrays.asList(activeProfiles).contains("dev");
+
+        // SameSite, Secure 설정
         String sameSite = isProd ? "None" : "Lax";
-        boolean secure = isProd;
-        String domain = isProd ? "sisc-web.duckdns.org" : "localhost";
+        boolean secure  = isProd;
+
+        // 도메인 설정
+        String domain;
+        if (isProd) {
+            domain = "sjusisc";  // 🔥 운영 도메인
+        } else if (isDev) {
+            domain = "sisc-web.duckdns.org";  // 🔥 개발 도메인
+        } else {
+            domain = "localhost";  // 🔥 기본값
+        }
+
 
 
 
