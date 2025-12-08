@@ -1,10 +1,12 @@
 function safeParseParamsJson(paramsJson) {
-  if (!paramsJson) return null;
+  if (!paramsJson) return {};
   try {
-    return JSON.parse(paramsJson);
+    const parsed = JSON.parse(paramsJson);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
   } catch (error) {
     console.error('Failed to parse paramsJson', error);
-    return null;
+    return {};
   }
 }
 
@@ -15,14 +17,18 @@ export function mapBacktestApiToResultProps(apiResponse) {
 
   const run = apiResponse.backtestRun;
   const metricsRaw = apiResponse.backtestRunMetricsResponse || {};
-  const params = safeParseParamsJson(run.paramsJson) || {};
 
-  const strategyParams = params.strategy ?? params;
+  const params = safeParseParamsJson(run.paramsJson);
+
+  // strategy 키가 있으면 그걸 쓰고, 없으면 params 자체를 전략 파라미터로 사용
+  const strategyParams =
+    (params && typeof params === 'object' && params.strategy) || params || {};
 
   const title =
     run.title || (run.template && run.template.title) || '백테스트 결과';
 
-  const rangeLabel = `${run.startDate} ~ ${run.endDate}`;
+  const rangeLabel =
+    run.startDate && run.endDate ? `${run.startDate} ~ ${run.endDate}` : '';
 
   const baseCurrency = strategyParams.baseCurrency || '$';
 
@@ -52,11 +58,19 @@ export function mapBacktestApiToResultProps(apiResponse) {
   return {
     title,
     rangeLabel,
-    startDate: run.startDate,
-    endDate: run.endDate,
     baseCurrency,
     startCapital,
+    startDate: run.startDate,
+    endDate: run.endDate,
     metrics,
-    strategy: strategyParams,
+    // 필요하면 strategyParams도 같이 넘길 수 있음
+    strategy: {
+      initialCapital: startCapital,
+      ticker: strategyParams.ticker,
+      defaultExitDays: strategyParams.defaultExitDays,
+      buyConditions: strategyParams.buyConditions || [],
+      sellConditions: strategyParams.sellConditions || [],
+      note: strategyParams.note || '',
+    },
   };
 }
