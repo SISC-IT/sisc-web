@@ -75,7 +75,7 @@ public class SecurityConfig {
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler((req, res, ex) -> {
                             if (isProd()) {
-                                res.sendRedirect("https://sjusisc/oauth/fail");
+                                res.sendRedirect("https://sjusisc.com/oauth/fail");
                             }else if(isDev()){
                                 res.sendRedirect("https://sisc-web.duckdns.org/oauth/fail");
                             }
