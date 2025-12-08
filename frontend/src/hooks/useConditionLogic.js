@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchDictionary } from '../api/dictionary.mock';
 import { normalizeSide, CROSS_SET } from '../utils/conditionUtils';
 
@@ -31,10 +31,16 @@ export function useConditionLogic(value, onChange) {
 
   // 1. 데이터 사전 로딩
   useEffect(() => {
-    fetchDictionary().then((d) => {
-      setDict(d);
-      setIsLoading(false);
-    });
+    fetchDictionary()
+      .then((d) => {
+        setDict(d);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error('Dictionary fetch failed:', err);
+        setIsLoading(false);
+        // 에러 상태 추가 고려: setError(err);
+      });
   }, []);
 
   // 2. 파생 상태 계산 (useMemo)
@@ -103,17 +109,26 @@ export function useConditionLogic(value, onChange) {
     }
   }, [operatorOptions, operator]);
 
-  // 4. 부모 컴포넌트로 변경사항 전파
+  const onChangeRef = useRef(onChange);
+
+  // 4-1) 최신 onChange를 ref에 유지
   useEffect(() => {
-    if (!onChange || isLoading) return;
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // 4-2) 실제 서버용 condition을 계산해서 콜백 호출
+  useEffect(() => {
+    if (!onChangeRef.current || isLoading) return;
+
     const conditionForServer = {
       leftOperand: toServerOperand(left),
       operator,
       rightOperand: toServerOperand(right),
       isAbsolute: right?.type === 'const',
     };
-    onChange(conditionForServer);
-  }, [left, operator, right, onChange, isLoading]);
+
+    onChangeRef.current(conditionForServer);
+  }, [left, operator, right, isLoading]);
 
   return {
     isLoading,
