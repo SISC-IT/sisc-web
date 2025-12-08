@@ -45,7 +45,7 @@ const AttendanceContent = () => {
 
   return (
     <>
-      <button
+      {/* <button
         onClick={async () => {
           console.log(await getAttendanceSessions());
         }}
@@ -67,7 +67,7 @@ const AttendanceContent = () => {
         }}
       >
         0번 세션 회차들 가져오기
-      </button>
+      </button> */}
 
       {/* --------------------------------------------------------------- */}
 

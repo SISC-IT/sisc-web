@@ -4,6 +4,7 @@ import calendarAddIcon from '../../assets/calendar-icon.svg';
 
 import { getRounds } from '../../utils/attendanceManage';
 import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 
 const SessionManagementCard = ({ styles: commonStyles }) => {
   const {
@@ -56,7 +57,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
             className={commonStyles.iconButton}
             onClick={() => {
               if (!currentSession) {
-                alert('세션을 먼저 선택해주세요.');
+                toast.error('세션을 먼저 선택해주세요.');
                 return;
               }
               openAddRoundsModal();
@@ -71,7 +72,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
             className={commonStyles.iconButton}
             onClick={() => {
               if (!currentSession) {
-                alert('세션을 먼저 선택해주세요.');
+                toast.error('세션을 먼저 선택해주세요.');
                 return;
               }
               openAddUsersModal();
