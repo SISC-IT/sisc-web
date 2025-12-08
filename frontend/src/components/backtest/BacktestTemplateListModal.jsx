@@ -250,7 +250,7 @@ const BacktestTemplateListModal = ({ onClose, onOpenRun }) => {
             <button
               type="button"
               className={styles.secondaryButton}
-              onClick={onClose}
+              onClick={handleInternalClose}
             >
               닫기
             </button>

@@ -91,7 +91,8 @@ export function toastConfirm(
       }
     );
 
-    confirmToastIds.add(id);
+    // ID를 먼저 Set에 추가하여 dismissConfirmToasts()가 항상 이 toast를 포함하도록 함
+    if (id) confirmToastIds.add(id);
   });
 }
 

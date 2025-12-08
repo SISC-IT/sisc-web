@@ -2,7 +2,8 @@ function safeParseParamsJson(paramsJson) {
   if (!paramsJson) return {};
   try {
     const parsed = JSON.parse(paramsJson);
-    if (!parsed || typeof parsed !== 'object') return {};
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      return {};
     return parsed;
   } catch (error) {
     console.error('Failed to parse paramsJson', error);
