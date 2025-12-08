@@ -99,7 +99,34 @@ export function useConditionLogic(value, onChange) {
   // 3. 상태 자동 보정 (useEffect)
   useEffect(() => {
     if (!dict || !rightAllow.types.includes(right.type)) {
-      // ... (기존 ConditionCard의 우항 타입 자동 보정 로직과 동일)
+      const nextType = rightAllow.types[0] || 'const';
+
+      if (nextType === 'indicator') {
+        const first = dict.indicators.find((i) =>
+          rightAllow.indDims.includes(i.dimension)
+        );
+        const params = (first?.params || []).reduce((acc, p) => {
+          acc[p.name] = p.default ?? '';
+          return acc;
+        }, {});
+        const output = first?.outputs?.[0]?.name || 'value';
+        const transforms = (first?.transforms || []).reduce((acc, t) => {
+          acc[t.code] = !!t.default;
+          return acc;
+        }, {});
+
+        setRight({
+          type: 'indicator',
+          code: first?.code,
+          params,
+          output,
+          transforms,
+        });
+      } else if (nextType === 'price') {
+        setRight({ type: 'price', field: dict.priceFields[0]?.code });
+      } else {
+        setRight({ type: 'const', value: '' });
+      }
     }
   }, [dict, rightAllow, right.type]);
 
