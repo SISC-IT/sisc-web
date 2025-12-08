@@ -1,22 +1,29 @@
 export function formatCurrency(value, currency) {
   if (value == null) return '-';
-  // 필요하면 Intl.NumberFormat으로 바꿔도 됨
-  return `${value.toLocaleString()} ${currency || ''}`.trim();
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return `${num.toLocaleString()} ${currency || ''}`.trim();
 }
 
 export function formatPercent(value) {
   if (value == null) return '-';
-  return `${value.toFixed(2)}%`;
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return `${num.toFixed(2)}%`;
 }
 
 export function formatNumber(value) {
   if (value == null) return '-';
-  return value.toLocaleString();
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return num.toLocaleString();
 }
 
 export function formatSharpe(value) {
   if (value == null) return '-';
-  return value.toFixed(2);
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return num.toFixed(2);
 }
 
 export function addDaysToDate(dateStr, days) {

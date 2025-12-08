@@ -94,7 +94,10 @@ const BacktestRunResults = (props) => {
         <div>
           <h1 className={styles.title}>{title || '백테스트 결과'}</h1>
           {rangeLabel && (
-            <p className={styles.rangeLabel}>{rangeLabel} • 기준통화 USD</p>
+            <p className={styles.rangeLabel}>
+              {rangeLabel} • 기준통화{' '}
+              {baseCurrency === '$' ? 'USD' : baseCurrency}
+            </p>
           )}
         </div>
 
@@ -143,7 +146,11 @@ const BacktestRunResults = (props) => {
           />
           <MetricCard
             label="평균 보유일수"
-            value={avgHoldDays != null ? `${avgHoldDays.toFixed(1)} 일` : '-'}
+            value={
+              avgHoldDays != null && typeof avgHoldDays === 'number'
+                ? `${avgHoldDays.toFixed(1)} 일`
+                : '-'
+            }
             sub="Average Hold Days"
           />
           <MetricCard
