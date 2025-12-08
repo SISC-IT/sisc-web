@@ -1,6 +1,6 @@
 import { api } from '../../utils/axios';
 
-// 템플릿 목록 조회
+// 템플릿 목록 조회 (GET /api/backtest/templates)
 export async function fetchBacktestTemplates() {
   const res = await api.get('/api/backtest/templates');
   const raw = res.data?.templates;
@@ -15,6 +15,7 @@ export async function fetchBacktestTemplates() {
   }));
 }
 
+// 템플릿 생성 (POST /api/backtest/templates)
 export async function createBacktestTemplate(title) {
   const body = {
     title,
@@ -41,7 +42,7 @@ export async function deleteBacktestTemplate(templateId) {
   return res.data;
 }
 
-// 백테스트 결과를 템플릿에 저장 (POST /api/backtest/runs/{backtestRunId})
+// 백테스트 결과를 템플릿에 저장 (PATCH /api/backtest/runs/{backtestRunId})
 export async function saveBacktestRunToTemplate(backtestRunId, payload) {
   const res = await api.patch(`/api/backtest/runs/${backtestRunId}`, payload);
   return res.data;
