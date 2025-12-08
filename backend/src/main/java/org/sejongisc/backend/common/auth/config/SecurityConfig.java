@@ -44,6 +44,9 @@ public class SecurityConfig {
     private boolean isProd() {
         return List.of(env.getActiveProfiles()).contains("prod");
     }
+    private boolean isDev() {
+        return List.of(env.getActiveProfiles()).contains("dev");
+    }
 
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
@@ -72,8 +75,11 @@ public class SecurityConfig {
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler((req, res, ex) -> {
                             if (isProd()) {
+                                res.sendRedirect("https://sjusisc.com/oauth/fail");
+                            }else if(isDev()){
                                 res.sendRedirect("https://sisc-web.duckdns.org/oauth/fail");
-                            } else {
+                            }
+                            else {
                                 res.sendRedirect("http://localhost:5173/oauth/fail");
                             }
                         })
@@ -121,7 +127,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                "https://sisc-web.duckdns.org"
+                "https://sisc-web.duckdns.org",
+                "https://sjusisc.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

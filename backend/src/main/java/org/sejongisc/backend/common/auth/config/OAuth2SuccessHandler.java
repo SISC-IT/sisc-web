@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -101,11 +102,26 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // 5. RefreshToken 저장(DB or Redis)
         refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
 
-        boolean isProd = Arrays.asList(env.getActiveProfiles()).contains("prod");
+        String[] activeProfiles = env.getActiveProfiles();
+        List<String> profiles = Arrays.asList(activeProfiles);
 
-        String sameSite = isProd ? "None" : "Lax";
-        boolean secure = isProd;
-        String domain = isProd ? "sisc-web.duckdns.org" : "localhost";
+        boolean isProd = profiles.contains("prod");
+        boolean isDev  = profiles.contains("dev");
+
+// SameSite, Secure 설정 (dev도 prod와 동일하게)
+        String sameSite = (isProd || isDev) ? "None" : "Lax";
+        boolean secure  = (isProd || isDev);
+
+// 도메인 설정
+        String domain;
+        if (isProd) {
+            domain = "sjusisc.com"; // 운영 도메인
+        } else if (isDev) {
+            domain = "sisc-web.duckdns.org"; // 개발 도메인
+        } else {
+            domain = "localhost"; // 기본값
+        }
+
 
 
 
