@@ -115,7 +115,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 // 도메인 설정
         String domain;
         if (isProd) {
-            domain = "sjusisc"; // 운영 도메인
+            domain = "sjusisc.com"; // 운영 도메인
         } else if (isDev) {
             domain = "sisc-web.duckdns.org"; // 개발 도메인
         } else {
