@@ -18,7 +18,11 @@ function toServerOperand(side) {
   if (side.type === 'price') {
     return { type: 'price', priceField: side.field };
   }
-  return { type: 'const', constantValue: Number(side.value) };
+  const numValue = Number(side.value);
+  return {
+    type: 'const',
+    constantValue: Number.isNaN(numValue) ? 0 : numValue,
+  };
 }
 
 export function useConditionLogic(value, onChange) {
@@ -98,7 +102,8 @@ export function useConditionLogic(value, onChange) {
 
   // 3. 상태 자동 보정 (useEffect)
   useEffect(() => {
-    if (!dict || !rightAllow.types.includes(right.type)) {
+    if (!dict) return;
+    if (!rightAllow.types.includes(right.type)) {
       const nextType = rightAllow.types[0] || 'const';
 
       if (nextType === 'indicator') {
