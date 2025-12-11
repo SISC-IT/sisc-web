@@ -5,6 +5,10 @@ on:
     tags:
       - "v*"            # ⬅ v1.0.0 이런 태그 push 시에만 빌드+배포
 
+permissions:
+  id-token: write
+  contents: read
+  
 concurrency:
   group: deploy-prod
   cancel-in-progress: true
