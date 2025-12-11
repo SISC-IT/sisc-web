@@ -90,9 +90,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"   # 프로젝트 Node 버전에 맞게 조정
-      # - name: Create .env.production
-      #   run: |
-      #     echo "VITE_API_URL=https://api.sjusisc.com" > .env.production
+      - name: Create .env.production
+        run: |
+          echo "VITE_API_URL=https://api.sjusisc.com" > .env.production
     
       - name: Install dependencies
         run: |
