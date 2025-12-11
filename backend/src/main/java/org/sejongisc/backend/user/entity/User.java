@@ -62,6 +62,9 @@ public class User extends BasePostgresEntity{
         if (this.role == null) {
             this.role = Role.TEAM_MEMBER;
         }
+        if (this.point == null) {
+            this.point = 0;
+        }
     }
     public void updatePoint(int amount) {
         this.point += amount;
