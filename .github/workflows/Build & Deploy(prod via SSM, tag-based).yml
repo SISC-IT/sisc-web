@@ -74,6 +74,7 @@ jobs:
   # -----------------------------
   build-front:
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       id-token: write          # AWS OIDC용
