@@ -1,0 +1,67 @@
+name: Sync prod branch on tagged main
+
+on:
+  push:
+    tags:
+      - "v*"   # v1.0.0, v2.3.4 이런 태그가 push될 때만 실행
+
+permissions:
+  contents: write   # prod 브랜치에 push해야 하므로 write 필요
+
+jobs:
+  sync-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout all branches and tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # 태그/브랜치 히스토리 전체 필요
+
+      - name: Get tag & commit info
+        id: taginfo
+        run: |
+          TAG_REF="${GITHUB_REF#refs/tags/}"              # 예: v1.2.3
+          TAG_COMMIT=$(git rev-list -n 1 "$TAG_REF")
+
+          echo "tag_ref=${TAG_REF}" >> $GITHUB_OUTPUT
+          echo "tag_commit=${TAG_COMMIT}" >> $GITHUB_OUTPUT
+
+          echo "Tag: $TAG_REF"
+          echo "Commit: $TAG_COMMIT"
+
+      - name: Fetch main & prod branches
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git fetch origin prod:refs/remotes/origin/prod || echo "prod 브랜치가 아직 없을 수도 있음"
+
+      - name: Ensure tag is on main
+        run: |
+          TAG_COMMIT="${{ steps.taginfo.outputs.tag_commit }}"
+          MAIN_HEAD=$(git rev-parse refs/remotes/origin/main)
+
+          # 태그 커밋이 main 히스토리 안에 있는지 확인 (실수 방지)
+          if git merge-base --is-ancestor "$TAG_COMMIT" "$MAIN_HEAD"; then
+            echo "Tag commit is contained in main. OK."
+          else
+            echo "❌ Tag commit is NOT on main. prod를 업데이트하지 않습니다."
+            exit 1
+          fi
+
+      - name: Update prod branch to tag (fast-forward)
+        run: |
+          TAG_REF="${{ steps.taginfo.outputs.tag_ref }}"
+          
+          # prod가 있으면 그 위에 체크아웃, 없으면 main 기준으로 생성
+          if git show-ref --verify --quiet refs/remotes/origin/prod; then
+            git checkout -b prod refs/remotes/origin/prod
+          else
+            echo "prod 브랜치가 없어 origin/main 기준으로 새로 생성합니다."
+            git checkout -b prod refs/remotes/origin/main
+          fi
+
+          # fast-forward merge (rebase, merge 커밋 없이 FF만 허용)
+          git merge --ff-only "$TAG_REF"
+
+          # prod 브랜치 푸시
+          git push origin prod
