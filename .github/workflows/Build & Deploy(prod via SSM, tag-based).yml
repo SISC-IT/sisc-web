@@ -101,6 +101,16 @@ jobs:
         run: |
           npm run build        # dist/ 또는 build/ 생성 (Vite면 dist)
 
+      - name: DEBUG - Check AWS_ROLE_ARN presence
+        run: |
+          if [ -z "${AWS_ROLE_ARN}" ]; then
+            echo "AWS_ROLE_ARN is EMPTY (from secrets -> env 안 넘어옴)"
+          else
+            echo "AWS_ROLE_ARN is SET (길이: ${#AWS_ROLE_ARN})"
+          fi
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          
       - name: Configure AWS credentials (for S3/CloudFront)
         uses: aws-actions/configure-aws-credentials@v4
         with:
