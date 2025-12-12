@@ -1,6 +1,6 @@
+import styles from './BacktestCard.module.css';
 import SectionCard from './common/SectionCard';
 import RulesCard from './common/RulesCard';
-import styles from './ExitRulesCard.module.css';
 
 const ExitRulesCard = ({
   rules,
