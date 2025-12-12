@@ -151,7 +151,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-       - name: Deploy backend via SSM (tag-based)
+      - name: Deploy backend via SSM (tag-based)
         env:
           TARGET_DIR: ${{ env.TARGET_DIR }}
           GHCR_READ_USER: ${{ secrets.GHCR_READ_USER }}
