@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import styles from './StocksCard.module.css';
+import styles from './BacktestCard.module.css';
 import SectionCard from './common/SectionCard';
 import useAvailableTickers from '../../api/backtest/useAvailableTickers';
+import { toast } from 'react-toastify';
 
 const StocksCard = ({ tickers, setTickers }) => {
   const [input, setInput] = useState('');
@@ -13,14 +14,12 @@ const StocksCard = ({ tickers, setTickers }) => {
     const value = normalize(rawValue ?? input);
     if (!value) return;
 
-    // 1) 백엔드에서 내려온 종목만 허용
     if (!availableTickers.includes(value)) {
-      alert('지원하지 않는 종목입니다.');
+      toast.error('지원하지 않는 종목입니다.');
       setInput('');
       return;
     }
 
-    // 2) 이미 선택된 종목이면 스킵
     if (tickers.includes(value)) {
       setInput('');
       return;

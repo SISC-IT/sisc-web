@@ -1,0 +1,300 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 264px;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+  width: 60%;
+  max-width: 70%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 0.6rem;
+}
+
+.modalHeaderLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.modalDescription {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.modalCloseBtn {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.modalBody {
+  padding: 0.9rem 0.6rem;
+  overflow-y: auto;
+}
+
+.modalBodyGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
+.newTemplateSection,
+.templateListSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.newTemplateForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.textInput {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid #d1d5db;
+  font-size: 0.9rem;
+}
+
+.primaryButton {
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.4rem;
+  border: none;
+  background-color: #4f46e5;
+  color: #ffffff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondaryButton {
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.4rem;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #111827;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 0.6rem;
+  border-top: 1px solid #e5e7eb;
+  gap: 0.75rem;
+}
+
+.footerDescription {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.closeButton {
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  background-color: #ffffff;
+  color: #111827;
+  border-color: #e5e7eb;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
+}
+
+.templateListHeader {
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.templateListScroll {
+  margin-top: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.closeButton:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.closeButton:active {
+  transform: translateY(1px);
+}
+
+.errorMessage {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c53030;
+}
+
+/* 로딩 상태 컨테이너: 가운데 정렬 + 약간 여백 */
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: #6b7280; /* 회색 텍스트 */
+}
+
+/* 스피너 아이콘에 회전 애니메이션 */
+.spinner {
+  font-size: 1.2rem;
+  animation: spin 0.8s linear infinite;
+}
+
+/* 회전 키프레임 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 템플릿/런이 없을 때 공통 빈 상태 박스 */
+.emptyTemplateBox {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: #f3f4f6;
+  font-size: 0.85rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* 좌측 템플릿 목록 / 우측 백테스트 결과 목록 공통 리스트 스타일 */
+.templateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* 리스트 아이템 기본 스타일 */
+.templateItem {
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.05s ease;
+}
+
+.templateItem:hover {
+  border-color: #a5b4fc;
+  background-color: #f9fafb;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+/* 선택된 아이템 */
+.templateItemSelected {
+  border-color: #6366f1;
+  background-color: #eef2ff;
+}
+
+/* 리스트 내부 텍스트 블록(제목 + 부가 정보) */
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* 템플릿 이름 / 백테스트 제목 */
+.templateName {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+/* 템플릿 업데이트 날짜 / 백테스트 기간 등 보조 텍스트 */
+.templateUpdatedAt {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+/* 오른쪽 삭제 아이콘과 텍스트를 한 줄에 */
+.runItemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* 삭제 아이콘 버튼 */
+.iconButtonDanger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #dc2626;
+}
+
+.iconButtonDanger:hover {
+  color: #b91c1c;
+}
+
+.iconButtonDanger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

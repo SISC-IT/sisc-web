@@ -138,7 +138,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
               </li>
               <li>
                 <NavLink
-                  to="/back-test"
+                  to="/backtest"
                   className={({ isActive }) =>
                     isActive ? styles['active-link'] : styles['inactive-link']
                   }

@@ -1,4 +1,4 @@
-import styles from './StrategyInfoCard.module.css';
+import styles from './BacktestCard.module.css';
 import SectionCard from './common/SectionCard';
 
 const StrategyInfoCard = ({

@@ -1,0 +1,205 @@
+/* ---------- common ---------- */
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #616161;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.input,
+.select {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border: 0.4px solid #e5e7eb;
+  border-color: #afafaf;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 16px;
+  box-sizing: border-box;
+  outline: none;
+  max-width: 100%;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.button {
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 10px;
+  border: 1px solid #0e1a2c;
+  background: #0e1a2c;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.button:hover {
+  opacity: 0.9;
+}
+
+.span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #339fff;
+}
+
+.textarea {
+  width: 100%;
+  height: auto;
+  padding: 12px;
+  border: 0.4px solid #e5e7eb;
+  border-color: #afafaf;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+  max-width: 100%;
+  resize: vertical;
+}
+
+.textarea:focus {
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* ---------- ExitRulesCard ---------- */
+
+.defaultExitRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.defaultExitLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.defaultExitInput {
+  width: 80px;
+  height: auto;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #d0d4dc;
+  font-size: 14px;
+}
+
+.defaultExitHint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ---------- StrategyInfoCard ---------- */
+
+.fieldGroup {
+  display: grid;
+  margin-top: 16px;
+  gap: 50px;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+
+/* ---------- StocksCard ---------- */
+
+.stockRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #111827;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.inputWrapper {
+  position: relative;
+}
+
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+
+  margin-top: 4px;
+  padding: 4px 0;
+
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.suggestions::-webkit-scrollbar {
+  width: 6px;
+}
+
+.suggestions::-webkit-scrollbar-thumb {
+  background-color: #cbd5f5;
+  border-radius: 999px;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.suggestionItem:hover,
+.suggestionItem:focus-visible {
+  background: #eef2ff;
+  color: #1d4ed8;
+  outline: none;
+}
+
+.suggestionItem:focus-visible {
+  box-shadow: 0 0 0 2px #c7d2fe;
+}
+
+.suggestionItem::after {
+  content: '추가';
+  font-size: 0.75rem;
+  color: #6b7280;
+}
