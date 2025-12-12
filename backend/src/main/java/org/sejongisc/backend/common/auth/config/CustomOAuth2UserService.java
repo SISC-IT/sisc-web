@@ -106,22 +106,45 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
 
             } else {
                 // 4) email로도 못 찾으면 신규 생성 + 링크
-                User newUser = User.builder()
-                        .email(email) // null 가능성: DB 제약(NOT NULL/UNIQUE) 있으면 정책 필요
-                        .name(name)
-                        .role(Role.TEAM_MEMBER)
-                        .build();
+                try {
+                    User newUser = User.builder()
+                            .email(email) // null 가능성: DB 제약 있으면 정책 필요
+                            .name(name)
+                            .role(Role.TEAM_MEMBER)
+                            .build();
 
-                User saved = userRepository.save(newUser);
+                    User saved = userRepository.save(newUser);
 
-                UserOauthAccount oauth = UserOauthAccount.builder()
-                        .user(saved)
-                        .provider(authProvider)
-                        .providerUid(providerUid)
-                        .build();
-                oauthAccountRepository.save(oauth);
+                    UserOauthAccount oauth = UserOauthAccount.builder()
+                            .user(saved)
+                            .provider(authProvider)
+                            .providerUid(providerUid)
+                            .build();
+                    oauthAccountRepository.save(oauth);
 
-                user = saved;
+                    user = saved;
+
+                } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                    // 동시에 다른 트랜잭션이 같은 이메일 유저를 먼저 만들어버린 경우(UK 충돌)
+                    if (email != null && !email.isBlank()) {
+                        User existing = userRepository.findUserByEmail(email)
+                                .orElseThrow(() -> e);
+
+                        // 해당 유저에 OAuth 링크 연결
+                        // (provider+uid가 이미 존재한다면 여기서도 unique constraint로 막히거나 exists 체크로 막힘)
+                        if (!oauthAccountRepository.existsByProviderAndUser(authProvider, existing)) {
+                            UserOauthAccount oauth = UserOauthAccount.builder()
+                                    .user(existing)
+                                    .provider(authProvider)
+                                    .providerUid(providerUid)
+                                    .build();
+                            oauthAccountRepository.save(oauth);
+                        }
+                        user = existing;
+                    } else {
+                        throw e;
+                    }
+                }
             }
         }
 
