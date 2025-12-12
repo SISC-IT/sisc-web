@@ -151,7 +151,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy backend via SSM (tag-based)
+       - name: Deploy backend via SSM (tag-based)
         env:
           TARGET_DIR: ${{ env.TARGET_DIR }}
           GHCR_READ_USER: ${{ secrets.GHCR_READ_USER }}
@@ -164,8 +164,7 @@ jobs:
             --targets "Key=tag:${{ env.EC2_TAG_KEY }},Values=${{ env.EC2_TAG_VALUE }}" \
             --parameters "commands=[
               \"cd ${TARGET_DIR}\",
-              \"echo 'BACK_IMAGE_TAG=${IMAGE_TAG}'  > .env.tag\",
-              \"export \$(cat .env.tag | xargs)\",
+              \"echo 'BACK_IMAGE_TAG=${IMAGE_TAG}' > .env\",
               \"echo '${GHCR_READ_TOKEN}' | docker login ghcr.io -u '${GHCR_READ_USER}' --password-stdin\",
               \"docker compose pull api\",
               \"docker compose up -d --remove-orphans api\"
