@@ -9,7 +9,6 @@ import org.sejongisc.backend.auth.entity.UserOauthAccount;
 import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.user.service.UserServiceImpl;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -27,7 +26,8 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserRequest, OAuth2User> {
+public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+
     private final UserRepository userRepository;
     private final UserOauthAccountRepository oauthAccountRepository;
 
@@ -71,6 +71,11 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
 
         AuthProvider authProvider = AuthProvider.from(provider);
 
+        // ✅ 선택지 A: email이 없으면 가상 이메일 생성 (User 생성용)
+        if (email == null || email.isBlank()) {
+            email = provider + "_" + providerUid + "@oauth.local";
+        }
+
         // 1) (provider, providerUid)로 먼저 찾는다 (기존 OAuth 로그인 사용자)
         Optional<UserOauthAccount> oauthLinkOpt =
                 oauthAccountRepository.findByProviderAndProviderUid(authProvider, providerUid);
@@ -82,7 +87,7 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
         } else {
             // 2) 링크가 없으면 email로 기존 로컬/회원가입 유저를 찾는다 (핵심!)
             Optional<User> userByEmailOpt = Optional.empty();
-            if (email != null && !email.isBlank()) {
+            if (!email.isBlank()) {
                 userByEmailOpt = userRepository.findUserByEmail(email);
             }
 
@@ -90,11 +95,7 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
                 // 3) 기존 유저가 있으면: 새 유저 만들지 말고 OAuth 링크만 추가
                 user = userByEmailOpt.get();
 
-                // (선택) 이미 같은 provider로 링크가 있으면 중복 저장 방지
-                // repository에 메서드 없으면 try/catch로 unique constraint에 맡겨도 됨
-                boolean alreadyLinked = oauthAccountRepository
-                        .existsByProviderAndUser(authProvider, user);
-
+                boolean alreadyLinked = oauthAccountRepository.existsByProviderAndUser(authProvider, user);
                 if (!alreadyLinked) {
                     UserOauthAccount oauth = UserOauthAccount.builder()
                             .user(user)
@@ -105,10 +106,10 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
                 }
 
             } else {
-                // 4) email로도 못 찾으면 신규 생성 + 링크
+                // 4) email로도 못 찾으면 신규 생성 + 링크 (경합 대비 try/catch)
                 try {
                     User newUser = User.builder()
-                            .email(email) // null 가능성: DB 제약 있으면 정책 필요
+                            .email(email)
                             .name(name)
                             .role(Role.TEAM_MEMBER)
                             .build();
@@ -126,24 +127,18 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
 
                 } catch (org.springframework.dao.DataIntegrityViolationException e) {
                     // 동시에 다른 트랜잭션이 같은 이메일 유저를 먼저 만들어버린 경우(UK 충돌)
-                    if (email != null && !email.isBlank()) {
-                        User existing = userRepository.findUserByEmail(email)
-                                .orElseThrow(() -> e);
+                    User existing = userRepository.findUserByEmail(email)
+                            .orElseThrow(() -> e);
 
-                        // 해당 유저에 OAuth 링크 연결
-                        // (provider+uid가 이미 존재한다면 여기서도 unique constraint로 막히거나 exists 체크로 막힘)
-                        if (!oauthAccountRepository.existsByProviderAndUser(authProvider, existing)) {
-                            UserOauthAccount oauth = UserOauthAccount.builder()
-                                    .user(existing)
-                                    .provider(authProvider)
-                                    .providerUid(providerUid)
-                                    .build();
-                            oauthAccountRepository.save(oauth);
-                        }
-                        user = existing;
-                    } else {
-                        throw e;
+                    if (!oauthAccountRepository.existsByProviderAndUser(authProvider, existing)) {
+                        UserOauthAccount oauth = UserOauthAccount.builder()
+                                .user(existing)
+                                .provider(authProvider)
+                                .providerUid(providerUid)
+                                .build();
+                        oauthAccountRepository.save(oauth);
                     }
+                    user = existing;
                 }
             }
         }
@@ -156,13 +151,9 @@ public class CustomOAuth2UserService implements OAuth2UserService <OAuth2UserReq
         attributes.put("userId", user.getUserId());
 
         return new DefaultOAuth2User(
-                // 기존처럼 고정 ROLE 주고 싶으면 그대로 두고,
-                // 권한을 user role 기반으로 주고 싶으면 아래 주석 라인으로 교체해도 됨
                 List.of(new SimpleGrantedAuthority("ROLE_TEAM_MEMBER")),
-                // List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
                 attributes,
                 "userId"
         );
     }
-
 }
