@@ -85,9 +85,14 @@ const SessionModifyModal = ({
 
     // 상위 컴포넌트로 업데이트된 회차 데이터 전달
     onSave({
-      id: session.id,
+      attendanceSessionId: session.attendanceSessionId,
+      title: session.title,
       defaultStartTime: `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`,
-      defaultAvailableMinutes: availableMinute,
+      allowedMinutes: defaultAvailableMinutes,
+      rewardPoints: session.rewardPoints,
+      latitude: session.location.lat,
+      longitude: session.location.lng,
+      radiusMeters: session.radiusMeters,
     });
 
     onClose();
@@ -95,7 +100,7 @@ const SessionModifyModal = ({
 
   const handleDeleteClick = () => {
     const handleConfirm = () => {
-      onDelete(session.id);
+      onDelete(session.attendanceSessionId);
       onClose();
     };
 
@@ -131,7 +136,7 @@ const SessionModifyModal = ({
         </div>
 
         <div className={styles.form}>
-          <div className={commonStyles.inputGroup}>
+          <div className={commonStyles.modalInputGroup}>
             <label htmlFor="sessionStartTime" className={commonStyles.label}>
               출석 시작 시간
             </label>

@@ -6,6 +6,7 @@ import ConfirmationToast from './ConfirmationToast';
 const RoundModifyModal = ({
   styles: commonStyles,
   onClose,
+  sessionId,
   round,
   onSave,
   onDelete,
@@ -80,10 +81,12 @@ const RoundModifyModal = ({
     if (!isFormValid(hour, minute, second, availableMinute)) return;
 
     // 상위 컴포넌트로 업데이트된 회차 데이터 전달
-    onSave({
-      id: round.id,
+    onSave(round.id, {
+      // roundId: round.id,
+      sessionId: sessionId,
+      roundDate: round.date,
       startTime: `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`,
-      availableMinutes: availableMinute,
+      allowedMinutes: availableMinute,
     });
 
     onClose();
@@ -127,7 +130,7 @@ const RoundModifyModal = ({
         </div>
 
         <div className={styles.form}>
-          <div className={commonStyles.inputGroup}>
+          <div className={commonStyles.modalInputGroup}>
             <label htmlFor="sessionStartTime" className={commonStyles.label}>
               출석 시작 시간
             </label>
