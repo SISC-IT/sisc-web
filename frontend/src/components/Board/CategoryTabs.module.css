@@ -1,0 +1,72 @@
+.categoryTabsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 30px 0 20px 0;
+  width: 100%;
+}
+
+.tabsLeft {
+  display: flex;
+  gap: 10px;
+}
+
+.tab {
+  height: 43px;
+  padding: 12px 20px;
+  background: #ffffff;
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+
+  /* 폰트 스타일 */
+  font-size: 16px;
+  font-weight: 600;
+  font-style: normal;
+  line-height: 100%;
+  letter-spacing: 0;
+  color: rgba(23, 23, 23, 1);
+
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab:hover {
+  background: #f5f5f5;
+  border-color: #a8a8a8;
+}
+
+.tab.active {
+  background: rgba(238, 249, 255, 1);
+  border: 1px solid transparent;
+  color: rgba(29, 128, 244, 1);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0;
+}
+
+/* 하위 게시판 추가 버튼 */
+.subBoardButton {
+  height: 43px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid #d4d4d4;
+  background: #ffffff;
+
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(23, 23, 23, 1);
+
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.subBoardButton:hover {
+  background: #f5f5f5;
+  border-color: #a8a8a8;
+}

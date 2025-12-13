@@ -1,5 +1,5 @@
 :root {
-  --search-width: 908px;
+  --search-width: 100%;
   --search-height: 68px;
   --search-radius: 50px;
   --search-padding: 24px 16px 24px 26px;

@@ -1,5 +1,7 @@
+/* PostDetail.module.css */
+
 :root {
-  --width-content: 926px;
+  --width-content: 75%;
   --padding-default: 12px;
   --gap-default: 12px;
   --color-bg-light: rgba(244, 244, 244, 1);
@@ -28,7 +30,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-left: 264px;
 }
 
 .title {
@@ -49,9 +50,7 @@
 
 .meta,
 .content,
-.commentsSection,
-.commentInput,
-.commentsList {
+.commentsSection {
   width: var(--width-content);
 }
 
@@ -124,7 +123,9 @@
   font-weight: 700;
 }
 
+/* [수정] 댓글 입력창 - width를 100%로 변경 */
 .commentInput {
+  width: 100%;
   display: flex;
   align-items: flex-start;
   min-height: 71px;
@@ -165,13 +166,14 @@
   outline: none;
 }
 
+/* [수정] 댓글 작성 버튼 - margin-left를 auto로 변경 */
 .submitButton {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 113px;
   height: 43px;
-  margin-left: calc(var(--width-content) - 113px);
+  margin-left: auto;
   margin-bottom: 32px;
   background: var(--color-button);
   color: #fff;
@@ -194,19 +196,23 @@
   cursor: not-allowed;
 }
 
+/* [수정] 댓글 목록 - width 100% 추가 */
 .commentsList {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--gap-default);
 }
 
 .commentCard {
+  width: 100%;
   padding: 20px;
   border: 1px solid var(--color-border-card);
   border-radius: 8px;
   background: var(--color-bg-card);
   word-break: break-word;
   overflow-wrap: break-word;
+  box-sizing: border-box;
 }
 
 .commentHeader {
@@ -367,6 +373,10 @@
   overflow: hidden;
 }
 
+.hiddenInput {
+  display: none;
+}
+
 .menuDropdown button {
   display: flex;
   align-items: center;
@@ -445,7 +455,8 @@
   padding: 16px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  width: 100%;
+  width: var(--width-content);
+  box-sizing: border-box;
 }
 
 .attachmentTitle {
@@ -459,35 +470,68 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 .attachmentItem {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background-color: white;
-  border-radius: 6px;
+  padding: 10px 12px;
+  background-color: #ffffff;
   border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .attachmentIcon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.attachmentIconButton {
+  cursor: pointer;
+}
+
+.attachmentIconButton:hover {
+  opacity: 0.8;
 }
 
 .attachmentName {
   flex: 1;
   font-size: 14px;
+  font-weight: 500;
   color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .attachmentSize {
   font-size: 12px;
-  color: #666;
+  color: #888;
+  margin-right: 8px;
 }
 
-/* 수정 모드 input/textarea */
+/* 수정 모드 */
+.editFormContainer {
+  width: var(--width-content);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editTitleWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
 .editTitleInput {
   width: 100%;
   font-size: 28px;
@@ -497,10 +541,18 @@
   border-radius: 8px;
   outline: none;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .editTitleInput:focus {
   border-color: #3b82f6;
+}
+
+.editDivider {
+  width: 100%;
+  height: 2px;
+  margin-bottom: 24px;
+  background: var(--color-divider);
 }
 
 .editContentTextarea {
@@ -515,10 +567,21 @@
   resize: vertical;
   font-family: inherit;
   transition: border-color 0.2s;
+  box-sizing: border-box;
+  min-height: 400px;
 }
 
 .editContentTextarea:focus {
   border-color: #3b82f6;
+}
+
+.editAttachments {
+  margin: 12px 0 24px 0;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* 수정 모드 버튼 */
@@ -526,6 +589,7 @@
   display: flex;
   gap: 12px;
   margin: 24px 0;
+  width: 100%;
 }
 
 .saveButton {
@@ -595,6 +659,7 @@
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px dashed #d1d5db;
+  width: 100%;
 }
 
 .addFileButton {
@@ -614,4 +679,76 @@
   background-color: #e5e7eb;
   border-color: #9ca3af;
   color: #374151;
+}
+
+.commentItemWrapper {
+  width: 100%;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.replyList {
+  margin-left: 24px;
+  margin-top: 12px;
+  border-left: 1px solid #eee;
+  padding-left: 12px;
+}
+
+.replyInputWrapper {
+  margin-left: 24px;
+  margin-top: 8px;
+  width: calc(100% - 24px);
+}
+
+.replyTextarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+.replyTextarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.replySubmitButton {
+  padding: 8px 16px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.replySubmitButton:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.replySubmitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.replyButton {
+  font-size: 12px;
+  color: #888;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 8px;
+}
+
+.replyButton:hover {
+  color: #555;
 }

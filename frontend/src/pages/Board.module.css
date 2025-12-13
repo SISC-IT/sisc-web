@@ -9,12 +9,24 @@
   box-sizing: border-box;
 }
 
+.boardContainer::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(255, 255, 255, 1);
+  z-index: -1;
+  pointer-events: none;
+}
+
 .boardHeader {
   margin-bottom: 32px;
 }
 
 .boardTitle {
-  width: 94px;
+  width: 200px;
   height: 36px;
   font-weight: 600;
   font-size: 36px;
@@ -35,7 +47,7 @@
 }
 
 .searchContainer {
-  width: 908px;
+  width: 100%;
   height: 68px;
   border-radius: 50px;
   padding: 24px 26px;
@@ -199,9 +211,41 @@
 
 .postsContainer {
   width: 100%;
-  max-width: 908px;
   margin: 0;
   height: auto;
   min-height: auto;
   box-sizing: border-box;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 20px 0;
+}
+
+.pageButton {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.pageButton:hover:not(:disabled) {
+  background-color: #f0f0f0;
+}
+
+.pageButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pageButton.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
 }
