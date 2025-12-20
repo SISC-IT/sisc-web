@@ -1,15 +1,7 @@
 import styles from './External.module.css';
 import Filter from '../../components/external/Filter';
 
-const teams = [
-  '증권 1팀',
-  '증권 2팀',
-  '증권 3팀',
-  '자산 운용팀',
-  '금융 IT팀',
-  '매크로팀',
-  '트레이딩팀',
-];
+const cohort = Array.from({ length: 24 }, (_, i) => `${24 - i}기`);
 
 const Leaders = () => {
   return (
@@ -19,7 +11,7 @@ const Leaders = () => {
         <hr className={styles.divider} />
       </div>
       <div className={styles.info}>
-        <Filter items={teams} />
+        <Filter items={cohort} />
       </div>
     </div>
   );

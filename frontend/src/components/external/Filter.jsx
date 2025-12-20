@@ -1,9 +1,6 @@
 import styles from './Filter.module.css';
-import { useState } from 'react';
 
-const Filter = ({ items }) => {
-  const [selected, setSelected] = useState(items[0]);
-
+const Filter = ({ items, value, onChange }) => {
   return (
     <div className={styles.wrap}>
       <div className={styles.line} />
@@ -13,14 +10,14 @@ const Filter = ({ items }) => {
 
         <ul className={styles.list}>
           {items.map((label) => {
-            const isActive = selected === label;
+            const isActive = value === label;
 
             return (
               <li key={label} className={styles.listItem}>
                 <button
                   type="button"
                   className={`${styles.item} ${isActive ? styles.active : ''}`}
-                  onClick={() => setSelected(label)}
+                  onClick={() => onChange(label)}
                 >
                   {label}
                 </button>

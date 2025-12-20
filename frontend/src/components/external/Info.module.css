@@ -1,0 +1,21 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 45px;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 146%;
+  color: #142d56;
+}
+
+.desc {
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 180%;
+  letter-spacing: -0.03em;
+  color: #000000;
+  word-break: keep-all;
+}
