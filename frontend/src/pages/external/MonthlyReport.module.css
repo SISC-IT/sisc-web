@@ -9,6 +9,7 @@
   background:
     linear-gradient(rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.82)),
     url('../../assets/external/monthly-report.png') center no-repeat;
+  background-size: cover;
   min-height: 300px;
   display: flex;
   flex-direction: column;
