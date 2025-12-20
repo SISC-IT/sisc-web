@@ -1,0 +1,40 @@
+.container {
+  max-width: 850px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.cardSection {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.card {
+  width: 260px;
+  height: 340px;
+  background-color: #f4f4f4;
+}
+
+.nameSection {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.role {
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 146%;
+  letter-spacing: -0.04em;
+  color: #616161;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 146%;
+  letter-spacing: -0.04em;
+  color: #171717;
+}
