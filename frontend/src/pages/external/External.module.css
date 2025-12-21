@@ -64,3 +64,11 @@
 .content {
   max-width: 700px;
 }
+
+.portfolio {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px 100px;
+  gap: 45px;
+}

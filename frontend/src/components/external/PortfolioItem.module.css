@@ -1,0 +1,50 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #cdd4db;
+  padding-bottom: 35px;
+  cursor: pointer;
+}
+
+.preview {
+  display: flex;
+  gap: 20px;
+}
+
+.image {
+  width: 48px;
+  height: 48px;
+}
+
+.titleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.author {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.role {
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 100%;
+  color: #828282;
+}
+
+.time {
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 100%;
+  color: #aaaaaa;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 100%;
+  color: #616161;
+}
