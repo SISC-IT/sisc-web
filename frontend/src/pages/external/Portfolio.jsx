@@ -29,16 +29,26 @@ const mockPortfolio = [
 
 const Portfolio = () => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
   const itemsPerPage = 4;
 
-  const totalPages = Math.ceil(mockPortfolio.length / itemsPerPage);
-  const currentData = mockPortfolio.slice(
+  const filteredPortfolio = mockPortfolio.filter((item) =>
+    item.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredPortfolio.length / itemsPerPage);
+  const currentData = filteredPortfolio.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  const handleSearchChange = (term) => {
+    setSearchTerm(term);
+    setCurrentPage(1);
   };
 
   return (
@@ -48,7 +58,10 @@ const Portfolio = () => {
         <hr className={styles.divider} />
       </div>
       <div className={styles.portfolio}>
-        <SearchBar />
+        <SearchBar
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
+        />
         {currentData.map((item, index) => {
           return <PortfolioItem data={item} key={index} />;
         })}

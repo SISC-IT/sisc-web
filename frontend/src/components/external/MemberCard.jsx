@@ -3,9 +3,9 @@ import styles from './MemberCard.module.css';
 const MemberCard = ({ datas }) => {
   return (
     <div className={styles.container}>
-      {datas.map((data) => {
+      {datas.map((data, index) => {
         return (
-          <div className={styles.cardSection}>
+          <div className={styles.cardSection} key={index}>
             <div className={styles.card}></div>
             <div className={styles.nameSection}>
               <span className={styles.role}>{data.role}</span>
