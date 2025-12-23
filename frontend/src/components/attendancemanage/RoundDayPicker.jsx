@@ -3,7 +3,6 @@ import styles from '../VerificationModal.module.css';
 
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
-import { v4 as uuid } from 'uuid';
 import { useAttendance } from '../../contexts/AttendanceContext';
 
 const RoundDayPicker = () => {
@@ -29,7 +28,9 @@ const RoundDayPicker = () => {
   }, [closeAddRoundsModal]);
 
   const handleComplete = () => {
-    const currentSession = sessions.find((s) => s.id === selectedSessionId);
+    const currentSession = sessions.find(
+      (s) => s.attendanceSessionId === selectedSessionId
+    );
 
     if (!currentSession) {
       alert('세션을 먼저 선택해주세요.');
@@ -46,12 +47,12 @@ const RoundDayPicker = () => {
       const dateString = dateWithoutOffset.toISOString().split('T')[0];
 
       return {
-        id: `round-${uuid()}`,
-        date: dateString,
+        // id: `round-${uuid()}`,
+        roundDate: dateString,
         startTime: currentSession.defaultStartTime,
         availableMinutes: currentSession.defaultAvailableMinutes,
-        status: 'opened',
-        participants: [],
+        // status: 'opened',
+        // participants: [],
       };
     });
 
