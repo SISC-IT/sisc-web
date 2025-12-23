@@ -21,8 +21,8 @@
 }
 
 .boardActions {
-  width: 908px;
-  max-width: calc(100% - 20px);
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   display: flex;
   align-items: center;

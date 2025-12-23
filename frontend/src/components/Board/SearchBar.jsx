@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './SearchBar.module.css';
 import SearchArrowIcon from '../../assets/boardSearchArrow.svg';
 
-const SearchBar = ({ searchTerm, onSearchChange }) => {
+const SearchBar = ({ onSearch }) => {
+  const [inputValue, setInputValue] = useState('');
+
   const handleSearch = () => {
-    if (searchTerm.trim()) {
-      console.log('검색어:', searchTerm);
+    if (inputValue.trim()) {
+      onSearch(inputValue);
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
@@ -20,18 +22,13 @@ const SearchBar = ({ searchTerm, onSearchChange }) => {
       <input
         type="text"
         placeholder="검색어를 입력하세요"
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-        onKeyPress={handleKeyPress}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         className={styles.searchInput}
-        aria-label="검색"
       />
-      <button
-        onClick={handleSearch}
-        className={styles.searchButton}
-        aria-label="검색 버튼"
-      >
-        <img src={SearchArrowIcon} alt="" />
+      <button onClick={handleSearch} className={styles.searchButton}>
+        <img src={SearchArrowIcon} alt="검색" />
       </button>
     </div>
   );

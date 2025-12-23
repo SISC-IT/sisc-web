@@ -49,6 +49,7 @@ function App() {
           <Route path="/board" element={<Board />} />
           <Route path="/board/:team" element={<Board />} />
           <Route path="/board/:team/:postId" element={<PostDetail />} />
+          <Route path="/board/:team/post/:postId" element={<PostDetail />} />
           <Route path="/quant-bot" element={<QuantTradingDashboard />} />
           <Route path="/stock-game" element={<StockGame />} />
           <Route path="/backtest" element={<BackTest />} />
