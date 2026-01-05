@@ -1,102 +1,347 @@
 .sessionManagementCardContainer {
   border-radius: 12px;
-  padding: 26px 40px;
+  padding: 16px;
   background: #fafbfc;
-
-  border: 1px solid #c9bebe;
+  border: 1.5px solid #d1d5db;
   width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.sessionManagementCardContainer:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 
 .selectGroup {
   display: flex;
-  gap: 5px;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  align-items: center;
 }
 
 .sessionSelect {
-  display: flex;
-  width: 30%;
-  padding: 9px 14px;
-  font-size: 18px;
+  display: inline-flex;
+  flex: 1;
+  min-width: 180px;
+  max-width: 280px;
+  padding: 9px 12px;
+  font-size: 13px;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-
+  gap: 8px;
   border-radius: 8px;
-  border: 0.8px solid #afafaf;
+  border: 1.5px solid #d1d5db;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  font-family: Inter, sans-serif;
+}
+
+.sessionSelect:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.sessionSelect:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 .tableGroup {
-  border-radius: 12px;
-  overflow: hidden;
-  max-height: 250px;
-  overflow-y: auto;
+  border-radius: 8px;
+  overflow: auto;
+  max-height: 500px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  width: 100%;
 }
+
+.tableGroup::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.tableGroup::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+
+.tableGroup::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
+}
+
+.tableGroup::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 .table {
   width: 100%;
-
   border-collapse: collapse;
-  border-spacing: 0px 10px;
+  border-spacing: 0;
   table-layout: fixed;
+}
+
+.table thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 10;
 }
 
 .table thead th {
   text-align: left;
-  border-bottom: 1px solid var(--line);
-  color: var(--text);
-  padding: 8px 7px;
+  border-bottom: 2px solid #e2e8f0;
+  color: #1e293b;
+  padding: 10px 6px;
   white-space: nowrap;
-  font-family: Inter;
-  font-size: 20px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 100%;
-
-  position: sticky;
-  top: 0;
-  background-color: #fafbfc;
+  font-family: Inter, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  background-color: #f8fafc;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .row {
-  margin-bottom: 10px;
+  transition: background-color 0.15s;
+  cursor: pointer;
 }
+
+.row:hover {
+  background-color: #f8fafc;
+}
+
 .table tbody td {
-  border-bottom: 1px solid var(--line);
-  padding: 8px 7px;
-  font-size: 18px;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 6px;
+  font-size: 12px;
   text-align: left;
+  color: #334155;
+  font-family: Inter, sans-serif;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.table tbody td:nth-child(2) {
-  padding-left: 10px;
+/* 컬럼별 스타일 */
+.dateCell {
+  font-weight: 500;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
 }
 
+.timeCell {
+  font-variant-numeric: tabular-nums;
+  color: #475569;
+}
+
+.minutesCell {
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+}
+
+.roundCell {
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+  text-align: center;
+}
+
+.menuCell {
+  text-align: center;
+}
+
+/* 컬럼 너비 - 비율 기반 */
 .table thead th:nth-child(1),
 .table tbody td:nth-child(1) {
-  width: 25%;
+  width: 26%;
 }
 .table thead th:nth-child(2),
 .table tbody td:nth-child(2) {
-  width: 25%;
+  width: 24%;
 }
 .table thead th:nth-child(3),
 .table tbody td:nth-child(3) {
-  width: 25%;
+  width: 22%;
 }
 .table thead th:nth-child(4),
 .table tbody td:nth-child(4) {
-  width: 20%;
+  width: 18%;
 }
 .table thead th:nth-child(5),
 .table tbody td:nth-child(5) {
   width: 10%;
+  text-align: center;
 }
 
 .menuButton {
   background: none;
   border: none;
   cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  font-size: 16px;
+  color: #64748b;
+  line-height: 1;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #334155;
 }
 
 .selectedRound {
-  background-color: #e0f7fa; /* 선택 회차 하늘색으로 */
-  cursor: pointer;
+  background-color: #dbeafe;
+}
+
+.selectedRound:hover {
+  background-color: #bfdbfe;
+}
+
+.noData {
+  text-align: center;
+  padding: 32px 16px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .sessionManagementCardContainer {
+    padding: 20px;
+  }
+
+  .selectGroup {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .sessionSelect {
+    min-width: 200px;
+    max-width: 300px;
+    font-size: 14px;
+    padding: 9px 13px;
+  }
+
+  .tableGroup {
+    max-height: 550px;
+  }
+
+  .table thead th {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  .table tbody td {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  .menuButton {
+    padding: 4px 8px;
+  }
+
+  .noData {
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .sessionManagementCardContainer {
+    padding: 22px 24px;
+  }
+
+  .selectGroup {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .sessionSelect {
+    min-width: 220px;
+    max-width: 320px;
+    font-size: 14.5px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .tableGroup {
+    max-height: 600px;
+  }
+
+  .table thead th {
+    padding: 13px 10px;
+    font-size: 14px;
+  }
+
+  .table tbody td {
+    padding: 13px 10px;
+    font-size: 14px;
+  }
+}
+
+/* 대형 데스크톱 */
+@media (min-width: 1280px) {
+  .sessionManagementCardContainer {
+    padding: 24px 28px;
+  }
+
+  .sessionSelect {
+    min-width: 240px;
+    font-size: 15px;
+    padding: 10px 15px;
+  }
+
+  .table thead th {
+    padding: 14px 11px;
+    font-size: 14.5px;
+  }
+
+  .table tbody td {
+    padding: 14px 11px;
+    font-size: 14.5px;
+  }
+
+  .noData {
+    font-size: 15px;
+  }
+}
+
+/* 초대형 데스크톱 */
+@media (min-width: 1536px) {
+  .sessionManagementCardContainer {
+    padding: 26px 32px;
+  }
+
+  .sessionSelect {
+    min-width: 260px;
+    font-size: 16px;
+    padding: 11px 16px;
+  }
+
+  .table thead th {
+    padding: 15px 12px;
+    font-size: 15px;
+  }
+
+  .table tbody td {
+    padding: 15px 12px;
+    font-size: 15px;
+  }
 }

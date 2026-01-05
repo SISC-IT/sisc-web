@@ -7,11 +7,20 @@
 }
 
 .fieldLabel {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #212529;
+  word-break: keep-all;
 }
 
 .fieldControl {
   width: 100%;
+  box-sizing: border-box;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .fieldLabel {
+    font-size: 13px;
+  }
 }

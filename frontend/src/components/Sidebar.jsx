@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { api } from '../utils/axios';
 import { toast } from 'react-toastify';
 
-const Sidebar = ({ isOpen, isRoot }) => {
+const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,12 +52,28 @@ const Sidebar = ({ isOpen, isRoot }) => {
     }
   };
 
+  const handleNavLinkClick = () => {
+    // 모바일에서 메뉴 클릭 시 사이드바 닫기
+    if (window.innerWidth < 1024 && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div>
-      {/* 클릭 시 사이드바 슬라이드 */}
+    <>
+      {/* 모바일 오버레이 */}
+      {isOpen && (
+        <div 
+          className={styles.overlay} 
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      
+      {/* 사이드바 */}
       <div
         className={`${styles.homeSidebarMenu} ${
-          !isOpen && isRoot ? styles.closed : styles.open
+          isOpen ? styles.open : styles.closed
         }`}
         aria-hidden={!isOpen}
       >
@@ -76,6 +92,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                 if (selected) {
                   setSelectedBoard(newBoard);
                   navigate(selected.path);
+                  handleNavLinkClick();
                 }
               }}
             >
@@ -96,6 +113,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                   className={({ isActive }) =>
                     isActive ? styles['active-link'] : styles['inactive-link']
                   }
+                  onClick={handleNavLinkClick}
                 >
                   출석하기
                 </NavLink>
@@ -106,6 +124,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                   className={({ isActive }) =>
                     isActive ? styles['active-link'] : styles['inactive-link']
                   }
+                  onClick={handleNavLinkClick}
                 >
                   출석관리(담당자)
                 </NavLink>
@@ -122,6 +141,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                   className={({ isActive }) =>
                     isActive ? styles['active-link'] : styles['inactive-link']
                   }
+                  onClick={handleNavLinkClick}
                 >
                   퀀트봇
                 </NavLink>
@@ -132,6 +152,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                   className={({ isActive }) =>
                     isActive ? styles['active-link'] : styles['inactive-link']
                   }
+                  onClick={handleNavLinkClick}
                 >
                   주식베팅
                 </NavLink>
@@ -142,6 +163,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                   className={({ isActive }) =>
                     isActive ? styles['active-link'] : styles['inactive-link']
                   }
+                  onClick={handleNavLinkClick}
                 >
                   백테스팅
                 </NavLink>
@@ -162,6 +184,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                           ? styles['active-link']
                           : styles['inactive-link']
                       }
+                      onClick={handleNavLinkClick}
                     >
                       마이페이지
                     </NavLink>
@@ -171,7 +194,10 @@ const Sidebar = ({ isOpen, isRoot }) => {
                     <NavLink
                       to="/"
                       className={styles['inactive-link']}
-                      onClick={logout}
+                      onClick={(e) => {
+                        logout();
+                        handleNavLinkClick();
+                      }}
                     >
                       로그아웃
                     </NavLink>
@@ -187,6 +213,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                           ? styles['active-link']
                           : styles['inactive-link']
                       }
+                      onClick={handleNavLinkClick}
                     >
                       마이페이지
                     </NavLink>
@@ -200,6 +227,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                           ? styles['active-link']
                           : styles['inactive-link']
                       }
+                      onClick={handleNavLinkClick}
                     >
                       로그인
                     </NavLink>
@@ -213,6 +241,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
                           ? styles['active-link']
                           : styles['inactive-link']
                       }
+                      onClick={handleNavLinkClick}
                     >
                       회원가입
                     </NavLink>
@@ -223,7 +252,7 @@ const Sidebar = ({ isOpen, isRoot }) => {
           </div>
         </nav>
       </div>
-    </div>
+    </>
   );
 };
 

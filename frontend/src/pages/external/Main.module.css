@@ -17,6 +17,131 @@
   z-index: -1;
 }
 
+/* ========== 모바일 헤더 ========== */
+.mobileHeader {
+  display: none;
+}
+
+/* ========== 모바일 햄버거 버튼 ========== */
+.hamburger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  z-index: 1001;
+}
+
+.hamburgerLine {
+  width: 24px;
+  height: 2px;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+/* ========== 모바일 사이드바 ========== */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.mobileSidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: transparent;
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+  padding: 60px 30px;
+  box-sizing: border-box;
+  animation: slideIn 0.3s ease;
+  overflow-y: auto;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 50px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.sidebarHeader:hover {
+  opacity: 0.8;
+}
+
+.sidebarHeader img {
+  width: 28px;
+  height: 28px;
+  filter: brightness(0) invert(1);
+}
+
+.sidebarHeader span {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.sidebarMenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.sidebarMenu li {
+  width: 100%;
+}
+
+.sidebarMenu a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 140%;
+  display: block;
+  transition: opacity 0.2s ease;
+}
+
+.sidebarMenu a:hover {
+  opacity: 0.7;
+}
+
+/* ========== 태블릿/데스크톱 메뉴 (기존) ========== */
 .menu {
   margin-top: 55px;
   margin-left: 108px;
@@ -38,6 +163,7 @@
   letter-spacing: -0.556px;
 }
 
+/* ========== 메인 콘텐츠 ========== */
 .info {
   margin-top: 150px;
   display: flex;
@@ -45,6 +171,29 @@
   justify-content: center;
   align-items: center;
   gap: 40px;
+}
+
+.headerLogo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.headerLogo:hover {
+  opacity: 0.8;
+}
+
+.headerLogo img {
+  width: 24px;
+  height: 24px;
+}
+
+.headerLogo span {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .logo {
@@ -59,6 +208,7 @@
   letter-spacing: 0%;
   color: #ffffff;
   margin: 0;
+  text-align: center;
 }
 
 .subTitle {
@@ -68,4 +218,85 @@
   letter-spacing: 0%;
   color: #ffffff;
   margin: 0;
+  text-align: center;
+}
+
+/* ========== 모바일 반응형 (< 768px) ========== */
+@media (max-width: 767px) {
+  /* 모바일 헤더 표시 */
+  .mobileHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+    z-index: 10;
+  }
+
+  /* 태블릿/데스크톱 메뉴 숨김 */
+  .menu {
+    display: none;
+  }
+
+  /* 메인 콘텐츠 조정 */
+  .info {
+    margin-top: 180px;
+    padding: 0 20px;
+    gap: 24px;
+  }
+
+  .logo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .title {
+    font-size: 32px;
+    line-height: 120%;
+  }
+
+  .subTitle {
+    font-size: 16px;
+    line-height: 150%;
+  }
+}
+
+/* ========== 태블릿 반응형 (768px ~ 1023px) ========== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .menu {
+    margin-left: 40px;
+  }
+
+  .menu ul {
+    gap: 40px;
+  }
+
+  .menu a {
+    font-size: 16px;
+  }
+
+  .info {
+    margin-top: 120px;
+    gap: 32px;
+  }
+
+  .logo {
+    width: 90px;
+    height: 90px;
+  }
+
+  .title {
+    font-size: 56px;
+  }
+
+  .subTitle {
+    font-size: 24px;
+  }
+}
+
+/* ========== 데스크톱 (≥ 1024px) ========== */
+@media (min-width: 1024px) {
+  .mobileHeader {
+    display: none;
+  }
 }

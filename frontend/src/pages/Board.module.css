@@ -3,9 +3,9 @@
   width: 100%;
   max-width: 1030px;
   background: rgba(255, 255, 255, 1);
-  padding: 32px 40px;
-  margin-top: 80px;
-  margin-left: 100px;
+  padding: 20px;
+  margin-top: 20px;
+  margin-left: 0;
   box-sizing: border-box;
 }
 
@@ -22,14 +22,14 @@
 }
 
 .boardHeader {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .boardTitle {
-  width: 200px;
-  height: 36px;
+  width: auto;
+  height: auto;
   font-weight: 600;
-  font-size: 36px;
+  font-size: 24px;
   line-height: 100%;
   letter-spacing: 0%;
   color: rgba(23, 23, 23, 1);
@@ -41,16 +41,16 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  margin-bottom: 32px;
-  gap: 70px;
+  margin-bottom: 24px;
+  gap: 20px;
   align-items: flex-start;
 }
 
 .searchContainer {
   width: 100%;
-  height: 68px;
+  height: 56px;
   border-radius: 50px;
-  padding: 24px 26px;
+  padding: 18px 20px;
   gap: 10px;
   opacity: 1;
   position: relative;
@@ -81,7 +81,7 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 20px;
+  font-size: 16px;
   color: rgba(23, 23, 23, 1);
   padding: 0;
   margin: 0;
@@ -89,7 +89,7 @@
 
 .searchInput::placeholder {
   font-weight: 400;
-  font-size: 20px;
+  font-size: 16px;
   line-height: 100%;
   letter-spacing: 0%;
   color: rgba(170, 170, 170, 1);
@@ -97,10 +97,10 @@
 }
 
 .searchButton {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 1); /* 검정색 원형 배경 유지 */
+  background: rgba(0, 0, 0, 1);
   border: none;
   opacity: 1;
   cursor: pointer;
@@ -112,38 +112,38 @@
 }
 
 .searchButton img {
-  width: 20px;
-  height: 16px;
+  width: 18px;
+  height: 14px;
   display: block;
 }
 
 .boardActions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  width: 908px;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
-/* selectWrapper 추가 */
 .selectWrapper {
   position: relative;
   display: inline-block;
 }
 
 .sortSelect {
-  width: 90px;
-  height: 35px;
+  width: 80px;
+  height: 32px;
   border-radius: 4px;
-  padding: 8px 12px;
-  gap: 12px;
+  padding: 6px 10px;
+  gap: 8px;
   opacity: 1;
   border: 0.6px solid rgba(0, 0, 0, 1);
   background: #ffffff;
   cursor: pointer;
   box-sizing: border-box;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 100%;
   letter-spacing: 0%;
   color: rgba(0, 0, 0, 1);
@@ -157,23 +157,22 @@
   border-color: #2b518e;
 }
 
-/* selectArrow - img 태그용 스타일 */
 .selectArrow {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  width: 12px;
-  height: 8px;
+  width: 10px;
+  height: 6px;
 }
 
 .writeButton {
-  width: 122px;
-  height: 35px;
+  width: 110px;
+  height: 32px;
   border-radius: 4px;
-  padding: 8px 12px;
-  gap: 12px;
+  padding: 6px 10px;
+  gap: 8px;
   opacity: 1;
   background: linear-gradient(
     92.89deg,
@@ -190,16 +189,15 @@
 }
 
 .writeButton span {
-  width: 74px;
-  height: 19px;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 100%;
   letter-spacing: 0%;
   color: rgba(0, 0, 0, 1);
   opacity: 1;
   display: flex;
   align-items: center;
+  white-space: nowrap;
 }
 
 .writeButton img {
@@ -221,18 +219,21 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin-top: 24px;
-  padding: 20px 0;
+  gap: 6px;
+  margin-top: 20px;
+  padding: 16px 0;
+  flex-wrap: wrap;
 }
 
 .pageButton {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid #ddd;
   background-color: white;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s;
+  font-size: 14px;
+  min-width: 32px;
 }
 
 .pageButton:hover:not(:disabled) {
@@ -248,4 +249,173 @@
   background-color: #007bff;
   color: white;
   border-color: #007bff;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .boardContainer {
+    padding: 28px 32px;
+    margin-top: 40px;
+    margin-left: 50px;
+  }
+
+  .boardHeader {
+    margin-bottom: 28px;
+  }
+
+  .boardTitle {
+    font-size: 32px;
+  }
+
+  .boardControls {
+    gap: 40px;
+    margin-bottom: 28px;
+  }
+
+  .searchContainer {
+    height: 62px;
+    padding: 20px 24px;
+  }
+
+  .searchInput {
+    font-size: 18px;
+  }
+
+  .searchInput::placeholder {
+    font-size: 18px;
+  }
+
+  .searchButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .searchButton img {
+    width: 19px;
+    height: 15px;
+  }
+
+  .boardActions {
+    justify-content: flex-end;
+    gap: 14px;
+  }
+
+  .sortSelect {
+    width: 85px;
+    height: 33px;
+    font-size: 15px;
+    padding: 7px 11px;
+  }
+
+  .selectArrow {
+    width: 11px;
+    height: 7px;
+  }
+
+  .writeButton {
+    width: 116px;
+    height: 33px;
+    padding: 7px 11px;
+  }
+
+  .writeButton span {
+    font-size: 15px;
+  }
+
+  .pagination {
+    gap: 7px;
+    margin-top: 22px;
+    padding: 18px 0;
+  }
+
+  .pageButton {
+    padding: 7px 11px;
+    font-size: 15px;
+    min-width: 36px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .boardContainer {
+    padding: 32px 40px;
+    margin-top: 80px;
+    margin-left: 100px;
+  }
+
+  .boardHeader {
+    margin-bottom: 32px;
+  }
+
+  .boardTitle {
+    font-size: 36px;
+  }
+
+  .boardControls {
+    gap: 70px;
+    margin-bottom: 32px;
+  }
+
+  .searchContainer {
+    height: 68px;
+    padding: 24px 26px;
+  }
+
+  .searchInput {
+    font-size: 20px;
+  }
+
+  .searchInput::placeholder {
+    font-size: 20px;
+  }
+
+  .searchButton {
+    width: 40px;
+    height: 40px;
+  }
+
+  .searchButton img {
+    width: 20px;
+    height: 16px;
+  }
+
+  .boardActions {
+    gap: 16px;
+  }
+
+  .sortSelect {
+    width: 90px;
+    height: 35px;
+    font-size: 16px;
+    padding: 8px 12px;
+    gap: 12px;
+  }
+
+  .selectArrow {
+    width: 12px;
+    height: 8px;
+  }
+
+  .writeButton {
+    width: 122px;
+    height: 35px;
+    padding: 8px 12px;
+    gap: 12px;
+  }
+
+  .writeButton span {
+    font-size: 16px;
+  }
+
+  .pagination {
+    gap: 8px;
+    margin-top: 24px;
+    padding: 20px 0;
+  }
+
+  .pageButton {
+    padding: 8px 12px;
+    font-size: 16px;
+    min-width: 40px;
+  }
 }

@@ -4,6 +4,153 @@
   display: flex;
   flex-direction: column;
   background-color: #ffffff;
+  position: relative;
+}
+
+/* ========== 모바일 헤더 ========== */
+.mobileHeader {
+  display: none;
+}
+
+.hamburger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  z-index: 1001;
+}
+
+.hamburgerLine {
+  width: 24px;
+  height: 2px;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.headerLogo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.headerLogo:hover {
+  opacity: 0.8;
+}
+
+.headerLogo img {
+  width: 24px;
+  height: 24px;
+}
+
+.headerLogo span {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ========== 모바일 사이드바 ========== */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.mobileSidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: transparent;
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+  padding: 60px 30px;
+  box-sizing: border-box;
+  animation: slideIn 0.3s ease;
+  overflow-y: auto;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 50px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.sidebarHeader:hover {
+  opacity: 0.8;
+}
+
+.sidebarHeader img {
+  width: 28px;
+  height: 28px;
+  filter: brightness(0) invert(1);
+}
+
+.sidebarHeader span {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.sidebarMenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.sidebarMenu li {
+  width: 100%;
+}
+
+.sidebarMenu a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 140%;
+  display: block;
+  transition: opacity 0.2s ease;
+}
+
+.sidebarMenu a:hover {
+  opacity: 0.7;
 }
 
 .header {
@@ -27,6 +174,7 @@
 
 .divider {
   width: 250px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .info {
@@ -63,6 +211,7 @@
 
 .content {
   max-width: 700px;
+  width: 100%;
 }
 
 .portfolio {
@@ -71,4 +220,117 @@
   justify-content: center;
   padding: 80px 100px;
   gap: 45px;
+}
+
+/* ========== 모바일 반응형 (< 768px) ========== */
+@media (max-width: 767px) {
+  /* 모바일 헤더 표시 */
+  .mobileHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  }
+
+  .header {
+    height: 180px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .divider {
+    width: 150px;
+  }
+
+  .info {
+    flex-direction: column;
+    padding: 40px 20px;
+    gap: 30px;
+  }
+
+  .logoSection {
+    width: 100%;
+    height: auto;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .name {
+    font-size: 20px;
+    line-height: 130%;
+  }
+
+  .filter {
+    gap: 20px;
+    width: 100%;
+  }
+
+  .content {
+    max-width: 100%;
+  }
+
+  .portfolio {
+    padding: 40px 20px;
+    gap: 30px;
+  }
+}
+
+/* ========== 태블릿 반응형 (768px ~ 1023px) ========== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .header {
+    height: 200px;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .divider {
+    width: 200px;
+  }
+
+  .info {
+    padding: 60px 40px;
+    gap: 35px;
+  }
+
+  .logoSection {
+    width: 280px;
+  }
+
+  .logo {
+    width: 50px;
+    height: 50px;
+  }
+
+  .name {
+    font-size: 22px;
+  }
+
+  .portfolio {
+    padding: 60px 40px;
+    gap: 35px;
+  }
+}
+
+/* ========== 데스크톱 (≥ 1024px) ========== */
+@media (min-width: 1024px) {
+  .mobileHeader {
+    display: none;
+  }
 }

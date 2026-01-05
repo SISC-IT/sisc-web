@@ -1,16 +1,22 @@
 .header {
-  width: 264px;
+  width: 100%;
   height: 90px;
   box-sizing: border-box;
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1000;
+  z-index: 1001;
   display: flex;
   background-color: #000000;
   align-items: center;
-  padding: 0 30px;
-  gap: 30px;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 20px;
+}
+
+/* 루트 페이지에서 투명 */
+.transparent {
+  background-color: transparent;
 }
 
 .brand {
@@ -18,11 +24,12 @@
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  flex: 1;
 }
 
 .title {
   font-weight: 600;
-  font-size: 18.53px;
+  font-size: 16px;
   line-height: 120%;
   letter-spacing: -0.03em;
   color: white;
@@ -39,6 +46,11 @@
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.menuButton:active {
+  opacity: 0.7;
 }
 
 .menuButton span {
@@ -47,9 +59,62 @@
   height: 2px;
   background: white;
   border-radius: 2px;
+  transition: all 0.3s ease;
 }
 
 .logo {
   width: 19px;
   height: 19px;
+}
+
+.authLinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.authLinks a {
+  color: #ffffff;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+
+.authLinks a:hover {
+  opacity: 0.7;
+}
+
+.authLinks span {
+  color: #ffffff;
+  opacity: 0.5;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .header {
+    padding: 0 30px;
+    gap: 30px;
+  }
+
+  .title {
+    font-size: 18.53px;
+  }
+  
+  /* 태블릿/데스크톱에서 로그인|회원가입 숨김 */
+  .authLinks {
+    display: none;
+  }
+}
+
+/* 데스크톱 - 사이드바가 고정되므로 헤더도 고정 너비, 햄버거 버튼 숨김 */
+@media (min-width: 1024px) {
+  .header {
+    width: 264px;
+  }
+  
+  .menuButton {
+    display: none;
+  }
 }

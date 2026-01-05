@@ -29,15 +29,12 @@
   list-style: none;
   padding: 0;
   margin: 0;
-
   max-height: 220px;
   overflow-y: auto;
-
   display: flex;
   flex-direction: column;
   gap: 14px;
   align-items: center;
-
   -webkit-overflow-scrolling: touch;
 }
 
@@ -51,11 +48,15 @@
   border: 0;
   padding: 0;
   cursor: pointer;
-
   font-size: 16px;
   font-weight: 400;
   line-height: 146%;
   color: #656565;
+  transition: all 0.2s ease;
+}
+
+.item:hover {
+  color: #142d56;
 }
 
 .active {
@@ -65,4 +66,83 @@
 
 .list::-webkit-scrollbar {
   width: 0px;
+}
+
+/* ========== 모바일 반응형 (< 768px) ========== */
+@media (max-width: 767px) {
+  .wrap {
+    width: 100%;
+    padding: 20px 0;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .line {
+    display: none;
+  }
+
+  .content {
+    width: 100%;
+  }
+
+  .title {
+    font-size: 11px;
+    margin-bottom: 12px;
+  }
+
+  .list {
+    max-height: none;
+    overflow-y: visible;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .item {
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: #f5f5f5;
+  }
+
+  .active {
+    background-color: #142d56;
+    color: #ffffff !important;
+  }
+
+  .item:hover {
+    background-color: #e0e0e0;
+    color: #656565;
+  }
+
+  .active:hover {
+    background-color: #0f1f3d;
+    color: #ffffff !important;
+  }
+}
+
+/* ========== 태블릿 반응형 (768px ~ 1023px) ========== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .wrap {
+    width: 200px;
+    padding: 24px 16px;
+  }
+
+  .line {
+    height: 220px;
+  }
+
+  .title {
+    font-size: 11px;
+  }
+
+  .list {
+    max-height: 200px;
+    gap: 12px;
+  }
+
+  .item {
+    font-size: 14px;
+  }
 }
