@@ -1,28 +1,39 @@
 .attendanceManageContainer {
   color: #171717;
-  padding: 124px;
+  padding: 16px;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .mainTitle {
-  font-family: Pretendard;
-  font-size: 36px;
+  font-family: Pretendard, sans-serif;
+  font-size: 22px;
   font-style: normal;
   font-weight: 600;
-  line-height: 100%;
+  line-height: 1.2;
+  margin-bottom: 14px;
+  letter-spacing: -0.01em;
 }
 
 .cardLayout {
   display: grid;
-  width: auto;
-
+  width: 100%;
   align-items: start;
-  padding: 72px 0px;
-  gap: 16px;
+  padding: 24px 0px;
+  gap: 18px;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    'settings'
+    'session'
+    'roster';
 }
+
 .leftColumn {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .settings {
@@ -33,15 +44,6 @@
 }
 .session {
   grid-area: session;
-}
-@media (max-width: 1024px) {
-  .cardLayout {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'settings'
-      'session'
-      'roster';
-  }
 }
 
 /* 공통 컴포넌트 디자인 */
@@ -57,104 +59,340 @@
 
 .header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 16px;
 }
+
+.buttonGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .iconButton {
-  background: none;
-  border: none;
+  background: white;
+  border: 1.5px solid #e5e7eb;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+
+.iconButton:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
 .iconButton img {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
 }
+
 .iconGroup {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
+
 .text {
-  color: #6a6a6a;
-  font-family: Inter;
-  font-size: 14px;
+  color: #64748b;
+  font-family: Inter, sans-serif;
+  font-size: 12px;
   font-style: normal;
-  font-weight: 400;
-  line-height: normal;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .header h1 {
-  color: var(--T2, #171717);
-  font-family: Pretendard;
-  font-size: 25px;
+  color: #171717;
+  font-family: Pretendard, sans-serif;
+  font-size: 18px;
   font-style: normal;
   font-weight: 700;
-  line-height: 146%; /* 29.2px */
+  line-height: 1.3;
+  margin: 0;
+  letter-spacing: -0.01em;
 }
+
 .inputGroup {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   margin-bottom: 14px;
 }
 
 .inputGroup .label {
-  color: #000;
-  font-family: Inter;
-  font-size: 17px;
+  color: #1e293b;
+  font-family: Inter, sans-serif;
+  font-size: 13px;
   font-style: normal;
-  font-weight: 400;
-  line-height: normal;
+  font-weight: 500;
+  line-height: 1.3;
 }
 
 .inputGroup input {
-  width: 300px;
+  width: 100%;
+  max-width: 320px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: #ffffff;
-  border: 1px solid #d1d5db;
-
-  max-width: 100%;
-  padding-left: 12px;
-
-  font-size: 16px;
-  color: #111827;
-  outline: none;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-input::placeholder {
-  color: #9ca3af;
-}
-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.modalInputGroup {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-.modalInputGroup input {
-  width: 116px;
-  height: 44px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-
-  max-width: 100%;
-  padding-left: 12px;
-
+  border: 1.5px solid #d1d5db;
+  padding: 0 12px;
   font-size: 14px;
   color: #111827;
   outline: none;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  box-sizing: border-box;
+  font-family: Inter, sans-serif;
+}
+
+input::placeholder {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.modalInputGroup {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.modalInputGroup input {
+  width: 100%;
+  max-width: 115px;
+  height: 44px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
+  padding: 0 10px;
+  font-size: 13px;
+  color: #111827;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  box-sizing: border-box;
+  font-family: Inter, sans-serif;
+}
+
+.modalInputGroup input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .attendanceManageContainer {
+    padding: 24px 20px;
+  }
+
+  .mainTitle {
+    font-size: 26px;
+    margin-bottom: 16px;
+  }
+
+  .cardLayout {
+    padding: 32px 0px;
+    gap: 20px;
+  }
+
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .buttonGroup {
+    gap: 10px;
+  }
+
+  .iconButton {
+    padding: 7px 11px;
+  }
+
+  .iconButton img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .iconGroup {
+    gap: 7px;
+  }
+
+  .text {
+    font-size: 13px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+  }
+
+  .inputGroup .label {
+    font-size: 14px;
+  }
+
+  .inputGroup input {
+    max-width: 360px;
+    font-size: 14.5px;
+  }
+
+  input::placeholder {
+    font-size: 13.5px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .attendanceManageContainer {
+    padding: 32px 28px;
+  }
+
+  .mainTitle {
+    font-size: 28px;
+    margin-bottom: 18px;
+  }
+
+  .cardLayout {
+    padding: 40px 0px;
+    gap: 22px;
+  }
+
+  .header {
+    margin-bottom: 20px;
+  }
+
+  .iconButton {
+    padding: 7px 12px;
+  }
+
+  .iconButton img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .iconGroup {
+    gap: 8px;
+  }
+
+  .text {
+    font-size: 13.5px;
+  }
+
+  .header h1 {
+    font-size: 21px;
+  }
+
+  .inputGroup .label {
+    font-size: 14.5px;
+  }
+
+  .inputGroup input {
+    max-width: 380px;
+    font-size: 15px;
+  }
+
+  input::placeholder {
+    font-size: 14px;
+  }
+}
+
+/* 대형 데스크톱 */
+@media (min-width: 1280px) {
+  .attendanceManageContainer {
+    padding: 40px 36px;
+  }
+
+  .mainTitle {
+    font-size: 30px;
+    margin-bottom: 20px;
+  }
+
+  .cardLayout {
+    padding: 48px 0px;
+    gap: 24px;
+  }
+
+  .iconButton img {
+    width: 26px;
+    height: 26px;
+  }
+
+  .text {
+    font-size: 14px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+  }
+
+  .inputGroup .label {
+    font-size: 15px;
+  }
+
+  .inputGroup input {
+    max-width: 400px;
+    font-size: 15.5px;
+  }
+
+  input::placeholder {
+    font-size: 14.5px;
+  }
+}
+
+/* 초대형 데스크톱 */
+@media (min-width: 1536px) {
+  .attendanceManageContainer {
+    padding: 50px 44px;
+  }
+
+  .mainTitle {
+    font-size: 32px;
+    margin-bottom: 22px;
+  }
+
+  .cardLayout {
+    padding: 56px 0px;
+    gap: 26px;
+  }
+
+  .iconButton {
+    padding: 8px 13px;
+  }
+
+  .iconButton img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .header h1 {
+    font-size: 23px;
+  }
+
+  .inputGroup .label {
+    font-size: 16px;
+  }
+
+  .inputGroup input {
+    font-size: 16px;
+  }
+
+  input::placeholder {
+    font-size: 15px;
+  }
 }

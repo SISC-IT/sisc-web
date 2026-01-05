@@ -2,15 +2,15 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  position: relative;
 }
 
-/* 위쪽 어두운 부분 */
+/* ========== 배경 그라데이션 ========== */
 .upper {
   height: 50%;
   background: linear-gradient(to bottom, #000000, #060d2a);
 }
 
-/* 아래쪽 타원형 빛 부분 */
 .lower {
   height: 50%;
   background: radial-gradient(
@@ -25,26 +25,34 @@
   );
 }
 
+/* ========== 메인 텍스트 ========== */
+.textBox {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 90%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .textBox h1 {
   font-weight: 600;
-  font-size: 64px;
+  font-size: 32px;
   line-height: 120%;
-  letter-spacing: -3%;
-  position: absolute;
-  top: 180px;
-  left: 300px;
+  letter-spacing: -0.03em;
   color: #ffffff;
-  width: 600px;
+  margin: 0 0 20px 0;
 }
 
 .textBox h2 {
   font-weight: 700;
-  font-size: 36px;
-  line-height: 110%;
-  letter-spacing: -1%;
-  position: absolute;
-  top: 370px;
-  left: 300px;
+  font-size: 18px;
+  line-height: 140%;
+  letter-spacing: -0.01em;
   background: linear-gradient(
     290.46deg,
     #5b93ed 19.78%,
@@ -53,32 +61,123 @@
     #fcffff 105.89%
   );
   background-clip: text;
+  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  width: 650px;
+  margin: 0;
+}
+
+/* ========== 코인 이미지 ========== */
+.imgBox {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  margin-top: 40px;
 }
 
 .coin3 {
   position: absolute;
-  width: 269px;
-  height: 186px;
-  top: 205px;
-  left: 978px;
+  width: 160px;
+  height: auto;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-80%);
   z-index: 3;
 }
 
 .coin4 {
   position: absolute;
-  width: 200px;
-  height: 235px;
-  left: 1016px;
-  top: 468px;
+  width: 130px;
+  height: auto;
+  left: 50%;
+  transform: translateX(-10%);
+  top: 120px;
+  z-index: 2;
 }
 
 .coin5 {
   position: absolute;
-  width: 241px;
-  height: 232px;
-  top: 285px;
-  left: 1091px;
+  width: 150px;
+  height: auto;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-35%);
   z-index: 1;
+}
+
+/* ========== 태블릿 반응형 (768px ~ 1023px) ========== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .textBox h1 {
+    font-size: 48px;
+  }
+
+  .textBox h2 {
+    font-size: 24px;
+  }
+
+  .coin3 {
+    width: 220px;
+  }
+
+  .coin4 {
+    width: 170px;
+  }
+
+  .coin5 {
+    width: 190px;
+  }
+}
+
+/* ========== 데스크톱 (≥ 1024px) ========== */
+@media (min-width: 1024px) {
+  .textBox {
+    top: 50%;
+    left: 300px;
+    transform: translateY(-50%);
+    text-align: left;
+    max-width: 650px;
+    align-items: flex-start;
+  }
+
+  .textBox h1 {
+    font-size: 64px;
+    line-height: 120%;
+  }
+
+  .textBox h2 {
+    font-size: 36px;
+    line-height: 110%;
+    margin-top: 20px;
+  }
+
+  .imgBox {
+    position: absolute;
+    width: 450px;
+    height: 500px;
+    margin-top: 0;
+    top: 50%;
+    right: 200px;
+    left: auto;
+    transform: translateY(-50%);
+  }
+
+  .coin3 {
+    width: 269px;
+    top: 0;
+    left: 50%;
+    transform: translateX(-70%);
+  }
+
+  .coin4 {
+    width: 200px;
+    left: 50%;
+    top: 260px;
+    transform: translateX(0%);
+  }
+
+  .coin5 {
+    width: 241px;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-20%);
+  }
 }

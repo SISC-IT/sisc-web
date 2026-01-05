@@ -1,4 +1,4 @@
-/* PostDetail.module.css */
+/* PostDetail.module.css 수정 - 반응형 개선 */
 
 :root {
   --width-content: 75%;
@@ -26,44 +26,48 @@
 
 .postDetail {
   flex: 1;
-  padding: 80px 0 40px;
+  padding: 60px 20px 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .title {
-  width: var(--width-content);
-  margin: 0 0 32px;
+  width: 100%;
+  max-width: var(--width-content);
+  margin: 0 0 24px;
   font-weight: 700;
-  font-size: 32px;
+  font-size: 24px;
   line-height: 1.4;
   color: var(--color-text-primary);
+  word-break: break-word;
 }
 
 .divider {
-  width: var(--width-content);
+  width: 100%;
+  max-width: var(--width-content);
   height: 2px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   background: var(--color-divider);
 }
 
 .meta,
 .content,
 .commentsSection {
-  width: var(--width-content);
+  width: 100%;
+  max-width: var(--width-content);
 }
 
 .meta {
   display: flex;
   align-items: center;
   gap: var(--gap-default);
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .profileIcon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
@@ -78,22 +82,21 @@
 .author {
   margin: 0;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 
 .date {
   margin: 0;
   font-weight: 400;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
 }
 
 .content {
-  width: var(--width-content);
-  margin-bottom: 48px;
+  margin-bottom: 40px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 160%;
   letter-spacing: -3%;
   color: var(--color-text-dark);
@@ -104,17 +107,17 @@
 }
 
 .commentsSection {
-  padding-top: 40px;
+  padding-top: 32px;
 }
 
 .commentsHeader {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .commentCount {
   margin: 0;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--color-text-primary);
 }
 
@@ -123,14 +126,13 @@
   font-weight: 700;
 }
 
-/* [수정] 댓글 입력창 - width를 100%로 변경 */
 .commentInput {
   width: 100%;
   display: flex;
   align-items: flex-start;
   min-height: 71px;
   margin-bottom: var(--gap-default);
-  padding: var(--padding-default) 16px;
+  padding: var(--padding-default) 14px;
   background: var(--color-bg-light);
   border-radius: 12px;
   box-sizing: border-box;
@@ -145,7 +147,7 @@
   background: transparent;
   font-family: inherit;
   font-weight: 500;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 160%;
   letter-spacing: 0%;
   color: var(--color-text-input);
@@ -156,7 +158,7 @@
 
 .textarea::placeholder {
   font-weight: 500;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 160%;
   letter-spacing: 0%;
   color: var(--color-text-input);
@@ -166,21 +168,21 @@
   outline: none;
 }
 
-/* [수정] 댓글 작성 버튼 - margin-left를 auto로 변경 */
 .submitButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 113px;
-  height: 43px;
+  width: 100%;
+  max-width: 113px;
+  height: 40px;
   margin-left: auto;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   background: var(--color-button);
   color: #fff;
   border: none;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 100%;
   letter-spacing: 0%;
   cursor: pointer;
@@ -196,7 +198,6 @@
   cursor: not-allowed;
 }
 
-/* [수정] 댓글 목록 - width 100% 추가 */
 .commentsList {
   width: 100%;
   display: flex;
@@ -206,7 +207,7 @@
 
 .commentCard {
   width: 100%;
-  padding: 20px;
+  padding: 16px;
   border: 1px solid var(--color-border-card);
   border-radius: 8px;
   background: var(--color-bg-card);
@@ -232,20 +233,20 @@
 .commentAuthor {
   margin: 0;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-primary);
 }
 
 .commentDate {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
 }
 
 .commentText {
   margin: 0;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 160%;
   letter-spacing: -3%;
   color: var(--color-text-dark);
@@ -255,91 +256,31 @@
 }
 
 .noComments {
-  padding: 40px 0;
+  padding: 32px 0;
   margin: 0;
   text-align: center;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
 }
 
 .notFound {
-  padding: 60px 20px;
+  padding: 50px 20px;
   text-align: center;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--color-text-tertiary);
 }
 
-/* 반응형 */
-@media (max-width: 768px) {
-  .postDetail {
-    padding: 40px 20px;
-    align-items: stretch;
-    margin-left: 0;
-  }
-
-  .title,
-  .divider,
-  .meta,
-  .content,
-  .commentsSection,
-  .commentInput,
-  .commentsList {
-    width: 100%;
-  }
-
-  .textarea {
-    min-height: 80px;
-    resize: vertical;
-  }
-
-  .submitButton {
-    width: 100%;
-    margin-left: 0;
-  }
-}
-
-@media (max-width: 400px) {
-  .postDetail {
-    padding: 24px 12px;
-    margin-left: 0;
-  }
-
-  .title {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-
-  .commentInput {
-    padding: 8px;
-  }
-
-  .submitButton {
-    width: 100%;
-    height: 40px;
-    font-size: 14px;
-    margin-bottom: 24px;
-  }
-
-  .commentCard {
-    padding: 12px;
-  }
-
-  .commentText {
-    font-size: 14px;
-  }
-}
-
 .titleWrapper {
-  width: var(--width-content);
+  width: 100%;
+  max-width: var(--width-content);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 32px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .title {
-  width: auto;
   margin: 0;
   flex-grow: 1;
 }
@@ -353,7 +294,7 @@
 .menuButton {
   background: transparent;
   border: none;
-  font-size: 28px;
+  font-size: 24px;
   color: var(--color-text-secondary);
   cursor: pointer;
   padding: 0 4px;
@@ -369,7 +310,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 10;
-  width: 120px;
+  width: 110px;
   overflow: hidden;
 }
 
@@ -381,12 +322,12 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 10px 20px;
+  padding: 10px 16px;
   background: none;
   border: none;
   text-align: left;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -400,22 +341,22 @@
 }
 
 .EditIcon {
-  width: 18px;
-  height: 15px;
+  width: 16px;
+  height: 13px;
 }
 
 .DeleteIcon {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
 }
 
 .commentsHeaderWrapper {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--color-divider);
-  padding-bottom: 16px;
+  padding-bottom: 12px;
 }
 
 .commentsHeader {
@@ -425,13 +366,13 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .actionButton {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: none;
   border: none;
   cursor: pointer;
@@ -439,37 +380,37 @@
 }
 
 .actionButton img {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .actionButton .count {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   font-weight: 500;
 }
 
-/* 첨부 파일 스타일 */
 .attachments {
-  margin: 12px 0 24px 0;
-  padding: 16px;
+  margin: 12px 0 20px 0;
+  padding: 14px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  width: var(--width-content);
+  width: 100%;
+  max-width: var(--width-content);
   box-sizing: border-box;
 }
 
 .attachmentTitle {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .attachmentList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -477,7 +418,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background-color: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
@@ -486,8 +427,8 @@
 }
 
 .attachmentIcon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
 }
 
@@ -501,7 +442,7 @@
 
 .attachmentName {
   flex: 1;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #333;
   overflow: hidden;
@@ -510,17 +451,17 @@
 }
 
 .attachmentSize {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
-  margin-right: 8px;
+  margin-right: 6px;
 }
 
-/* 수정 모드 */
 .editFormContainer {
-  width: var(--width-content);
+  width: 100%;
+  max-width: var(--width-content);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .editTitleWrapper {
@@ -528,15 +469,15 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 32px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .editTitleInput {
   width: 100%;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
-  padding: 12px;
+  padding: 10px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   outline: none;
@@ -551,16 +492,16 @@
 .editDivider {
   width: 100%;
   height: 2px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   background: var(--color-divider);
 }
 
 .editContentTextarea {
   width: 100%;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.6;
-  padding: 16px;
-  margin: 24px 0;
+  padding: 14px;
+  margin: 20px 0;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   outline: none;
@@ -568,7 +509,7 @@
   font-family: inherit;
   transition: border-color 0.2s;
   box-sizing: border-box;
-  min-height: 400px;
+  min-height: 300px;
 }
 
 .editContentTextarea:focus {
@@ -576,30 +517,31 @@
 }
 
 .editAttachments {
-  margin: 12px 0 24px 0;
-  padding: 16px;
+  margin: 12px 0 20px 0;
+  padding: 14px;
   background-color: #f8f9fa;
   border-radius: 8px;
   width: 100%;
   box-sizing: border-box;
 }
 
-/* 수정 모드 버튼 */
 .editButtons {
   display: flex;
-  gap: 12px;
-  margin: 24px 0;
+  gap: 10px;
+  margin: 20px 0;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .saveButton {
   flex: 1;
-  padding: 12px 24px;
+  min-width: 100px;
+  padding: 10px 20px;
   background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -611,12 +553,13 @@
 
 .cancelButton {
   flex: 1;
-  padding: 12px 24px;
+  min-width: 100px;
+  padding: 10px 20px;
   background-color: #e5e7eb;
   color: #374151;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -626,14 +569,13 @@
   background-color: #d1d5db;
 }
 
-/* 파일 삭제 버튼 */
 .removeFileButton {
   padding: 4px 8px;
   background-color: #ef4444;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
@@ -642,33 +584,31 @@
   background-color: #dc2626;
 }
 
-/* 새 파일 배지 */
 .newBadge {
   display: inline-block;
   padding: 2px 6px;
-  margin-left: 8px;
+  margin-left: 6px;
   background-color: #10b981;
   color: white;
-  font-size: 11px;
+  font-size: 10px;
   border-radius: 4px;
   font-weight: 600;
 }
 
-/* 파일 추가 섹션 */
 .fileAddSection {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px dashed #d1d5db;
   width: 100%;
 }
 
 .addFileButton {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   background-color: #f3f4f6;
   border: 2px dashed #d1d5db;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #6b7280;
   cursor: pointer;
@@ -683,31 +623,31 @@
 
 .commentItemWrapper {
   width: 100%;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   box-sizing: border-box;
 }
 
 .replyList {
-  margin-left: 24px;
-  margin-top: 12px;
+  margin-left: 20px;
+  margin-top: 10px;
   border-left: 1px solid #eee;
-  padding-left: 12px;
+  padding-left: 10px;
 }
 
 .replyInputWrapper {
-  margin-left: 24px;
+  margin-left: 20px;
   margin-top: 8px;
-  width: calc(100% - 24px);
+  width: calc(100% - 20px);
 }
 
 .replyTextarea {
   width: 100%;
   min-height: 60px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   resize: vertical;
   box-sizing: border-box;
   margin-bottom: 8px;
@@ -719,12 +659,12 @@
 }
 
 .replySubmitButton {
-  padding: 8px 16px;
+  padding: 7px 14px;
   background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -740,15 +680,231 @@
 }
 
 .replyButton {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
   background: none;
   border: none;
   cursor: pointer;
   padding: 4px 0;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .replyButton:hover {
   color: #555;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .postDetail {
+    padding: 70px 40px;
+  }
+
+  .title {
+    font-size: 28px;
+    margin-bottom: 28px;
+  }
+
+  .divider {
+    margin-bottom: 22px;
+  }
+
+  .meta {
+    margin-bottom: 28px;
+  }
+
+  .profileIcon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .author {
+    font-size: 14px;
+  }
+
+  .date {
+    font-size: 11.5px;
+  }
+
+  .content {
+    margin-bottom: 44px;
+    font-size: 15.5px;
+  }
+
+  .commentsSection {
+    padding-top: 36px;
+  }
+
+  .commentCount {
+    font-size: 15.5px;
+  }
+
+  .textarea {
+    font-size: 15.5px;
+  }
+
+  .textarea::placeholder {
+    font-size: 15.5px;
+  }
+
+  .submitButton {
+    font-size: 15.5px;
+    height: 41px;
+    margin-bottom: 28px;
+  }
+
+  .commentCard {
+    padding: 18px;
+  }
+
+  .commentAuthor {
+    font-size: 13.5px;
+  }
+
+  .commentDate {
+    font-size: 11.5px;
+  }
+
+  .commentText {
+    font-size: 15.5px;
+  }
+
+  .menuButton {
+    font-size: 26px;
+  }
+
+  .menuDropdown {
+    width: 115px;
+  }
+
+  .menuDropdown button {
+    padding: 10px 18px;
+    font-size: 13.5px;
+  }
+
+  .actionButton img {
+    width: 19px;
+    height: 19px;
+  }
+
+  .actionButton .count {
+    font-size: 13.5px;
+  }
+
+  .editTitleInput {
+    font-size: 26px;
+    padding: 11px;
+  }
+
+  .editContentTextarea {
+    font-size: 15.5px;
+    min-height: 350px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .postDetail {
+    padding: 80px 40px;
+  }
+
+  .title {
+    font-size: 32px;
+    margin-bottom: 32px;
+  }
+
+  .divider {
+    margin-bottom: 24px;
+  }
+
+  .meta {
+    margin-bottom: 32px;
+  }
+
+  .profileIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .author {
+    font-size: 14px;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .content {
+    margin-bottom: 48px;
+    font-size: 16px;
+  }
+
+  .commentsSection {
+    padding-top: 40px;
+  }
+
+  .commentCount {
+    font-size: 16px;
+  }
+
+  .textarea {
+    font-size: 16px;
+  }
+
+  .textarea::placeholder {
+    font-size: 16px;
+  }
+
+  .submitButton {
+    font-size: 16px;
+    height: 43px;
+    margin-bottom: 32px;
+  }
+
+  .commentCard {
+    padding: 20px;
+  }
+
+  .commentAuthor {
+    font-size: 14px;
+  }
+
+  .commentDate {
+    font-size: 12px;
+  }
+
+  .commentText {
+    font-size: 16px;
+  }
+
+  .menuButton {
+    font-size: 28px;
+  }
+
+  .menuDropdown {
+    width: 120px;
+  }
+
+  .menuDropdown button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .actionButton img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .actionButton .count {
+    font-size: 14px;
+  }
+
+  .editTitleInput {
+    font-size: 28px;
+    padding: 12px;
+  }
+
+  .editContentTextarea {
+    font-size: 16px;
+    min-height: 400px;
+  }
 }

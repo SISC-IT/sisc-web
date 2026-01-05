@@ -4,6 +4,11 @@
   border-bottom: 1px solid #cdd4db;
   padding-bottom: 35px;
   cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.container:hover {
+  opacity: 0.7;
 }
 
 .preview {
@@ -14,12 +19,15 @@
 .image {
   width: 48px;
   height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .titleSection {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  flex: 1;
 }
 
 .author {
@@ -45,6 +53,73 @@
 .title {
   font-weight: 700;
   font-size: 20px;
-  line-height: 100%;
+  line-height: 130%;
   color: #616161;
+  word-break: keep-all;
+}
+
+/* ========== 모바일 반응형 (< 768px) ========== */
+@media (max-width: 767px) {
+  .container {
+    padding-bottom: 24px;
+  }
+
+  .preview {
+    gap: 12px;
+  }
+
+  .image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .titleSection {
+    gap: 10px;
+  }
+
+  .author {
+    gap: 8px;
+  }
+
+  .role {
+    font-size: 14px;
+  }
+
+  .time {
+    font-size: 11px;
+  }
+
+  .title {
+    font-size: 16px;
+    line-height: 140%;
+  }
+}
+
+/* ========== 태블릿 반응형 (768px ~ 1023px) ========== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding-bottom: 28px;
+  }
+
+  .preview {
+    gap: 16px;
+  }
+
+  .image {
+    width: 44px;
+    height: 44px;
+  }
+
+  .titleSection {
+    gap: 12px;
+  }
+
+  .role {
+    font-size: 15px;
+  }
+
+  .title {
+    font-size: 18px;
+    line-height: 130%;
+  }
 }

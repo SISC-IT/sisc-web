@@ -6,6 +6,21 @@ import { getRounds } from '../../utils/attendanceManage';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 
+// 날짜 포맷 함수 추가
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${month}/${day}`;
+};
+
+// 시간 포맷 함수 추가 (초 제거)
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  return timeStr.substring(0, 5); // "14:30:00" -> "14:30"
+};
+
 const SessionManagementCard = ({ styles: commonStyles }) => {
   const {
     sessions,
@@ -130,23 +145,24 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               <th>시간</th>
               <th>가능(분)</th>
               <th>회차</th>
-              <th>메뉴</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {currentDisplayedRounds.length > 0 ? (
-              currentDisplayedRounds.map((round) => {
+              currentDisplayedRounds.map((round, index) => {
                 return (
                   <tr
                     key={round.id}
                     className={`${styles.row} ${selectedRound === round.id ? styles.selectedRound : ''}`}
                     onClick={() => setSelectedRound(round.id)}
+                    title={`${round.date} ${round.startTime}`}
                   >
-                    <td>{round.date}</td>
-                    <td>{round.startTime}</td>
-                    <td>{round.availableMinutes}</td>
-                    <td>1</td>
-                    <td>
+                    <td className={styles.dateCell}>{formatDate(round.date)}</td>
+                    <td className={styles.timeCell}>{formatTime(round.startTime)}</td>
+                    <td className={styles.minutesCell}>{round.availableMinutes}</td>
+                    <td className={styles.roundCell}>{index + 1}</td>
+                    <td className={styles.menuCell}>
                       <button
                         className={styles.menuButton}
                         onClick={(e) => {
@@ -164,7 +180,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               })
             ) : (
               <tr>
-                <td colSpan="4" className={styles.noData}>
+                <td colSpan="5" className={styles.noData}>
                   회차 정보가 없습니다.
                 </td>
               </tr>

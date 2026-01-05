@@ -1,14 +1,42 @@
 .container {
   margin: auto;
-  padding: 80px;
+  padding: 20px;
   display: grid;
-  gap: 30px;
+  gap: 20px;
   background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pageTitle {
-  margin-bottom: 40px;
-  font-size: 36px;
+  margin-bottom: 20px;
+  font-size: 24px;
   font-weight: 600;
   color: #171717;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .container {
+    padding: 40px;
+    gap: 25px;
+  }
+
+  .pageTitle {
+    margin-bottom: 30px;
+    font-size: 32px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .container {
+    padding: 80px;
+    gap: 30px;
+  }
+
+  .pageTitle {
+    margin-bottom: 40px;
+    font-size: 36px;
+  }
 }

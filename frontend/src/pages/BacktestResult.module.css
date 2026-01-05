@@ -1,7 +1,9 @@
 .resultLayout {
-  padding: 80px;
+  padding: 20px;
   display: grid;
   gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .errorMessage {
@@ -16,13 +18,15 @@
   border: 1px solid #e5e7eb;
   background: #f9fafb;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .statusInfo {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  word-break: break-word;
 }
 
 .refreshButton {
@@ -37,6 +41,7 @@
   transition:
     background-color 0.15s ease,
     transform 0.05s ease;
+  width: 100%;
 }
 
 .refreshButton:disabled {
@@ -71,5 +76,34 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .resultLayout {
+    padding: 40px;
+  }
+
+  .statusBar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .statusInfo {
+    font-size: 0.9rem;
+  }
+
+  .refreshButton {
+    width: auto;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .resultLayout {
+    padding: 80px;
   }
 }

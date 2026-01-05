@@ -1,19 +1,50 @@
 .stock-info-item {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
 }
 
 .stock-key {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   font-style: medium;
   color: #828282;
 }
 
 .stock-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 500;
   font-style: medium;
   color: #616161;
+  word-break: break-word;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .stock-info-item {
+    gap: 18px;
+  }
+
+  .stock-key {
+    font-size: 15px;
+  }
+
+  .stock-value {
+    font-size: 25px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .stock-info-item {
+    gap: 20px;
+  }
+
+  .stock-key {
+    font-size: 16px;
+  }
+
+  .stock-value {
+    font-size: 28px;
+  }
 }
