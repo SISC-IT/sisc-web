@@ -1,10 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './ProfileCard.module.css';
 import ProfileImage from '../../assets/profile-image.png';
 import Coin4 from '../../assets/coin4.svg';
+import { api } from '../../utils/axios';
+import { toast } from 'react-toastify';
 
 const ProfileCard = () => {
-  const [userName, setUserName] = useState('김성림');
+  const [userName, setUserName] = useState('로딩 중...');
+  const [userPoint, setUserPoint] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 사용자 정보 불러오기
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await api.get('/api/user/details');
+        const { name, point } = response.data;
+        setUserName(name || '사용자');
+        setUserPoint(point || 0);
+      } catch (error) {
+        console.error('사용자 정보 불러오기 실패:', error);
+        toast.error('사용자 정보를 불러올 수 없습니다.');
+        setUserName('사용자');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   return (
     <section className={styles.profileRow} aria-label="프로필">
@@ -51,7 +75,7 @@ const ProfileCard = () => {
               alt="포인트 아이콘"
               className={styles.pointsIcon}
             />
-            <p className={styles.pointsText}>300P</p>
+            <p className={styles.pointsText}>{userPoint}P</p>
           </div>
         </div>
       </div>

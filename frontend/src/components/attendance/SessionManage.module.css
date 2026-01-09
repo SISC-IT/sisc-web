@@ -1,14 +1,15 @@
 .card {
-  width: 955px;
+  width: 100%;
+  max-width: 955px;
   min-height: 320px;
   box-sizing: border-box;
   border: 1px solid #c9bebe;
   background: #fafbfc;
   border-radius: 12px;
-  padding: 20px 40px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 50px;
+  gap: 30px;
 }
 
 .title {
@@ -16,7 +17,7 @@
   align-items: center;
   gap: 10px;
   font-weight: 400;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 146%;
   letter-spacing: 0%;
   color: #000000;
@@ -25,11 +26,20 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
+  overflow-x: auto;
+  display: block;
 }
 
 .table td:last-child {
   text-align: right;
+}
+
+.table thead,
+.table tbody {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .table thead th,
@@ -40,10 +50,12 @@
   border-bottom: 0.4px solid #6a6a6a;
   font-family: Inter;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 100%;
   letter-spacing: 0%;
   color: #000000;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .button {
@@ -53,13 +65,49 @@
     #d1d8ff 74.81%,
     #dddeff 107.39%
   );
-  width: 70px;
-  height: 35px;
+  width: 60px;
+  height: 30px;
   border-radius: 8px;
   border: none;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 100%;
   letter-spacing: 0%;
   color: #000000;
+  cursor: pointer;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .card {
+    padding: 30px;
+    gap: 40px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .table {
+    display: table;
+  }
+
+  .table thead th,
+  .table tbody td {
+    font-size: 16px;
+  }
+
+  .button {
+    width: 70px;
+    height: 35px;
+    font-size: 16px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .card {
+    padding: 20px 40px;
+    gap: 50px;
+  }
 }

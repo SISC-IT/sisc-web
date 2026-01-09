@@ -11,51 +11,264 @@
   border-radius: 12px;
   background: #fafbfc;
   width: 100%;
-  border: 1px solid #c9bebe;
-
+  border: 1.5px solid #d1d5db;
   flex-shrink: 0;
-  padding: 26px 40px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.SessionSettingCardContainer:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 
 .form {
-  display: flex;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  width: 100%;
 }
 
 .timeInputGroup {
-  display: flex;
-  width: auto;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  width: 100%;
+  align-items: center;
 }
+
 .timeInputGroup > input {
-  width: var(--ctrl-w);
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 6px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  font-family: Inter, sans-serif;
+}
+
+.timeInputGroup > input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.timeInputGroup > input::placeholder {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 .availableTimeInputGroup {
   display: grid;
-  width: auto;
-  grid-template-columns: var(--ctrl-w) auto;
-  column-gap: 36px;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
   align-items: center;
-  justify-content: space-between;
 }
+
 .availableTimeInputGroup > input {
-  width: var(--ctrl-w);
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 8px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  font-family: Inter, sans-serif;
 }
+
+.availableTimeInputGroup > input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.availableTimeInputGroup > input::placeholder {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
 .availableTimeInputGroup button {
   display: flex;
-  width: 90px;
-  padding: 12px 26px;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   border-radius: 8px;
   background: linear-gradient(
     100deg,
-    #b3ebff -15.44%,
-    #91c3ff 39.86%,
-    #d3edff 94.81%
+    #3b82f6 0%,
+    #2563eb 100%
   );
   border: none;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  white-space: nowrap;
+  font-family: Inter, sans-serif;
+  box-sizing: border-box;
+}
+
+.availableTimeInputGroup button:hover {
+  background: linear-gradient(
+    100deg,
+    #2563eb 0%,
+    #1d4ed8 100%
+  );
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.availableTimeInputGroup button:active {
+  transform: translateY(0);
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .SessionSettingCardContainer {
+    padding: 20px;
+  }
+
+  .form {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .timeInputGroup {
+    gap: 8px;
+  }
+
+  .timeInputGroup > input {
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .timeInputGroup > input::placeholder {
+    font-size: 12px;
+  }
+
+  .availableTimeInputGroup {
+    gap: 10px;
+  }
+
+  .availableTimeInputGroup > input {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .availableTimeInputGroup button {
+    font-size: 14px;
+    padding: 0 14px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .SessionSettingCardContainer {
+    padding: 22px 24px;
+  }
+
+  .form {
+    gap: 18px;
+  }
+
+  .timeInputGroup {
+    gap: 9px;
+  }
+
+  .timeInputGroup > input {
+    font-size: 14px;
+  }
+
+  .timeInputGroup > input::placeholder {
+    font-size: 12.5px;
+  }
+
+  .availableTimeInputGroup {
+    gap: 12px;
+  }
+
+  .availableTimeInputGroup > input {
+    font-size: 14px;
+  }
+
+  .availableTimeInputGroup button {
+    font-size: 14.5px;
+  }
+}
+
+/* 대형 데스크톱 */
+@media (min-width: 1280px) {
+  .SessionSettingCardContainer {
+    padding: 24px 28px;
+  }
+
+  .form {
+    gap: 20px;
+  }
+
+  .timeInputGroup {
+    gap: 10px;
+  }
+
+  .timeInputGroup > input {
+    font-size: 14.5px;
+  }
+
+  .timeInputGroup > input::placeholder {
+    font-size: 13px;
+  }
+
+  .availableTimeInputGroup {
+    gap: 14px;
+  }
+
+  .availableTimeInputGroup > input {
+    font-size: 14.5px;
+  }
+
+  .availableTimeInputGroup button {
+    font-size: 15px;
+  }
+}
+
+/* 초대형 데스크톱 */
+@media (min-width: 1536px) {
+  .SessionSettingCardContainer {
+    padding: 26px 32px;
+  }
+
+  .form {
+    gap: 22px;
+  }
+
+  .timeInputGroup > input {
+    font-size: 15px;
+  }
+
+  .timeInputGroup > input::placeholder {
+    font-size: 13.5px;
+  }
+
+  .availableTimeInputGroup > input {
+    font-size: 15px;
+  }
+
+  .availableTimeInputGroup button {
+    font-size: 15.5px;
+  }
 }

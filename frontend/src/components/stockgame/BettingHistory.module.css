@@ -5,12 +5,12 @@
   justify-content: space-between;
   background-color: #f9f9f9;
   border-radius: 12px;
-  width: 880px;
-  height: 200px;
-  /* max-width: 880px;
-  min-width: 440px; */
-  padding: 30px;
-  margin-bottom: 30px;
+  width: 100%;
+  max-width: 880px;
+  min-height: 180px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
 }
 
 .correct-card {
@@ -40,7 +40,7 @@
 }
 
 .date {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   font-style: bold;
   color: #616161;
@@ -48,32 +48,35 @@
 
 .stock-info {
   display: flex;
-  gap: 4%;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .stock-change {
   display: flex;
   align-items: end;
-  gap: 15px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .change-value {
   color: #339fff;
   font-weight: 300;
   font-style: normal;
-  font-size: 28px;
+  font-size: 22px;
 }
 
 .bet-result {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   gap: 10px;
   font-weight: 500;
   font-style: medium;
-  font-size: 16px;
+  font-size: 14px;
   color: #616161;
-  width: 40%;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 .divider {
@@ -89,14 +92,13 @@
   gap: 4px;
   background-color: #eeeeee;
   border-radius: 17.5px;
-
-  width: 95px;
-  height: 35px;
+  width: 85px;
+  height: 32px;
 }
 
 .icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .up-button {
@@ -107,10 +109,10 @@
   cursor: pointer;
   font-weight: 410;
   font-style: medium;
-  font-size: 16px;
-  width: 78px;
-  height: 40px;
-  margin-left: 5%;
+  font-size: 14px;
+  width: 70px;
+  height: 36px;
+  margin-left: 0;
 }
 
 .down-button {
@@ -121,14 +123,105 @@
   cursor: pointer;
   font-weight: 410;
   font-style: medium;
-  font-size: 16px;
-  width: 78px;
-  height: 40px;
-  margin-left: 5%;
+  font-size: 14px;
+  width: 70px;
+  height: 36px;
+  margin-left: 0;
 }
 
 .paginationContainer {
   display: flex;
-  /* margin-left: 230px; */
   justify-content: center;
+  width: 100%;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .daily-betting-card {
+    padding: 25px;
+    margin-bottom: 25px;
+  }
+
+  .date {
+    font-size: 18px;
+  }
+
+  .stock-info {
+    flex-direction: row;
+    gap: 4%;
+  }
+
+  .stock-change {
+    gap: 12px;
+  }
+
+  .change-value {
+    font-size: 25px;
+  }
+
+  .bet-result {
+    font-size: 15px;
+    width: 40%;
+  }
+
+  .bet-point {
+    width: 90px;
+    height: 33px;
+  }
+
+  .icon {
+    width: 19px;
+    height: 19px;
+  }
+
+  .up-button,
+  .down-button {
+    font-size: 15px;
+    width: 75px;
+    height: 38px;
+    margin-left: 3%;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .daily-betting-card {
+    padding: 30px;
+    margin-bottom: 30px;
+    height: 200px;
+  }
+
+  .date {
+    font-size: 20px;
+  }
+
+  .stock-change {
+    gap: 15px;
+  }
+
+  .change-value {
+    font-size: 28px;
+  }
+
+  .bet-result {
+    font-size: 16px;
+  }
+
+  .bet-point {
+    width: 95px;
+    height: 35px;
+  }
+
+  .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .up-button,
+  .down-button {
+    font-size: 16px;
+    width: 78px;
+    height: 40px;
+    margin-left: 5%;
+  }
 }

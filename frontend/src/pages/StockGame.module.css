@@ -2,35 +2,40 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 45px;
-  gap: 25px;
-  margin-left: 50px;
+  padding: 20px;
+  gap: 20px;
+  margin-left: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .title {
   font-weight: 600;
   font-style: medium;
-  font-size: 36px;
+  font-size: 24px;
   color: #171717;
-  margin-top: 50px;
-  margin-bottom: 30px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .content-tab {
   display: flex;
+  overflow-x: auto;
 }
 
 .tab {
-  width: 140px;
-  height: 60px;
+  width: 120px;
+  min-width: 100px;
+  height: 50px;
   padding: 10px 10px;
   cursor: pointer;
   color: #9c9c9c;
   font-weight: 700;
-  font-size: 26px;
+  font-size: 20px;
   border: none;
   background: none;
   border-bottom: 2px solid #c9c9c9;
+  white-space: nowrap;
 }
 
 .active {
@@ -41,34 +46,33 @@
 .last-game {
   font-weight: 600;
   font-style: Bold;
-  font-size: 20px;
+  font-size: 18px;
   margin-bottom: 15px;
 }
 
 .daily-betting {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 20px;
 }
 
 .daily-betting > span {
   font-weight: 500;
   font-style: medium;
-  font-size: 20px;
+  font-size: 18px;
   color: #616161;
 }
 
 .type {
-  margin: 20px 5px;
+  margin: 15px 5px;
   cursor: pointer;
   border: 1px solid #d4d4d4;
-  width: 68px;
-  height: 39px;
+  width: 60px;
+  height: 36px;
   border-radius: 8px;
   background: none;
-
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
   color: #171717;
 }
 
@@ -76,4 +80,68 @@
   color: #1d80f4;
   background-color: #eef9ff;
   border: none;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .stock-game {
+    padding: 40px;
+    gap: 25px;
+    margin-left: 30px;
+  }
+
+  .title {
+    font-size: 32px;
+    margin-top: 40px;
+    margin-bottom: 25px;
+  }
+
+  .tab {
+    width: 130px;
+    height: 55px;
+    font-size: 24px;
+  }
+
+  .last-game {
+    font-size: 20px;
+  }
+
+  .daily-betting > span {
+    font-size: 20px;
+  }
+
+  .daily-betting {
+    gap: 25px;
+  }
+
+  .type {
+    margin: 20px 5px;
+    width: 68px;
+    height: 39px;
+    font-size: 16px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .stock-game {
+    padding: 45px;
+    margin-left: 50px;
+  }
+
+  .title {
+    font-size: 36px;
+    margin-top: 50px;
+    margin-bottom: 30px;
+  }
+
+  .tab {
+    width: 140px;
+    height: 60px;
+    font-size: 26px;
+  }
+
+  .daily-betting {
+    gap: 30px;
+  }
 }

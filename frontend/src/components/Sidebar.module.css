@@ -1,15 +1,39 @@
+/* 모바일 오버레이 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: block;
+}
+
+/* 데스크톱에서는 오버레이 숨김 */
+@media (min-width: 1024px) {
+  .overlay {
+    display: none;
+  }
+}
+
 .homeSidebarMenu {
   position: fixed;
-  top: 90px;
+  top: 0;
   left: 0;
   width: 264px;
-  height: calc(100vh - 90px);
-  padding: 0 32px;
+  height: 100vh;
+  padding-top: 110px;
+  padding-left: 32px;
+  padding-right: 32px;
+  padding-bottom: 20px;
   background-color: #02040d;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
-  z-index: 100;
-  overflow: hidden;
+  z-index: 1000;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .open {
@@ -18,7 +42,20 @@
 
 .closed {
   transform: translateX(-100%);
-  pointer-events: none;
+}
+
+/* 데스크톱에서는 항상 표시 */
+@media (min-width: 1024px) {
+  .homeSidebarMenu {
+    top: 90px;
+    height: calc(100vh - 90px);
+    padding-top: 20px;
+    transform: translateX(0);
+  }
+  
+  .closed {
+    transform: translateX(0);
+  }
 }
 
 .menu-title {
@@ -27,10 +64,15 @@
   font-style: semibold;
   font-weight: 600;
   margin-bottom: 15px;
+  margin-top: 20px;
 }
 
 .menu-section {
   margin-bottom: 30px;
+}
+
+.menu-section:first-child .menu-title {
+  margin-top: 0;
 }
 
 .menu-section > ul {
@@ -122,14 +164,16 @@
   background: transparent;
   color: #ffffff;
   border: none;
-  padding: 3px;
+  padding: 8px 3px;
   border-radius: 6px;
   margin-top: 6px;
   text-decoration: none;
   font-weight: 500;
   font-size: 16px;
+  cursor: pointer;
 }
 
 .boardSelect option {
   color: black;
+  background: white;
 }

@@ -12,16 +12,6 @@ import { login } from '../../utils/auth';
 import { api } from './../../utils/axios.js';
 import { toast } from 'react-toastify';
 
-const getUserDetails = async () => {
-  try {
-    const res = await api.get('/api/user/details');
-    return res.data;
-  } catch (err) {
-    console.error('[getUserDetails] error:', err);
-    throw err;
-  }
-};
-
 const LoginForm = () => {
   const nav = useNavigate();
 
@@ -82,18 +72,6 @@ const LoginForm = () => {
   return (
     <>
       <div className={styles.formContainer}>
-        <button
-          onClick={async () => {
-            try {
-              const user = await getUserDetails();
-              console.log('USER:', user);
-            } catch (e) {
-              console.error(e);
-            }
-          }}
-        >
-          유저 정보 확인
-        </button>
         <form className={styles.loginForm} onSubmit={handleLogin}>
           <div className={styles.header}>
             <div className={styles.logoBox}>

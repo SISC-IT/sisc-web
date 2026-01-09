@@ -1,6 +1,7 @@
 .card {
-  width: 335px;
-  height: 160px;
+  width: 100%;
+  max-width: 335px;
+  min-height: 160px;
   border: 1px solid #c9bebe;
   background: #fafbfc;
   border-radius: 12px;
@@ -9,20 +10,34 @@
   justify-content: center;
   align-items: center;
   gap: 10px;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .excuse {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 100%;
   letter-spacing: 0%;
   color: #aaaaaa;
+  text-align: center;
 }
 
 .time {
   font-weight: 600;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 100%;
   letter-spacing: 0%;
   color: #171717;
+}
+
+/* 태블릿 이상 */
+@media (min-width: 768px) {
+  .excuse {
+    font-size: 16px;
+  }
+
+  .time {
+    font-size: 24px;
+  }
 }
