@@ -13,3 +13,5 @@ requests
 beautifulsoup4
 pathlib
 fredapi
+matplotlib
+python-dotenv

@@ -10,6 +10,7 @@ from urllib.parse import quote_plus
 
 import psycopg2
 from sqlalchemy import create_engine
+from dotenv import load_dotenv
 
 
 # ----------------------------------------------------------------------
@@ -17,6 +18,8 @@ from sqlalchemy import create_engine
 # ----------------------------------------------------------------------
 project_root = Path(__file__).resolve().parents[3]
 sys.path.append(str(project_root))
+
+load_dotenv(os.path.join(project_root, ".env"))
 
 
 # ----------------------------------------------------------------------
