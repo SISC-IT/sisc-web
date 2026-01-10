@@ -1,4 +1,4 @@
-﻿# libs/llm_clients/ollama_client.py
+﻿# libs/llm/ollama_client.py
 import os
 import requests
 from typing import Optional
