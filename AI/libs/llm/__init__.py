@@ -1,3 +1,10 @@
-﻿#AI/libs/llm_clients/ollama_client.py
-from AI.libs.llm.ollama_client import get_ollama_client
-__all__ = ["get_ollama_client"]
+# AI/libs/llm/__init__.py
+from .base_client import BaseLLMClient
+from .groq import GroqClient
+from .ollama import OllamaClient
+
+__all__ = [
+    "BaseLLMClient",
+    "GroqClient",
+    "OllamaClient",
+]

@@ -1,59 +1,51 @@
-﻿# quick_db_check.py
-
+﻿# AI/tests/quick_db_check.py
 """
-DB 연결을 빠르게 테스트하는 스크립트.
-- 프로젝트 루트(sisc-web) 자동 계산
-- .env 자동 로드
-- 환경변수 기반 get_db_conn 사용
+[DB 연결 테스트]
+- AI/libs/database/connection.py 모듈이 정상 작동하는지 확인합니다.
+- 간단한 쿼리(SELECT 1)를 실행하여 연결 상태를 점검합니다.
 """
 
-import os
 import sys
-from dotenv import load_dotenv
+import os
 
-# -----------------------------
-# 1) 프로젝트 루트 계산 (중요!)
-# -----------------------------
-# 현재 위치: sisc-web/AI/tests/quick_db_check.py
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(project_root)
+# 프로젝트 루트 경로 추가 (절대 경로 import 위함)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
-# -----------------------------
-# 2) .env 파일 로드
-# -----------------------------
-load_dotenv(os.path.join(project_root, ".env"))
+try:
+    from AI.libs.database.connection import get_db_conn
+except ImportError as e:
+    print(f"[Error] 모듈 임포트 실패: {e}")
+    print(f"PYTHONPATH: {sys.path}")
+    sys.exit(1)
 
-# -----------------------------
-# 3) DB 유틸
-# -----------------------------
-from AI.libs.utils.get_db_conn import get_db_conn
-
-
-def quick_db_check(db_name: str = "db"):
-    print(f"[INFO] DB 연결 테스트 시작 (db_name='{db_name}')")
-
+def check_connection():
+    print("=== DB 연결 테스트 시작 ===")
+    
+    conn = None
     try:
-        conn = get_db_conn(db_name)
+        # DB 연결 시도
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        
+        # 간단한 쿼리 실행
+        cursor.execute("SELECT 1")
+        result = cursor.fetchone()
+        
+        if result and result[0] == 1:
+            print("[Success] DB 연결 성공! (Query Result: 1)")
+        else:
+            print("[Fail] 쿼리 실행 결과가 예상과 다릅니다.")
+            
     except Exception as e:
-        print("❌ DB 연결 실패 (커넥션 생성 오류):", repr(e))
-        return
-
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT version();")
-            version = cur.fetchone()[0]
-            print("✅ 연결 성공:", version)
-
-            cur.execute("SELECT current_database(), current_user;")
-            db, user = cur.fetchone()
-            print(f"ℹ️ DB = {db}, USER = {user}")
-
-    except Exception as e:
-        print("❌ 쿼리 실행 실패:", repr(e))
+        print(f"[Error] DB 연결 중 오류 발생: {e}")
+        
     finally:
-        conn.close()
-        print("🔌 DB 연결 종료")
-
+        if conn:
+            conn.close()
+            print("=== DB 연결 종료 ===")
 
 if __name__ == "__main__":
-    quick_db_check("db")
+    check_connection()
