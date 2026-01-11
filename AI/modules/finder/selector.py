@@ -7,7 +7,6 @@
 
 import sys
 import os
-import pandas as pd
 from typing import List
 
 # 프로젝트 루트 경로 추가
@@ -21,20 +20,15 @@ from AI.libs.database.connection import get_db_conn
 def get_target_tickers(limit: int = 50, min_price: float = 1000) -> List[str]:
     """
     분석 대상 종목 리스트를 반환합니다.
-    
-    Args:
-        limit (int): 가져올 최대 종목 수 (거래량 상위 순)
-        min_price (float): 최소 주가 필터
-        
-    Returns:
-        List[str]: 종목 코드 리스트 (예: ['AAPL', 'MSFT', ...])
     """
-    conn = get_db_conn()
-    cursor = conn.cursor()
+    conn = None
+    cursor = None
     
     try:
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        
         # 최근 날짜 기준으로 거래대금(종가 * 거래량) 상위 종목 조회
-        # (최근 데이터가 있는 종목만 대상으로 함)
         query = """
             WITH RecentData AS (
                 SELECT ticker, close, volume, date,
@@ -55,21 +49,52 @@ def get_target_tickers(limit: int = 50, min_price: float = 1000) -> List[str]:
         tickers = [row[0] for row in rows]
         
         if not tickers:
-            print("[Finder] 조회된 종목이 없습니다. (DB가 비어있을 수 있음)")
-            # DB가 비어있을 경우 테스트용 티커 반환
+            print("[Finder] DB에서 조회된 종목이 없습니다.")
             return ["AAPL", "TSLA", "MSFT", "GOOGL", "NVDA"]
             
-        print(f"[Finder] 상위 {len(tickers)}개 종목 선정 완료.")
         return tickers
         
     except Exception as e:
-        print(f"[Finder][Error] 종목 조회 실패: {e}")
-        return ["AAPL"] # 실패 시 기본값
+        print(f"[Finder][Error] 종목 조회 중 DB 오류: {e}")
+        # DB 연결 실패 등의 경우 기본 티커 반환
+        return ["AAPL", "TSLA", "MSFT", "GOOGL", "NVDA"]
+        
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
+        if conn: conn.close()
 
 def load_all_tickers_from_db(verbose: bool = True) -> List[str]:
     """
-    DB에 존재하는 모든 종목 코드를 가져옵니다. (AutoML 등에서 사용)
+    DB에 존재하는 모든 종목 코드를 가져옵니다.
     """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_conn()
+        cursor = conn.cursor()
+        
+        # DB에 있는 모든 고유 티커 조회 (LIMIT 없음)
+        query = "SELECT DISTINCT ticker FROM public.price_data ORDER BY ticker"
+        
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        
+        tickers = [row[0] for row in rows]
+        
+        if verbose:
+            print(f"[Finder] DB 전체 종목 수: {len(tickers)}개")
+            
+        if not tickers:
+            if verbose: print("[Finder] DB가 비어있어 기본값(Big Tech)을 반환합니다.")
+            return ["AAPL", "TSLA", "MSFT", "GOOGL", "NVDA"]
+            
+        return tickers
+        
+    except Exception as e:
+        print(f"[Finder][Error] 전체 티커 로드 실패: {e}")
+        # 실패 시 기본값 반환
+        return ["AAPL", "TSLA", "MSFT", "GOOGL", "NVDA"]
+        
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
