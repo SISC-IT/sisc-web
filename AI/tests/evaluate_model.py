@@ -38,20 +38,18 @@ from AI.modules.finder.selector import load_all_tickers_from_db
 MODEL_TYPE = "transformer"
 DATA_DIR = os.path.join(project_root, "AI", "data")
 
-# ★ 중요: 학습된 '단일 모델'의 경로를 지정해야 합니다.
-# (사용자님의 기존 파일명 규칙인 initial.weights.h5 등을 따르거나, train 결과물 경로 지정)
 CONFIG = {
     "seq_len": 60,     # 학습 시 설정한 Window Size
     "pred_h": 1,       # 예측 기간 (Next Day Return)
     "hold_thr": 0.003, # 0.3% 이상 상승 기대 시 매수
     
     # 단일 글로벌 모델 및 스케일러 경로
-    "weights_path": os.path.join(DATA_DIR, "weights", "transformer", "universal_transformer.keras"),
+    "weights_path": os.path.join(DATA_DIR, "weights", "transformer", "universal_transformer.keras"), # 파일명 확인 필요
     "scaler_path": os.path.join(DATA_DIR, "weights", "transformer", "universal_scaler.pkl"),
     
     # 평가 기간
     "eval_start_date": "2025-01-01",
-    "eval_end_date": "2025-12-31",
+    "eval_end_date": "2025-10-20",
     
     # 평가 대상: None이면 전체, 리스트면 특정 종목
     "test_tickers": ["AAPL", "TSLA", "MSFT", "NVDA", "GOOGL", "AMD"],
@@ -103,7 +101,6 @@ def evaluate_market_signals():
         
         # 모델 로드 (Config는 로드 시 파일에서 복원되므로 빈 dict)
         # 단, input_shape 등 구조 생성을 위해 기본값은 넣어줌
-        # (실제 가중치 로드 시 shape이 맞아야 함)
         model_wrapper = get_model(MODEL_TYPE, {
             "head_size": 256, "num_heads": 4, "ff_dim": 4, # 기본값 (필요시 수정)
             "num_blocks": 4, "mlp_units": [128],
@@ -148,16 +145,35 @@ def evaluate_market_signals():
             if df.empty or len(df) < CONFIG['seq_len']:
                 continue
 
+            # ✅ [수정된 부분] 날짜 컬럼을 인덱스로 설정 (안전장치)
+            # ------------------------------------------------------------------
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])  # datetime 변환 보장
+                df.set_index('date', inplace=True)       # 인덱스로 설정
+            elif not isinstance(df.index, pd.DatetimeIndex):
+                # date 컬럼도 없고 인덱스도 날짜가 아니면 처리 불가
+                print(f"[Skip] {ticker}: 날짜 정보를 찾을 수 없습니다.")
+                continue
+            # ------------------------------------------------------------------
+
             # (2) 전처리 및 시퀀스 생성
+            # feature_cols 생성 시 인덱스(날짜)는 자동으로 제외됨 (np.number만 포함하므로)
             feature_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            
+            # 라벨 및 미래 수익률 계산
             labels, future_ret = _label_by_future_return(df["close"], CONFIG['pred_h'], CONFIG['hold_thr'])
             
+            # 유효 데이터 마스킹
             valid_mask = df[feature_cols].notna().all(axis=1) & (labels != -1) & future_ret.notna()
             df_valid = df[valid_mask]
             
             # 평가 기간 필터링
+            # ✅ 이제 df_valid.index가 DatetimeIndex이므로 정상 작동함
             dates_seq = pd.to_datetime(df_valid.index[CONFIG['seq_len']-1:])
-            if dates_seq.tz is not None: dates_seq = dates_seq.tz_localize(None)
+            
+            # Timezone 정보가 있다면 제거 (비교를 위해)
+            if dates_seq.tz is not None: 
+                dates_seq = dates_seq.tz_localize(None)
             
             target_start = pd.to_datetime(CONFIG['eval_start_date'])
             target_end = pd.to_datetime(CONFIG['eval_end_date'])
@@ -170,6 +186,8 @@ def evaluate_market_signals():
             # 데이터 변환 (transform only)
             # ★ 학습 때와 동일한 Global Scaler를 사용하여 transform 해야 함
             scaled_vals = loader.scaler.transform(df_valid[feature_cols])
+            
+            # DataFrame 재구성 (인덱스 유지)
             df_scaled = pd.DataFrame(scaled_vals, columns=feature_cols, index=df_valid.index)
             
             X_seq = _build_sequences(df_scaled, feature_cols, CONFIG['seq_len'])
@@ -196,7 +214,7 @@ def evaluate_market_signals():
             
         except Exception as e:
             # 데이터 불량 등으로 인한 개별 종목 에러는 무시하고 진행
-            # print(f"[Skip] {ticker}: {e}")
+            print(f"[Skip] {ticker}: {e}")
             pass
 
     # ─────────────────────────────────────────────────────────────────────────────

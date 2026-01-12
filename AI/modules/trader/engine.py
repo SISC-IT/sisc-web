@@ -1,4 +1,3 @@
-# AI/modules/trader/engine.py
 """
 [백테스트 엔진]
 - 과거 데이터를 사용하여 AI 모델의 매매 성과를 시뮬레이션합니다.
@@ -12,7 +11,9 @@ import numpy as np
 from tqdm import tqdm
 from typing import Dict, Any
 
-# 프로젝트 루트 경로 추가
+# ─────────────────────────────────────────────────────────────────────────────
+#  경로 설정 (프로젝트 루트 추가)
+# ─────────────────────────────────────────────────────────────────────────────
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
@@ -53,54 +54,71 @@ class BacktestEngine:
         if len(df) < 100:
             print("데이터 부족으로 백테스트 중단")
             return None
+        
+        # ✅ 안전장치: date 컬럼이 있다면 인덱스로 설정 (DataLoader 리팩토링 전이라도 동작 보장)
+        if 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'])
+            df.set_index('date', inplace=True)
+            df.sort_index(inplace=True) # 시간순 정렬 보장
 
         # 2. 모델 준비
         # 백테스트는 '학습된 모델'을 사용하는 것이 원칙
-        # 만약 weights_path가 없으면, 임의로 초기화된 모델을 사용하게 되므로 주의 (여기서는 로드 로직 생략)
         if model_weights_path and os.path.exists(model_weights_path):
             print(f"모델 로드: {model_weights_path}")
             model = get_model(self.model_name, {})
             model.load(model_weights_path)
         else:
-            print("[Warning] 모델 가중치 파일이 지정되지 않았습니다. 랜덤 예측으로 진행될 수 있습니다.")
-            # 실제로는 여기서 에러를 내거나 train을 먼저 하라고 안내해야 함
-            return None
+            print("[Warning] 모델 가중치 파일이 지정되지 않았습니다. (테스트 모드)")
+            # 실제 운영 시에는 여기서 return None 하는 것이 안전함
+            # return None
 
         # 3. 일별 시뮬레이션 루프
         # 시퀀스 길이(60일) 이후부터 매매 가능
         start_idx = 60
+        
+        # 수치형 피처만 선택 (날짜 제외)
         features = df.select_dtypes(include=[np.number]).columns.tolist()
         
-        # 전체 데이터 스케일링 (Data Leakage 주의: 엄밀히는 매일매일 fit해야 하나 속도상 전체 fit 사용)
+        # 전체 데이터 스케일링 (Local Scaling)
+        # 주의: 엄밀한 백테스팅을 위해서는 매 시점마다 과거 데이터로 fit해야 Data Leakage를 막을 수 있음
+        # 속도 문제로 여기서는 전체 기간 fit을 사용하나, 실제 퀀트 시스템에선 Walk-forward 방식 권장
         scaled_data = loader.scaler.fit_transform(df[features])
         
         for i in tqdm(range(start_idx, len(df) - 1)):
-            # (1) 오늘 날짜 및 데이터
-            today_date = df.iloc[i]['date']
+            # (1) 오늘 날짜 가져오기 (수정된 핵심 부분)
+            # 인덱스로 접근하여 KeyError 방지
+            today_date = df.index[i]
+            
+            # (2) 현재가(종가) 확인
+            # 인덱스가 날짜이므로 iloc(위치 기반)을 사용하여 i번째 행 접근
             current_close = df.iloc[i]['close']
             
-            # (2) AI 모델 추론 (오늘 장 마감 후 내일 예측)
+            # (3) AI 모델 추론 (오늘 장 마감 후 내일 예측)
             # 입력: i-59 ~ i 까지의 60일 데이터
             input_seq = scaled_data[i-59 : i+1] # (60, features)
-            input_seq = np.expand_dims(input_seq, axis=0)
             
-            pred = model.predict(input_seq)
-            score = float(pred[0][0])
+            if model_weights_path:
+                input_seq = np.expand_dims(input_seq, axis=0)
+                pred = model.predict(input_seq, verbose=0)
+                score = float(pred[0][0])
+            else:
+                score = 0.5 # 모델 없으면 관망
             
-            # (3) 매매 판단 (내일 시초가에 주문한다고 가정 -> 여기서는 간소화하여 오늘 종가 기준 판단)
+            # (4) 매매 판단 (정책 모듈 위임)
             action, qty, reason = decide_order(
                 self.ticker, score, current_close, self.cash, 
                 self.position_qty, self.avg_price, self.total_asset
             )
             
-            # (4) 주문 집행 (가정: 슬리피지/수수료 반영)
+            # (5) 주문 집행 (가상 체결)
             self._execute_order(today_date, action, qty, current_close, score, reason)
             
-            # (5) 자산 가치 업데이트
+            # (6) 자산 가치 업데이트
             self.total_asset = self.cash + (self.position_qty * current_close)
 
         # 4. 결과 정리 및 리포팅
         result_df = pd.DataFrame(self.trade_logs)
+        
         if not result_df.empty:
             final_return = (self.total_asset - self.initial_cash) / self.initial_cash * 100
             print(f"=== 백테스트 종료 ===")
@@ -108,7 +126,7 @@ class BacktestEngine:
             print(f"수익률: {final_return:.2f}%")
             print(f"총 거래 횟수: {len(result_df)}회")
             
-            # DB 저장 (선택 사항)
+            # DB 저장 (필요 시 주석 해제)
             # save_executions_to_db(result_df)
             
         return result_df
@@ -118,7 +136,7 @@ class BacktestEngine:
         if qty == 0:
             return
 
-        commission_rate = 0.0015 # 수수료 0.15%
+        commission_rate = 0.0015 # 수수료 0.15% (가정)
         trade_amount = price * qty
         commission = trade_amount * commission_rate
         
@@ -150,7 +168,7 @@ class BacktestEngine:
     def _log_trade(self, date, side, price, qty, commission, score, reason, pnl=0.0):
         """거래 기록 생성"""
         log = {
-            "run_id": "backtest_run", # 임시 ID
+            "run_id": "backtest_run", # 임시 ID (실제로는 UUID 등 사용 권장)
             "ticker": self.ticker,
             "signal_date": date,
             "signal_price": price,
@@ -165,8 +183,13 @@ class BacktestEngine:
             "position_qty": self.position_qty,
             "avg_price": self.avg_price,
             "pnl_realized": pnl,
-            "pnl_unrealized": 0.0, # 단순화
+            "pnl_unrealized": 0.0, # (단순화) 매도 시점에만 PnL 기록
             "score": score,
             "reason": reason
         }
         self.trade_logs.append(log)
+
+if __name__ == "__main__":
+    # 테스트 실행용
+    engine = BacktestEngine("AAPL", "2024-01-01", "2025-01-01")
+    # engine.run("path/to/model.keras")

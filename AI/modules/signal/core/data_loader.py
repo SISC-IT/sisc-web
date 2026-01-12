@@ -2,7 +2,7 @@
 """
 [데이터 로드 및 전처리 모듈]
 - DB에서 OHLCV 데이터를 가져와 기술적 지표를 추가하고,
-- LSTM/Transformer 학습에 맞게 시퀀스(Sequence) 데이터로 변환합니다.
+- 날짜 인덱스 설정 및 정렬을 수행하여 분석 준비를 마칩니다.
 """
 
 import numpy as np
@@ -28,54 +28,60 @@ class SignalDataLoader:
         self.feature_columns = [] # 학습에 사용된 피처 이름 저장
 
     def load_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
-        """DB에서 데이터 로드 및 지표 추가"""
+        """
+        DB에서 데이터 로드 -> 지표 추가 -> 날짜 인덱스 설정 (표준화)
+        """
+        # 1. DB 조회
         df = fetch_ohlcv(ticker, start_date, end_date)
+        
         if df.empty:
-            print(f"[DataLoader] {ticker} 데이터가 없습니다.")
+            # print(f"[DataLoader] {ticker} 데이터가 없습니다.") # 로그 너무 많으면 주석 처리
             return df
-            
+        
+        # 2. 보조지표 추가
         df = add_technical_indicators(df)
+
+        # 3. 날짜 인덱스 표준화 (Standardization)
+        # 이미 DatetimeIndex라면 넘어감
+        if not isinstance(df.index, pd.DatetimeIndex):
+            # 대소문자 무관하게 날짜 컬럼 찾기
+            date_col = next((col for col in df.columns if col.lower() in ['date', 'dates', '날짜']), None)
+            
+            if date_col:
+                df[date_col] = pd.to_datetime(df[date_col])
+                df.set_index(date_col, inplace=True)
+            else:
+                # 날짜 컬럼도 없고 인덱스도 날짜가 아니면 경고
+                print(f"[WARN] {ticker}: 날짜 정보를 찾을 수 없습니다. (Index: {df.index.name})")
+                return df # 또는 빈 DF 반환
+
+        # 4. 정렬 및 타임존 제거 (필수)
+        df.sort_index(inplace=True)
+        
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
+
         return df
 
     def create_sequences(self, data: pd.DataFrame, target_col: str = 'close', prediction_horizon: int = 1) -> Tuple[np.ndarray, np.ndarray]:
         """
         시계열 데이터를 (Samples, Timesteps, Features) 형태의 시퀀스로 변환
-        
-        Args:
-            data (pd.DataFrame): 전체 데이터프레임
-            target_col (str): 예측 대상 컬럼 (보통 close 또는 수익률)
-            prediction_horizon (int): 며칠 뒤를 예측할지 (1이면 다음날)
-            
-        Returns:
-            X (np.ndarray): 입력 시퀀스
-            y (np.ndarray): 정답 레이블
         """
-        # 사용할 피처 선택 (날짜 제외 수치형 컬럼만)
         features = data.select_dtypes(include=[np.number]).columns.tolist()
         self.feature_columns = features
         
-        # 데이터 스케일링 (0~1)
+        # 주의: fit_transform은 학습 시에만 사용해야 함. 
+        # 테스트 시에는 외부에서 주입된 scaler를 사용하거나 transform만 해야 함.
         scaled_data = self.scaler.fit_transform(data[features])
         
         X, y = [], []
-        
-        # 시퀀스 생성 로직
-        # i: 현재 시점 (예측 기준일)
-        # i - sequence_length : 입력 데이터 시작점
-        # i + prediction_horizon : 정답 데이터 (미래)
-        
         total_len = len(scaled_data)
         
         for i in range(self.sequence_length, total_len - prediction_horizon + 1):
-            # 입력: 과거 N일치 데이터
             X.append(scaled_data[i - self.sequence_length : i])
             
-            # 정답: 미래의 종가 등락 여부 (0: 하락/보합, 1: 상승) - 분류 모델용 예시
-            # 회귀 모델이라면 실제 값을 사용
-            
-            # 여기서는 예시로 "다음날 종가가 오늘 종가보다 올랐나?"를 1/0으로 라벨링
-            current_close = data[target_col].iloc[i-1] # 어제 종가
-            future_close = data[target_col].iloc[i + prediction_horizon - 1] # 미래 종가
+            current_close = data[target_col].iloc[i-1]
+            future_close = data[target_col].iloc[i + prediction_horizon - 1]
             
             label = 1 if future_close > current_close else 0
             y.append(label)
