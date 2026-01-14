@@ -95,7 +95,7 @@ def run_inference(ticker: str, model_type: str = "transformer") -> float:
         model.build(input_shape=(None, input_tensor.shape[1], input_tensor.shape[2]))
         
         # 가중치 로드
-        model.load_weights(weights_path)
+        model.load(weights_path)
         
         # 5. 예측 수행
         # predict 반환값: [[0.732]] 형태의 확률값 (Sigmoid 출력)

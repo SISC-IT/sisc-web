@@ -29,13 +29,23 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df['ma60'] = df['close'].rolling(window=60).mean()
     
     # 2. RSI (Relative Strength Index)
+    # CodeRabbit 리뷰 반영: 엣지 케이스(횡보, 상승지속) 정밀 처리
     delta = df['close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    # division by zero 방지
-    rs = rs.fillna(0) 
+    
+    # division by zero 등 경고 억제
+    with np.errstate(divide='ignore', invalid='ignore'):
+        rs = gain / loss
+    
+    # 기본 RSI 계산 (loss=0인 경우 rs=inf가 되며, 100/(1+inf)=0 이므로 RSI=100이 됨 -> 정상)
     df['rsi'] = 100 - (100 / (1 + rs))
+    
+    # [보정 1] 가격 변동이 아예 없는 경우 (Gain=0, Loss=0) -> NaN 발생 -> 50(중립)으로 설정
+    df.loc[(gain == 0) & (loss == 0), 'rsi'] = 50
+    
+    # [보정 2] 하락 없이 상승만 한 경우 (Loss=0, Gain>0) -> 100(강세)으로 설정 (수식상 자동 처리되나 명시)
+    df.loc[(loss == 0) & (gain > 0), 'rsi'] = 100
     
     # 3. 볼린저 밴드 (Bollinger Bands)
     df['std20'] = df['close'].rolling(window=20).std()
@@ -52,7 +62,8 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df['vol_change'] = df['volume'].pct_change()
     
     # 6. 결측치 처리 (지표 계산 초반 구간)
-    df = df.fillna(method='bfill')
+    # [수정] FutureWarning 해결: fillna(method='bfill') -> bfill()
+    df = df.bfill()
     df = df.fillna(0) # 앞부분 bfill로도 안 채워지는 경우 0 처리
     
     return df

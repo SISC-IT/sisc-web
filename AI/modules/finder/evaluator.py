@@ -9,6 +9,7 @@ import sys
 import os
 import pandas as pd
 from typing import Dict
+from datetime import datetime, timedelta
 
 # 프로젝트 루트 경로 추가
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,16 +22,19 @@ from AI.modules.signal.core.features import add_technical_indicators
 
 def evaluate_ticker(ticker: str) -> Dict[str, float]:
     """
-    특정 종목의 기술적 점수를 계산합니다. (펀더멘털 데이터 부재 시 대안)
-    
-    Returns:
-        Dict: {'trend_score': 0.8, 'volatility': 0.02, ...}
+    특정 종목의 기술적 점수를 계산합니다.
     """
-    # 최근 100일 데이터 조회
-    df = fetch_ohlcv(ticker, start="2023-01-01", end="2099-12-31")
+    # [수정] 5년치 데이터 로드 (장기 추세 파악용)
+    end_dt = datetime.now()
+    start_dt = end_dt - timedelta(days=365 * 5) # 5년 (약 1825일)
+    
+    start_str = start_dt.strftime("%Y-%m-%d")
+    end_str = end_dt.strftime("%Y-%m-%d")
+
+    df = fetch_ohlcv(ticker, start=start_str, end=end_str)
     
     if df.empty or len(df) < 60:
-        return {'score': 0.0, 'reason': '데이터 부족'}
+        return {'total_score': 0.0, 'reason': '데이터 부족'}
         
     # 기술적 지표 추가
     df = add_technical_indicators(df)
@@ -38,26 +42,29 @@ def evaluate_ticker(ticker: str) -> Dict[str, float]:
     
     score = 0.0
     
-    # 1. 정배열 점수 (이동평균선)
+    # 1. 정배열 점수
     if last_row['close'] > last_row['ma20'] > last_row['ma60']:
         score += 30
     elif last_row['close'] > last_row['ma20']:
         score += 10
         
-    # 2. RSI 점수 (과매도 구간이면 가점)
+    # 2. RSI 점수
     rsi = last_row['rsi']
     if rsi <= 30:
         score += 20
     elif 30 < rsi < 70:
         score += 10
-    # 70 이상(과매수)은 0점
     
     # 3. MACD 모멘텀
     if last_row['macd'] > last_row['signal_line']:
         score += 20
         
-    # 4. 거래량 분석 (거래량 급증 시 가점)
-    if last_row['volume'] > df['volume'].mean() * 1.5:
+    # 4. 거래량 분석 (스마트하게 수정됨)
+    # 5년치 평균을 쓰면 옛날 데이터 때문에 왜곡될 수 있으므로, 
+    # '최근 120일(약 6개월)' 평균 거래량과 비교합니다.
+    recent_vol_mean = df['volume'].tail(120).mean()
+    
+    if recent_vol_mean > 0 and last_row['volume'] > recent_vol_mean * 1.5:
         score += 30
         
     return {

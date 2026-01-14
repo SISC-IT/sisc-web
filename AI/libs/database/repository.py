@@ -161,3 +161,64 @@ def save_reports_to_db(reports: List[Tuple], db_name: str = "db") -> List[int]:
         conn.close()
 
     return generated_ids
+
+def get_current_position(ticker: str, initial_cash: float = 10000000, db_name: str = "db") -> dict:
+    """
+    [현재 포지션 조회]
+    DB의 체결 내역(executions)을 기반으로 특정 종목의 현재 보유 수량, 평단가, 남은 현금을 계산합니다.
+    """
+    conn = get_db_conn(db_name)
+    cursor = conn.cursor()
+    
+    # 해당 종목의 모든 체결 내역 조회 (시간순)
+    query = """
+        SELECT side, qty, fill_price, commission
+        FROM public.executions
+        WHERE ticker = %s
+        ORDER BY fill_date ASC, created_at ASC
+    """
+    
+    cursor.execute(query, (ticker,))
+    rows = cursor.fetchall()
+    
+    current_qty = 0
+    current_cash = initial_cash
+    total_cost = 0.0 # 평단가 계산용 총 매수 금액
+    avg_price = 0.0
+    
+    for side, qty, price, commission in rows:
+        qty = int(qty)
+        price = float(price)
+        commission = float(commission)
+        trade_amount = price * qty
+        
+        if side == "BUY":
+            cost = trade_amount + commission
+            current_cash -= cost
+            
+            # 평단가 갱신 (이동평균법)
+            total_cost += trade_amount
+            current_qty += qty
+            if current_qty > 0:
+                avg_price = total_cost / current_qty
+                
+        elif side == "SELL":
+            revenue = trade_amount - commission
+            current_cash += revenue
+            
+            # 매도 시 평단가는 변하지 않음, 보유 수량과 총 매수 원금만 감소
+            current_qty -= qty
+            total_cost = avg_price * current_qty
+            
+            if current_qty == 0:
+                avg_price = 0.0
+                total_cost = 0.0
+
+    cursor.close()
+    conn.close()
+    
+    return {
+        "cash": current_cash,
+        "qty": current_qty,
+        "avg_price": avg_price
+    }

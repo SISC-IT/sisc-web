@@ -1,58 +1,53 @@
 # AI/tests/optimization.py
 """
-[하이퍼파라미터 최적화 (AutoML)]
-- Optuna를 사용하여 Transformer 모델의 하이퍼파라미터 및 매매 임계값(Threshold)을 최적화합니다.
-- 'test' 성격의 실험용 스크립트이므로, 파이프라인에는 포함되지 않고 독립적으로 실행됩니다.
-- 메모리 효율성을 위해 데이터 로딩은 전역 변수로 처리하여 중복 로드를 방지합니다.
+[하이퍼파라미터 최적화 (AutoML) - Stable & Strict Version]
+- Optuna를 사용하여 Transformer 모델 최적화
+- [수정 내역]:
+  1. 피처 NaN 결측치 엄격한 필터링
+  2. Class Weight 계산 시 int 타입 보장
+  3. Validation 데이터 시퀀스 생성 시 Train 후반부 Context 활용 (평가 데이터 보존)
+  4. 점수 산정 시 Cooldown(중복 진입 방지) 적용으로 현실성 확보
+  5. 예외 발생 시 안전한 자원 해제 로직
 """
 
 import sys
 import os
-import argparse
+import gc
 import optuna
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.utils.class_weight import compute_class_weight
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras import backend as K
+from sklearn.preprocessing import MinMaxScaler
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  경로 및 모듈 로드
+#  1. 경로 및 모듈 로드
 # ─────────────────────────────────────────────────────────────────────────────
-# 프로젝트 루트 경로 추가 (절대 경로 import 위함)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
-if project_root not in sys.path:
-    sys.path.append(project_root)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(project_root)
 
 from AI.modules.signal.core.data_loader import SignalDataLoader
 from AI.modules.signal.models import get_model
-# (필요 시) 티커 리스트 로드 함수 임포트
-# from AI.modules.finder.selector import load_all_tickers 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  전역 데이터 로드 (Global Data Loading)
-#  - Optuna Trial마다 DB 접속을 반복하지 않기 위해 한 번만 로드합니다.
+#  2. 전역 데이터 로드
 # ─────────────────────────────────────────────────────────────────────────────
 print("[AutoML] 데이터 메모리 로딩 중...")
 
-# 1. 대상 티커 선정 (예시: S&P 500 상위 종목 등)
-# 실제로는 DB나 파일에서 가져오는 로직 사용
 target_tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META"] 
-
-# 2. 데이터 로드 및 전처리 (피처 생성)
-# 학습 기간 설정
 start_date = "2023-01-01"
 end_date = "2024-12-31"
 
-loader = SignalDataLoader(sequence_length=60) # 기본 시퀀스 길이는 나중에 변경됨
+loader = SignalDataLoader(sequence_length=60)
 grouped_data = []
 
 for ticker in target_tickers:
     try:
-        # load_data 내부에서 fetch_ohlcv + add_technical_indicators 수행
         df = loader.load_data(ticker, start_date, end_date)
-        if not df.empty and len(df) > 100:
+        if not df.empty and len(df) > 300:
             grouped_data.append(df)
     except Exception as e:
         print(f"[Warning] {ticker} 데이터 로드 실패: {e}")
@@ -61,26 +56,26 @@ print(f"[AutoML] {len(grouped_data)}개 종목 데이터 준비 완료.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Helper Functions (라벨링 및 시퀀스 생성)
-#  - Trial 내부에서 동적으로 호출됩니다.
+#  3. Helper Functions
 # ─────────────────────────────────────────────────────────────────────────────
-def _label_by_future_return(close_prices: pd.Series, horizon: int, threshold: float) -> pd.Series:
-    """미래 수익률 기반 라벨링 (0: BUY, 1: HOLD)"""
-    # future_return = (미래 가격 / 현재 가격) - 1
+def _label_by_future_return(close_prices: pd.Series, horizon: int, threshold: float) -> tuple[pd.Series, pd.Series]:
+    """
+    [수정 6] 라벨 타입 명시 (int32)
+    """
     future_ret = (close_prices.shift(-horizon) / close_prices) - 1.0
     
-    # 임계값 이상이면 BUY(0), 아니면 HOLD(1)
-    # (참고: 일반적으로 1이 Positive Class지만, 기존 코드 유지)
-    labels = np.where(future_ret > threshold, 0, 1)
+    # 1=BUY, 0=HOLD
+    labels = np.where(future_ret > threshold, 1, 0).astype(np.int32)
     
-    # 마지막 horizon 기간은 NaN 처리 (미래 데이터 없음)
+    # 마지막 horizon 기간 -1 처리
     labels[-horizon:] = -1 
+    
     return pd.Series(labels, index=close_prices.index), future_ret
 
-def _build_sequences(df: pd.DataFrame, feature_cols: list, seq_len: int) -> np.ndarray:
-    """시퀀스 데이터 생성"""
-    data = df[feature_cols].values
+def _build_sequences(data: np.ndarray, seq_len: int) -> np.ndarray:
     num_samples = len(data) - seq_len + 1
+    if num_samples <= 0:
+        return np.array([])
     
     X = []
     for i in range(num_samples):
@@ -88,182 +83,232 @@ def _build_sequences(df: pd.DataFrame, feature_cols: list, seq_len: int) -> np.n
         
     return np.array(X)
 
-def _align_labels(labels: pd.Series, seq_len: int) -> np.ndarray:
-    """시퀀스에 맞춰 라벨 정렬"""
-    # 시퀀스의 마지막 시점에 해당하는 라벨을 가져옴
-    # 입력 시퀀스: t ~ t+seq_len-1
-    # 예측 대상: t+seq_len-1 시점에서의 판단
-    return labels.iloc[seq_len-1:].values
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-#  Objective Function (Optuna가 최적화할 대상)
+#  4. Objective Function
 # ─────────────────────────────────────────────────────────────────────────────
 def objective(trial):
-    # 1. 탐색할 하이퍼파라미터 정의 (Search Space)
-    SEQ_LEN = trial.suggest_categorical('seq_len', [30, 60, 128]) # 윈도우 크기
-    PRED_H = 7  # 예측 기간은 고정 (필요 시 변경 가능)
+    # (0) 메모리 정리
+    K.clear_session()
+    gc.collect()
+    model_wrapper = None # [수정 3] 초기화
+
+    # (1) 하이퍼파라미터 정의
+    SEQ_LEN = trial.suggest_categorical('seq_len', [30, 60, 90])
+    PRED_H = 5
+    HOLD_THR = trial.suggest_float('hold_thr', 0.01, 0.04) 
     
-    # ★ 핵심: 매수/매도 기준 임계값도 최적화 대상에 포함
-    HOLD_THR = trial.suggest_float('hold_thr', 0.002, 0.02) # 0.2% ~ 2.0% 사이 탐색
+    LEARNING_RATE = trial.suggest_float('learning_rate', 1e-4, 5e-3, log=True)
+    DROPOUT = trial.suggest_float('dropout', 0.1, 0.4)
+    NUM_BLOCKS = trial.suggest_int('num_blocks', 1, 3)
+    HEAD_SIZE = trial.suggest_categorical('head_size', [64, 128])
+    NUM_HEADS = trial.suggest_categorical('num_heads', [2, 4])
+    FF_DIM = trial.suggest_categorical('ff_dim', [64, 128, 256])
     
-    # 모델 관련 파라미터
-    LEARNING_RATE = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)
-    DROPOUT = trial.suggest_float('dropout', 0.1, 0.5)
-    NUM_LAYERS = trial.suggest_int('num_blocks', 1, 4) # layer -> blocks 용어 통일
-    HEAD_SIZE = trial.suggest_categorical('head_size', [64, 128, 256]) # d_model 대신 head_size 사용
-    NUM_HEADS = trial.suggest_int('num_heads', 2, 8)
-    FF_DIM = trial.suggest_int('ff_dim', 2, 8)
-    
-    # 2. 데이터셋 구성 (파라미터에 따라 라벨이 바뀌므로 매번 생성해야 함)
-    X_all, y_all, r_all = [], [], []
-    
-    # 피처 컬럼 선택 (Date, Ticker 등 제외하고 수치형만)
+    PRED_THR = trial.suggest_float('pred_thr', 0.4, 0.7)
+
+    # (2) 데이터셋 구성
     if not grouped_data:
         return -999.0
-        
+    
+    X_train_list, y_train_list = [], []
+    X_val_list, y_val_list, r_val_list = [], [], []
+
     sample_df = grouped_data[0]
     feature_cols = sample_df.select_dtypes(include=[np.number]).columns.tolist()
     
-    # 데이터셋 생성 루프
     for df in grouped_data:
-        # (1) 라벨링 다시 수행 (HOLD_THR가 바뀌므로)
         labels, future_ret = _label_by_future_return(df["close"], PRED_H, HOLD_THR)
         
-        # (2) 유효 데이터 필터링
-        # 피처, 라벨, 미래수익률 모두 NaN이 아닌 구간만 사용
-        valid_mask = df[feature_cols].notna().all(axis=1) & (labels != -1) & future_ret.notna()
+        # [수정 1] 피처 NaN 포함 여부까지 엄격하게 검사
+        valid_mask = (
+            (labels != -1) & 
+            future_ret.notna() & 
+            df[feature_cols].notna().all(axis=1)
+        )
         
-        df_valid = df[valid_mask]
+        df_valid = df.loc[valid_mask]
         labels_valid = labels[valid_mask]
         ret_valid = future_ret[valid_mask]
         
-        if len(df_valid) < SEQ_LEN:
+        if len(df_valid) < SEQ_LEN + 20: # 여유분 포함
             continue
             
-        # (3) 스케일링 (간소화를 위해 각 종목별 MinMax 적용)
-        # 주의: 엄밀한 검증을 위해서는 Train/Val 분리 후 스케일링해야 함
-        from sklearn.preprocessing import MinMaxScaler
+        # Time Split (8:2)
+        split_idx = int(len(df_valid) * 0.8)
+        
+        train_df = df_valid.iloc[:split_idx]
+        val_df = df_valid.iloc[split_idx:]
+        
+        train_labels = labels_valid.iloc[:split_idx]
+        val_labels = labels_valid.iloc[split_idx:]
+        val_rets = ret_valid.iloc[split_idx:]
+        
+        # 스케일링
         scaler = MinMaxScaler()
-        scaled_features = scaler.fit_transform(df_valid[feature_cols])
-        df_scaled = pd.DataFrame(scaled_features, columns=feature_cols, index=df_valid.index)
+        train_feat = train_df[feature_cols].values.astype(np.float32)
+        scaler.fit(train_feat) # Train Fit
         
-        # (4) 시퀀스 생성
-        X_seq = _build_sequences(df_scaled, feature_cols, SEQ_LEN)
-        y_seq = _align_labels(labels_valid, SEQ_LEN)
-        r_seq = _align_labels(ret_valid, SEQ_LEN) # 수익률 시퀀스
+        # ─── Train Data 생성 ───
+        train_scaled = scaler.transform(train_feat)
+        X_train_seq = _build_sequences(train_scaled, SEQ_LEN)
+        y_train_seq = train_labels.values[SEQ_LEN-1:] # 시퀀스 끝나는 시점의 라벨
         
-        # 길이 맞춤
-        min_len = min(len(X_seq), len(y_seq), len(r_seq))
-        X_all.append(X_seq[:min_len])
-        y_all.append(y_seq[:min_len])
-        r_all.append(r_seq[:min_len])
+        min_len_train = min(len(X_train_seq), len(y_train_seq))
+        if min_len_train > 0:
+            X_train_list.append(X_train_seq[:min_len_train])
+            y_train_list.append(y_train_seq[:min_len_train])
+            
+        # ─── Val Data 생성 (Context Prefix 적용) [수정 4] ───
+        # 검증 데이터의 첫 날부터 예측하기 위해 Train의 마지막 부분을 가져옴
+        lookback = SEQ_LEN - 1
+        if len(train_df) >= lookback:
+            # Train 뒷부분 + Val 전체
+            val_input_df = pd.concat([train_df.iloc[-lookback:], val_df], axis=0)
+            val_input_feat = val_input_df[feature_cols].values.astype(np.float32)
+            val_scaled = scaler.transform(val_input_feat)
+            
+            X_val_seq = _build_sequences(val_scaled, SEQ_LEN)
+            # Context를 붙였으므로, 생성된 시퀀스 개수는 정확히 val_df 길이와 같음
+            # 따라서 slicing 불필요 (단, 길이가 맞는지 min으로 안전장치)
+            
+            y_val_seq = val_labels.values
+            r_val_seq = val_rets.values
+        else:
+            # Train이 너무 짧은 경우 (예외적) -> 기존 방식 fallback
+            val_feat = val_df[feature_cols].values.astype(np.float32)
+            val_scaled = scaler.transform(val_feat)
+            X_val_seq = _build_sequences(val_scaled, SEQ_LEN)
+            y_val_seq = val_labels.values[SEQ_LEN-1:]
+            r_val_seq = val_rets.values[SEQ_LEN-1:]
+        
+        min_len_val = min(len(X_val_seq), len(y_val_seq), len(r_val_seq))
+        if min_len_val > 0:
+            X_val_list.append(X_val_seq[:min_len_val])
+            y_val_list.append(y_val_seq[:min_len_val])
+            r_val_list.append(r_val_seq[:min_len_val])
 
-    if not X_all:
-        return -999.0 # 실패 시 매우 낮은 점수
+    if not X_train_list or not X_val_list:
+        return -999.0
 
-    X = np.concatenate(X_all, axis=0)
-    y = np.concatenate(y_all, axis=0).astype(int)
-    r = np.concatenate(r_all, axis=0)
+    # (3) 데이터 병합 및 가중치 계산
+    X_train = np.concatenate(X_train_list, axis=0)
+    # [수정 2] int32로 명시적 변환
+    y_train = np.concatenate(y_train_list, axis=0).astype(np.int32)
     
-    # Train/Val 분리 (최근 20%를 검증용으로 사용 - 시계열 고려)
-    # 여기서는 단순 Shuffle 없이 뒤쪽 데이터를 Val로 사용
-    split_idx = int(len(X) * 0.8)
-    X_train, X_val = X[:split_idx], X[split_idx:]
-    y_train, y_val = y[:split_idx], y[split_idx:]
-    r_val = r[split_idx:] # 검증 데이터의 실제 수익률
+    X_val = np.concatenate(X_val_list, axis=0)
+    y_val = np.concatenate(y_val_list, axis=0).astype(np.int32)
+    r_val = np.concatenate(r_val_list, axis=0)
     
-    # 클래스 가중치 계산 (HOLD 편향 방지)
     classes = np.unique(y_train)
-    if len(classes) < 2:
-        return -999.0 # 클래스가 하나뿐이면 학습 불가
-        
-    weights = compute_class_weight(class_weight='balanced', classes=classes, y=y_train)
-    class_weight_dict = {i: w for i, w in zip(classes, weights)}
-
-    # 3. 모델 빌드 및 학습
-    # get_model 팩토리 함수 사용
+    class_weight_dict = None
+    if len(classes) >= 2:
+        weights = compute_class_weight(class_weight='balanced', classes=classes, y=y_train)
+        # [수정 2] Dict key: int, value: float 보장
+        class_weight_dict = {int(c): float(w) for c, w in zip(classes, weights)}
+    
+    # (4) 모델 학습
     config = {
-        "input_shape": (SEQ_LEN, X.shape[2]),
+        "input_shape": (SEQ_LEN, len(feature_cols)),
         "head_size": HEAD_SIZE,
         "num_heads": NUM_HEADS,
         "ff_dim": FF_DIM,
-        "num_blocks": NUM_LAYERS,
-        "mlp_units": [128], # 고정값 또는 탐색 가능
+        "num_blocks": NUM_BLOCKS,
+        "mlp_units": [64], 
         "dropout": DROPOUT,
         "mlp_dropout": DROPOUT,
         "learning_rate": LEARNING_RATE
     }
     
-    model_wrapper = get_model("transformer", config)
-    model_wrapper.build(config["input_shape"])
-    
-    # 속도를 위해 Epoch는 짧게 설정 (Pruning 활용 가능)
-    # fit() 메서드 직접 호출 대신 wrapper의 train 사용
-    history = model_wrapper.train(
-        X_train, y_train,
-        X_val=X_val, y_val=y_val,
-        epochs=5,          # 최적화 단계에서는 epoch를 줄임
-        batch_size=512,
-        class_weight=class_weight_dict,
-        callbacks=[EarlyStopping(patience=2, monitor='val_loss')]
-    )
-    
-    # 4. 백테스팅 시뮬레이션 (검증 데이터셋 대상)
-    # wrapper의 predict 메서드 사용 (확률값 반환)
-    # TransformerSignalModel은 기본적으로 이진 분류(sigmoid) -> 0.5 기준
-    # 하지만 위 로직은 Sparse Categorical (다중분류) 로직을 따르고 있으므로,
-    # 모델 아키텍처가 이진분류(sigmoid)인지 다중분류(softmax)인지에 따라 처리가 다릅니다.
-    # 현재 architecture.py는 sigmoid(이진분류)로 되어 있으므로 이에 맞게 조정합니다.
-    
-    y_pred_probs = model_wrapper.predict(X_val) # (N, 1) 형태
-    
-    # 0: BUY, 1: HOLD 라고 가정했으나, 
-    # Sigmoid 출력 1에 가까울수록 "상승(Positive)" -> BUY
-    # Sigmoid 출력 0에 가까울수록 "하락/보합(Negative)" -> HOLD
-    # 따라서, score > 0.5 이면 BUY로 간주
-    
-    buy_signals = (y_pred_probs.flatten() > 0.5)
-    
-    if np.sum(buy_signals) == 0:
-        return 0.0 # 매수 신호가 하나도 없으면 0점 처리
+    try:
+        model_wrapper = get_model("transformer", config)
+        model_wrapper.build(config["input_shape"])
         
-    # 평가지표: 'BUY 신호 시 평균 수익률 * 적중률'
-    # r_val은 실제 수익률
-    
-    avg_return = np.mean(r_val[buy_signals])
-    win_rate = np.mean(r_val[buy_signals] > 0)
-    
-    # 점수 산정 공식 (사용자 정의 가능)
-    # 예: 평균 수익률이 높으면서도, 너무 적게 거래하지 않는 균형점 찾기
-    score = avg_return * 100 
-    
-    # 너무 위험한 매매를 막기 위해 승률 페널티 추가 가능
-    if win_rate < 0.5: 
-        score *= 0.5 
+        # model.train 내부에서 fit 호출 시 y_train이 int여도 binary_crossentropy(from_logits=False)면 OK
+        # 단, TransformerSignalModel 구조상 sigmoid 출력이면 y는 0/1 (int or float) 호환됨
+        model_wrapper.train(
+            X_train, y_train,
+            X_val=X_val, y_val=y_val,
+            epochs=5,
+            batch_size=1024,
+            class_weight=class_weight_dict,
+            callbacks=[EarlyStopping(patience=2, monitor='val_loss', restore_best_weights=True)],
+            verbose=2
+        )
         
-    return score
+        # (5) 평가 및 점수 산정
+        y_pred_probs = model_wrapper.predict(X_val).flatten()
+        buy_signals = (y_pred_probs > PRED_THR) # boolean mask
+        
+        if np.sum(buy_signals) < 5: # 최소 거래 횟수 미달
+            return -10.0
+            
+        # [수정 5] Cooldown(중복 진입 방지) 적용 Score 계산
+        # "BUY 신호가 뜨면 PRED_H(=5일) 동안은 추가 매수 불가(이미 포지션 보유)" 가정
+        
+        total_profit = 0.0
+        trade_count = 0
+        last_exit_idx = -1  # 마지막 매도(보유 종료) 시점 인덱스
+        
+        # buy_signals가 True인 인덱스만 추출
+        signal_indices = np.where(buy_signals)[0]
+        
+        for idx in signal_indices:
+            # 이전 거래가 끝난 이후에만 진입 가능
+            if idx > last_exit_idx:
+                # 수익 실현 (r_val[idx]는 idx 시점 매수 후 5일 뒤 수익률)
+                total_profit += r_val[idx]
+                trade_count += 1
+                last_exit_idx = idx + PRED_H - 1 # 보유 기간 설정
+        
+        # 거래가 너무 적게 걸러졌을 경우 재확인
+        if trade_count == 0:
+            return -5.0
+
+        # 최종 점수: 누적 수익률
+        # (옵션) 승률이나 거래 횟수에 따른 가중치를 더 줄 수도 있음
+        score = total_profit
+        
+        # 승률 계산 (실제 진입한 거래 기준)
+        # 루프를 다시 돌 필요 없이, 위에서 더할 때 승/패 카운팅 가능하나 간략화
+        # 여기서는 단순 누적 수익을 최우선 지표로 삼음
+        
+        return score
+
+    except Exception as e:
+        print(f"[Trial Fail] Error: {e}")
+        # traceback을 보고 싶으면 import traceback; traceback.print_exc() 사용
+        return -999.0
+        
+    finally:
+        # [수정 3] 안전한 자원 해제
+        if model_wrapper is not None:
+            del model_wrapper
+        K.clear_session()
+        gc.collect()
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  실행 (Main)
+#  5. 메인 실행
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # 방향: maximize (수익률 점수 최대화)
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except RuntimeError as e:
+            print(e)
+            
     study = optuna.create_study(direction="maximize")
     
-    print("🚀 하이퍼파라미터 최적화 시작 (총 20회 시도)")
-    # n_jobs=1 (TensorFlow 충돌 방지)
-    study.optimize(objective, n_trials=20, n_jobs=1)
+    print("🚀 하이퍼파라미터 최적화 시작 (Stable & Strict)")
+    # 예외로 죽지 않도록 catch_catch=True 옵션을 고려할 수 있으나,
+    # 여기서는 objective 내부 try-except로 처리함.
+    study.optimize(objective, n_trials=30, n_jobs=1)
     
     print("\n" + "="*50)
-    print("🏆 Best Trial 결과:")
-    print(f"  Value (Score): {study.best_value}")
-    print("  Params:")
+    print("🏆 Best Trial Result")
+    print(f"  Score (Cooldown Total Return): {study.best_value:.4f}")
+    print("  Best Params:")
     for key, value in study.best_params.items():
         print(f"    {key}: {value}")
     print("="*50)
-    
-    # 최적 파라미터 저장 (선택 사항)
-    # import json
-    # with open('best_params.json', 'w') as f:
-    #     json.dump(study.best_params, f)

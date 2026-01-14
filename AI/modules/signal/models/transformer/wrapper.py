@@ -9,10 +9,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from typing import Dict, Any, Optional
-
-# 절대 경로 Import (프로젝트 루트 기준)
 from AI.modules.signal.core.base_model import BaseSignalModel
-# 같은 패키지 내의 모듈은 상대 경로로 명확하게 지정하는 것이 좋습니다.
 from .architecture import build_transformer_model 
 
 class TransformerSignalModel(BaseSignalModel):
@@ -26,10 +23,10 @@ class TransformerSignalModel(BaseSignalModel):
         if len(input_shape) != 2:
              # input_shape가 (timesteps, features) 2차원이 아니라면 경고 또는 에러
              # 일부 환경에서 (None, timesteps, features)로 올 수 있으므로 유연하게 처리
-             if len(input_shape) == 3 and input_shape[0] is None:
+            if len(input_shape) == 3 and input_shape[0] is None:
                  input_shape = input_shape[1:]
-             else:
-                 raise ValueError(f"입력 차원은 (timesteps, features) 2차원이어야 합니다. 현재: {input_shape}")
+            else:
+                raise ValueError(f"입력 차원은 (timesteps, features) 2차원이어야 합니다. 현재: {input_shape}")
 
         self.model = build_transformer_model(
             input_shape=input_shape,
@@ -50,34 +47,42 @@ class TransformerSignalModel(BaseSignalModel):
             metrics=["accuracy", "AUC"]
         )
 
-    def train(self, 
-              X_train: np.ndarray, 
-              y_train: np.ndarray, 
-              X_val: Optional[np.ndarray] = None, 
-              y_val: Optional[np.ndarray] = None, 
-              **kwargs):
+    def train(
+        self,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_val: Optional[np.ndarray] = None,
+        y_val: Optional[np.ndarray] = None,
+        **kwargs
+    ):
         """모델 학습 수행"""
         if self.model is None:
             raise ValueError("모델이 빌드되지 않았습니다. build()를 먼저 호출하세요.")
-            
-        epochs = self.config.get("epochs", 50)
-        batch_size = self.config.get("batch_size", 32)
-        
-        callbacks = kwargs.get("callbacks", [])
-        
-        # kwargs에 class_weight 등이 있을 수 있으므로 fit에 전달
-        fit_kwargs = {k: v for k, v in kwargs.items() if k != "callbacks"}
+
+        # ✅ 호출자가 주면 우선, 없으면 config, 없으면 default
+        epochs = int(kwargs.pop("epochs", self.config.get("epochs", 50)))
+        batch_size = int(kwargs.pop("batch_size", self.config.get("batch_size", 32)))
+        verbose = int(kwargs.pop("verbose", 1))
+
+        # callbacks는 pop으로 빼서 중복 전달 방지
+        callbacks = kwargs.pop("callbacks", [])
+
+        # validation_data는 (X_val, y_val)이 둘 다 있을 때만
+        validation_data = (X_val, y_val) if (X_val is not None and y_val is not None) else None
 
         history = self.model.fit(
             X_train, y_train,
-            validation_data=(X_val, y_val) if X_val is not None else None,
+            validation_data=validation_data,
             epochs=epochs,
             batch_size=batch_size,
             callbacks=callbacks,
-            verbose=kwargs.get("verbose", 1),
-            **fit_kwargs
+            verbose=verbose,
+            **kwargs 
         )
         return history
+
+
+
 
     def predict(self, X_input: np.ndarray) -> np.ndarray:
         """추론 수행"""
