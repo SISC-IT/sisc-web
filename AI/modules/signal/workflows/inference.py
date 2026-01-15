@@ -99,7 +99,7 @@ def run_inference(ticker: str, model_type: str = "transformer") -> float:
         
         # 5. 예측 수행
         # predict 반환값: [[0.732]] 형태의 확률값 (Sigmoid 출력)
-        prediction = model.predict(input_tensor, verbose=0)
+        prediction = model.predict(input_tensor)
         score = float(prediction[0][0])
         
         print(f"Result ▷ [{ticker}] 상승 확률: {score*100:.2f}%")

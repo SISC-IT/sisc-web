@@ -88,7 +88,7 @@ class BacktestEngine:
         # tqdm으로 진행률 표시
         for i in tqdm(range(start_idx, len(df) - 1)):
             # (1) 오늘 날짜 및 데이터
-            today_date = df.iloc[i]['date']
+            today_date = df.index[i] #날짜는 인덱스에서 가져옴
             current_close = df.iloc[i]['close']
             
             # ─────────────────────────────────────────────────────────────────
