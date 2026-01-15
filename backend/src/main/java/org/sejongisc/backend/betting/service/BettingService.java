@@ -138,6 +138,7 @@ public class BettingService {
      * 사용자 베팅 생성
      * - 반환 타입을 UserBetResponse(DTO)로 변경하여 LazyInitializationException 방지
      * - 통계 업데이트 시 Repository의 @Modifying 쿼리를 사용하여 동시성 문제(Lost Update) 해결
+     * - 취소 이력이 있는 베팅도 베팅 가능한 상태에 한하여 재배팅 가능
      */
     @Transactional
     public UserBetResponse postUserBet(UUID userId, UserBetRequest userBetRequest) {
@@ -145,8 +146,11 @@ public class BettingService {
         BetRound betRound = betRoundRepository.findById(userBetRequest.getRoundId())
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
 
-        // 2. 중복 베팅 검증
-        if (userBetRepository.existsByRoundAndUserId(betRound, userId)) {
+        UserBet existingBet = userBetRepository.findByRoundAndUserId(betRound, userId)
+                .orElse(null);
+
+        // 중복 베팅 존재 여부 검증
+        if (existingBet != null && existingBet.getBetStatus() != BetStatus.DELETED) {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
 
@@ -178,8 +182,14 @@ public class BettingService {
             );
         }
 
-        // 7. UserBet 엔티티 생성
-        UserBet userBet = UserBet.builder()
+        // 기존 베팅 존재 시 재베팅, 없으면 생성
+        UserBet userBet;
+        if (existingBet != null) {
+            userBet = existingBet;
+            userBet.updateBet(userBetRequest.getOption(), stake, userBetRequest.isFree());
+        }
+        else {
+            userBet = UserBet.builder()
                 .round(betRound)
                 .userId(userId)
                 .option(userBetRequest.getOption())
@@ -187,12 +197,10 @@ public class BettingService {
                 .stakePoints(stake)
                 .betStatus(BetStatus.ACTIVE)
                 .build();
+        }
 
-        // 8. 저장 및 DTO 변환 반환
         try {
-            UserBet savedBet = userBetRepository.save(userBet);
-            // 여기서 DTO로 변환해야 트랜잭션 내에서 betRound 정보를 안전하게 가져올 수 있음
-            return UserBetResponse.from(savedBet);
+            return UserBetResponse.from(userBetRepository.save(userBet));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
