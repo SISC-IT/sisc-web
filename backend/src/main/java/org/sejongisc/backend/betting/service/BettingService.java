@@ -141,7 +141,7 @@ public class BettingService {
      */
     @Transactional
     public UserBetResponse postUserBet(UUID userId, UserBetRequest userBetRequest) {
-        // 1. 라운드 조회
+        // 라운드 조회
         BetRound betRound = betRoundRepository.findById(userBetRequest.getRoundId())
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
 
@@ -150,20 +150,20 @@ public class BettingService {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
 
-        // 3. 라운드 상태 검증 (마감 시간 등)
+        // 베팅 가능한 라운드 상태인지 검증
         betRound.validate();
 
-        // 4. 베팅 포인트(stake) 결정
+        // 베팅 포인트 결정
         int stake = userBetRequest.isFree() ? 0 : userBetRequest.getStakePoints();
 
-        // 5. 라운드 통계 업데이트 (동시성 해결: DB 직접 업데이트)
+        // 라운드 통계 업데이트
         if (userBetRequest.getOption() == BetOption.RISE) {
             betRoundRepository.incrementUpStats(betRound.getBetRoundID(), stake);
         } else {
             betRoundRepository.incrementDownStats(betRound.getBetRoundID(), stake);
         }
 
-        // 6. 포인트 차감 및 이력 생성 (유료 베팅인 경우)
+        // 포인트 차감 및 이력 생성 (유료 베팅인 경우)
         if (!userBetRequest.isFree()) {
             if (!userBetRequest.isStakePointsValid()) {
                 throw new CustomException(ErrorCode.BET_POINT_TOO_LOW);

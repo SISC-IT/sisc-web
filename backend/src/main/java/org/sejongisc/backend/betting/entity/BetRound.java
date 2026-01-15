@@ -126,7 +126,7 @@ public class BetRound extends BasePostgresEntity {
         return BigDecimal.valueOf((double) totalPool / optionPool);
     }
 
-    // "베팅 가능한 상태인지 검증
+    // 베팅 가능한 상태인지 검증
     public void validate() {
         if (isClosed() || (lockAt != null && LocalDateTime.now().isAfter(lockAt))) {
             throw new CustomException(ErrorCode.BET_ROUND_CLOSED);
