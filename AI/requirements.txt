@@ -15,4 +15,3 @@ pathlib
 fredapi
 matplotlib
 python-dotenv
-lxml

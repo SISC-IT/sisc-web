@@ -88,7 +88,7 @@ def run_inference(ticker: str, model_type: str = "transformer") -> float:
             "input_shape": (input_tensor.shape[1], input_tensor.shape[2]),
             # 아래 파라미터는 로드 시 덮어써지거나, build용으로 사용됨
             "head_size": 256, "num_heads": 4, "ff_dim": 4,
-            "num_blocks": 4, "mlp_units": [128], "dropout": 0.1
+            "num_blocks": 4, "mlp_units": [128], "dropout": 0.4
         })
         
         # 모델 빌드 (가중치 로드 전 필수)

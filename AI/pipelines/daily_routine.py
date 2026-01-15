@@ -1,3 +1,4 @@
+# AI/pipelines/daily_routine.py
 """
 [일일 자동화 파이프라인]
 - 매일 장 마감 후 실행되는 메인 스크립트입니다.
@@ -22,15 +23,18 @@ from AI.modules.signal.workflows.inference import run_inference
 from AI.modules.trader.policy import decide_order
 from AI.modules.analysis.generator import ReportGenerator
 from AI.modules.collector.market_data import update_market_data
-from AI.libs.database.repository import save_executions_to_db, save_reports_to_db
-from AI.modules.signal.core.data_loader import SignalDataLoader
-from AI.libs.database.repository import save_executions_to_db, save_reports_to_db, get_current_position 
+from AI.libs.database.repository import save_executions_to_db, save_reports_to_db, get_current_position
+from AI.modules.signal.core.data_loader import SignalDataLoader 
 
 def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xai: bool = True):
     """
     일일 파이프라인 실행 함수
+    
+    Args:
+        target_tickers (list): 분석 대상 종목 코드 리스트
+        mode (str): 실행 모드 ('simulation': DB저장만, 'live': 실제 주문 전송)
+        enable_xai (bool): XAI 리포트 생성 여부
     """
-    # 시스템 실행 기준 오늘 날짜 (파일명, 로그용)
     today_str = datetime.now().strftime("%Y-%m-%d")
     print(f"\n[{today_str}] === AI Daily Routine Started (Mode: {mode}, XAI: {enable_xai}) ===")
 
@@ -52,12 +56,12 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
         print(f"[Warning] 데이터 수집 중 오류 발생 (기존 데이터로 진행): {e}")
 
     execution_results = []
-    report_results = [] 
+    report_results = [] # (ticker, signal, price, date, report_text) 튜플 저장
 
     # 2. 종목별 분석 시작
     print(f"2. {len(target_tickers)}개 종목 분석 시작...")
     
-    # DataLoader가 이제 Date 인덱스를 가진 DF를 반환한다고 가정
+    # 데이터 로더 인스턴스 (지표 계산용)
     loader = SignalDataLoader(sequence_length=60)
 
     for ticker in target_tickers:
@@ -71,12 +75,7 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
                 continue
                 
             # 인덱스(날짜) 기반 데이터 추출
-            # fetch_ohlcv가 df.set_index(date_col, inplace=True)를 수행했으므로 df.index는 DatetimeIndex입니다.
-            
-            # 마지막 날짜 (Timestamp 객체)
             last_date_obj = df.index[-1]
-            
-            # 문자열 변환 (YYYY-MM-DD)
             data_date_str = last_date_obj.strftime("%Y-%m-%d")
             
             # 마지막 행 데이터 (Series)
@@ -90,12 +89,6 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
                 continue
 
             # (3) 매매 정책 결정 (DB 기반 잔고 조회)
-            
-            # DB에서 현재 내 상태(현금, 보유수량, 평단가)를 가져옵니다.
-            # (단, 전체 자산 관리 차원에서 '현금'은 종목별로 쪼개져 있지 않으므로, 
-            #  여기서는 시뮬레이션 편의상 종목별로 1,000만원씩 할당되었다고 가정하거나,
-            #  실제로는 전체 계좌 예수금을 조회해야 합니다. 여기선 종목별 할당 방식 유지)
-            
             initial_seed = 10000000 # 종목당 배정 예산
             pos_info = get_current_position(ticker, initial_cash=initial_seed)
             
@@ -103,12 +96,10 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
             my_qty = pos_info["qty"]
             my_avg_price = pos_info["avg_price"]
             
-            # 총 자산 가치 (현금 + 주식 평가액)
             total_asset = my_cash + (my_qty * current_price)
 
             print(f"   [Status] 보유: {my_qty}주 (평단 {my_avg_price:,.0f}), 현금: {my_cash:,.0f}")
 
-            # 매매 결정
             action, qty, reason = decide_order(
                 ticker, score, current_price, 
                 my_cash, my_qty, my_avg_price, total_asset
@@ -116,14 +107,38 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
             
             print(f"   Score: {score:.4f} -> Action: {action} ({qty}주) | {reason}")
 
+            # 거래 후 상태(After) 계산
+            next_cash = my_cash
+            next_qty = my_qty
+            next_avg_price = my_avg_price
+            
+            if action == 'BUY':
+                cost = current_price * qty
+                next_cash -= cost
+                
+                # 평단가 갱신 (이동평균)
+                total_val_old = my_qty * my_avg_price
+                total_val_new = qty * current_price
+                next_qty = my_qty + qty
+                
+                if next_qty > 0:
+                    next_avg_price = (total_val_old + total_val_new) / next_qty
+                    
+            elif action == 'SELL':
+                revenue = current_price * qty
+                next_cash += revenue
+                next_qty = my_qty - qty
+                
+                # 전량 매도 시 평단가 초기화, 부분 매도 시 평단가 유지
+                if next_qty == 0:
+                    next_avg_price = 0.0
+            
+            # HOLD인 경우 변동 없음 (next_ 변수들이 my_ 변수들과 동일)
             # ─────────────────────────────────────────────────────────────
 
             # (4) XAI 리포트 생성
             if enable_xai and xai_generator:
                 print(f"   ...리포트 생성 중...")
-                
-                # ✅ [수정] row_dict 생성 및 date 명시적 추가
-                # current_row(Series)에는 인덱스(날짜)가 포함되지 않으므로 수동으로 넣어줘야 함
                 row_dict = current_row.to_dict()
                 row_dict['date'] = data_date_str 
                 
@@ -133,26 +148,26 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
                     "ticker": ticker,
                     "signal": action,
                     "price": current_price,
-                    "date": data_date_str, # 실제 데이터 날짜 사용
+                    "date": data_date_str,
                     "text": report_text
                 })
 
-            # (5) 결과 모음
+            # (5) 결과 모음 (수정된 next_ 변수 사용)
             execution_results.append({
                 "run_id": f"daily_{today_str}",
                 "ticker": ticker,
-                "signal_date": data_date_str, # 데이터 날짜 사용
+                "signal_date": data_date_str,
                 "signal_price": current_price,
                 "signal": action,
-                "fill_date": today_str, # 체결일은 실제 실행일(오늘)
+                "fill_date": today_str,
                 "fill_price": current_price,
                 "qty": qty,
                 "side": action,
                 "value": current_price * qty,
                 "commission": 0,
-                "cash_after": my_cash,
-                "position_qty": my_qty + qty if action == 'BUY' else my_qty - qty,
-                "avg_price": current_price,
+                "cash_after": next_cash,       # 거래 후 현금
+                "position_qty": next_qty,      # 거래 후 수량
+                "avg_price": next_avg_price,   # 거래 후 평단가
                 "pnl_realized": 0,
                 "pnl_unrealized": 0,
                 "xai_report_id": None 
@@ -160,8 +175,8 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
 
         except Exception as e:
             print(f"   [Error] {ticker} 처리 중 에러: {e}")
-            import traceback
-            traceback.print_exc()
+            # import traceback
+            # traceback.print_exc()
 
     # 3. 결과 DB 저장
     # (1) 리포트 저장
