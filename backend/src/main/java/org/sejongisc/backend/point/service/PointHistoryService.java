@@ -84,6 +84,16 @@ public class PointHistoryService {
   }
 
   /**
+   * OptimisticLockingFailureException가 아닌 CustomException이 발생했을 때 재시도 없이 예외를 던집니다.
+   * @param e @Retryable에서 발생한 예외
+   */
+  @Recover
+  public PointHistory recover(CustomException e) {
+    log.warn("포인트 업데이트 중 비즈니스 로직 예외 발생: {}", e.getMessage());
+    throw e;
+  }
+
+  /**
    * @Retryable에서 모든 재시도를 실패했을 때 호출될 메서드입니다.
    * @param e @Retryable에서 발생한 마지막 예외
    * @param userId, ... 원본 메서드와 동일한 파라미터
