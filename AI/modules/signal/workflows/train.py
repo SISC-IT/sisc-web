@@ -65,7 +65,7 @@ def run_global_training(tickers: list = None, model_type: str = "transformer", e
             valid_ticker_count += 1
             
         except Exception as e:
-            # print(f"   [Error] {ticker}: {e}")
+            print(f"   [Error] {ticker}: {e}")
             pass
 
     if valid_ticker_count == 0:
