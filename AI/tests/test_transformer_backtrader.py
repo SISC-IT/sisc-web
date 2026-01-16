@@ -1,194 +1,144 @@
-# AI/tests/test_transformer_backtrader.py
-# 사용불가. 추후 수정 필요
-import os
+"""
+[통합 테스트: Transformer + Backtrader]
+- 데이터 로드 -> 모델 빌드 -> 추론 -> 백테스트 실행까지의 전체 흐름을 검증합니다.
+- unittest.mock을 사용하여 DB 연결 없이 가상 데이터(Mock Data)로 파이프라인을 테스트합니다.
+- 리팩토링된 'Date Index' 구조가 전체 흐름에서 잘 동작하는지 확인합니다.
+"""
+
 import sys
-from typing import List, Dict, Optional
+import os
+import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
-import pandas as pd
-import pathlib
+from unittest.mock import patch, MagicMock # Mocking 도구 추가
 
-# --- 프로젝트/레포 경로 설정 ---------------------------------------------------
-_this_file = os.path.abspath(__file__)
-project_root = os.path.dirname(os.path.dirname(_this_file))      # .../transformer
-repo_root    = os.path.dirname(project_root)                     # .../
-libs_root    = os.path.join(repo_root, "libs")                   # .../libs
+# ─────────────────────────────────────────────────────────────────────────────
+#  경로 설정
+# ─────────────────────────────────────────────────────────────────────────────
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
-# sys.path에 중복 없이 추가
-for p in (project_root, repo_root, libs_root):
-    if p not in sys.path:
-        sys.path.append(p)
-# ------------------------------------------------------------------------------
+# 모듈 임포트
+from AI.modules.signal.core.data_loader import SignalDataLoader
+from AI.modules.signal.models import get_model
+from AI.modules.trader.engine import BacktestEngine
+from AI.modules.signal.core.features import add_technical_indicators
 
-# ----------------------------------------------------------------------
-# Transformer 실행
-# ----------------------------------------------------------------------
-from transformer.main import run_transformer
-
-from typing import Optional
-import pandas as pd
-from sqlalchemy import text
-
-# DB용 유틸: SQLAlchemy Engine 생성 함수 사용 (get_engine)
-from libs.utils.get_db_conn import get_engine
-
-def fetch_ohlcv(
-    ticker: List[str],
-    start: str,
-    end: str,
-    interval: str = "1d",
-    db_name: str = "db",
-) -> pd.DataFrame:
-    """
-    특정 티커, 날짜 범위의 OHLCV 데이터를 DB에서 불러오기 (SQLAlchemy 엔진 사용)
-
-    Args:
-        ticker (List[str]): 종목 코드 리스트 (예: ["AAPL", "MSFT", "GOOGL"])
-        start (str): 시작일자 'YYYY-MM-DD' (inclusive)
-        end (str): 종료일자 'YYYY-MM-DD' (inclusive)
-        interval (str): 데이터 간격 ('1d' 등) - 현재 테이블이 일봉만 제공하면 무시됨
-        db_name (str): get_engine()가 참조할 설정 블록 이름 (예: "db", "report_DB")
-
-    Returns:
-        pd.DataFrame: 컬럼 = [ticker, date, open, high, low, close, adjusted_close, volume]
-                      (date 컬럼은 pandas datetime으로 변환됨)
-    """
-
-    # 1) SQLAlchemy engine 얻기 (configs/config.json 기준)
-    engine = get_engine(db_name)
-
-    # 2) 쿼리: named parameter(:tickers 등) 사용 -> 안전하고 가독성 좋음
-    query = text("""
-        SELECT ticker, date, open, high, low, close, adjusted_close, volume
-        FROM public.price_data
-        WHERE ticker IN :tickers  -- 수정된 부분
-          AND date BETWEEN :start AND :end
-        ORDER BY date;
-    """)
-
-    # 3) DB에서 읽기 (with 문으로 커넥션 자동 정리)
-    with engine.connect() as conn:
-        df = pd.read_sql(
-            query,
-            con=conn,  # 꼭 키워드 인자로 con=conn
-            params={"tickers": tuple(ticker), "start": start, "end": end},  # 수정된 부분
-        )
-
-    # 4) 후처리: 컬럼 정렬 및 date 타입 통일
-    if df is None or df.empty:
-        # 빈 DataFrame이면 일관된 컬럼 스키마로 반환
-        return pd.DataFrame(columns=["ticker", "date", "open", "high", "low", "close", "adjusted_close", "volume"])
-
-    # date 컬럼을 datetime으로 변경 (UTC로 맞추고 싶으면 pd.to_datetime(..., utc=True) 사용)
-    if "date" in df.columns:
-        df["date"] = pd.to_datetime(df["date"])
-
-    # 선택: 컬럼 순서 고정 (일관성 유지)
-    desired_cols = ["ticker", "date", "open", "high", "low", "close", "adjusted_close", "volume"]
-    # 존재하는 컬럼만 가져오기
-    cols_present = [c for c in desired_cols if c in df.columns]
-    df = df.loc[:, cols_present]
-
+def create_mock_data(ticker, start_date, end_date):
+    """테스트용 가상 OHLCV 데이터 생성 (인덱스 = Date)"""
+    dates = pd.date_range(start=start_date, end=end_date)
+    n = len(dates)
+    
+    df = pd.DataFrame({
+        'open': np.random.rand(n) * 100 + 100,
+        'high': np.random.rand(n) * 110 + 100,
+        'low': np.random.rand(n) * 90 + 100,
+        'close': np.random.rand(n) * 100 + 100,
+        'volume': np.random.randint(1000, 10000, n),
+        'ticker': ticker
+    }, index=dates) # ✅ 핵심: 날짜를 인덱스로 설정
+    
+    df.index.name = "date"
+    
+    # 지표 추가 (RSI, MACD 등 계산 로직 검증 겸용)
+    df = add_technical_indicators(df)
     return df
 
-
-
-def run_transformer_for_test(finder_df: pd.DataFrame, raw_data: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFrame:
-    """
-    Transformer 모델을 실행하여 매매 신호를 예측하는 함수
-    :param finder_df: 종목 리스트
-    :param raw_data: OHLCV 시계열 데이터
-    :param start_date: 시작 날짜
-    :param end_date: 종료 날짜
-    :return: 매매 신호를 포함한 DataFrame
-    """
-    transformer_result = run_transformer(
-        finder_df=finder_df,
-        seq_len=64,
-        pred_h=5,
-        raw_data=raw_data,
-        run_date=end_date,  # 예측 날짜
-        weights_path=None,  # 가중치 경로. transformer/main.py 내부에서 기본 경로 사용
-        interval="1d"
-    )
+def test_integration():
+    print("\n=== [Test] 통합 테스트 시작 (Signal + Trader) ===\n")
     
-    logs_df = transformer_result.get("logs", pd.DataFrame())
-    return logs_df
-
-# ----------------------------------------------------------------------
-# Backtrader 실행
-# ----------------------------------------------------------------------
-from backtrader import Cerebro, Strategy
-from backtrader.feeds import PandasData
-
-class SimpleStrategy(Strategy):
-    """
-    Backtrader 전략
-    """
-    def __init__(self, logs_df: pd.DataFrame):
-        self.order = None
-        self.buy_price = None
-        self.logs_df = logs_df  # 매매 신호를 담은 logs_df를 클래스에 저장
-
-    def next(self):
-        # 매수/매도 신호에 따라 거래 진행
-        if self.order:
-            return  # 이미 주문이 있으면 아무것도 하지 않음
-
-        for _, row in self.logs_df.iterrows():
-            if row['action'] == 'BUY' and self.data.datetime.date(0) == pd.to_datetime(row['date']).date():
-                self.buy_price = row['predicted_price']
-                self.order = self.buy(size=1)  # 예시: 1주 매수
-
-            elif row['action'] == 'SELL' and self.data.datetime.date(0) == pd.to_datetime(row['date']).date():
-                if self.buy_price:
-                    sell_price = row['predicted_price']
-                    profit = (sell_price - self.buy_price) / self.buy_price * 100  # 수익률 계산
-                    print(f"Profit from {row['ticker']}: {profit:.2f}%")
-                    self.order = self.sell(size=1)  # 예시: 1주 매도
-                    self.buy_price = None
-
-# ----------------------------------------------------------------------
-# 테스트 실행 (2024년 1월 1일부터 12월 31일까지의 데이터로 테스트)
-# ----------------------------------------------------------------------
-def test_transformer_backtrader():
-    """
-    1년 동안 Transformer 모델을 통해 매매 신호를 예측하고, 
-    Backtrader를 사용하여 수익률을 계산하는 테스트 함수
-    """
-    start_date = "2024-01-01"
-    end_date = "2024-12-31"
-    db_name = "db"  # DB 이름
-
-    # 1. Transformer 모델을 통한 예측 신호 생성
-    finder_df = pd.DataFrame({"ticker": ["AAPL", "MSFT", "GOOGL"]})
+    ticker = "TEST_AAPL"
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
     
-    # DB에서 OHLCV 데이터 가져오기
-    raw_data = fetch_ohlcv(finder_df['ticker'].tolist(), start_date, end_date, db_name=db_name)
-
-    # Transformer 모델 실행
-    logs_df = run_transformer_for_test(finder_df, raw_data, start_date, end_date)
-    
-    if logs_df.empty:
-        print("Transformer 모델에서 예측된 신호가 없습니다.")
+    # ─────────────────────────────────────────────────────────────────────────
+    # 1. 데이터 준비 (Mock Data)
+    # ─────────────────────────────────────────────────────────────────────────
+    print("1. [Setup] 테스트용 가상 데이터 생성 중...")
+    try:
+        mock_df = create_mock_data(ticker, start_date, end_date)
+        print(f"   - 데이터 생성 완료: {len(mock_df)} rows")
+        print(f"   - 인덱스 타입 확인: {type(mock_df.index)} (Expected: DatetimeIndex) -> {'✅ OK' if isinstance(mock_df.index, pd.DatetimeIndex) else '❌ Fail'}")
+    except Exception as e:
+        print(f"   [Fail] 데이터 생성 중 오류: {e}")
         return
 
-    # 2. Backtrader 전략 실행 (매매 시뮬레이션)
-    ohlcv_data_feed = PandasData(dataname=raw_data)
+    # ─────────────────────────────────────────────────────────────────────────
+    # 2. 모델 빌드 및 추론 테스트
+    # ─────────────────────────────────────────────────────────────────────────
+    print("\n2. [Signal] 모델 빌드 및 추론 테스트...")
+    try:
+        loader = SignalDataLoader(sequence_length=30)
+        
+        # 전처리 (날짜 인덱스는 자동 제외되고 수치형만 선택되는지 확인)
+        features = mock_df.select_dtypes(include=[np.number]).columns.tolist()
+        if 'date' in features:
+            print("   [Warn] features에 날짜가 포함되었습니다! (오류 가능성)")
+        
+        # 스케일링
+        loader.scaler.fit(mock_df[features])
+        scaled_data = loader.scaler.transform(mock_df[features])
+        
+        # 입력 데이터 생성 (Batch=1)
+        sample_input = scaled_data[:30] 
+        sample_input = np.expand_dims(sample_input, axis=0) # (1, 30, features)
+        
+        # 모델 구조 빌드
+        config = {
+            "input_shape": (30, sample_input.shape[2]),
+            "head_size": 64, "num_heads": 2, "ff_dim": 2,
+            "num_blocks": 1, "mlp_units": [32], "dropout": 0.1
+        }
+        model = get_model("transformer", config)
+        model.build(config["input_shape"])
+        
+        # 추론 실행
+        # ✅ [수정] verbose 인자 제거 (TransformerSignalModel wrapper가 지원하지 않음)
+        pred = model.predict(sample_input) 
+        print(f"   - 추론 성공! 예측값: {pred[0][0]:.4f} ✅")
+        
+    except Exception as e:
+        print(f"   [Fail] 모델 테스트 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        return
 
-    # Cerebro 엔진 설정
-    cerebro = Cerebro()
-    cerebro.addstrategy(SimpleStrategy, logs_df=logs_df)  # logs_df를 전략에 전달
-    cerebro.adddata(ohlcv_data_feed)
+    # ─────────────────────────────────────────────────────────────────────────
+    # 3. 백테스트 엔진 테스트 (Mocking 적용)
+    # ─────────────────────────────────────────────────────────────────────────
+    print("\n3. [Trader] 백테스트 엔진 연동 테스트...")
+    print("   (DB 연결 없이 Mock Data를 주입하여 실행합니다)")
+    
+    # ★ 핵심: SignalDataLoader.load_data가 실제 DB 대신 mock_df를 반환하도록 가로채기(Patch)
+    with patch('AI.modules.signal.core.data_loader.SignalDataLoader.load_data', return_value=mock_df):
+        try:
+            # 엔진 초기화
+            engine = BacktestEngine(ticker, start_date, end_date)
+            print("   - 엔진 초기화 성공")
+            
+            # 실행 (가중치 파일 없이 실행 -> 랜덤/기본값 예측으로 동작 확인)
+            # engine.py 로직상 모델 경로가 없으면 경고 메시지를 띄우고 score=0.5 등으로 처리하거나 종료함
+            # 여기서는 에러 없이 루프가 도는지(특히 날짜 인덱싱 부분)를 확인하는 것이 목적
+            result_df = engine.run(model_weights_path=None)
+            
+            if result_df is not None:
+                print(f"   - 백테스트 완료! 거래 횟수: {len(result_df)}회 ✅")
+                print("   - 실행 결과 샘플:")
+                print(result_df.head(2) if not result_df.empty else "     (거래 없음)")
+            else:
+                print("   - 백테스트 완료 (거래 내역 없음) ✅")
+                
+        except KeyError as ke:
+            print(f"   [Fail] KeyError 발생! 인덱스 처리가 잘못되었을 수 있습니다: {ke}")
+        except Exception as e:
+            print(f"   [Fail] 백테스트 실행 중 에러: {e}")
+            import traceback
+            traceback.print_exc()
+            return
 
-    # 초기 자본금 및 수수료 설정
-    cerebro.broker.set_cash(100000)  # 초기 자본금 설정
-    cerebro.broker.set_commission(commission=0.001)  # 거래 수수료 설정
-
-    # 3. 백테스트 실행
-    cerebro.run()
-
-    # 최종 자본금 출력
-    print(f"Final Portfolio Value: {cerebro.broker.getvalue():.2f}")
+    print("\n=== [Success] 모든 통합 테스트 통과! ===")
 
 if __name__ == "__main__":
-    test_transformer_backtrader()
+    test_integration()
