@@ -1,4 +1,4 @@
-﻿# AI/libs/llm/ollama.py
+# AI/libs/llm/ollama.py
 """
 [Ollama 클라이언트 구현체]
 - 로컬 LLM 서버(Ollama)와 통신합니다.
@@ -46,4 +46,4 @@ class OllamaClient(BaseLLMClient):
             res = requests.get(self.base_url, timeout=5)
             return res.status_code == 200
         except Exception:
-             return False
+            return False

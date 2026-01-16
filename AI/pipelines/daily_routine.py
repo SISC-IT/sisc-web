@@ -11,6 +11,7 @@ import os
 import argparse
 from datetime import datetime
 import pandas as pd
+import traceback
 
 # 프로젝트 루트 경로 추가 (절대 경로 import 위함)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -112,6 +113,10 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
             next_qty = my_qty
             next_avg_price = my_avg_price
             
+            # P&L(손익) 변수 초기화
+            pnl_realized = 0.0 # 실현손익
+            pnl_unrealized = 0.0 # 미실현 손익
+
             if action == 'BUY':
                 cost = current_price * qty
                 next_cash -= cost
@@ -132,38 +137,42 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
                 # 전량 매도 시 평단가 초기화, 부분 매도 시 평단가 유지
                 if next_qty == 0:
                     next_avg_price = 0.0
+                
+                # 실현 손익 계산
+                if my_avg_price > 0:
+                    pnl_realized = (current_price - my_avg_price) * qty
 
-            #P&L(손익) 계산
-            pnl_realized = 0.0 #실현손익
-            pnl_unrealized = 0.0 #미실현 손익
-            if action == 'SELL' and my_avg_price>0:
-                pnl_realized = (current_price - my_avg_price) * qty
-
-            if next_qty > 0 and next_avg_price >0:
+            # 미실현 손익 계산 (보유 잔량이 있을 때)
+            if next_qty > 0 and next_avg_price > 0:
                 pnl_unrealized = (current_price - next_avg_price) * next_qty
             
             # HOLD인 경우 변동 없음 (next_ 변수들이 my_ 변수들과 동일)
             # ─────────────────────────────────────────────────────────────
 
             # (4) XAI 리포트 생성
+            # XAI 생성 실패가 매매 기록 저장을 방해하지 않도록 별도 try-except 처리
             if enable_xai and xai_generator:
-                print(f"   ...리포트 생성 중...")
-                row_dict = current_row.to_dict()
-                row_dict['date'] = data_date_str 
-                
-                report_text = xai_generator.generate_report(ticker, data_date_str, row_dict, score, action)
-                
-                report_results.append({
-                    "ticker": ticker,
-                    "signal": action,
-                    "price": current_price,
-                    "date": data_date_str,
-                    "text": report_text
-                })
+                try:
+                    print(f"   ...리포트 생성 중...")
+                    row_dict = current_row.to_dict()
+                    row_dict['date'] = data_date_str 
+                    
+                    report_text = xai_generator.generate_report(ticker, data_date_str, row_dict, score, action)
+                    
+                    if report_text:
+                        report_results.append({
+                            "ticker": ticker,
+                            "signal": action,
+                            "price": current_price,
+                            "date": data_date_str,
+                            "text": report_text
+                        })
+                except Exception as xai_e:
+                    print(f"   [Warning] 리포트 생성 중 오류 무시: {xai_e}")
 
             # (5) 결과 모음 (수정된 next_ 변수 사용)
             execution_results.append({
-                "run_id": f"daily_{today_str}",     # 실행 고유 ID (일일 실행 날짜 기준)
+                "run_id": f"daily_{today_str}",    # 실행 고유 ID (일일 실행 날짜 기준)
                 "ticker": ticker,                   # 종목 코드
                 "signal_date": data_date_str,       # 신호 발생 날짜
                 "signal_price": current_price,      # 신호 발생 시 가격
@@ -179,13 +188,12 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
                 "avg_price": next_avg_price,        # 거래 후 평단가
                 "pnl_realized": pnl_realized,       # 실현 손익 (판매된 종목에 대한 손익)
                 "pnl_unrealized": pnl_unrealized,   # 미실현 손익 (현재 보유 종목에 대한 손익)
-                "xai_report_id": None               # 매매이유 ID
+                "xai_report_id": None               # 매매이유 ID (DB 저장 후 매핑)
             })
 
         except Exception as e:
             print(f"   [Error] {ticker} 처리 중 에러: {e}")
-            # import traceback
-            # traceback.print_exc()
+            traceback.print_exc()
 
     # 3. 결과 DB 저장
     # (1) 리포트 저장
@@ -193,7 +201,23 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
     if report_results:
         print(f"3-1. XAI 리포트 DB 저장 중... ({len(report_results)}건)")
 
-        saved_report_map = save_reports_to_db(reports_tuple)  # 반환 값은 {'AAPL': 123, 'TSLA': 124, ...} 형식
+        # report_results (dict 리스트) -> tuple 리스트 변환
+        reports_tuple = [
+            (r["ticker"], r["signal"], r["price"], r["date"], r["text"])
+            for r in report_results
+        ]
+        
+        try:
+            saved_report_ids = save_reports_to_db(reports_tuple)
+            
+            # ID 매핑 생성 (ticker -> id)
+            # 주의: 삽입 순서와 반환 ID 순서가 동일하다고 가정
+            saved_report_map = {
+                r["ticker"]: saved_id 
+                for r, saved_id in zip(report_results, saved_report_ids)
+            }
+        except Exception as db_e:
+            print(f"   [Error] 리포트 저장 실패: {db_e}")
 
     # (2) report_map 생성 (ticker를 키로 ID 매핑)
     for exe in execution_results:
@@ -203,8 +227,11 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
     # (3) 실행 내역 저장
     if execution_results:
         print(f"3-2. 매매 실행 내역 DB 저장 중... ({len(execution_results)}건)")
-        df_results = pd.DataFrame(execution_results)
-        save_executions_to_db(df_results)
+        try:
+            df_results = pd.DataFrame(execution_results)
+            save_executions_to_db(df_results)
+        except Exception as db_e:
+            print(f"   [Error] 실행 내역 저장 실패: {db_e}")
         
     print(f"=== Daily Routine Finished ===\n")
 
