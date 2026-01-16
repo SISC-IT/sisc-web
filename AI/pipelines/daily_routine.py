@@ -132,6 +132,15 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
                 # 전량 매도 시 평단가 초기화, 부분 매도 시 평단가 유지
                 if next_qty == 0:
                     next_avg_price = 0.0
+
+            #P&L(손익) 계산
+            pnl_realized = 0.0 #실현손익
+            pnl_unrealized = 0.0 #미실현 손익
+            if action == 'SELL' and my_avg_price>0:
+                pnl_realized = (current_price - my_avg_price) * qty
+
+            if next_qty > 0 and next_avg_price >0:
+                pnl_unrealized = (current_price - next_avg_price) * next_qty
             
             # HOLD인 경우 변동 없음 (next_ 변수들이 my_ 변수들과 동일)
             # ─────────────────────────────────────────────────────────────
@@ -154,23 +163,23 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
 
             # (5) 결과 모음 (수정된 next_ 변수 사용)
             execution_results.append({
-                "run_id": f"daily_{today_str}",
-                "ticker": ticker,
-                "signal_date": data_date_str,
-                "signal_price": current_price,
-                "signal": action,
-                "fill_date": today_str,
-                "fill_price": current_price,
-                "qty": qty,
-                "side": action,
-                "value": current_price * qty,
-                "commission": 0,
-                "cash_after": next_cash,       # 거래 후 현금
-                "position_qty": next_qty,      # 거래 후 수량
-                "avg_price": next_avg_price,   # 거래 후 평단가
-                "pnl_realized": 0,
-                "pnl_unrealized": 0,
-                "xai_report_id": None 
+                "run_id": f"daily_{today_str}",     # 실행 고유 ID (일일 실행 날짜 기준)
+                "ticker": ticker,                   # 종목 코드
+                "signal_date": data_date_str,       # 신호 발생 날짜
+                "signal_price": current_price,      # 신호 발생 시 가격
+                "signal": action,                   # 매매 신호 ('BUY' 또는 'SELL')
+                "fill_date": today_str,             # 주문 체결 날짜 (현재 날짜)
+                "fill_price": current_price,        # 주문 체결 가격 (현재 가격)
+                "qty": qty,                         # 주문 수량
+                "side": action,                     # 거래 방향 ('BUY' 또는 'SELL')
+                "value": current_price * qty,       # 거래 금액 (가격 * 수량)
+                "commission": 0,                    # 거래 수수료 (현재는 0으로 설정됨) 
+                "cash_after": next_cash,            # 거래 후 현금
+                "position_qty": next_qty,           # 거래 후 수량
+                "avg_price": next_avg_price,        # 거래 후 평단가
+                "pnl_realized": pnl_realized,       # 실현 손익 (판매된 종목에 대한 손익)
+                "pnl_unrealized": pnl_unrealized,   # 미실현 손익 (현재 보유 종목에 대한 손익)
+                "xai_report_id": None               # 매매이유 ID
             })
 
         except Exception as e:
@@ -180,24 +189,18 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
 
     # 3. 결과 DB 저장
     # (1) 리포트 저장
-    saved_report_ids = []
+    saved_report_map = {}
     if report_results:
         print(f"3-1. XAI 리포트 DB 저장 중... ({len(report_results)}건)")
-        reports_tuple = [
-            (r['ticker'], r['signal'], r['price'], r['date'], r['text']) 
-            for r in report_results
-        ]
-        saved_report_ids = save_reports_to_db(reports_tuple)
-        
-        # ID 매핑
-        if len(saved_report_ids) == len(report_results):
-            report_map = {r['ticker']: saved_id for r, saved_id in zip(report_results, saved_report_ids)}
-            
-            for exe in execution_results:
-                if exe['ticker'] in report_map:
-                    exe['xai_report_id'] = report_map[exe['ticker']]
 
-    # (2) 실행 내역 저장
+        saved_report_map = save_reports_to_db(reports_tuple)  # 반환 값은 {'AAPL': 123, 'TSLA': 124, ...} 형식
+
+    # (2) report_map 생성 (ticker를 키로 ID 매핑)
+    for exe in execution_results:
+        if exe['ticker'] in saved_report_map:
+            exe['xai_report_id'] = saved_report_map[exe['ticker']]
+
+    # (3) 실행 내역 저장
     if execution_results:
         print(f"3-2. 매매 실행 내역 DB 저장 중... ({len(execution_results)}건)")
         df_results = pd.DataFrame(execution_results)

@@ -43,7 +43,7 @@ class OllamaClient(BaseLLMClient):
 
     def get_health(self) -> bool:
         try:
-            res = requests.get(self.base_url)
+            res = requests.get(self.base_url, timeout=5)
             return res.status_code == 200
-        except:
-            return False
+        except Exception:
+             return False

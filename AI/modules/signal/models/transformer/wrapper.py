@@ -84,7 +84,7 @@ class TransformerSignalModel(BaseSignalModel):
 
 
 
-    def predict(self, X_input: np.ndarray) -> np.ndarray:
+    def predict(self, X_input: np.ndarray, **kwargs) -> np.ndarray:
         """추론 수행"""
         if self.model is None:
             raise ValueError("모델이 없습니다. load()하거나 build() 하세요.")
@@ -93,7 +93,7 @@ class TransformerSignalModel(BaseSignalModel):
         if len(X_input.shape) == 2:
             X_input = np.expand_dims(X_input, axis=0)
             
-        return self.model.predict(X_input, verbose=0)
+        return self.model.predict(X_input,  **kwargs)
 
     def save(self, filepath: str):
         """모델 저장"""
@@ -103,7 +103,7 @@ class TransformerSignalModel(BaseSignalModel):
         
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         self.model.save(filepath)
-        # print(f"모델 저장 완료: {filepath}")
+        print(f"모델 저장 완료: {filepath}")
 
     def load(self, filepath: str):
         """모델 로드"""

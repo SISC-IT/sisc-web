@@ -45,19 +45,25 @@ def decide_order(
 
     # 2. 리스크 관리 (손절/익절 우선 체크)
     if position_qty > 0:
-        pnl_rate = (current_price - avg_price) / avg_price
+        if avg_price <= 0:
+            # 평단가가 없으면 리스크 관리 스킵
+            reason = "평단가 정보 없음 (리스크 관리 불가)"
+            return "HOLD", 0, reason
+        else:
+            pnl_rate = (current_price - avg_price) / avg_price
+
+            if pnl_rate <= -STOP_LOSS_PCT:
+                action = "SELL"
+                qty = position_qty
+                reason = f"손절매 발동 (수익률 {pnl_rate*100:.2f}%)"
+                return action, qty, reason
         
-        if pnl_rate <= -STOP_LOSS_PCT:
-            action = "SELL"
-            qty = position_qty
-            reason = f"손절매 발동 (수익률 {pnl_rate*100:.2f}%)"
-            return action, qty, reason
-            
-        elif pnl_rate >= TAKE_PROFIT_PCT:
-            action = "SELL"
-            qty = position_qty
-            reason = f"익절매 발동 (수익률 {pnl_rate*100:.2f}%)"
-            return action, qty, reason
+            elif pnl_rate >= TAKE_PROFIT_PCT:
+                action = "SELL"
+                qty = position_qty
+                reason = f"익절매 발동 (수익률 {pnl_rate*100:.2f}%)"
+                return action, qty, reason
+
 
     # 3. AI 점수 기반 매매 판단
     # (1) 매수 조건
