@@ -27,7 +27,7 @@ class StockTradingEnv(gym.Env):
             raise ValueError(f"데이터 부족: {ticker}")
 
         # Simulator 인스턴스 생성 (우리가 만든 엔진 사용)
-        self.simulator = Simulator(ticker, self.df)
+        self.simulator = Simulator(ticker, self.df, initial_balance=initial_balance)
 
         # 2. Action Space (행동 정의)
         # Continuous: -1.0(전량매도) ~ +1.0(전량매수)
