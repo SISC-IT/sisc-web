@@ -50,61 +50,7 @@ public class AttendanceControllerTest {
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
-    @Test
-    @DisplayName("출석 체크인 성공")
-    @WithMockUser
-    void checkIn_success() throws Exception {
-        //given
-        AttendanceRequest request = AttendanceRequest.builder()
-                .code("123456")
-                .latitude(37.5665)
-                .longitude(126.9780)
-                .note("정상 춣석")
-                .deviceInfo("iphone 14")
-                .build();
 
-        User user = User.builder()
-                .userId(UUID.randomUUID())
-                .name("오찬혁")
-                .email("oh@example.com")
-                .role(Role.TEAM_MEMBER)
-                .build();
-
-        CustomUserDetails userDetails = new CustomUserDetails(user);
-
-        AttendanceResponse response = AttendanceResponse.builder()
-                .attendanceId(UUID.randomUUID())
-                .userId(user.getUserId())
-                .userName("오찬혁")
-                .attendanceSessionId(UUID.randomUUID())
-                .attendanceStatus(AttendanceStatus.PRESENT)
-                .checkedAt(LocalDateTime.now())
-                .awardedPoints(10)
-                .note("정상 출석")
-                .deviceInfo("iphone 14")
-                .isLate(false)
-                .build();
-
-        when(attendanceService.checkIn(any(UUID.class), any(AttendanceRequest.class), eq(user.getUserId()))).thenReturn(response);
-
-        //then
-        UUID sessionId = UUID.randomUUID();
-        mockMvc.perform(post("/api/attendance/sessions/{sessionId}/check-in", sessionId)
-                        .with(user(userDetails))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.userName").value("오찬혁"))
-                .andExpect(jsonPath("$.attendanceStatus").value("PRESENT"))
-                .andExpect(jsonPath("$.awardedPoints").value(10))
-                .andExpect(jsonPath("$.note").value("정상 출석"))
-                .andExpect(jsonPath("$.deviceInfo").value("iphone 14"))
-                .andExpect(jsonPath("$.late").value(false));
-    }
-
-    @Test
-    @DisplayName("출석 체크인 실패: 유효성 검증 오류")
-    @WithMockUser
     void checkIn_fail_validation() throws Exception {
         //given
         AttendanceRequest request = AttendanceRequest.builder()

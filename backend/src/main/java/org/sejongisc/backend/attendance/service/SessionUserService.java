@@ -44,32 +44,31 @@ public class SessionUserService {
     public SessionUserResponse addUserToSession(UUID sessionId, UUID userId) {
         log.info("🔧 세션에 사용자 추가 시작: sessionId={}, userId={}", sessionId, userId);
 
-        // 1. 세션 존재 확인
+        // 세션 존재 확인
         AttendanceSession session = attendanceSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
 
-        // 2. 사용자 존재 확인
+        // 사용자 존재 확인
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
 
-        // 3. 중복 참여 여부 확인
+        // 중복 참여 여부 확인
         if (sessionUserRepository.existsBySessionIdAndUserId(sessionId, userId)) {
             throw new IllegalArgumentException("이미 세션에 참여 중입니다: " + user.getName());
         }
 
         log.info("✅ 유효성 검사 완료: sessionId={}, userId={}, userName={}", sessionId, userId, user.getName());
 
-        // 4. SessionUser 레코드 생성
+        // SessionUser 레코드 생성
         SessionUser sessionUser = SessionUser.builder()
                 .attendanceSession(session)
                 .user(user)
-                .userName(user.getName())
                 .build();
 
         sessionUser = sessionUserRepository.save(sessionUser);
         log.info("💾 SessionUser 저장 완료: sessionUserId={}, userName={}", sessionUser.getSessionUserId(), user.getName());
 
-        // 5. ⭐ 핵심: 이미 진행된 라운드들에 대해 자동으로 결석 처리
+        // 핵심: 이미 진행된 라운드들에 대해 자동으로 결석 처리
         List<AttendanceRound> pastRounds = attendanceRoundRepository.findBySession_SessionIdAndRoundDateBefore(
                 sessionId,
                 LocalDate.now()
@@ -87,7 +86,6 @@ public class SessionUserService {
                     // 새로운 Attendance 레코드 생성 (결석 상태)
                     Attendance absentRecord = Attendance.builder()
                             .user(user)
-                            .attendanceSession(session)
                             .attendanceRound(round)
                             .attendanceStatus(AttendanceStatus.ABSENT)
                             .note("세션 중간 참여 - 이전 라운드는 자동 결석 처리")
@@ -121,7 +119,6 @@ public class SessionUserService {
                     // 새로운 Attendance 레코드 생성 (PENDING 상태)
                     Attendance pendingRecord = Attendance.builder()
                             .user(user)
-                            .attendanceSession(session)
                             .attendanceRound(round)
                             .attendanceStatus(AttendanceStatus.PENDING)
                             .build();
@@ -217,7 +214,6 @@ public class SessionUserService {
                 .sessionUserId(sessionUser.getSessionUserId())
                 .userId(sessionUser.getUser().getUserId())
                 .sessionId(sessionUser.getAttendanceSession().getAttendanceSessionId())
-                .userName(sessionUser.getUserName())
                 .createdAt(sessionUser.getCreatedDate())
                 .build();
     }

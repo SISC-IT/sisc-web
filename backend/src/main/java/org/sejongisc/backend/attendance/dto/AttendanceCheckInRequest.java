@@ -25,11 +25,6 @@ import java.util.UUID;
 )
 public class AttendanceCheckInRequest {
 
-    @NotNull(message = "라운드 ID는 필수입니다")
-    @Schema(
-            description = "체크인할 라운드의 고유 ID",
-            example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-    )
     private UUID roundId;
 
     @DecimalMin(value = "-90.0", message = "위도는 -90도 이상이어야 합니다")

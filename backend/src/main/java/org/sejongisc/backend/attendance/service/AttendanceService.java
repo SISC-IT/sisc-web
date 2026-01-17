@@ -50,7 +50,7 @@ public class AttendanceService {
         log.info("라운드 출석 체크인 시작: 사용자={}, 라운드ID={}, 날짜={}",
                 user.getName(), request.getRoundId(), round.getRoundDate());
 
-        // 1. 라운드 시간 검증 - 통일된 로직
+        // 라운드 시간 검증 - 통일된 로직
         LocalDateTime now = LocalDateTime.now();
         LocalDate checkDate = now.toLocalDate();
         LocalTime checkTime = now.toLocalTime();
@@ -136,7 +136,6 @@ public class AttendanceService {
         // 5. 출석 기록 저장
         Attendance attendance = Attendance.builder()
                 .user(user)
-                .attendanceSession(session)
                 .attendanceRound(round)
                 .attendanceStatus(status)
                 .checkedAt(java.time.LocalDateTime.now())
@@ -229,7 +228,6 @@ public class AttendanceService {
             throw new IllegalArgumentException("잘못된 출석 상태입니다: " + status);
         }
 
-        attendance.updateStatus(newStatus, reason);
         attendance = attendanceRepository.save(attendance);
 
         log.info("출석 상태 수정 완료: 세션ID={}, 멤버ID={}, 상태={}", sessionId, memberId, newStatus);
@@ -303,7 +301,6 @@ public class AttendanceService {
 
             attendance = Attendance.builder()
                     .user(user)
-                    .attendanceSession(round.getAttendanceSession())
                     .attendanceRound(round)
                     .attendanceStatus(newStatus)
                     .note(reason != null ? reason : "관리자가 추가함")
@@ -316,7 +313,7 @@ public class AttendanceService {
             // 기존 기록이 있으면 상태 업데이트
             log.info("📝 기존 Attendance 레코드 업데이트");
 
-            attendance.updateStatus(newStatus, reason);
+
             attendance = attendanceRepository.save(attendance);
             log.info("✅ Attendance 상태 업데이트 완료: status={}", newStatus);
         }
@@ -337,7 +334,6 @@ public class AttendanceService {
                 .attendanceId(attendance.getAttendanceId())
                 .userId(attendance.getUser() != null ? attendance.getUser().getUserId() : null)
                 .userName(attendance.getUser() != null ? attendance.getUser().getName() : "익명")
-                .attendanceSessionId(attendance.getAttendanceSession().getAttendanceSessionId())
                 .attendanceRoundId(attendance.getAttendanceRound() != null ?
                         attendance.getAttendanceRound().getRoundId() : null)
                 .attendanceStatus(attendance.getAttendanceStatus())
@@ -348,8 +344,6 @@ public class AttendanceService {
                         attendance.getCheckInLocation().getLat() : null)
                 .checkInLongitude(attendance.getCheckInLocation() != null ?
                         attendance.getCheckInLocation().getLng() : null)
-                .deviceInfo(attendance.getDeviceInfo())
-                .isLate(attendance.isLate())
                 .createdAt(attendance.getCreatedDate())
                 .updatedAt(attendance.getUpdatedDate())
                 .build();

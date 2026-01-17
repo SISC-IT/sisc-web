@@ -58,19 +58,10 @@ public class AttendanceRoundService {
             AttendanceRound round = AttendanceRound.builder()
                     .attendanceSession(session)
                     .roundDate(roundDate)
-                    .startTime(requestStartTime)
-                    .allowedMinutes(request.getAllowedMinutes() != null ? request.getAllowedMinutes() : 30)
                     .roundStatus(RoundStatus.UPCOMING)
                     .build();
 
-            log.info("🔨 라운드 엔티티 생성: roundDate={}, startTime={}, allowedMinutes={}",
-                    round.getRoundDate(), round.getStartTime(), round.getAllowedMinutes());
 
-            RoundStatus status = round.calculateCurrentStatus();
-            round.setRoundStatus(status);
-
-            log.info("📊 라운드 상태 계산: 현재시간={}, 라운드시작={}, 계산된상태={}, 종료시간={}",
-                    LocalTime.now(), round.getStartTime(), status, round.getEndTime());
 
             AttendanceRound saved = attendanceRoundRepository.save(round);
             session.getRounds().add(saved);
@@ -85,7 +76,6 @@ public class AttendanceRoundService {
             for (SessionUser sessionUser : sessionUsers) {
                 Attendance pendingAttendance = Attendance.builder()
                         .user(sessionUser.getUser())
-                        .attendanceSession(session)
                         .attendanceRound(saved)
                         .attendanceStatus(AttendanceStatus.PENDING)
                         .build();
@@ -133,12 +123,7 @@ public class AttendanceRoundService {
     public AttendanceRoundResponse updateRound(UUID roundId, AttendanceRoundRequest request) {
         AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
                 .orElseThrow(() -> new IllegalArgumentException("라운드를 찾을 수 없습니다: " + roundId));
-
-        round.updateRoundInfo(
-                request.getRoundDate(),
-                request.getStartTime(),
-                request.getAllowedMinutes()
-        );
+        
 
         AttendanceRound updated = attendanceRoundRepository.save(round);
         log.info("라운드 수정 완료 - roundId: {}", roundId);

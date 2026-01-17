@@ -59,12 +59,4 @@ public class AttendanceRequest {
     @Size(max = 500, message = "메모는 500자 이하여야 합니다")
     private String note;
 
-    @Schema(
-            description = "체크인에 사용한 디바이스 정보. 예: 'iPhone 12', 'Android Pixel 6' 등",
-            example = "iPhone 14 Pro",
-            maxLength = 200
-    )
-    @Size(max = 200, message = "디바이스 정보는 200자 이하여야 합니다")
-    private String deviceInfo;
-
 }

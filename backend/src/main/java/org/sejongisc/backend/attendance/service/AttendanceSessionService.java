@@ -28,15 +28,12 @@ public class AttendanceSessionService {
 
     /**
      * 출석 세션 생성
-     * - 6자리 유니크 코드 자동 생성
      * - GPS 위치 및 반경 설정 (선택사항)
      * - 기본 상태 UPCOMING 으로 설정
      */
     public AttendanceSessionResponse createSession(AttendanceSessionRequest request) {
         log.info("출석 세션 생성 시작: 제목={}, 기본시간={}, 출석인정시간={}분",
                 request.getTitle(), request.getDefaultStartTime(), request.getAllowedMinutes());
-
-        String code = generateUniqueCode();
         Location location = null;
 
         if (request.getLatitude() != null && request.getLongitude() != null) {
@@ -49,9 +46,7 @@ public class AttendanceSessionService {
 
         AttendanceSession session = AttendanceSession.builder()
                 .title(request.getTitle())
-                .defaultStartTime(request.getDefaultStartTime())
                 .allowedMinutes(request.getAllowedMinutes())
-                .code(code)
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
                 .status(SessionStatus.UPCOMING)
@@ -59,7 +54,7 @@ public class AttendanceSessionService {
 
         session = attendanceSessionRepository.save(session);
 
-        log.info("출석 세션 생성 완료: 세션ID={}, 코드={}", session.getAttendanceSessionId(), code);
+        log.info("출석 세션 생성 완료: 세션ID={}", session.getAttendanceSessionId());
 
         return convertToResponse(session);
     }
@@ -143,7 +138,6 @@ public class AttendanceSessionService {
 
         session = session.toBuilder()
                 .title(request.getTitle())
-                .defaultStartTime(request.getDefaultStartTime())
                 .allowedMinutes(request.getAllowedMinutes())
                 .rewardPoints(request.getRewardPoints())
                 .location(location)
@@ -212,17 +206,6 @@ public class AttendanceSessionService {
         log.info("출석 세션 종료 완료: 세션ID={}", sessionId);
     }
 
-    /**
-     * 중복되지 않는 6자리 코드 생성
-     * - DB에서 중복 검사 후 유니크 코드 리턴
-     */
-    private String generateUniqueCode() {
-        String code;
-        do {
-            code = generateRandomCode();
-        } while (attendanceSessionRepository.existsByCode(code));
-        return code;
-    }
 
     /**
      * 세션 위치 재설정
@@ -287,7 +270,6 @@ public class AttendanceSessionService {
                 .attendanceSessionId(session.getAttendanceSessionId())
                 .title(session.getTitle())
                 .location(location)
-                .defaultStartTime(session.getDefaultStartTime())
                 .defaultAvailableMinutes(session.getAllowedMinutes())
                 .rewardPoints(session.getRewardPoints())
                 .build();
