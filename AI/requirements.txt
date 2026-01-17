@@ -15,3 +15,6 @@ pathlib
 fredapi
 matplotlib
 python-dotenv
+stable-baselines3
+shimmy
+gymnasium

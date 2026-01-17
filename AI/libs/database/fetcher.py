@@ -1,4 +1,4 @@
-﻿# libs/database/fetcher.py
+﻿# AI/libs/database/fetcher.py
 from __future__ import annotations
 from typing import Optional
 import pandas as pd
@@ -15,25 +15,22 @@ def fetch_ohlcv(
     db_name: str = "db",
 ) -> pd.DataFrame:
     """
-    특정 티커, 날짜 범위의 OHLCV 데이터를 DB에서 불러오기 (SQLAlchemy 엔진 사용)
+    특정 티커, 날짜 범위의 OHLCV 데이터를 DB에서 불러오기
 
     Args:
         ticker (str): 종목 코드 (예: "AAPL")
-        start (str): 시작일자 'YYYY-MM-DD' (inclusive)
-        end (str): 종료일자 'YYYY-MM-DD' (inclusive)
-        interval (str): 데이터 간격 ('1d' 등) - 현재 테이블이 일봉만 제공하면 무시됨
-        db_name (str): get_engine()가 참조할 설정 블록 이름 (예: "db", "report_DB")
+        start (str): 시작일자 'YYYY-MM-DD'
+        end (str): 종료일자 'YYYY-MM-DD'
+        interval (str): 데이터 간격 (현재 일봉만 지원)
+        db_name (str): DB 설정 이름
 
     Returns:
-        pd.DataFrame: 컬럼 = [ticker, date, open, high, low, close, adjusted_close, volume]
-                      (date 컬럼은 pandas datetime으로 변환됨)
+        pd.DataFrame: [ticker, date, open, high, low, close, adjusted_close, volume]
     """
 
-    # 1) SQLAlchemy engine 얻기 (configs/config.json 기준)
     engine = get_engine(db_name)
 
-    # 2) 쿼리: named parameter(:ticker 등) 사용 -> 안전하고 가독성 좋음
-    #    - interval 분기가 필요하면 테이블/파티션 구조에 따라 쿼리를 분기하도록 확장 가능
+    # adjusted_close가 중요하다면 쿼리 단계에서 확실히 가져옵니다.
     query = text("""
         SELECT ticker, date, open, high, low, close, adjusted_close, volume
         FROM public.price_data
@@ -42,28 +39,32 @@ def fetch_ohlcv(
         ORDER BY date;
     """)
 
-    # 3) DB에서 읽기 (with 문으로 커넥션 자동 정리)
     with engine.connect() as conn:
         df = pd.read_sql(
             query,
-            con=conn,  # 꼭 키워드 인자로 con=conn
-            params={"ticker": ticker, "start": start, "end": end},  # 튜플 X, 딕셔너리 O
-            )
+            con=conn,
+            params={"ticker": ticker, "start": start, "end": end},
+        )
 
-    # 4) 후처리: 컬럼 정렬 및 date 타입 통일
+    # 빈 데이터 처리
     if df is None or df.empty:
-        # 빈 DataFrame이면 일관된 컬럼 스키마로 반환
         return pd.DataFrame(columns=["ticker", "date", "open", "high", "low", "close", "adjusted_close", "volume"])
 
-    # date 컬럼을 datetime으로 변경 (UTC로 맞추고 싶으면 pd.to_datetime(..., utc=True) 사용)
+    # 날짜 변환
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"])
 
-    # 선택: 컬럼 순서 고정 (일관성 유지)
+    # 데이터 보정 로직 추가
+    # 1. adjusted_close가 없는 경우(NaN) -> close 값으로 대체 (결측치 방지)
+    if "adjusted_close" in df.columns and "close" in df.columns:
+        df["adjusted_close"] = df["adjusted_close"].fillna(df["close"])
+    elif "adjusted_close" not in df.columns and "close" in df.columns:
+        # 컬럼 자체가 없으면 close를 복사해서 생성
+        df["adjusted_close"] = df["close"]
+
+    # 컬럼 순서 정리
     desired_cols = ["ticker", "date", "open", "high", "low", "close", "adjusted_close", "volume"]
-    # 존재하는 컬럼만 가져오기
     cols_present = [c for c in desired_cols if c in df.columns]
     df = df.loc[:, cols_present]
 
     return df
-
