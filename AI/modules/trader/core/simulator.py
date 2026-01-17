@@ -10,21 +10,27 @@ import pandas as pd
 from .account import TradingAccount
 
 class Simulator:
-    def __init__(self, ticker: str, data: pd.DataFrame):
+    def __init__(self, ticker: str, data: pd.DataFrame, initial_balance: float = 10_000_000):
         self.ticker = ticker
         self.data = data
         self.current_idx = 0
         self.max_idx = len(data) - 1
         
+        # 초기 자금 저장 (Reset 시 재사용)
+        self.initial_balance = initial_balance
+        
         # 계좌 생성
-        self.account = TradingAccount()
+        self.account = TradingAccount(initial_balance=initial_balance)
         
         # 로그
         self.history = []
 
     def reset(self):
         self.current_idx = 0
-        self.account = TradingAccount()
+        
+        # ★ [수정] 저장해둔 초기 자금으로 리셋
+        self.account = TradingAccount(initial_balance=self.initial_balance)
+        
         self.history = []
         return self._get_state()
 
@@ -72,7 +78,19 @@ class Simulator:
         done = self.current_idx >= self.max_idx
         
         # 보상(Reward) 계산 (강화학습용): 당일 수익률
-        prev_asset = self.history[-2]['asset'] if len(self.history) > 1 else self.account.initial_balance
-        reward = (total_asset - prev_asset) / prev_asset
+        # history가 비어있거나 막 시작했을 땐 초기 자금과 비교
+        if len(self.history) > 1:
+            prev_asset = self.history[-2]['asset']
+        else:
+            prev_asset = self.account.initial_balance
+            
+        # 0으로 나누기 방지
+        if prev_asset == 0:
+            reward = 0
+        else:
+            reward = (total_asset - prev_asset) / prev_asset
         
-        return self._get_state() if not done else None, reward, done
+        # 다음 상태 반환 (종료 시 None)
+        next_state = self._get_state() if not done else None
+        
+        return next_state, reward, done
