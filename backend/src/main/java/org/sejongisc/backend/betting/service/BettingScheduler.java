@@ -6,8 +6,6 @@ import org.sejongisc.backend.betting.entity.Scope;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
 @Component
 @Slf4j
 @RequiredArgsConstructor

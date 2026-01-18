@@ -106,7 +106,10 @@ public class SecurityConfig {
                                     "/oauth2/**"
                             ).permitAll();
 
-                            auth.requestMatchers("/api/user/**").authenticated();
+                            auth.requestMatchers(
+                                "/api/user/**",
+                                "/api/user-bets/**"
+                                ).authenticated();
 
                             auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 //                            .anyRequest().authenticated();
