@@ -30,7 +30,7 @@ if project_root not in sys.path:
 
 from AI.modules.signal.models import get_model
 from AI.modules.signal.core.data_loader import SignalDataLoader
-from AI.modules.finder.selector import load_all_tickers_from_db
+from AI.libs.database.ticker_loader import load_all_tickers_from_db
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  평가 설정 (CONFIG)

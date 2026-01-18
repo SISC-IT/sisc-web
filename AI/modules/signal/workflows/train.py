@@ -1,140 +1,98 @@
 # AI/modules/signal/workflows/train.py
-"""
-[글로벌 모델 학습 스크립트]
-- DB에 있는 여러 종목(S&P500 등)의 데이터를 모두 가져와 하나의 'Universal Model'을 학습시킵니다.
-- 개별 종목 모델이 아닌, 시장 전체의 패턴을 학습한 범용 모델을 생성합니다.
-"""
 
-import sys
 import os
-import argparse
-import joblib
+import sys
+import pickle
 import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from tqdm import tqdm
+from datetime import datetime
+from sklearn.model_selection import train_test_split  # [추가] 필수 라이브러리
 
-# 프로젝트 루트 경로 추가
+# 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from AI.modules.signal.core.data_loader import SignalDataLoader
-from AI.modules.signal.models import get_model
-from AI.modules.finder.selector import load_all_tickers_from_db
+from AI.modules.signal.core.data_loader import DataLoader
+from AI.modules.signal.models.transformer.architecture import build_transformer_model
 
-def run_global_training(tickers: list = None, model_type: str = "transformer", epochs: int = 30):
-    print(f"=== [Global Training] {model_type} 범용 모델 학습 시작 ===")
-    
-    # 1. 대상 종목 설정
-    if not tickers:
-        print("전체 종목 리스트 조회 중...")
-        tickers = load_all_tickers_from_db(verbose=False) 
-    
-    print(f"학습 대상 종목 수: {len(tickers)}개")
+def train_pipeline():
+    print("==================================================")
+    print(" [Training] Universal Transformer Model 학습 시작")
+    print("==================================================")
 
-    # 2. 데이터 로드 및 병합
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = "2018-01-01"
+    # 1. 데이터 로드 및 전처리
+    loader = DataLoader(lookback=60)
     
-    loader = SignalDataLoader(sequence_length=60)
+    print(">> 데이터 로딩 중 (DB)...")
+    raw_df = loader.load_data_from_db(start_date="2020-01-01")
     
-    X_all = []
-    y_all = []
+    print(">> 데이터셋 생성 중 (Sequencing)...")
+    X_ts, X_ticker, X_sector, y, info = loader.create_dataset(raw_df)
     
-    # 데이터 수집 루프
-    print("1. 데이터 수집 및 전처리 중...")
-    valid_ticker_count = 0
+    print(f"   - 총 샘플 수: {len(y)}")
     
-    for ticker in tqdm(tickers):
-        try:
-            # 개별 종목 데이터 로드
-            df = loader.load_data(ticker, start_date, end_date)
-            if df.empty or len(df) < 100:
-                continue
-            
-            # 시퀀스 생성 (fit은 나중에 전체 데이터로 하거나, 여기서 개별 fit_transform 사용)
-            # 글로벌 모델 학습 시, 각 종목별로 스케일링을 따로 해서 합치는 것(Local Scaling)이 
-            # 가격대가 다른 종목들을 섞어 쓰기에 유리합니다.
-            # SignalDataLoader.create_sequences는 내부적으로 fit_transform을 수행합니다.
-            X, y = loader.create_sequences(df, target_col='close', prediction_horizon=1)
-            
-            X_all.append(X)
-            y_all.append(y)
-            valid_ticker_count += 1
-            
-        except Exception as e:
-            print(f"   [Error] {ticker}: {e}")
-            pass
+    # ------------------------------------------------------------------
+    # 2. Train / Validation 분리 (Random Shuffle Split)
+    # 기존의 단순 슬라이싱(Slicing)은 종목별로 데이터가 쏠리는 문제가 있어 수정함.
+    # ------------------------------------------------------------------
+    print(">> 데이터 분할 중 (Train 80% / Val 20%)...")
+    
+    # 여러 배열을 동일한 인덱스 기준으로 섞어서 나눔
+    X_ts_train, X_ts_val, \
+    X_tick_train, X_tick_val, \
+    X_sec_train, X_sec_val, \
+    y_train, y_val = train_test_split(
+        X_ts, X_ticker, X_sector, y,
+        test_size=0.2,
+        shuffle=True,       # 데이터를 무작위로 섞음 (종목 쏠림 방지)
+        random_state=42     # 재현성을 위한 시드 고정
+    )
+    
+    print(f"   - Train Set: {len(y_train)}건")
+    print(f"   - Val Set  : {len(y_val)}건")
 
-    if valid_ticker_count == 0:
-        print("[Critical] 학습할 유효 데이터가 없습니다.")
-        return
+    # 3. 모델 빌드
+    print(">> 모델 빌드 중...")
+    # 시계열 데이터의 shape: (Lookback, Features)
+    input_shape = (X_ts.shape[1], X_ts.shape[2]) 
+    
+    model = build_transformer_model(
+        input_shape=input_shape,
+        n_tickers=info['n_tickers'],
+        n_sectors=info['n_sectors']
+    )
+    
+    model.compile(
+        optimizer="adam",
+        loss="binary_crossentropy",
+        metrics=["accuracy"]
+    )
+    model.summary()
 
-    # 데이터 병합
-    X_train_concat = np.concatenate(X_all, axis=0)
-    y_train_concat = np.concatenate(y_all, axis=0)
+    # 4. 학습 시작
+    print(">> 학습 시작 (Epochs=10)...")
+    history = model.fit(
+        x=[X_ts_train, X_tick_train, X_sec_train],
+        y=y_train,
+        validation_data=([X_ts_val, X_tick_val, X_sec_val], y_val),
+        epochs=10,
+        batch_size=32,
+        shuffle=True
+    )
     
-    print(f"   - 총 학습 샘플 수: {len(X_train_concat)}개")
-
-    # 학습/검증 데이터 분리 (Shuffle)
-    indices = np.arange(len(X_train_concat))
-    np.random.shuffle(indices)
-    
-    split_idx = int(len(indices) * 0.8)
-    train_idx, val_idx = indices[:split_idx], indices[split_idx:]
-    
-    X_train = X_train_concat[train_idx]
-    y_train = y_train_concat[train_idx]
-    X_val = X_train_concat[val_idx]
-    y_val = y_train_concat[val_idx]
-
-    # 3. 모델 설정 및 빌드
-    config = {
-        "input_shape": (X_train.shape[1], X_train.shape[2]),
-        "epochs": epochs,
-        "batch_size": 1024, # 데이터가 많으므로 배치 키움
-        "head_size": 256,
-        "num_heads": 4,
-        "dropout": 0.4,
-        "learning_rate": 1e-4
-    }
-    
-    model = get_model(model_type, config)
-    model.build(input_shape=config["input_shape"])
-    
-    # 4. 모델 학습
-    print("2. 모델 학습 진행 중...")
-    history = model.train(X_train, y_train, X_val, y_val)
-    
-    # 5. 결과 저장 (Universal Model)
-    save_dir = os.path.join(project_root, "AI", "data", "weights", model_type)
+    # 5. 모델 및 스칼라 저장
+    save_dir = os.path.join(project_root, "AI/data/weights/transformer")
     os.makedirs(save_dir, exist_ok=True)
     
-    # 파일명 고정: universal_transformer.keras
     model_path = os.path.join(save_dir, "universal_transformer.keras")
-    model.save(model_path)
-    
-    # ★ 중요: 스케일러 저장
-    # 여기서 주의! 우리는 각 종목별로 'Local Scaling'을 해서 합쳤습니다.
-    # 즉, 하나의 전역 스케일러(Global Scaler)가 존재하는 게 아닙니다.
-    # 추론 시에도 "해당 종목의 데이터"를 그 종목 기준으로 스케일링해서 넣어야 합니다.
-    # 따라서, 사실상 저장할 '학습된 스케일러'는 없지만, 
-    # 평가 코드 등에서 형식상 필요할 수 있으므로 대표 스케일러(빈 껍데기나 마지막 것)를 저장하거나
-    # 추론 시 매번 새로 fit하도록 가이드해야 합니다.
-    # -> 편의상 마지막 종목의 스케일러라도 저장해둡니다.
     scaler_path = os.path.join(save_dir, "universal_scaler.pkl")
-    joblib.dump(loader.scaler, scaler_path)
     
-    print(f"\n=== 글로벌 학습 완료 ===")
-    print(f"- 모델 저장됨: {model_path}")
-    print(f"- 스케일러(참고용) 저장됨: {scaler_path}")
+    model.save(model_path)
+    with open(scaler_path, "wb") as f:
+        pickle.dump(info['scaler'], f)
+        
+    print(f"\n[완료] 모델 저장됨: {model_path}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=10)
-    args = parser.parse_args()
-    
-    # 기본적으로 DB의 모든 티커를 대상으로 함
-    run_global_training(epochs=args.epochs)
+    train_pipeline()
