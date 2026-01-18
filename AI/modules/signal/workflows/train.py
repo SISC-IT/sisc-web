@@ -36,7 +36,7 @@ def run_global_training(tickers: list = None, model_type: str = "transformer", e
 
     # 2. 데이터 로드 및 병합
     end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=730)).strftime("%Y-%m-%d") # 최근 2년
+    start_date = "2018-01-01"
     
     loader = SignalDataLoader(sequence_length=60)
     

@@ -19,7 +19,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.libs.database.fetcher import fetch_ohlcv
-from AI.modules.signal.core.features import add_technical_indicators
+from AI.modules.signal.core.features import add_technical_indicators, add_multi_timeframe_features
 
 class SignalDataLoader:
     def __init__(self, sequence_length: int = 60):
@@ -40,8 +40,10 @@ class SignalDataLoader:
         
         # 2. 보조지표 추가
         df = add_technical_indicators(df)
+        # 3. 주봉, 월봉 추가
+        df = add_multi_timeframe_features(df)
 
-        # 3. 날짜 인덱스 표준화 (Standardization)
+        # 4. 날짜 인덱스 표준화 (Standardization)
         # 이미 DatetimeIndex라면 넘어감
         if not isinstance(df.index, pd.DatetimeIndex):
             # 대소문자 무관하게 날짜 컬럼 찾기
@@ -55,7 +57,7 @@ class SignalDataLoader:
                 print(f"[WARN] {ticker}: 날짜 정보를 찾을 수 없습니다. (Index: {df.index.name})")
                 return df # 또는 빈 DF 반환
 
-        # 4. 정렬 및 타임존 제거 (필수)
+        # 5. 정렬 및 타임존 제거 (필수)
         df.sort_index(inplace=True)
         
         if df.index.tz is not None:
@@ -63,7 +65,7 @@ class SignalDataLoader:
 
         return df
 
-    def create_sequences(self, data: pd.DataFrame, target_col: str = 'close', prediction_horizon: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+    def create_sequences(self, data: pd.DataFrame, target_col: str = 'close', prediction_horizon: int = 5) -> Tuple[np.ndarray, np.ndarray]:
         """
         시계열 데이터를 (Samples, Timesteps, Features) 형태의 시퀀스로 변환
         """
@@ -83,7 +85,9 @@ class SignalDataLoader:
             current_close = data[target_col].iloc[i-1]
             future_close = data[target_col].iloc[i + prediction_horizon - 1]
             
-            label = 1 if future_close > current_close else 0
+            # 미래 가격이 현재보다 '2%' 이상 커야 1 (임계값 0.02)
+            threshold = 0.02 
+            label = 1 if future_close > current_close * (1 + threshold) else 0
             y.append(label)
             
         return np.array(X), np.array(y)
