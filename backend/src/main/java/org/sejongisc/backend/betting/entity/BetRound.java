@@ -105,6 +105,12 @@ public class BetRound extends BasePostgresEntity {
         return !this.status;
     }
 
+    // 라운드가 무승부로 종료되었는지 여부 반환
+    // TODO: flyway 도입 시 BetOption에 DRAW 상태 추가 고려
+    public boolean isDraw() {
+        return this.settleAt != null && this.resultOption == null;
+    }
+
     // 베팅 시작
     public void open() {
         this.status = true;
@@ -152,7 +158,8 @@ public class BetRound extends BasePostgresEntity {
     // 결과 판정 로직 - 이전 종가와 비교하여 상승/하락 결정
     private BetOption determineResult(BigDecimal finalPrice) {
         int compare = finalPrice.compareTo(previousClosePrice);
-        if (compare >= 0) return BetOption.RISE;
-        return BetOption.FALL;
+        if (compare > 0) return BetOption.RISE;
+        else if (compare < 0) return BetOption.FALL;
+        return null;
     }
 }
