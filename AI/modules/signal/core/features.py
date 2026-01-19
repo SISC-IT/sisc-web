@@ -1,188 +1,143 @@
 ﻿# AI/modules/signal/core/features.py
 """
-[피처 엔지니어링 모듈 - Adjusted Close 통합 버전]
-- 데이터에 'adjusted_close'가 있다면 이를 'close'로 덮어씌웁니다.
-- 이렇게 하면 모든 지표(RSI, MACD 등)가 자연스럽게 '조정 종가' 기준으로 계산됩니다.
-- 학습 시 'close'와 'adjusted_close'가 중복되는 문제도 해결됩니다.
+[Stationary Multi-Timeframe Features]
+- 절대 가격(Price)은 모두 제거하고, '비율(Ratio)'과 '지표(Indicator)'만 남깁니다.
+- 사용자 정의 멀티 타임프레임(주봉/월봉) 로직을 포함하되, 스케일링에 유리한 형태로 가공합니다.
 """
 
 import pandas as pd
 import numpy as np
 
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    1. 조정 종가(Adjusted Close)를 종가(Close)로 통합합니다.
-    2. 기술적 지표를 계산하여 추가합니다.
-    """
-    if df.empty:
-        return df
-        
+    """일봉 기준 기술적 지표 (비율 기반)"""
+    if df.empty: return df
     df = df.copy()
-    
-    # ★ [핵심 수정] 조정 종가 우선 정책
-    # adjusted_close가 있으면, 이를 close에 덮어쓰고 adjusted_close 컬럼은 삭제합니다.
-    if 'adjusted_close' in df.columns:
-        # 결측치 방지 (혹시 adjusted_close가 비어있으면 close 값 사용)
-        df['adjusted_close'] = df['adjusted_close'].fillna(df['close'])
-        
-        # 덮어쓰기
-        df['close'] = df['adjusted_close']
-        
-        # 중복 방지를 위해 삭제 (이제 close가 adjusted_close 역할을 함)
-        df.drop(columns=['adjusted_close'], inplace=True)
-    
-    # --- 이하 모든 계산은 'close'(실제로는 조정 종가)를 기준으로 수행됨 ---
 
-    # 1. 이동평균선 (Simple Moving Average)
-    df['ma5'] = df['close'].rolling(window=5).mean()
-    df['ma20'] = df['close'].rolling(window=20).mean()
-    df['ma60'] = df['close'].rolling(window=60).mean()  
+    # 1. 조정 종가 처리
+    if 'adjusted_close' in df.columns:
+        df['adjusted_close'] = df['adjusted_close'].fillna(df['close'])
+        df['close'] = df['adjusted_close']
+        df.drop(columns=['adjusted_close'], inplace=True)
+
+    # --------------------------------------------------------
+    # [일봉] 절대 가격 -> 비율로 변환
+    # --------------------------------------------------------
+    # (1) 로그 수익률 (핵심)
+    df['log_return'] = np.log(df['close'] / df['close'].shift(1))
+
+    # (2) 캔들 모양 (비율)
+    df['open_ratio'] = (df['open'] - df['close'].shift(1)) / df['close'].shift(1)
+    df['high_ratio'] = (df['high'] - df['close'].shift(1)) / df['close'].shift(1)
+    df['low_ratio']  = (df['low'] - df['close'].shift(1)) / df['close'].shift(1)
     
-    # 2. RSI (Relative Strength Index)
-    delta = df['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    
-    with np.errstate(divide='ignore', invalid='ignore'):
-        rs = gain / loss
-    
-    df['rsi'] = 100 - (100 / (1 + rs))
-    
-    # RSI 보정
-    df.loc[(gain == 0) & (loss == 0), 'rsi'] = 50
-    df.loc[(loss == 0) & (gain > 0), 'rsi'] = 100
-    
-    # 3. 볼린저 밴드 (Bollinger Bands)
-    df['std20'] = df['close'].rolling(window=20).std()
-    df['upper_band'] = df['ma20'] + (df['std20'] * 2)
-    df['lower_band'] = df['ma20'] - (df['std20'] * 2)
-    
-    # 4. MACD
+    # (3) 이평선 이격도 (가격 대신 사용)
+    for window in [5, 20, 60]:
+        ma = df['close'].rolling(window=window).mean()
+        df[f'ma{window}_ratio'] = (df['close'] - ma) / ma
+
+    # (4) 거래량 변화율
+    df['vol_change'] = df['volume'].pct_change()
+
+    # (5) RSI (0~1 스케일링)
+    df['rsi'] = compute_rsi(df['close'], 14) / 100.0
+
+    # (6) MACD (가격 대비 비율)
     exp12 = df['close'].ewm(span=12, adjust=False).mean()
     exp26 = df['close'].ewm(span=26, adjust=False).mean()
-    df['macd'] = exp12 - exp26
-    df['signal_line'] = df['macd'].ewm(span=9, adjust=False).mean()
-    
-    # 5. 거래량 변화율
-    if 'volume' in df.columns:
-        df['vol_change'] = df['volume'].pct_change()
-        df['vol_change'] = df['vol_change'].replace([np.inf, -np.inf], 0)
-    else:
-        df['vol_change'] = 0
-    
-    # === [데이터 정제] ===
-    df.replace([np.inf, -np.inf], np.nan, inplace=True)
-    df = df.bfill()
+    macd = exp12 - exp26
+    df['macd_ratio'] = macd / df['close']
+
+    # (7) 볼린저 밴드 포지션 (0~1)
+    std20 = df['close'].rolling(window=20).std()
+    ma20 = df['close'].rolling(window=20).mean()
+    upper = ma20 + (std20 * 2)
+    lower = ma20 - (std20 * 2)
+    df['bb_position'] = (df['close'] - lower) / (upper - lower)
+
+    df.replace([np.inf, -np.inf], 0, inplace=True)
     df = df.fillna(0)
-    
     return df
 
 def add_multi_timeframe_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    일봉 데이터(df)를 기반으로 주봉/월봉 지표를 계산하여 컬럼에 추가합니다.
+    주봉/월봉 데이터를 생성하되, '절대 가격'은 버리고 '지표'만 가져와서 병합합니다.
     """
-    if df.empty:
-        return df
-
-    # 원본 인덱스 보존 및 날짜 확인
-    df = df.copy()
-    if not isinstance(df.index, pd.DatetimeIndex):
-         # 인덱스가 날짜가 아니면 날짜 컬럼을 인덱스로 (필요시)
-         pass 
-
-    # --- 1. 주봉(Weekly) 데이터 생성 및 지표 계산 ---
-    # 'W-FRI': 금요일 기준 주봉 (주식 시장 기준)
-    df_weekly = df.resample('W-FRI').agg({
-        'open': 'first',
-        'high': 'max',
-        'low': 'min',
-        'close': 'last',
-        'volume': 'sum'
+    if df.empty: return df
+    
+    # 원본 복사 및 정렬
+    df_origin = df.copy()
+    if 'date' in df_origin.columns:
+        df_origin = df_origin.set_index('date').sort_index()
+    
+    # =========================================================
+    # 1. 주봉 (Weekly) 처리
+    # =========================================================
+    df_weekly = df_origin.resample('W-FRI').agg({
+        'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'
     })
     
-    # 주봉 기준 이동평균선 (장기 추세용)
-    df_weekly['week_ma20'] = df_weekly['close'].rolling(window=20).mean() # 20주 이평선
-    df_weekly['week_rsi'] = compute_rsi(df_weekly['close'], 14)           # 주봉 RSI
-
-    #볼린저 밴드 주봉 포함
-    df_weekly['week_bollinger_ma20'] = df_weekly['close'].rolling(window=20).mean()  # 20주 이평선
-    df_weekly['week_bollinger_std'] = df_weekly['close'].rolling(window=20).std()  # 20주 표준편차
-    df_weekly['week_bollinger_upper'] = df_weekly['week_bollinger_ma20'] + (2 * df_weekly['week_bollinger_std'])  # 상한선
-    df_weekly['week_bollinger_lower'] = df_weekly['week_bollinger_ma20'] - (2 * df_weekly['week_bollinger_std'])  # 하한선
-
-    # **주봉 거래량 변화율** 계산
-    df_weekly['week_volume_change'] = df_weekly['volume'].pct_change() * 100  # 거래량 변화율 (%) 계산
-
-    # **주봉 MACD** 계산
-    df_weekly['week_macd'] = df_weekly['close'].ewm(span=12, adjust=False).mean() - df_weekly['close'].ewm(span=26, adjust=False).mean()
-    df_weekly['week_macd_signal'] = df_weekly['week_macd'].ewm(span=9, adjust=False).mean()  # MACD Signal Line
+    # [주봉 지표 계산] - 절대값 말고 '비율' 위주로
+    # 1) 주봉 이격도 (현재 주가가 주봉 20선 대비 어디인가)
+    w_ma20 = df_weekly['close'].rolling(window=20).mean()
+    df_weekly['week_ma20_ratio'] = (df_weekly['close'] - w_ma20) / w_ma20
     
+    # 2) 주봉 RSI
+    df_weekly['week_rsi'] = compute_rsi(df_weekly['close'], 14) / 100.0
+    
+    # 3) 주봉 볼린저 포지션
+    w_std20 = df_weekly['close'].rolling(window=20).std()
+    w_upper = w_ma20 + (w_std20 * 2)
+    w_lower = w_ma20 - (w_std20 * 2)
+    df_weekly['week_bb_pos'] = (df_weekly['close'] - w_lower) / (w_upper - w_lower)
+    
+    # 4) 주봉 거래량 변화율
+    df_weekly['week_vol_change'] = df_weekly['volume'].pct_change()
 
-    # --- 2. 월봉(Monthly) 데이터 생성 및 지표 계산 ---
-    df_monthly = df.resample('ME').agg({ # Pandas 2.1.0+ 에서는 'M' 대신 'ME' 권장
-        'open': 'first',
-        'high': 'max',
-        'low': 'min',
-        'close': 'last',
-        'volume': 'sum'
+    # =========================================================
+    # 2. 월봉 (Monthly) 처리
+    # =========================================================
+    df_monthly = df_origin.resample('ME').agg({
+        'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'
     })
     
-    # 월봉 기준 이동평균선 (초장기 추세)
-    df_monthly['month_ma12'] = df_monthly['close'].rolling(window=12).mean() # 12개월(1년) 이평선
-
-    # **월봉 볼린저 밴드** 계산
-    df_monthly['month_bollinger_ma12'] = df_monthly['close'].rolling(window=12).mean()  # 12개월 이평선
-    df_monthly['month_bollinger_std'] = df_monthly['close'].rolling(window=12).std()  # 12개월 표준편차
-    df_monthly['month_bollinger_upper'] = df_monthly['month_bollinger_ma12'] + (2 * df_monthly['month_bollinger_std'])  # 상한선
-    df_monthly['month_bollinger_lower'] = df_monthly['month_bollinger_ma12'] - (2 * df_monthly['month_bollinger_std'])  # 하한선
-
-    # **월봉 거래량 변화율** 계산
-    df_monthly['month_volume_change'] = df_monthly['volume'].pct_change() * 100  # 거래량 변화율 (%) 계산
-
-    # **월봉 MACD** 계산
-    df_monthly['month_macd'] = df_monthly['close'].ewm(span=12, adjust=False).mean() - df_monthly['close'].ewm(span=26, adjust=False).mean()
-    df_monthly['month_macd_signal'] = df_monthly['month_macd'].ewm(span=9, adjust=False).mean()  # MACD Signal Line
-
-    # --- 3. 일봉 데이터에 다시 매핑 (Merge) ---
-    # 주봉/월봉 데이터를 일봉 날짜에 맞춰서 채워넣습니다 (ffill: 앞의 값으로 채움)
-    # 예: 화요일 데이터에는 지난주 금요일에 확정된 주봉 지표가 들어갑니다. (Look-ahead Bias 방지)
+    # [월봉 지표 계산]
+    # 1) 월봉 이격도 (12개월 이평선 대비)
+    m_ma12 = df_monthly['close'].rolling(window=12).mean()
+    df_monthly['month_ma12_ratio'] = (df_monthly['close'] - m_ma12) / m_ma12
     
+    # 2) 월봉 RSI
+    df_monthly['month_rsi'] = compute_rsi(df_monthly['close'], 14) / 100.0
     
-    # 편의상 인덱스 정렬
-    df = df.sort_index()
+    # =========================================================
+    # 3. 병합 (Merge with ffill)
+    # =========================================================
+    # 필요한 컬럼만 선택 (가격 제외)
+    weekly_cols = ['week_ma20_ratio', 'week_rsi', 'week_bb_pos', 'week_vol_change']
+    monthly_cols = ['month_ma12_ratio', 'month_rsi']
+    
+    # 인덱스 정렬 확인
     df_weekly = df_weekly.sort_index()
     df_monthly = df_monthly.sort_index()
-
-    # asof merge 등을 사용할 수도 있지만, reindex + ffill 방식이 직관적입니다.
-    # 주봉 데이터 확장
-    weekly_cols = [
-        'week_ma20', 'week_rsi', 
-        'week_bollinger_upper', 'week_bollinger_lower', 
-        'week_volume_change', 'week_macd', 'week_macd_signal'
-    ]
     
-    monthly_cols = [
-        'month_ma12', 
-        'month_bollinger_upper', 'month_bollinger_lower', 
-        'month_volume_change', 'month_macd', 'month_macd_signal'
-    ]
-    # Reindex로 일봉 날짜에 맞게 확장 (ffill 사용)
-    weekly_features = df_weekly[weekly_cols].reindex(df.index, method='ffill')
-    monthly_features = df_monthly[monthly_cols].reindex(df.index, method='ffill')
-
-    # 컬럼 병합
+    # Reindex로 일봉 날짜에 맞게 확장 (ffill: 직전 주봉/월봉 값 유지)
+    weekly_features = df_weekly[weekly_cols].reindex(df_origin.index, method='ffill')
+    monthly_features = df_monthly[monthly_cols].reindex(df_origin.index, method='ffill')
+    
+    # 원본에 붙이기
     for col in weekly_cols:
-        df[col] = weekly_features[col]
-        
+        df_origin[col] = weekly_features[col]
     for col in monthly_cols:
-        df[col] = monthly_features[col]
+        df_origin[col] = monthly_features[col]
+        
+    # NaN 채우기 (앞부분 데이터 부족분)
+    df_origin = df_origin.fillna(0)
+    
+    # 인덱스 리셋 (DataLoader 호환)
+    if 'date' not in df_origin.columns:
+        df_origin = df_origin.reset_index()
+        
+    return df_origin
 
-    # 현재 가격과 장기 이평선 간의 괴리율 (Trend Strength)
-    df['dist_week_ma20'] = (df['close'] - df['week_ma20']) / df['week_ma20']
-
-    return df
-
-# (참고) RSI 계산 헬퍼 함수 (기존 로직 활용)
 def compute_rsi(series, period=14):
     delta = series.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()

@@ -28,7 +28,7 @@ def train_pipeline():
     # 1. 데이터 로드
     loader = DataLoader(lookback=60)
     print(">> 데이터 로딩 및 지표 생성 중...")
-    raw_df = loader.load_data_from_db(start_date="2020-01-01")
+    raw_df = loader.load_data_from_db(start_date="2015-01-01")
     
     print(">> 데이터셋 생성 중...")
     # [수정 포인트] 반환값이 6개로 늘어났으므로, y_reg는 여기서 받아서 무시(_)하거나 안 씁니다.
