@@ -292,21 +292,34 @@ public class BettingService {
             betRoundRepository.save(round);
 
             List<UserBet> userBets = userBetRepository.findAllByRound(round);
+            BetOption resultOption = round.getResultOption();
 
             for (UserBet bet : userBets) {
                 if (bet.getBetStatus() != BetStatus.ACTIVE) continue;
 
-                if (bet.getOption() == round.getResultOption()) {
+                if (round.isDraw()) {
+                    // 가격 변동이 없을 시 참여자 전원 원금 환불
+                    pointHistoryService.createPointHistory(
+                        bet.getUserId(),
+                        bet.getStakePoints(),
+                        PointReason.BETTING,
+                        PointOrigin.BETTING,
+                        round.getBetRoundID()
+                    );
+                    bet.draw();
+                } else if (bet.getOption() == resultOption) {
+                    // 예측 성공 시 보상 포인트 지급
                     int reward = calculateReward(bet);
                     bet.win(reward);
                     pointHistoryService.createPointHistory(
-                            bet.getUserId(),
-                            reward,
-                            PointReason.BETTING_WIN,
-                            PointOrigin.BETTING,
-                            round.getBetRoundID()
+                        bet.getUserId(),
+                        reward,
+                        PointReason.BETTING_WIN,
+                        PointOrigin.BETTING,
+                        round.getBetRoundID()
                     );
                 } else {
+                    // 예측 실패 시 포인트 소멸
                     bet.lose();
                 }
             }
