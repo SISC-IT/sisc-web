@@ -16,7 +16,7 @@ public class BettingScheduler {
 
     private final BettingService bettingService;
 
-    @Scheduled(cron = "0 5 0 * * MON-FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 9 * * MON-FRI", zone = "Asia/Seoul")
     public void dailyOpenScheduler() {
         // 일일 라운드 생성
         bettingService.createBetRound(Scope.DAILY);
