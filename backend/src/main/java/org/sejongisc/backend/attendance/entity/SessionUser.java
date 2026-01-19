@@ -45,6 +45,7 @@ public class SessionUser extends BasePostgresEntity {
 
     // 세션 내 사용자 역할
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SessionRole sessionRole;
 
     public void changeRole(SessionRole newRole) {

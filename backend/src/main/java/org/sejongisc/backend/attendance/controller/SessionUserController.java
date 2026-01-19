@@ -1,5 +1,7 @@
 package org.sejongisc.backend.attendance.controller;
 
+import static org.sejongisc.backend.attendance.util.AuthUserUtil.requireUserId;
+
 import io.swagger.v3.oas.annotations.Operation;
 import java.util.List;
 import java.util.UUID;
@@ -7,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.SessionUserResponse;
 import org.sejongisc.backend.attendance.service.SessionUserService;
+import org.sejongisc.backend.attendance.util.AuthUserUtil;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -41,10 +45,12 @@ public class SessionUserController {
   @PostMapping("/{sessionId}/users")
   public ResponseEntity<SessionUserResponse> addUserToSession(
       @PathVariable UUID sessionId,
-      UUID userId,
+      @RequestParam UUID userId,
       @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-    SessionUserResponse response = sessionUserService.addUserToSession(sessionId,userId,userDetails.getUserId());
+    UUID adminUserId = requireUserId(userDetails);
+
+    SessionUserResponse response = sessionUserService.addUserToSession(sessionId,userId,adminUserId);
 
 
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -68,8 +74,9 @@ public class SessionUserController {
       @PathVariable UUID userId,
       @AuthenticationPrincipal CustomUserDetails userDetails) {
     log.info("세션에서 사용자 제거: 세션ID={}, 사용자ID={}", sessionId, userId);
+    UUID adminUserId = requireUserId(userDetails);
 
-    sessionUserService.removeUserFromSession(sessionId, userId, userDetails.getUserId());
+    sessionUserService.removeUserFromSession(sessionId, userId, adminUserId);
 
     log.info("세션에서 사용자 제거 완료: 세션ID={}, 사용자ID={}", sessionId, userId);
 
@@ -91,8 +98,9 @@ public class SessionUserController {
   @GetMapping("/{sessionId}/users")
   public ResponseEntity<List<SessionUserResponse>> getSessionUsers(@PathVariable UUID sessionId, @AuthenticationPrincipal CustomUserDetails userDetails) {
     log.info("세션 참여자 조회: 세션ID={}", sessionId);
+    UUID adminUserId = requireUserId(userDetails);
 
-    List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId, userDetails.getUserId());
+    List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId, adminUserId);
 
     log.info("세션 참여자 조회 완료: 세션ID={}, 참여자 수={}", sessionId, users.size());
 

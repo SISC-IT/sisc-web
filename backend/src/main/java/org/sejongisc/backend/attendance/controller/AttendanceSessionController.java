@@ -1,5 +1,7 @@
 package org.sejongisc.backend.attendance.controller;
 
+import static org.sejongisc.backend.attendance.util.AuthUserUtil.requireUserId;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -9,6 +11,7 @@ import org.sejongisc.backend.attendance.dto.*;
 import org.sejongisc.backend.attendance.service.AttendanceAuthorizationService;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
 import org.sejongisc.backend.attendance.service.SessionUserService;
+import org.sejongisc.backend.attendance.util.AuthUserUtil;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.user.service.UserService;
 import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
@@ -32,8 +35,7 @@ import java.util.UUID;
 public class AttendanceSessionController {
 
     private final AttendanceSessionService attendanceSessionService;
-    private final SessionUserService sessionUserService;
-    private final UserService userService;
+
     /**
      * 출석 세션 생성
      */
@@ -57,6 +59,7 @@ public class AttendanceSessionController {
     public ResponseEntity<Void> createSession(@AuthenticationPrincipal(expression = "userId") UUID userId,
         @RequestBody AttendanceSessionRequest request) {
         log.info("출석 세션 생성 요청: 제목={}", request.title());
+
 
         attendanceSessionService.createSession(userId, request);
 
@@ -87,8 +90,8 @@ public class AttendanceSessionController {
         @PathVariable UUID sessionId,
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        UUID userId = (userDetails != null) ? userDetails.getUserId() : null;
-        AttendanceSessionResponse response = attendanceSessionService.getSessionById(sessionId, userId);
+        UUID adminUserId = requireUserId(userDetails);
+        AttendanceSessionResponse response = attendanceSessionService.getSessionById(sessionId, adminUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -169,9 +172,10 @@ public class AttendanceSessionController {
             @PathVariable UUID sessionId,
             @RequestBody AttendanceSessionRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails){
+        UUID adminUserId = requireUserId(userDetails);
 
         log.info("출석 세션 수정: 세션ID={}", sessionId);
-        attendanceSessionService.updateSession(sessionId, request,userDetails.getUserId());
+        attendanceSessionService.updateSession(sessionId, request,adminUserId);
 
         log.info("출석 세션 수정 완료: 세션ID={}", sessionId);
 
@@ -194,9 +198,10 @@ public class AttendanceSessionController {
     @PostMapping("/{sessionId}/close")
     public ResponseEntity<Void> closeSession(@PathVariable UUID sessionId,@AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("출석 세션 종료: 세션ID={}", sessionId);
+        UUID adminUserId = requireUserId(userDetails);
 
 
-        attendanceSessionService.closeSession(sessionId,userDetails.getUserId());
+        attendanceSessionService.closeSession(sessionId,adminUserId);
 
         log.info("출석 세션 종료 완료: 세션ID={}", sessionId);
 
@@ -220,8 +225,9 @@ public class AttendanceSessionController {
     public ResponseEntity<Void> deleteSession(@PathVariable UUID sessionId,
     @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("출석 세션 삭제: 세션ID={}", sessionId);
+        UUID adminUserId = requireUserId(userDetails);
 
-        attendanceSessionService.deleteSession(sessionId,userDetails.getUserId());
+        attendanceSessionService.deleteSession(sessionId,adminUserId);
 
         log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
 

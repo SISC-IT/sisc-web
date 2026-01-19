@@ -33,7 +33,7 @@ public class AttendanceController {
   @PostMapping("/check-in")
   public ResponseEntity<Void> checkIn(
       @AuthenticationPrincipal CustomUserDetails userDetails,
-      String qrToken
+      @RequestParam String qrToken
   ) {
     UUID userId = requireUserId(userDetails);
     attendanceService.checkIn(userId, qrToken);

@@ -1,5 +1,7 @@
 package org.sejongisc.backend.attendance.controller;
 
+import static org.sejongisc.backend.attendance.util.AuthUserUtil.requireUserId;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -8,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.*;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
+import org.sejongisc.backend.attendance.util.AuthUserUtil;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +31,6 @@ import java.util.UUID;
 public class AttendanceRoundController {
 
     private final AttendanceRoundService attendanceRoundService;
-    private final AttendanceService attendanceService;
 
     /**
      * 라운드 생성 (관리자/OWNER)
@@ -117,10 +119,4 @@ public class AttendanceRoundController {
     }
 
 
-    // -------- private helpers --------
-
-    private UUID requireUserId(CustomUserDetails userDetails) {
-        if (userDetails == null) throw new IllegalStateException("UNAUTHENTICATED");
-        return userDetails.getUserId();
-    }
 }

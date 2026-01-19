@@ -22,13 +22,9 @@ public record AttendanceSessionResponse(
             }else if(role == SessionRole.MANAGER) {
                 return new Permissions(true, true, false);
             }
-            boolean owner = role == SessionRole.OWNER;
-            boolean manager = role == SessionRole.MANAGER;
 
             return new Permissions(
-                owner || manager,
-                owner || manager,
-                owner
+                true, true, true
             );
         }
 
