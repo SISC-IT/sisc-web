@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
@@ -20,7 +21,6 @@ import java.util.UUID;
  */
 @Entity
 @Getter
-@Setter
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,40 +33,59 @@ public class AttendanceRound extends BasePostgresEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
-    @JsonBackReference
     private AttendanceSession attendanceSession;
 
     @Column(nullable = false)
     private LocalDate roundDate;              // 라운드 날짜 (예: 2025-11-06)
 
     @Column(nullable = false)
-    private LocalTime startTime;              // 시작 시간 (예: 10:00)
+    private LocalDateTime startAt;              // 시작 시간 미리 예약
 
-    @Column(nullable = false)
-    private LocalTime endTime;                // 종료 시간 (예: 10:20)
+
+    private LocalDateTime closeAt;                // 종료 시간 관리자가 설정 or 일정시간 경과시 자동 설정
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-
     // todo 라운드 상태 관리 로직 필요
     // 생성시 upcoming, 출석 시작시 active, 출석 종료시 closed
     private RoundStatus roundStatus;          // UPCOMING, ACTIVE, CLOSED
 
 
-    @Column(name = "round_name", length = 255, nullable = true)
+    @Column(name = "round_name", length = 255, nullable = false)
     private String roundName;                 // 라운드 이름 (예: "1차 정기모임", "OT" 등)
 
-    @Column(nullable = false)
     private String locationName;              // 장소 이름 (예: "세종대학교 310동")
 
     // todo 라운드별 관리자에게만 발급되는 큐알 코드는 필요할 거 같음
-    private String qrCode;                    // 라운드별 출석 QR 코드 문자열
+    @Column(name = "qr_secret", nullable = false, length = 120)
+    private String qrSecret;
 
     // 라운드별 참석 조회용
     @OneToMany(mappedBy = "attendanceRound", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<Attendance> attendances = new ArrayList<>();
 
+    /**
+     * 상태 변경
+     */
+
+    public void changeStatus(RoundStatus newStatus) {
+        // 종료된 라운드는 상태 변경 불가
+        if (this.roundStatus == RoundStatus.CLOSED) {
+            return;
+        }
+
+        if(this.roundStatus == RoundStatus.ACTIVE &&newStatus == RoundStatus.UPCOMING) {
+            // ACTIVE -> UPCOMING 불가
+            return;
+        }
+
+
+        if (this.roundStatus == newStatus) {
+            return; // 이미 그 상태이면 무시 (DB 쿼리 방지)
+        }
+        this.roundStatus = newStatus;
+    }
 
 
 

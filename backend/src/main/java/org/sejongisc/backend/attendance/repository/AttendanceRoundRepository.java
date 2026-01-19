@@ -1,7 +1,9 @@
 package org.sejongisc.backend.attendance.repository;
 
+import java.time.LocalDateTime;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,6 +15,36 @@ import java.util.UUID;
 
 @Repository
 public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound, UUID> {
+
+    List<AttendanceRound> findByAttendanceSession_AttendanceSessionIdAndRoundDateBefore(UUID sessionId, LocalDate date);
+
+
+
+    // UPCOMING -> ACTIVE
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update AttendanceRound r
+        set r.roundStatus = 'ACTIVE'
+        where r.roundStatus = 'UPCOMING'
+          and r.startAt <= :now
+          and r.closeAt > :now
+    """)
+    int activateDueRounds(LocalDateTime now);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+    update AttendanceRound r
+    set r.roundStatus = 'CLOSED'
+    where r.roundStatus <> 'CLOSED'
+      and r.closeAt <= :now
+""")
+    int closeDueRounds(LocalDateTime now);
+
+
+
+
+    Optional<AttendanceRound> findByQrSecret(String qrCode);
+    List<AttendanceRound> findByAttendanceSession_AttendanceSessionId(UUID sessionId);
 
     /**
      * 세션 ID로 해당 세션의 모든 라운드 조회
@@ -36,15 +68,6 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
      */
     long countByAttendanceSession_AttendanceSessionId(UUID sessionId);
 
-    /**
-     * 특정 세션 내 특정 라운드 번호의 라운드 조회
-     * nativeQuery=true를 사용하여 SQL의 LIMIT/OFFSET을 지원
-     */
-    @Query(value = "SELECT * FROM attendance_round " +
-            "WHERE attendance_session_id = :sessionId " +
-            "ORDER BY round_date ASC " +
-            "LIMIT 1 OFFSET :offset", nativeQuery = true)
-    Optional<AttendanceRound> findNthRoundInSession(@Param("sessionId") UUID sessionId, @Param("offset") int offset);
 
     /**
      * 세션의 특정 날짜 이전의 모든 라운드 조회

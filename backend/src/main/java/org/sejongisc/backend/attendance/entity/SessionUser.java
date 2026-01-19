@@ -47,6 +47,13 @@ public class SessionUser extends BasePostgresEntity {
     @Enumerated(EnumType.STRING)
     private SessionRole sessionRole;
 
+    public void changeRole(SessionRole newRole) {
+        if (this.sessionRole == newRole) {
+            return; // 이미 그 역할이면 무시 (DB 쿼리 방지)
+        }
+        this.sessionRole = newRole;
+    }
+
 
     /**
      * toString 오버라이드 (순환 참조 방지)

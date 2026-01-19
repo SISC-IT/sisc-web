@@ -23,22 +23,13 @@ public class AttendanceSession extends BasePostgresEntity {
     @Column(name = "attendance_session_id", columnDefinition = "uuid")
     private UUID attendanceSessionId;
 
-
-
     @Column(nullable = false)
     private String title;       // "세투연 9/17"
 
+    private String description;
 
     @Column(name = "allowed_minutes", nullable = false)
     private Integer allowedMinutes;         // 출석 인정 시간(분) - 예: 30분
-
-
-    // todo 세션별 포인트 다르게 줄거면 필요 아니면 굳이?, User의 point와 동기화 필요
-    @Column(name = "reward_points")
-    private Integer rewardPoints;       // 출석 시 지급할 포인트
-
-    @Embedded
-    private Location location;      // 위치 기반 출석을 위한 GPS 좌표
 
     @Enumerated(EnumType.STRING)
     private SessionStatus status;
@@ -51,5 +42,7 @@ public class AttendanceSession extends BasePostgresEntity {
     @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<SessionUser> sessionUsers = new ArrayList<>();
+
+
 
 }

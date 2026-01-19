@@ -101,7 +101,11 @@ public enum ErrorCode {
 
   BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 게시판을 찾을 수 없습니다."),
 
-  INVALID_BOARD_TYPE(HttpStatus.BAD_REQUEST, "상위 게시판에는 글을 작성할 수 없습니다.");
+  INVALID_BOARD_TYPE(HttpStatus.BAD_REQUEST, "상위 게시판에는 글을 작성할 수 없습니다."),
+
+  // SESSION
+
+  SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 세션이 존재하지 않습니다.");
 
 
 
