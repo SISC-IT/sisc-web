@@ -315,9 +315,33 @@ public class BettingService {
     }
 
     /**
-     * TODO: 향후 배당 비율에 따른 보상 계산 로직
+     * 배당률에 따른 보상 계산
+     * - 무료: 맞추면 10P
+     * - 유료: 배당률 적용
      */
     private int calculateReward(UserBet bet) {
-        return 10;
+        BetRound round = bet.getRound();
+
+        // 무료 베팅: 10 포인트
+        if (bet.isFree()) {
+            return 10;
+        }
+
+        long upPoints = round.getUpTotalPoints();
+        long downPoints = round.getDownTotalPoints();
+        long total = upPoints + downPoints;
+
+        long winning = (round.getResultOption() == BetOption.RISE) ? upPoints : downPoints;
+
+        // 호출 시점에 정답자 존재가 보장되지만 ArithmeticException 방지용
+        if (winning == 0) {
+            return 0;
+        }
+
+        // 배당률 계산: 내 베팅액 * (전체 포인트 / 정답 측 포인트 합)
+        double multiplier = (double) total / winning;
+
+        // 소수점 floor -> TODO: 복식부기 도입 시 남는 포인트는 시스템으로 이동시키기
+        return (int) Math.floor(bet.getStakePoints() * multiplier);
     }
 }
