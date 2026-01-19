@@ -18,10 +18,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.sejongisc.backend.betting.dto.UserBetResponse;
-import org.springframework.orm.ObjectOptimisticLockingFailureException; // import 확인
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -36,12 +34,6 @@ public class BettingService {
 
     private final Random random = new Random();
 
-    /**
-     * 현재 활성화된 베팅 라운드 조회
-     */
-    public Optional<BetRound> getActiveRound(Scope type) {
-        return betRoundRepository.findTopByStatusTrueAndScopeOrderByOpenAtDesc(type);
-    }
 
     /**
      * 전체 베팅 라운드 목록 조회
@@ -78,7 +70,6 @@ public class BettingService {
                 .build();
     }
 
-
     /**
      * 무료 베팅 가능 여부 (20% 확률)
      */
@@ -87,7 +78,7 @@ public class BettingService {
     }
 
     /**
-     * 사용자의 전체 베팅 내역 조회 (수정됨)
+     * 사용자의 전체 베팅 내역 조회
      */
     @Transactional(readOnly = true) // 트랜잭션 유지 필수
     public List<UserBetResponse> getAllMyBets(UUID userId) {
@@ -206,7 +197,9 @@ public class BettingService {
         }
     }
 
-    // [추가] getActiveRound 반환 타입 변경 대응 메서드 (Controller에서 사용)
+    /**
+     * 현재 활성화된 베팅 라운드 조회
+     */
     public Optional<BetRoundResponse> getActiveRoundResponse(Scope type) {
         return betRoundRepository.findTopByStatusTrueAndScopeOrderByOpenAtDesc(type)
                 .map(BetRoundResponse::from);
