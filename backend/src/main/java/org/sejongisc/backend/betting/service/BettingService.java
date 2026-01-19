@@ -9,6 +9,7 @@ import org.sejongisc.backend.betting.repository.BetRoundRepository;
 import org.sejongisc.backend.betting.repository.UserBetRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.common.annotation.OptimisticRetry;
 import org.sejongisc.backend.point.entity.PointOrigin;
 import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.service.PointHistoryService;
@@ -132,6 +133,7 @@ public class BettingService {
      * - 취소 이력이 있는 베팅도 베팅 가능한 상태에 한하여 재배팅 가능
      */
     @Transactional
+    @OptimisticRetry
     public UserBetResponse postUserBet(UUID userId, UserBetRequest userBetRequest) {
         // 라운드 조회
         BetRound betRound = betRoundRepository.findById(userBetRequest.getRoundId())
@@ -209,6 +211,7 @@ public class BettingService {
      * 사용자 베팅 취소 (수정됨)
      */
     @Transactional
+    @OptimisticRetry
     public void cancelUserBet(UUID userId, UUID userBetId) {
         try {
             // 1. 엔티티 조회 (UserBet)
@@ -265,6 +268,7 @@ public class BettingService {
      * 베팅 결과 정산
      */
     @Transactional
+    @OptimisticRetry
     public void settleUserBets() {
         LocalDateTime now = LocalDateTime.now();
 
