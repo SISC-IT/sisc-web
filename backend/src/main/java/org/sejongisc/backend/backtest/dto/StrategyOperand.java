@@ -15,7 +15,7 @@ public class StrategyOperand {
     @Schema(description = "지표 코드 (SMA, EMA, RSI, MACD, BB, STOCH, CCI, ATR, ADX)", example = "BB")
     private String indicatorCode;
 
-    @Schema(description = "가격 기준 (Close, Open, High, Low)", example = "Close")
+    @Schema(description = "가격 기준 (Close, Open, High, Low, Volume)", example = "Close")
     private String priceField;
 
     @Schema(description = "상수 값 (type이 const일 때 사용)", example = "30")
