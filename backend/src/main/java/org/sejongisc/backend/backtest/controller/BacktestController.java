@@ -246,7 +246,7 @@ public class BacktestController {
                   )
           )
   )
-  public ResponseEntity<BacktestResponse> runBacktest(@org.springframework.web.bind.annotation.RequestBody BacktestRequest request,
+  public ResponseEntity<BacktestResponse> runBacktest(@org.springframework.web.bind.annotation.RequestBody BacktestRequest request, //
                                                       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     request.setUserId(customUserDetails.getUserId()); // 사용자 ID 주입
     BacktestResponse response = backtestService.runBacktest(request);
