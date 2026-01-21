@@ -96,6 +96,7 @@ public class BettingService {
     /**
      * 새로운 베팅 라운드 생성
      */
+    @Transactional
     public void createBetRound(Scope scope) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -119,13 +120,13 @@ public class BettingService {
     /**
      * 종료 조건을 만족한 라운드 종료
      */
+    @Transactional
     public void closeBetRound() {
         LocalDateTime now = LocalDateTime.now();
         List<BetRound> toClose = betRoundRepository.findByStatusTrueAndLockAtLessThanEqual(now);
         if (toClose.isEmpty()) return;
 
         toClose.forEach(BetRound::close);
-        betRoundRepository.saveAll(toClose);
     }
 
     /**
