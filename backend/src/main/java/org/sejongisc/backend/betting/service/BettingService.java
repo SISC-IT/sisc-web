@@ -138,6 +138,11 @@ public class BettingService {
     @Transactional
     @OptimisticRetry
     public UserBetResponse postUserBet(UUID userId, UserBetRequest userBetRequest) {
+        // 베팅 포인트 검증
+        if (!userBetRequest.isFree() && !userBetRequest.isStakePointsValid()) {
+            throw new CustomException(ErrorCode.BET_POINT_TOO_LOW);
+        }
+
         // 라운드 조회
         BetRound betRound = betRoundRepository.findById(userBetRequest.getRoundId())
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
@@ -165,10 +170,6 @@ public class BettingService {
 
         // 포인트 차감 및 이력 생성 (유료 베팅인 경우)
         if (!userBetRequest.isFree()) {
-            if (!userBetRequest.isStakePointsValid()) {
-                throw new CustomException(ErrorCode.BET_POINT_TOO_LOW);
-            }
-
             pointHistoryService.createPointHistory(
                     userId,
                     -stake, // 포인트 차감
