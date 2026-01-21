@@ -19,6 +19,16 @@ import org.ta4j.core.indicators.helpers.*;
 import org.ta4j.core.indicators.ATRIndicator;
 import org.ta4j.core.num.Num;
 import org.ta4j.core.rules.*;
+import org.ta4j.core.indicators.bollinger.BollingerBandsLowerIndicator;
+import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
+import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
+import org.ta4j.core.indicators.statistics.StandardDeviationIndicator;
+import org.ta4j.core.indicators.StochasticOscillatorKIndicator;
+import org.ta4j.core.indicators.StochasticOscillatorDIndicator;
+import org.ta4j.core.indicators.CCIIndicator;
+import org.ta4j.core.indicators.ATRIndicator;
+import org.ta4j.core.indicators.adx.ADXIndicator;
+import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 
 import java.time.ZoneId;
 import java.util.List;
@@ -177,6 +187,7 @@ public class Ta4jHelperService {
         Map<String, Object> params = operand.getParams();
 
         Indicator<Num> baseIndicator = createPriceIndicator("Close", series);
+        Indicator<Num> closePrice = createPriceIndicator("Close", series);
 
         switch (code) {
             case "SMA":
@@ -202,9 +213,58 @@ public class Ta4jHelperService {
                     case "hist" -> new ManualMACDHistogramIndicator(macd, signalLine);
                     default -> macd;
                 };
-            //case "ATR":
-                //int atrLength = ((Number) params.get("length")).intValue();
-                //return new ATRIndicator(series, atrLength);
+            // 1. 볼린저 밴드 (Bollinger Bands)
+            case "BB":
+                int bbLength = ((Number) params.get("length")).intValue(); // 보통 20
+                double bbK = ((Number) params.get("k")).doubleValue();     // 보통 2.0
+
+                // 이동평균선(SMA) 생성
+                SMAIndicator bbSma = new SMAIndicator(closePrice, bbLength);
+
+                // SMA를 BollingerBandsMiddleIndicator로 감싸기 중요.
+                BollingerBandsMiddleIndicator bbMiddle = new BollingerBandsMiddleIndicator(bbSma);
+
+                // 표준편차 생성
+                StandardDeviationIndicator sd = new StandardDeviationIndicator(closePrice, bbLength);
+
+                return switch (operand.getOutput() != null ? operand.getOutput() : "middle") {
+                    // bbSma 대신 bbMiddle을 전달해야 함
+                    case "upper" -> new BollingerBandsUpperIndicator(bbMiddle, sd, series.numOf(bbK));
+                    case "lower" -> new BollingerBandsLowerIndicator(bbMiddle, sd, series.numOf(bbK));
+                    default -> bbMiddle; // middle 밴드 반환
+                };
+
+            // 2. 스토캐스틱 (Stochastic Oscillator)
+            case "STOCH":
+                int kLength = ((Number) params.get("kLength")).intValue(); // 보통 14
+                int dLength = ((Number) params.get("dLength")).intValue(); // 보통 3 (SMA smoothing) (선택 사항 처리가능)
+
+                // High, Low, Close 데이터 필요
+                Indicator<Num> maxPrice = createPriceIndicator("High", series);
+                Indicator<Num> minPrice = createPriceIndicator("Low", series);
+
+                StochasticOscillatorKIndicator stochK = new StochasticOscillatorKIndicator(series, kLength);
+
+                if ("d".equalsIgnoreCase(operand.getOutput())) {
+                    // D 라인은 보통 K 라인의 SMA 입니다.
+                    return new SMAIndicator(stochK, dLength);
+                }
+                return stochK; // 기본값 K
+
+            // 3. CCI (Commodity Channel Index)
+            case "CCI":
+                int cciLength = ((Number) params.get("length")).intValue(); // 보통 14 또는 20
+                return new CCIIndicator(series, cciLength);
+
+            // 4. ATR (Average True Range) - 변동성 지표
+            case "ATR":
+                int atrLength = ((Number) params.get("length")).intValue(); // 보통 14
+                return new ATRIndicator(series, atrLength);
+
+            // 5. ADX (Average Directional Index) - 추세 강도
+            case "ADX":
+                int adxLength = ((Number) params.get("length")).intValue(); // 보통 14
+                return new ADXIndicator(series, adxLength);
             default:
                 throw new IllegalArgumentException("Unknown indicator code: " + code);
         }
