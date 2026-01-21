@@ -15,7 +15,5 @@ public interface UserBetRepository extends JpaRepository<UserBet, UUID> {
 
     List<UserBet> findAllByUserIdOrderByRound_SettleAtDesc(UUID userId);
 
-    List<UserBet> findAllByRound(BetRound round);
-
-
+    List<UserBet> findAllByRoundIn(List<BetRound> rounds);
 }
