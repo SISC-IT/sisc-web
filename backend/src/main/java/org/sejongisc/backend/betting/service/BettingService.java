@@ -298,13 +298,15 @@ public class BettingService {
 
                 if (round.isDraw()) {
                     // 가격 변동이 없을 시 참여자 전원 원금 환불
-                    pointHistoryService.createPointHistory(
-                        bet.getUserId(),
-                        bet.getStakePoints(),
-                        PointReason.BETTING,
-                        PointOrigin.BETTING,
-                        round.getBetRoundID()
-                    );
+                    if (!bet.isFree() && bet.getStakePoints() > 0) {
+                        pointHistoryService.createPointHistory(
+                            bet.getUserId(),
+                            bet.getStakePoints(),
+                            PointReason.BETTING,
+                            PointOrigin.BETTING,
+                            round.getBetRoundID()
+                        );
+                    }
                     bet.draw();
                 } else if (bet.getOption() == resultOption) {
                     // 예측 성공 시 보상 포인트 지급
