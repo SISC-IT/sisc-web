@@ -218,17 +218,15 @@ public class BettingService {
     @Transactional
     @OptimisticRetry
     public void cancelUserBet(UUID userId, UUID userBetId) {
-        UserBet userBet = userBetRepository.findByUserBetIdAndUserId(userBetId, userId)
+        // fetch join으로 UserBet 및 BetRound 조회
+        UserBet userBet = userBetRepository.findByUserBetIdAndUserIdWithRound(userBetId, userId)
             .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
+        BetRound betRound = userBet.getRound();
 
-        //  이미 처리된 상태인지 검증
+        // 이미 처리된 상태인지 검증
         if (userBet.getBetStatus() != BetStatus.ACTIVE) {
             throw new CustomException(ErrorCode.BET_ALREADY_PROCESSED);
         }
-
-        // BetRound 조회 및 검증
-        BetRound betRound = betRoundRepository.findById(userBet.getRound().getBetRoundID())
-            .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
 
         // 베팅 가능한 라운드 상태인지 검증
         betRound.validate();
