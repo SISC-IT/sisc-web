@@ -23,6 +23,7 @@ import org.sejongisc.backend.betting.dto.UserBetResponse;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -264,8 +265,16 @@ public class BettingService {
     public void settleUserBets() {
         LocalDateTime now = LocalDateTime.now();
 
+        // 정산 대상 활성 라운드 조회
         List<BetRound> activeRounds =
                 betRoundRepository.findByStatusFalseAndSettleAtIsNullAndLockAtLessThanEqual(now);
+
+        // 활성 라운드의 전체 베팅 한 번에 조회
+        List<UserBet> allUserBets = userBetRepository.findAllByRoundIn(activeRounds);
+
+        // 라운드별 그룹화
+        Map<UUID, List<UserBet>> betMap = allUserBets.stream()
+            .collect(Collectors.groupingBy(bet -> bet.getRound().getBetRoundID()));
 
         for (BetRound round : activeRounds) {
             // PriceData를 이용해 시세 조회
@@ -277,10 +286,12 @@ public class BettingService {
 
             if (finalPrice == null) continue;
 
+            // 라운드 정산
             round.settle(finalPrice);
             betRoundRepository.save(round);
 
-            List<UserBet> userBets = userBetRepository.findAllByRound(round);
+            // 현재 라운드의 베팅 리스트
+            List<UserBet> userBets = betMap.getOrDefault(round.getBetRoundID(), Collections.emptyList());
             BetOption resultOption = round.getResultOption();
 
             for (UserBet bet : userBets) {
