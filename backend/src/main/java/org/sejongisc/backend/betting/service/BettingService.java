@@ -147,6 +147,9 @@ public class BettingService {
         BetRound betRound = betRoundRepository.findById(userBetRequest.getRoundId())
                 .orElseThrow(() -> new CustomException(ErrorCode.BET_ROUND_NOT_FOUND));
 
+        // 베팅 가능한 라운드 상태인지 검증
+        betRound.validate();
+
         UserBet existingBet = userBetRepository.findByRoundAndUserId(betRound, userId)
                 .orElse(null);
 
@@ -154,9 +157,6 @@ public class BettingService {
         if (existingBet != null && existingBet.getBetStatus() != BetStatus.DELETED) {
             throw new CustomException(ErrorCode.BET_DUPLICATE);
         }
-
-        // 베팅 가능한 라운드 상태인지 검증
-        betRound.validate();
 
         // 베팅 포인트 결정
         int stake = userBetRequest.isFree() ? 0 : userBetRequest.getStakePoints();
