@@ -39,6 +39,7 @@ public class BettingService {
     /**
      * 전체 베팅 라운드 목록 조회
      */
+    @Transactional(readOnly = true)
     public List<BetRound> getAllBetRounds() {
         return betRoundRepository.findAllByOrderBySettleAtDesc();
     }
@@ -46,6 +47,7 @@ public class BettingService {
     /**
      * PriceData 기반 무작위 종목 선택 (기존 Stock 대체)
      */
+    @Transactional(readOnly = true)
     public PriceResponse getPriceData() {
         List<PriceData> allData = priceDataRepository.findAll();
         if (allData.isEmpty()) {
@@ -81,7 +83,7 @@ public class BettingService {
     /**
      * 사용자의 전체 베팅 내역 조회
      */
-    @Transactional(readOnly = true) // 트랜잭션 유지 필수
+    @Transactional(readOnly = true)
     public List<UserBetResponse> getAllMyBets(UUID userId) {
         List<UserBet> userBets = userBetRepository.findAllByUserIdOrderByRound_SettleAtDesc(userId);
 
@@ -202,6 +204,7 @@ public class BettingService {
     /**
      * 현재 활성화된 베팅 라운드 조회
      */
+    @Transactional(readOnly = true)
     public Optional<BetRoundResponse> getActiveRoundResponse(Scope type) {
         return betRoundRepository.findTopByStatusTrueAndScopeOrderByOpenAtDesc(type)
                 .map(BetRoundResponse::from);
