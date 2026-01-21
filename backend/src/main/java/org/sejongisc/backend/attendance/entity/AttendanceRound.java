@@ -1,8 +1,12 @@
 package org.sejongisc.backend.attendance.entity;
 
+import static java.time.Duration.ofMinutes;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
@@ -14,14 +18,9 @@ import java.util.UUID;
 
 /**
  * 출석 세션 내 개별 라운드(주차)
- *
- * 예: "금융동아리 2024년 정기 모임" 세션 내
- *     - 라운드 1: 2025-11-06, 10:00~11:00
- *     - 라운드 2: 2025-11-13, 10:00~11:00
  */
 @Entity
 @Getter
-@Setter
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
@@ -34,89 +33,61 @@ public class AttendanceRound extends BasePostgresEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
-    @JsonBackReference
     private AttendanceSession attendanceSession;
 
     @Column(nullable = false)
     private LocalDate roundDate;              // 라운드 날짜 (예: 2025-11-06)
 
     @Column(nullable = false)
-    private LocalTime startTime;              // 출석 시작 시간 (예: 10:00)
+    private LocalDateTime startAt;              // 시작 시간 미리 예약
 
-    @Column(nullable = false)
-    private Integer allowedMinutes;           // 출석 인정 시간 (분단위, 예: 30)
+
+    private LocalDateTime closeAt;                // 종료 시간 관리자가 설정 or 일정시간 경과시 자동 설정
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    // todo 라운드 상태 관리 로직 필요
+    // 생성시 upcoming, 출석 시작시 active, 출석 종료시 closed
     private RoundStatus roundStatus;          // UPCOMING, ACTIVE, CLOSED
 
-    @Column(name = "round_name", length = 255, nullable = true)
+
+    @Column(name = "round_name", length = 255, nullable = false)
     private String roundName;                 // 라운드 이름 (예: "1차 정기모임", "OT" 등)
 
+    private String locationName;              // 장소 이름 (예: "세종대학교 310동")
+
+    // todo 라운드별 관리자에게만 발급되는 큐알 코드는 필요할 거 같음
+    @Column(name = "qr_secret", nullable = false, length = 120)
+    private String qrSecret;
+
+    // 라운드별 참석 조회용
     @OneToMany(mappedBy = "attendanceRound", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @JsonManagedReference
     @Builder.Default
     private List<Attendance> attendances = new ArrayList<>();
 
     /**
-     * 현재 라운드 상태 계산
-     * - UPCOMING: 라운드 날짜 이전 또는 당일이지만 시작시간 이전
-     * - ACTIVE: 시작시간부터 종료시간 사이
-     * - CLOSED: 라운드 날짜 이후 또는 당일이지만 종료시간 이후
+     * 상태 변경
      */
-    public RoundStatus calculateCurrentStatus() {
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
 
-        if (today.isBefore(roundDate)) {
-            return RoundStatus.UPCOMING;
+    public void changeStatus(RoundStatus newStatus) {
+        // 종료된 라운드는 상태 변경 불가
+        if (this.roundStatus == RoundStatus.CLOSED) {
+            return;
         }
 
-        if (today.isAfter(roundDate)) {
-            return RoundStatus.CLOSED;
+        if(this.roundStatus == RoundStatus.ACTIVE &&newStatus == RoundStatus.UPCOMING) {
+            // ACTIVE -> UPCOMING 불가
+            return;
         }
 
-        // today.equals(roundDate)인 경우
-        if (now.isBefore(startTime)) {
-            return RoundStatus.UPCOMING;
-        }
 
-        if (now.isAfter(getEndTime())) {
-            return RoundStatus.CLOSED;
+        if (this.roundStatus == newStatus) {
+            return; // 이미 그 상태이면 무시 (DB 쿼리 방지)
         }
-
-        // startTime <= now <= endTime
-        return RoundStatus.ACTIVE;
+        this.roundStatus = newStatus;
     }
 
-    /**
-     * 출석 종료 시간 계산
-     */
-    public LocalTime getEndTime() {
-        return startTime.plusMinutes(allowedMinutes != null ? allowedMinutes : 30);
-    }
 
-    /**
-     * 해당 라운드에서 출석 가능 여부 확인
-     */
-    public boolean isCheckInAvailable() {
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
 
-        if (!today.equals(roundDate)) {
-            return false;
-        }
 
-        return !now.isBefore(startTime) && now.isBefore(getEndTime());
-    }
-
-    /**
-     * 라운드 정보 업데이트
-     */
-    public void updateRoundInfo(LocalDate newDate, LocalTime newStartTime, Integer newAllowedMinutes) {
-        this.roundDate = newDate;
-        this.startTime = newStartTime;
-        this.allowedMinutes = newAllowedMinutes;
-        this.roundStatus = calculateCurrentStatus();
-    }
 }

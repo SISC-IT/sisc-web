@@ -1,173 +1,188 @@
 package org.sejongisc.backend.attendance.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundResponse;
 import org.sejongisc.backend.attendance.entity.*;
-import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
-import org.sejongisc.backend.attendance.repository.SessionUserRepository;
+import org.sejongisc.backend.attendance.util.QrTokenUtil;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-/**
- * 출석 라운드 서비스
- * 세션 내 주차별 라운드 관리
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class AttendanceRoundService {
 
-    private final AttendanceRoundRepository attendanceRoundRepository;
-    private final AttendanceSessionRepository attendanceSessionRepository;
-    private final SessionUserRepository sessionUserRepository;
-    private final AttendanceRepository attendanceRepository;
+  private static final int DEFAULT_ROUND_DURATION_HOURS = 3;
+  private static final long QR_TOKEN_TTL_SECONDS = 90; // 60~120 추천
 
+  private final AttendanceRoundRepository attendanceRoundRepository;
+  private final AttendanceSessionRepository attendanceSessionRepository;
+  private final AttendanceAuthorizationService authorizationService;
 
-    /**
-     * 라운드 생성
-     */
-    public AttendanceRoundResponse createRound(UUID sessionId, AttendanceRoundRequest request) {
-        log.info("📋 라운드 생성 요청: sessionId={}, roundDate={}, startTime={}, allowedMinutes={}",
-                sessionId, request.getRoundDate(), request.getStartTime(), request.getAllowedMinutes());
+  /** 라운드 생성(관리자/소유자) */
 
-        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+  public AttendanceRoundResponse createRound(UUID sessionId, UUID userId, AttendanceRoundRequest req) {
+    authorizationService.ensureAdmin(sessionId, userId);
 
-        try {
-            // 클라이언트가 보낸 날짜 대신 서버의 현재 날짜를 사용하여 시간대 차이 방지
-            LocalDate roundDate = request.getRoundDate();
-            if (roundDate == null) {
-                roundDate = LocalDate.now();
-            }
-            LocalTime requestStartTime = request.getStartTime();
+    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+        .orElseThrow(() -> new IllegalArgumentException("SESSION_NOT_FOUND"));
 
-            log.info("📅 시간대 정보: 클라이언트 roundDate={}, 서버 today={}, 요청 startTime={}",
-                    request.getRoundDate(), roundDate, requestStartTime);
+    validateCreateRequest(req);
 
-            AttendanceRound round = AttendanceRound.builder()
-                    .attendanceSession(session)
-                    .roundDate(roundDate)
-                    .startTime(requestStartTime)
-                    .allowedMinutes(request.getAllowedMinutes() != null ? request.getAllowedMinutes() : 30)
-                    .roundStatus(RoundStatus.UPCOMING)
-                    .build();
+    LocalDateTime closeAt = (req.closeAt() != null)
+        ? req.closeAt()
+        : req.startAt().plusHours(DEFAULT_ROUND_DURATION_HOURS);
 
-            log.info("🔨 라운드 엔티티 생성: roundDate={}, startTime={}, allowedMinutes={}",
-                    round.getRoundDate(), round.getStartTime(), round.getAllowedMinutes());
+    AttendanceRound round = AttendanceRound.builder()
+        .attendanceSession(session)
+        .roundStatus(RoundStatus.UPCOMING)
+        .roundDate(req.roundDate())
+        .startAt(req.startAt())
+        .closeAt(closeAt)
+        .roundName(req.roundName())
+        .locationName(req.locationName())
+        .qrSecret(QrTokenUtil.generateSecret())
+        .build();
 
-            RoundStatus status = round.calculateCurrentStatus();
-            round.setRoundStatus(status);
+    AttendanceRound saved = attendanceRoundRepository.save(round);
 
-            log.info("📊 라운드 상태 계산: 현재시간={}, 라운드시작={}, 계산된상태={}, 종료시간={}",
-                    LocalTime.now(), round.getStartTime(), status, round.getEndTime());
+    // 목록/상세 응답에는 토큰을 넣지 않는 걸 추천(짧게 만료되므로)
+    return AttendanceRoundResponse.from(saved, false);
+  }
 
-            AttendanceRound saved = attendanceRoundRepository.save(round);
-            session.getRounds().add(saved);
-            // 양방향 관계를 DB에 반영하기 위해 세션도 저장
-            attendanceSessionRepository.save(session);
+  /** 라운드 개별 조회(세션 멤버만) - 토큰은 별도 API로 발급 */
+  @Transactional(readOnly = true)
+  public AttendanceRoundResponse getRound(UUID roundId, UUID userId) {
+    AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
+        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
 
-            // ⭐ 라운드 생성 시 세션의 모든 SessionUser에 대해 PENDING 상태의 Attendance 미리 생성
-            log.info("📝 세션 사용자에 대한 PENDING 출석 기록 생성 시작: sessionId={}, roundId={}",
-                    sessionId, saved.getRoundId());
+    UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
+    authorizationService.ensureMember(sessionId, userId);
 
-            List<SessionUser> sessionUsers = sessionUserRepository.findBySessionId(sessionId);
-            for (SessionUser sessionUser : sessionUsers) {
-                Attendance pendingAttendance = Attendance.builder()
-                        .user(sessionUser.getUser())
-                        .attendanceSession(session)
-                        .attendanceRound(saved)
-                        .attendanceStatus(AttendanceStatus.PENDING)
-                        .build();
-                attendanceRepository.save(pendingAttendance);
-                log.info("  ✓ PENDING 출석 기록 생성: userId={}, userName={}, roundId={}",
-                        sessionUser.getUser().getUserId(), sessionUser.getUser().getName(), saved.getRoundId());
-            }
+    return AttendanceRoundResponse.from(round, false);
+  }
 
-            log.info("✅ 라운드 생성 완료 - sessionId: {}, roundId: {}, roundDate: {}, roundStatus: {}, 생성된PENDING개수: {}",
-                    sessionId, saved.getRoundId(), saved.getRoundDate(), saved.getRoundStatus(), sessionUsers.size());
-            return AttendanceRoundResponse.fromEntity(saved);
-        } catch (Exception e) {
-            log.error("❌ 라운드 생성 중 오류 발생: sessionId={}, error={}", sessionId, e.getMessage(), e);
-            throw new RuntimeException("라운드 생성에 실패했습니다: " + e.getMessage(), e);
-        }
+  /** 세션 내 라운드 목록 조회(세션 멤버만) */
+  @Transactional(readOnly = true)
+  public List<AttendanceRoundResponse> getRoundsBySession(UUID sessionId, UUID userId) {
+    authorizationService.ensureMember(sessionId, userId);
+
+    List<AttendanceRound> rounds = attendanceRoundRepository
+        .findByAttendanceSession_AttendanceSessionIdOrderByRoundDateAsc(sessionId);
+
+    return rounds.stream()
+        .map(r -> AttendanceRoundResponse.from(r, false))
+        .toList();
+  }
+
+  /** 관리자만: QR 토큰 발급(짧게 유효) */
+  @Transactional(readOnly = true)
+  public AttendanceRoundQrTokenResponse issueQrToken(UUID roundId, UUID userId) {
+    AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
+        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+
+    UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
+    authorizationService.ensureAdmin(sessionId, userId);
+
+    // 라운드가 ACTIVE일 때만 발급하고 싶으면 아래 체크 추가:
+    if (round.getRoundStatus() != RoundStatus.ACTIVE) {
+      throw new IllegalStateException("ROUND_NOT_ACTIVE");
     }
 
-    /**
-     * 라운드 조회 (개별)
-     */
-    @Transactional(readOnly = true)
-    public AttendanceRoundResponse getRound(UUID roundId) {
-        AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-                .orElseThrow(() -> new IllegalArgumentException("라운드를 찾을 수 없습니다: " + roundId));
+    QrTokenUtil.IssuedToken issued = QrTokenUtil.issue(round.getRoundId(), round.getQrSecret(), QR_TOKEN_TTL_SECONDS);
+    return new AttendanceRoundQrTokenResponse(round.getRoundId(), issued.token(), issued.expiresAtEpochSec());
+  }
 
-        return AttendanceRoundResponse.fromEntity(round);
+  /** 참가자 출석 처리 쪽에서 사용: 토큰 검증 후 라운드 조회 */
+  @Transactional(readOnly = true)
+  public AttendanceRound verifyQrTokenAndGetRound(String qrToken) {
+    // 토큰 파싱을 위해 roundId 먼저 뽑고 → 라운드 가져온 뒤 secret으로 검증
+    String[] parts = qrToken.split(":");
+    if (parts.length != 3) throw new IllegalStateException("QR_TOKEN_MALFORMED");
+
+    UUID roundId;
+    try {
+      roundId = UUID.fromString(parts[0]);
+    } catch (Exception e) {
+      throw new IllegalStateException("QR_TOKEN_MALFORMED");
     }
 
-    /**
-     * 세션 내 라운드 목록 조회
-     */
-    @Transactional(readOnly = true)
-    public List<AttendanceRoundResponse> getRoundsBySession(UUID sessionId) {
-        List<AttendanceRound> rounds = attendanceRoundRepository
-                .findByAttendanceSession_AttendanceSessionIdOrderByRoundDateAsc(sessionId);
+    AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
+        .orElseThrow(() -> new IllegalStateException("ROUND_NOT_FOUND"));
 
-        return rounds.stream()
-                .map(AttendanceRoundResponse::fromEntity)
-                .collect(Collectors.toList());
+    // 라운드 상태 체크(선택이 아니라 사실상 필수)
+    if (round.getRoundStatus() != RoundStatus.ACTIVE) {
+      throw new IllegalStateException("ROUND_NOT_ACTIVE");
     }
 
-    /**
-     * 라운드 정보 수정
-     */
-    public AttendanceRoundResponse updateRound(UUID roundId, AttendanceRoundRequest request) {
-        AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-                .orElseThrow(() -> new IllegalArgumentException("라운드를 찾을 수 없습니다: " + roundId));
+    // 서명/만료 검증
+    QrTokenUtil.verifyAndParse(qrToken, round.getQrSecret());
+    return round;
+  }
 
-        round.updateRoundInfo(
-                request.getRoundDate(),
-                request.getStartTime(),
-                request.getAllowedMinutes()
-        );
+  /** 라운드 삭제(관리자/소유자) */
+  public void deleteRound(UUID roundId, UUID userId) {
+    AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
+        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
 
-        AttendanceRound updated = attendanceRoundRepository.save(round);
-        log.info("라운드 수정 완료 - roundId: {}", roundId);
-        return AttendanceRoundResponse.fromEntity(updated);
+    UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
+    authorizationService.ensureAdmin(sessionId, userId);
+
+    attendanceRoundRepository.delete(round);
+    log.info("라운드 삭제 완료 - roundId: {}", roundId);
+  }
+
+  /** 라운드 마감(관리자/소유자) */
+  public void closeRound(UUID roundId, UUID userId) {
+    AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
+        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+
+    UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
+    authorizationService.ensureAdmin(sessionId, userId);
+
+    round.changeStatus(RoundStatus.CLOSED);
+  }
+
+  /** 라운드 활성화(관리자/소유자) */
+  public void openRound(UUID roundId, UUID userId) {
+    AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
+        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+
+    UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
+    authorizationService.ensureAdmin(sessionId, userId);
+
+    round.changeStatus(RoundStatus.ACTIVE);
+  }
+
+
+
+  @Scheduled(fixedRate = 10_000)
+  public void autoActivateAndCloseRounds() {
+    LocalDateTime now = LocalDateTime.now();
+    int closed = attendanceRoundRepository.closeDueRounds(now);
+    int activated = attendanceRoundRepository.activateDueRounds(now);
+
+    if (activated > 0 || closed > 0) {
+      log.info("activated={}, closed={}", activated, closed);
     }
+  }
 
-    /**
-     * 라운드 삭제
-     */
-    public void deleteRound(UUID roundId) {
-        AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-                .orElseThrow(() -> new IllegalArgumentException("라운드를 찾을 수 없습니다: " + roundId));
-
-        AttendanceSession session = round.getAttendanceSession();
-        session.getRounds().remove(round);
-
-        attendanceRoundRepository.delete(round);
-        log.info("라운드 삭제 완료 - roundId: {}", roundId);
+  private void validateCreateRequest(AttendanceRoundRequest req) {
+    if (req.roundDate() == null) throw new IllegalArgumentException("ROUND_DATE_REQUIRED");
+    if (req.startAt() == null) throw new IllegalArgumentException("START_AT_REQUIRED");
+    if (req.roundName() == null || req.roundName().isBlank()) throw new IllegalArgumentException("ROUND_NAME_REQUIRED");
+    if (req.closeAt() != null && !req.closeAt().isAfter(req.startAt())) {
+      throw new IllegalArgumentException("END_AT_MUST_BE_AFTER_START_AT");
     }
-
-    /**
-     * 특정 날짜의 라운드 조회
-     */
-    @Transactional(readOnly = true)
-    public AttendanceRoundResponse getRoundByDate(UUID sessionId, LocalDate date) {
-        AttendanceRound round = attendanceRoundRepository
-                .findByAttendanceSession_AttendanceSessionIdAndRoundDate(sessionId, date)
-                .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 라운드를 찾을 수 없습니다"));
-
-        return AttendanceRoundResponse.fromEntity(round);
-    }
+  }
 }

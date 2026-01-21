@@ -12,12 +12,8 @@ import java.util.UUID;
 @Repository
 public interface AttendanceSessionRepository extends JpaRepository<AttendanceSession, UUID> {
 
-    // 출석 코드로 세션 찾기 (학생 출석 체크)
-    Optional<AttendanceSession> findByCode(String code);
-
     // 상태별 세션 조회
     List<AttendanceSession> findByStatus(SessionStatus status);
 
-    // 코드 중복 체크
-    boolean existsByCode(String code);
+
 }

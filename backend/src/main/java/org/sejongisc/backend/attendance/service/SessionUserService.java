@@ -1,5 +1,8 @@
 package org.sejongisc.backend.attendance.service;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.SessionUserResponse;
@@ -8,15 +11,12 @@ import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.sejongisc.backend.attendance.repository.SessionUserRepository;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,195 +30,152 @@ public class SessionUserService {
     private final AttendanceRepository attendanceRepository;
     private final UserRepository userRepository;
 
+    private final AttendanceAuthorizationService authorizationService;
+
     /**
-     * 세션에 사용자 추가
-     * - 사용자가 이미 참여 중이면 예외 발생
-     * - 세션의 이전 라운드들에 대해 자동으로 ABSENT 상태의 Attendance 레코드 생성
-     *
-     * 흐름:
-     * 1. 세션과 사용자 존재 확인
-     * 2. 중복 참여 여부 확인
-     * 3. SessionUser 레코드 생성
-     * 4. 이전 라운드들에 대해 결석 처리
+     * 세션에 사용자 추가 (OWNER 전용 추천)
      */
-    public SessionUserResponse addUserToSession(UUID sessionId, UUID userId) {
-        log.info("🔧 세션에 사용자 추가 시작: sessionId={}, userId={}", sessionId, userId);
+    public SessionUserResponse addUserToSession(UUID sessionId, UUID targetUserId, UUID actorUserId) {
+        log.info("세션 사용자 추가: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
 
-        // 1. 세션 존재 확인
+        authorizationService.ensureOwner(sessionId, actorUserId);
+
         AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+            .orElseThrow(()-> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        // 2. 사용자 존재 확인
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+        User user = userRepository.findById(targetUserId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 3. 중복 참여 여부 확인
-        if (sessionUserRepository.existsBySessionIdAndUserId(sessionId, userId)) {
-            throw new IllegalArgumentException("이미 세션에 참여 중입니다: " + user.getName());
-        }
+        boolean exists = sessionUserRepository
+            .existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId);
 
-        log.info("✅ 유효성 검사 완료: sessionId={}, userId={}, userName={}", sessionId, userId, user.getName());
+        if (exists) throw new IllegalArgumentException("ALREADY_JOINED");
 
-        // 4. SessionUser 레코드 생성
         SessionUser sessionUser = SessionUser.builder()
-                .attendanceSession(session)
-                .user(user)
-                .userName(user.getName())
-                .build();
+            .attendanceSession(session)
+            .user(user)
+            .sessionRole(SessionRole.PARTICIPANT)
+            .build();
 
-        sessionUser = sessionUserRepository.save(sessionUser);
-        log.info("💾 SessionUser 저장 완료: sessionUserId={}, userName={}", sessionUser.getSessionUserId(), user.getName());
+        SessionUser saved = sessionUserRepository.save(sessionUser);
 
-        // 5. ⭐ 핵심: 이미 진행된 라운드들에 대해 자동으로 결석 처리
-        List<AttendanceRound> pastRounds = attendanceRoundRepository.findBySession_SessionIdAndRoundDateBefore(
-                sessionId,
-                LocalDate.now()
-        );
+        createAbsentForPastRounds(sessionId, user);
 
-        if (!pastRounds.isEmpty()) {
-            log.info("📅 과거 라운드 자동 결석 처리: 이전 라운드 수={}", pastRounds.size());
-
-            for (AttendanceRound round : pastRounds) {
-                // 이미 해당 라운드에 출석 기록이 있는지 확인
-                boolean alreadyExists = attendanceRepository.findByAttendanceRound_RoundIdAndUser(round.getRoundId(), user)
-                        .isPresent();
-
-                if (!alreadyExists) {
-                    // 새로운 Attendance 레코드 생성 (결석 상태)
-                    Attendance absentRecord = Attendance.builder()
-                            .user(user)
-                            .attendanceSession(session)
-                            .attendanceRound(round)
-                            .attendanceStatus(AttendanceStatus.ABSENT)
-                            .note("세션 중간 참여 - 이전 라운드는 자동 결석 처리")
-                            .checkedAt(java.time.LocalDateTime.now())
-                            .build();
-
-                    attendanceRepository.save(absentRecord);
-                    log.info("  - 결석 기록 생성: roundId={}, date={}, userName={}",
-                            round.getRoundId(), round.getRoundDate(), user.getName());
-                }
-            }
-
-            log.info("✅ 과거 라운드 자동 결석 처리 완료: 처리된 라운드 수={}", pastRounds.size());
-        }
-
-        // 6. ⭐ 미래 라운드들에 대해 자동으로 PENDING 상태 처리
-        List<AttendanceRound> futureRounds = attendanceRoundRepository.findBySession_SessionIdAndRoundDateAfterOrEqual(
-                sessionId,
-                LocalDate.now()
-        );
-
-        if (!futureRounds.isEmpty()) {
-            log.info("📅 미래 라운드 PENDING 처리: 미래 라운드 수={}", futureRounds.size());
-
-            for (AttendanceRound round : futureRounds) {
-                // 이미 해당 라운드에 출석 기록이 있는지 확인
-                boolean alreadyExists = attendanceRepository.findByAttendanceRound_RoundIdAndUser(round.getRoundId(), user)
-                        .isPresent();
-
-                if (!alreadyExists) {
-                    // 새로운 Attendance 레코드 생성 (PENDING 상태)
-                    Attendance pendingRecord = Attendance.builder()
-                            .user(user)
-                            .attendanceSession(session)
-                            .attendanceRound(round)
-                            .attendanceStatus(AttendanceStatus.PENDING)
-                            .build();
-
-                    attendanceRepository.save(pendingRecord);
-                    log.info("  - PENDING 기록 생성: roundId={}, date={}, userName={}",
-                            round.getRoundId(), round.getRoundDate(), user.getName());
-                }
-            }
-
-            log.info("✅ 미래 라운드 PENDING 처리 완료: 처리된 라운드 수={}", futureRounds.size());
-        }
-
-        log.info("✅ 세션에 사용자 추가 완료: sessionId={}, userId={}, userName={}",
-                sessionId, userId, user.getName());
-
-        return convertToResponse(sessionUser);
+        return SessionUserResponse.from(saved);
     }
 
     /**
-     * 세션에서 사용자 제거
-     * - SessionUser 레코드 삭제
-     * - 해당 사용자의 모든 Attendance 레코드도 함께 삭제 (관련된 모든 라운드의 출석 기록 제거)
+     * 세션에서 사용자 제거 (OWNER 전용 추천)
+     * - SessionUser 삭제
+     * - 해당 유저의 이 세션 관련 Attendance 삭제
      */
-    public void removeUserFromSession(UUID sessionId, UUID userId) {
-        log.info("🗑️ 세션에서 사용자 제거 시작: sessionId={}, userId={}", sessionId, userId);
+    public void removeUserFromSession(UUID sessionId, UUID targetUserId, UUID actorUserId) {
+        log.info("세션 사용자 제거: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
 
-        // 1. 세션 존재 확인
+        authorizationService.ensureOwner(sessionId, actorUserId);
+
         AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+            .orElseThrow(() -> new IllegalArgumentException("SESSION_NOT_FOUND"));
 
-        // 2. 사용자 존재 확인
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+        // SessionUser 삭제
+        sessionUserRepository.deleteByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId);
 
-        // 3. SessionUser 레코드 삭제
-        sessionUserRepository.deleteBySessionIdAndUserId(sessionId, userId);
-        log.info("💾 SessionUser 레코드 삭제 완료: userName={}", user.getName());
-
-        // 4. ⭐ 해당 세션의 모든 Attendance 레코드 삭제 (해당 라운드별 출석 기록 모두 제거)
-        List<Attendance> attendancesToDelete = attendanceRepository.findAllBySessionAndUserId(session, userId);
-
-        if (!attendancesToDelete.isEmpty()) {
-            log.info("🗑️ Attendance 레코드 삭제 시작: 삭제 대상 수={}", attendancesToDelete.size());
-
-            attendanceRepository.deleteAll(attendancesToDelete);
-
-            log.info("✅ Attendance 레코드 삭제 완료: 삭제된 레코드 수={}", attendancesToDelete.size());
-            for (Attendance a : attendancesToDelete) {
-                log.info("  - 삭제됨: roundId={}, status={}",
-                        a.getAttendanceRound() != null ? a.getAttendanceRound().getRoundId() : "null",
-                        a.getAttendanceStatus());
-            }
-        }
-
-        log.info("✅ 세션에서 사용자 제거 완료: sessionId={}, userId={}, userName={}",
-                sessionId, userId, user.getName());
+        // 해당 세션의 라운드들에서 targetUserId의 출석 레코드 삭제
+        attendanceRepository.deleteAllByAttendanceRound_AttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId);
     }
 
     /**
-     * 세션의 모든 참여자 조회
+     * 세션 참여자 조회 (멤버면 조회 가능 / 또는 공개)
      */
     @Transactional(readOnly = true)
-    public List<SessionUserResponse> getSessionUsers(UUID sessionId) {
-        log.info("📋 세션 참여자 조회: sessionId={}", sessionId);
+    public List<SessionUserResponse> getSessionUsers(UUID sessionId, UUID viewerUserId) {
+        authorizationService.ensureMember(sessionId, viewerUserId);
 
-        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+        List<SessionUser> users = sessionUserRepository
+            .findByAttendanceSession_AttendanceSessionId(sessionId);
 
-        List<SessionUser> sessionUsers = sessionUserRepository.findBySessionId(sessionId);
-
-        log.info("📊 세션 참여자 조회 결과: sessionId={}, 참여자 수={}",
-                sessionId, sessionUsers.size());
-
-        return sessionUsers.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
+        return users.stream().map(SessionUserResponse::from).toList();
     }
 
-    /**
-     * 특정 사용자가 세션에 참여하는지 확인
-     */
     @Transactional(readOnly = true)
     public boolean isUserInSession(UUID sessionId, UUID userId) {
-        return sessionUserRepository.existsBySessionIdAndUserId(sessionId, userId);
+        return sessionUserRepository.existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, userId);
+    }
+
+    private void createAbsentForPastRounds(UUID sessionId, User user) {
+        List<AttendanceRound> pastRounds = attendanceRoundRepository
+            .findByAttendanceSession_AttendanceSessionIdAndRoundDateBefore(sessionId, LocalDate.now());
+
+        for (AttendanceRound round : pastRounds) {
+            boolean already = attendanceRepository.findByAttendanceRound_RoundIdAndUser(round.getRoundId(), user).isPresent();
+            if (already) continue;
+
+            Attendance absent = Attendance.builder()
+                .user(user)
+                .attendanceRound(round)
+                .attendanceStatus(AttendanceStatus.ABSENT)
+                .note("세션 중간 참여 - 이전 라운드는 자동 결석 처리")
+                .build();
+
+            attendanceRepository.save(absent);
+        }
     }
 
     /**
-     * SessionUser를 SessionUserResponse로 변환
+     * 세션 가입
      */
-    private SessionUserResponse convertToResponse(SessionUser sessionUser) {
-        return SessionUserResponse.builder()
-                .sessionUserId(sessionUser.getSessionUserId())
-                .userId(sessionUser.getUser().getUserId())
-                .sessionId(sessionUser.getAttendanceSession().getAttendanceSessionId())
-                .userName(sessionUser.getUserName())
-                .createdAt(sessionUser.getCreatedDate())
-                .build();
+    @Transactional
+    public void joinSession(UUID sessionId, UUID userId) {
+        // 이미 가입했는지 체크
+        boolean exists = sessionUserRepository.existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, userId);
+        if (exists) throw new IllegalStateException("ALREADY_JOINED");
+
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+            .orElseThrow(()-> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        User user = userRepository.findById(userId)
+            .orElseThrow(()-> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        sessionUserRepository.save(SessionUser.builder()
+            .attendanceSession(session)
+            .user(user)
+            .sessionRole(SessionRole.PARTICIPANT)
+            .build());
     }
+
+    /**
+     * 세션 탈퇴
+     */
+    @Transactional
+    public void leaveSession(UUID sessionId, UUID userId) {
+        SessionUser su = sessionUserRepository
+            .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, userId)
+            .orElseThrow(() -> new IllegalStateException("NOT_SESSION_MEMBER"));
+
+        sessionUserRepository.delete(su);
+    }
+
+    /**
+     * 세션 관리자 추가/제거
+     */
+    @Transactional
+    public void addAdmin(UUID sessionId, UUID targetUserId) {
+        SessionUser su = sessionUserRepository
+            .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
+            .orElseThrow(() -> new IllegalStateException("TARGET_NOT_SESSION_MEMBER"));
+        su.changeRole(SessionRole.MANAGER);
+    }
+
+    @Transactional
+    public void removeAdmin(UUID sessionId, UUID targetUserId) {
+        SessionUser su = sessionUserRepository
+            .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
+            .orElseThrow(() -> new IllegalStateException("TARGET_NOT_SESSION_MEMBER"));
+
+        // OWNER를 강제로 내릴지 여부는 정책
+        if (su.getSessionRole() == SessionRole.OWNER) {
+            throw new IllegalStateException("CANNOT_DEMOTE_OWNER");
+        }
+        su.changeRole(SessionRole.PARTICIPANT);
+    }
+
 }

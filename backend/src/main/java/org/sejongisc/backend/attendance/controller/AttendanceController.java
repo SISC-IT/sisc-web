@@ -2,109 +2,99 @@ package org.sejongisc.backend.attendance.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceResponse;
+import org.sejongisc.backend.attendance.dto.AttendanceStatusUpdateRequest;
 import org.sejongisc.backend.attendance.service.AttendanceService;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
-
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/attendance")
+@RequiredArgsConstructor
 @Slf4j
-@Tag(
-    name = "출석(Attendance) API",
-    description = "학생 출석 체크인 및 관리자 출석 현황 조회 관련 API"
-)
+@Tag(name = "출석(Attendance) API", description = "체크인, 출석명단 조회, 출석상태 수정 등 출석 관련 API")
 public class AttendanceController {
 
-    private final AttendanceService attendanceService;
+  private final AttendanceService attendanceService;
 
-    /**
-     * 세션별 출석 목록 조회(관리자용)
-     * @deprecated 라운드 기반 조회로 변경되었습니다.
-     * GET /api/attendance/rounds/{roundId}/attendances 를 사용하세요.
-     * - 특정 세션의 모든 출석 기록 조회
-     * - 출석 시간 순으로 정렬
-     */
-    @Operation(
-            summary = "세션별 출석 목록 조회",
-            description = "⚠️ [DEPRECATED] 라운드 기반 조회로 변경되었습니다. " +
-                    "GET /api/attendance/rounds/{roundId}/attendances 를 사용하세요. " +
-                    "특정 세션에 참가한 모든 학생의 출석 기록을 조회합니다. (관리자 전용) " +
-                    "출석 시간 순으로 정렬되며, 각 학생의 상태, 체크인 시간, 포인트 등이 포함됩니다.",
-            deprecated = true
-    )
-    @GetMapping("/sessions/{sessionId}/attendances")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    @Deprecated(since = "2.0", forRemoval = true)
-    public ResponseEntity<List<AttendanceResponse>> getAttendancesBySession(@PathVariable UUID sessionId) {
-        log.info("세션별 출석 목록 조회: 세션ID={}", sessionId);
+  /**
+   * ✅ 체크인(세션 멤버)
+   * POST /api/attendance/check-in
+   * body: { "qrToken": "..." }
+   */
+  @Operation(summary = "체크인", description = "qrToken으로 출석 체크인합니다. (세션 멤버)")
+  @PostMapping("/check-in")
+  public ResponseEntity<Void> checkIn(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @RequestParam String qrToken
+  ) {
+    UUID userId = requireUserId(userDetails);
+    attendanceService.checkIn(userId, qrToken);
+    return ResponseEntity.ok().build();
+  }
 
-        List<AttendanceResponse> attendances = attendanceService.getAttendancesBySession(sessionId);
+  /**
+   * 라운드별 출석 명단 조회(관리자/OWNER)
+   */
+  @Operation(summary = "라운드 출석 명단 조회", description = "특정 라운드의 출석 기록을 조회합니다. (관리자/OWNER)")
+  @GetMapping("/rounds/{roundId}")
+  public ResponseEntity<List<AttendanceResponse>> getAttendancesByRound(
+      @PathVariable UUID roundId,
+      @AuthenticationPrincipal CustomUserDetails userDetails
+  ) {
+    UUID adminUserId = requireUserId(userDetails);
+    return ResponseEntity.ok(attendanceService.getAttendancesByRound(roundId, adminUserId));
+  }
 
-        return ResponseEntity.ok(attendances);
-    }
+  /**
+   *  라운드 내 특정 유저 출석 상태 수정(관리자/OWNER)
+   * PUT /api/attendance/rounds/{roundId}/users/{userId}
+   */
+  @Operation(summary = "출석 상태 수정", description = "특정 라운드에서 특정 유저의 출석 상태를 수정합니다. (관리자/OWNER)")
+  @PutMapping("/rounds/{roundId}/users/{userId}")
+  public ResponseEntity<AttendanceResponse> updateAttendanceStatus(
+      @PathVariable UUID roundId,
+      @PathVariable UUID userId,
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @Valid @RequestBody AttendanceStatusUpdateRequest request
+  ) {
+    UUID adminUserId = requireUserId(userDetails);
 
-    /**
-     * 내 출석 기록 조회
-     * - 로그인한 사용자의 모든 출석 기록 조회
-     * - 최신 순으로 정렬
-     */
-    @Operation(
-            summary = "내 출석 기록 조회",
-            description = "로그인한 사용자의 모든 출석 기록을 최신 순으로 조회합니다. " +
-                    "각 출석 기록에는 세션 정보, 출석 상태, 체크인 시간, 획득 포인트 등이 포함됩니다."
-    )
-    @GetMapping("/history")
-    public ResponseEntity<List<AttendanceResponse>> getMyAttendances(
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        log.info("내 출석 기록 조회: 사용자={}", userDetails.getName());
+    // status가 enum이든 string이든 안전하게 문자열로 변환
+    String statusStr = String.valueOf(request.getStatus());
+    String reason = request.getReason();
 
-        List<AttendanceResponse> attendances = attendanceService.getAttendancesByUser(userDetails.getUserId());
+    AttendanceResponse response =
+        attendanceService.updateAttendanceStatusByRound(adminUserId, roundId, userId, statusStr, reason);
 
-        return ResponseEntity.ok(attendances);
-    }
+    return ResponseEntity.ok(response);
+  }
 
-    /**
-     * 출석 상태 수정(관리자용)
-     * @deprecated 라운드 기반 수정으로 변경되었습니다.
-     * PUT /api/attendance/rounds/{roundId}/attendances/{userId} 를 사용하세요.
-     * - PRESENT/LATE/ABSENT 등으로 상태 변경
-     * - 수정 사유 기록 가능
-     */
-    @Operation(
-            summary = "출석 상태 수정",
-            description = "⚠️ [DEPRECATED] 라운드 기반 수정으로 변경되었습니다. " +
-                    "PUT /api/attendance/rounds/{roundId}/attendances/{userId} 를 사용하세요. " +
-                    "특정 학생의 출석 상태를 변경합니다. (관리자 전용) " +
-                    "PRESENT(출석), LATE(지각), ABSENT(결석), EXCUSED(사유결석) 등의 상태로 변경 가능하며, " +
-                    "변경 사유를 함께 기록할 수 있습니다.",
-            deprecated = true
-    )
-    @PostMapping("/sessions/{sessionId}/attendances/{memberId}")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    @Deprecated(since = "2.0", forRemoval = true)
-    public ResponseEntity<AttendanceResponse> updateAttendanceStatus(
-            @PathVariable UUID sessionId,
-            @PathVariable UUID memberId,
-            @RequestParam String status,
-            @RequestParam(required = false) String reason,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
+  /**
+   * (옵션) 내 출석 이력 조회
+   * GET /api/attendance/me
+   */
+  @Operation(summary = "내 출석 이력 조회", description = "로그인한 사용자의 출석 이력을 조회합니다.")
+  @GetMapping("/me")
+  public ResponseEntity<List<AttendanceResponse>> getMyAttendances(
+      @AuthenticationPrincipal CustomUserDetails userDetails
+  ) {
+    UUID userId = requireUserId(userDetails);
+    return ResponseEntity.ok(attendanceService.getAttendancesByUser(userId));
+  }
 
-        log.info("출석 상태 수정: 세션ID={}, 멤버ID={}, 새로운상태={}, 관리자={}", sessionId, memberId, status, userDetails.getName());
 
-        AttendanceResponse response = attendanceService.updateAttendanceStatus(sessionId, memberId, status, reason, userDetails.getUserId());
 
-        log.info("출석 상태 수정 완료: 세션ID={}, 멤버ID={}, 상태={}", sessionId, memberId, response.getAttendanceStatus());
-
-        return ResponseEntity.ok(response);
-    }
+  // ------- helper -------
+  private UUID requireUserId(CustomUserDetails userDetails) {
+    if (userDetails == null) throw new IllegalStateException("UNAUTHENTICATED");
+    return userDetails.getUserId();
+  }
 }

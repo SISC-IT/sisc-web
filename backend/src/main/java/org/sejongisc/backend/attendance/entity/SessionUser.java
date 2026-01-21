@@ -11,10 +11,6 @@ import java.util.UUID;
 /**
  * 세션에 참여하는 사용자를 관리하는 엔티티
  *
- * 예: "금융동아리 2024년 정기 모임" 세션에 참여하는 팀원들
- * - 참여자 추가/삭제 관리
- * - 세션별 참여자 조회
- * - 중간 참여시 이전 라운드는 자동으로 결석 처리
  */
 @Entity
 @Table(
@@ -41,16 +37,24 @@ public class SessionUser extends BasePostgresEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
-    @JsonBackReference
     private AttendanceSession attendanceSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "user_name", length = 100, nullable = false)
-    @lombok.Setter
-    private String userName;  // 저장 시점의 user.name 캐시 (나중에 user.name이 변경되어도 유지)
+    // 세션 내 사용자 역할
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SessionRole sessionRole;
+
+    public void changeRole(SessionRole newRole) {
+        if (this.sessionRole == newRole) {
+            return; // 이미 그 역할이면 무시 (DB 쿼리 방지)
+        }
+        this.sessionRole = newRole;
+    }
+
 
     /**
      * toString 오버라이드 (순환 참조 방지)
@@ -61,7 +65,6 @@ public class SessionUser extends BasePostgresEntity {
                 "sessionUserId=" + sessionUserId +
                 ", sessionId=" + (attendanceSession != null ? attendanceSession.getAttendanceSessionId() : null) +
                 ", userId=" + (user != null ? user.getUserId() : null) +
-                ", userName='" + userName + '\'' +
                 ", createdDate=" + getCreatedDate() +
                 '}';
     }

@@ -1,18 +1,24 @@
 package org.sejongisc.backend.attendance.controller;
 
+import static org.sejongisc.backend.attendance.util.AuthUserUtil.requireUserId;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.*;
+import org.sejongisc.backend.attendance.service.AttendanceAuthorizationService;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
 import org.sejongisc.backend.attendance.service.SessionUserService;
+import org.sejongisc.backend.attendance.util.AuthUserUtil;
+import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.user.service.UserService;
 import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,48 +35,63 @@ import java.util.UUID;
 public class AttendanceSessionController {
 
     private final AttendanceSessionService attendanceSessionService;
-    private final SessionUserService sessionUserService;
-    private final UserService userService;
+
     /**
-     * 출석 세션 생성 (관리자용)
-     * - 6자리 랜덤 코드 자동 생성
-     * - GPS 위치 및 반경 설정
-     * - 시간 윈도우 설정
+     * 출석 세션 생성
      */
     @Operation(
             summary = "출석 세션 생성",
-            description = "새로운 출석 세션을 생성합니다. (관리자 전용) " +
-                    "6자리 랜덤 코드가 자동 생성되며, GPS 위치 정보, 시간 윈도우, " +
-                    "보상 포인트 등을 설정할 수 있습니다."
+            description = """
+                
+                ## 인증(JWT): **필요**
+                
+                
+                ## 요청 파라미터 ( `AttendanceSessionDto` )
+                - **`title`**: 세션 제목
+                - **`description`**: 세션 설명
+                - **`allowedMinutes`**: 체크인 허용 시간 (분)
+                - **`rewardPoints`**: 세션 참여 시 부여할 포인트
+                
+                ## 반환값 없음
+                """
     )
     @PostMapping
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<AttendanceSessionResponse> createSession(@Valid @RequestBody AttendanceSessionRequest request) {
-        log.info("출석 세션 생성 요청: 제목={}", request.getTitle());
+    public ResponseEntity<Void> createSession(@AuthenticationPrincipal(expression = "userId") UUID userId,
+        @RequestBody AttendanceSessionRequest request) {
+        log.info("출석 세션 생성 요청: 제목={}", request.title());
 
-        AttendanceSessionResponse response = attendanceSessionService.createSession(request);
 
-        log.info("출석 세션 생성 완료: 세션ID={}", response.getAttendanceSessionId());
+        attendanceSessionService.createSession(userId, request);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     /**
      * 세션 상세 조회
      * - 세션 ID로 상세 정보 조회
-     * - 남은 시간, 참여자 수 등 포함
      */
     @Operation(
             summary = "세션 상세 조회",
-            description = "세션 ID로 특정 세션의 상세 정보를 조회합니다. " +
-                    "남은 체크인 시간, 현재 참여자 수, 세션 상태 등의 정보가 포함됩니다."
+            description = """
+                ## 인증(JWT): **필요없음**
+                
+                ## 요청 파라미터 ( `sessionId` )
+                
+                ## 반환값 (`AttendanceSessionDto`)
+                - **`title`**: 세션 제목
+                - **`description`**: 세션 설명
+                - **`allowedMinutes`**: 체크인 허용 시간 (분)
+                - **`rewardPoints`**: 세션 참여 시 부여할 포인트
+                - **`status`**: 세션 상태 (OPEN, CLOSED 등)
+                """
     )
     @GetMapping("/{sessionId}")
-    public ResponseEntity<AttendanceSessionResponse> getSession(@PathVariable UUID sessionId) {
-        log.info("출석 세션 조회: 세션ID={}", sessionId);
-
-        AttendanceSessionResponse response = attendanceSessionService.getSessionById(sessionId);
-
+    public ResponseEntity<AttendanceSessionResponse> getSession(
+        @PathVariable UUID sessionId,
+        @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID adminUserId = requireUserId(userDetails);
+        AttendanceSessionResponse response = attendanceSessionService.getSessionById(sessionId, adminUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -81,46 +102,50 @@ public class AttendanceSessionController {
      */
     @Operation(
             summary = "모든 세션 목록 조회",
-            description = "생성된 모든 출석 세션을 최신 순으로 조회합니다. " +
-                    "공개/비공개 세션이 모두 포함되며, 관리자는 모든 세션을 볼 수 있습니다."
+            description = """
+                ## 인증(JWT): **필요없음**
+                
+                ## 요청 파라미터 : **없음**
+                
+                ## 반환값 (`List<AttendanceSessionDto>`)
+                - **`title`**: 세션 제목
+                - **`description`**: 세션 설명
+                - **`allowedMinutes`**: 체크인 허용 시간 (분)
+                - **`rewardPoints`**: 세션 참여 시 부여할 포인트
+                - **`status`**: 세션 상태 (OPEN, CLOSED 등)
+                
+                ## 설명
+                - 세션 관리자 권한 여부에 따라 반환되는 세션 정보가 다를 수 있음
+                """
     )
     @GetMapping
     public ResponseEntity<List<AttendanceSessionResponse>> getAllSessions() {
-        log.info("모든 출석 세션 조회");
 
         List<AttendanceSessionResponse> sessions = attendanceSessionService.getAllSessions();
 
-        return ResponseEntity.ok(sessions);
-    }
-
-    /**
-     * 공개 세션 목록 조회
-     * - 학생들이 볼 수 있는 공개 세션만 조회
-     * - 최신 순으로 정렬
-     */
-    @Operation(
-            summary = "공개 세션 목록 조회",
-            description = "학생들이 볼 수 있는 공개 세션들을 최신 순으로 조회합니다. " +
-                    "비공개 세션은 제외됩니다."
-    )
-    @GetMapping("/public")
-    public ResponseEntity<List<AttendanceSessionResponse>> getPublicSessions() {
-        log.info("공개 출석 세션 조회");
-
-        List<AttendanceSessionResponse> sessions = attendanceSessionService.getPublicSessions();
 
         return ResponseEntity.ok(sessions);
     }
+
 
     /**
      * 현재 활성 세션 목록 조회
      * - 체크인 가능한 세션들만 조회
-     * - 시작시간 ~ 종료 시간 범위 내
      */
     @Operation(
             summary = "활성 세션 목록 조회",
-            description = "현재 체크인이 가능한 활성 세션들을 조회합니다. " +
-                    "세션 시작 시간부터 시간 윈도우 종료까지 범위 내인 세션들만 조회됩니다."
+            description = """
+                ## 인증(JWT): **필요없음**
+                
+                ## 요청 파라미터 : **없음**
+                
+                ## 반환값 (`List<AttendanceSessionDto>`)
+                - **`title`**: 세션 제목
+                - **`description`**: 세션 설명
+                - **`allowedMinutes`**: 체크인 허용 시간 (분)
+                - **`rewardPoints`**: 세션 참여 시 부여할 포인트
+                - **`status`**: 세션 상태 (OPEN, CLOSED 등)
+                """
     )
     @GetMapping("/active")
     public ResponseEntity<List<AttendanceSessionResponse>> getActiveSessions() {
@@ -138,46 +163,25 @@ public class AttendanceSessionController {
      */
     @Operation(
             summary = "세션 정보 수정",
-            description = "세션의 기본 정보를 수정합니다. (관리자 전용) " +
-                    "제목, 태그, 시간, GPS 위치, 반경, 포인트 등을 수정할 수 있으며, " +
-                    "6자리 코드는 변경할 수 없습니다."
+            description = """
+                
+                """
     )
     @PutMapping("/{sessionId}")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<AttendanceSessionResponse> updateSession(
+    public ResponseEntity<Void> updateSession(
             @PathVariable UUID sessionId,
-            @Valid @RequestBody AttendanceSessionRequest request) {
+            @RequestBody AttendanceSessionRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails){
+        UUID adminUserId = requireUserId(userDetails);
 
         log.info("출석 세션 수정: 세션ID={}", sessionId);
-
-        AttendanceSessionResponse response = attendanceSessionService.updateSession(sessionId, request);
+        attendanceSessionService.updateSession(sessionId, request,adminUserId);
 
         log.info("출석 세션 수정 완료: 세션ID={}", sessionId);
 
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 세션 활성화 (관리자용)
-     * - 세션 상태를 OPEN으로 변경
-     * - 체크인 수동 활성화
-     */
-    @Operation(
-            summary = "세션 활성화",
-            description = "세션을 수동으로 활성화하여 즉시 체크인을 가능하게 합니다. (관리자 전용) " +
-                    "세션 상태가 OPEN으로 변경되어 학생들이 체크인할 수 있습니다."
-    )
-    @PostMapping("/{sessionId}/activate")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<Void> activateSession(@PathVariable UUID sessionId) {
-        log.info("출석 세션 활성화: 세션ID={}", sessionId);
-
-        attendanceSessionService.activateSession(sessionId);
-
-        log.info("출석 세션 활성화 완료: 세션ID={}", sessionId);
-
         return ResponseEntity.ok().build();
     }
+
 
     /**
      * 세션 종료 (관리자용)
@@ -186,45 +190,24 @@ public class AttendanceSessionController {
      */
     @Operation(
             summary = "세션 종료",
-            description = "세션을 종료합니다. (관리자 전용) " +
-                    "세션 상태가 CLOSED로 변경되어 더 이상 체크인이 불가능합니다."
+            description = """
+                ## 인증(JWT): **필요**
+                
+                """
     )
     @PostMapping("/{sessionId}/close")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<Void> closeSession(@PathVariable UUID sessionId) {
+    public ResponseEntity<Void> closeSession(@PathVariable UUID sessionId,@AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("출석 세션 종료: 세션ID={}", sessionId);
+        UUID adminUserId = requireUserId(userDetails);
 
-        attendanceSessionService.closeSession(sessionId);
+
+        attendanceSessionService.closeSession(sessionId,adminUserId);
 
         log.info("출석 세션 종료 완료: 세션ID={}", sessionId);
 
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * 세션 위치 재설정 (관리자용)
-     * - 기존 위치 정보를 새로운 위치로 업데이트
-     * - 반경은 기존 값 유지
-     */
-    @Operation(
-            summary = "세션 위치 재설정",
-            description = "세션의 위치 정보를 재설정합니다. (관리자 전용) " +
-                    "새로운 위도와 경도로 출석 기반 위치 검증 범위를 변경할 수 있습니다."
-    )
-    @PutMapping("/{sessionId}/location")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<AttendanceSessionResponse> updateSessionLocation(
-            @PathVariable UUID sessionId,
-            @Valid @RequestBody SessionLocationUpdateRequest request) {
-        log.info("세션 위치 재설정: 세션ID={}, 위도={}, 경도={}",
-                sessionId, request.getLatitude(), request.getLongitude());
-
-        AttendanceSessionResponse response = attendanceSessionService.updateSessionLocation(sessionId, request);
-
-        log.info("세션 위치 재설정 완료: 세션ID={}", sessionId);
-
-        return ResponseEntity.ok(response);
-    }
 
     /**
      * 세션 삭제 (관리자용)
@@ -233,112 +216,48 @@ public class AttendanceSessionController {
      */
     @Operation(
             summary = "세션 삭제",
-            description = "세션을 완전히 삭제합니다. (관리자 전용) " +
-                    "⚠️ 주의: 해당 세션의 모든 출석 기록이 함께 삭제되며, 복구가 불가능합니다."
+            description = """
+                ## 인증(JWT): **필요**
+
+                """
     )
     @DeleteMapping("/{sessionId}")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<Void> deleteSession(@PathVariable UUID sessionId) {
+    public ResponseEntity<Void> deleteSession(@PathVariable UUID sessionId,
+    @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("출석 세션 삭제: 세션ID={}", sessionId);
+        UUID adminUserId = requireUserId(userDetails);
 
-        attendanceSessionService.deleteSession(sessionId);
+        attendanceSessionService.deleteSession(sessionId,adminUserId);
 
         log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
 
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 세션에 사용자 추가 (관리자용)
-     * - 사용자를 세션에 추가
-     * - 중복 참여 방지
-     * - 자동으로 이전 라운드들에 결석 처리
-     */
-    @Operation(
-            summary = "세션에 사용자 추가",
-            description = "사용자를 출석 세션에 추가합니다. (관리자 전용) " +
-                    "이미 참여 중인 사용자는 추가할 수 없으며, 추가 시 이전 라운드들은 자동으로 결석 처리됩니다."
-    )
-    @PostMapping("/{sessionId}/users")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<SessionUserResponse> addUserToSession(
-            @PathVariable UUID sessionId,
-            @Valid @RequestBody SessionUserRequest request) {
-        log.info("세션에 사용자 추가: 세션ID={}, 사용자ID={}", sessionId, request.getUserId());
 
-        SessionUserResponse response = sessionUserService.addUserToSession(sessionId, request.getUserId());
+    //    /**
+//     * 세션 위치 재설정 (관리자용)
+//     * - 기존 위치 정보를 새로운 위치로 업데이트
+//     * - 반경은 기존 값 유지
+//     */
+//    @Operation(
+//            summary = "세션 위치 재설정",
+//            description = "세션의 위치 정보를 재설정합니다. (관리자 전용) " +
+//                    "새로운 위도와 경도로 출석 기반 위치 검증 범위를 변경할 수 있습니다."
+//    )
+//    @PutMapping("/{sessionId}/location")
+//    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
+//    public ResponseEntity<AttendanceSessionResponse> updateSessionLocation(
+//            @PathVariable UUID sessionId,
+//            @Valid @RequestBody SessionLocationUpdateRequest request) {
+//        log.info("세션 위치 재설정: 세션ID={}, 위도={}, 경도={}",
+//                sessionId, request.getLatitude(), request.getLongitude());
+//
+//        AttendanceSessionResponse response = attendanceSessionService.updateSessionLocation(sessionId, request);
+//
+//        log.info("세션 위치 재설정 완료: 세션ID={}", sessionId);
+//
+//        return ResponseEntity.ok(response);
+//    }
 
-        log.info("세션에 사용자 추가 완료: 세션ID={}, 사용자명={}", sessionId, response.getUserName());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
-     * 세션에서 사용자 제거 (관리자용)
-     * - 사용자를 세션에서 제거
-     * - 해당 사용자의 모든 출석 기록도 함께 삭제
-     */
-    @Operation(
-            summary = "세션에서 사용자 제거",
-            description = "사용자를 출석 세션에서 제거합니다. (관리자 전용) " +
-                    "⚠️ 주의: 해당 사용자의 해당 세션에서의 모든 출석 기록이 함께 삭제됩니다."
-    )
-    @DeleteMapping("/{sessionId}/users/{userId}")
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT')")
-    public ResponseEntity<Void> removeUserFromSession(
-            @PathVariable UUID sessionId,
-            @PathVariable UUID userId) {
-        log.info("세션에서 사용자 제거: 세션ID={}, 사용자ID={}", sessionId, userId);
-
-        sessionUserService.removeUserFromSession(sessionId, userId);
-
-        log.info("세션에서 사용자 제거 완료: 세션ID={}, 사용자ID={}", sessionId, userId);
-
-        return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * 세션 참여자 조회
-     * - 세션에 참여 중인 모든 사용자 목록
-     * - 참여 순서대로 정렬
-     */
-    @Operation(
-            summary = "세션 참여자 조회",
-            description = "세션에 참여 중인 모든 사용자 목록을 조회합니다. " +
-                    "각 사용자의 ID, 이름, 참여 시간 등의 정보가 포함됩니다."
-    )
-    @GetMapping("/{sessionId}/users")
-    public ResponseEntity<List<SessionUserResponse>> getSessionUsers(@PathVariable UUID sessionId) {
-        log.info("세션 참여자 조회: 세션ID={}", sessionId);
-
-        List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId);
-
-        log.info("세션 참여자 조회 완료: 세션ID={}, 참여자 수={}", sessionId, users.size());
-
-        return ResponseEntity.ok(users);
-    }
-
-    @GetMapping("/get-users")
-    @Operation(
-            summary = "유저 목록 반환",
-            description = """
-          ## 인증(JWT): **필요**
-          
-          ## 설명
-          - 모든 유저의 id와 이름을 반환 
-          
-          ## 요청 파라미터
-          - **요청 파라미터 없음**
-          
-          ## 반환값 
-          -     UUID userId
-                String name
-                String email
-          """
-    )
-    @PreAuthorize("hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT') or hasRole('TEAM_LEADER')")
-    public ResponseEntity<?> getUsers(){
-        List<UserIdNameProjection> userProjectionList = userService.getUserProjectionList();
-        return ResponseEntity.ok(userProjectionList);
-    }
 }
