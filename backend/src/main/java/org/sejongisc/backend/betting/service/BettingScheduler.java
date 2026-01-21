@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Component
 @Slf4j
@@ -22,7 +23,7 @@ public class BettingScheduler {
         bettingService.createBetRound(Scope.DAILY);
 
         // 월요일: 주간 라운드 생성
-        if (LocalDate.now().getDayOfWeek() == DayOfWeek.MONDAY) {
+        if (LocalDate.now(ZoneId.of("Asia/Seoul")).getDayOfWeek() == DayOfWeek.MONDAY) {
             bettingService.createBetRound(Scope.WEEKLY);
         }
     }
