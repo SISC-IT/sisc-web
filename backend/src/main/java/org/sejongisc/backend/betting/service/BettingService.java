@@ -288,7 +288,6 @@ public class BettingService {
 
             // 라운드 정산
             round.settle(finalPrice);
-            betRoundRepository.save(round);
 
             // 현재 라운드의 베팅 리스트
             List<UserBet> userBets = betMap.getOrDefault(round.getBetRoundID(), Collections.emptyList());
@@ -323,7 +322,6 @@ public class BettingService {
                     bet.lose();
                 }
             }
-            userBetRepository.saveAll(userBets);
         }
     }
 
