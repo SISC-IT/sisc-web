@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.util.UUID;
 
@@ -13,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LedgerEntry {
+public class LedgerEntry extends BasePostgresEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID entryId;
