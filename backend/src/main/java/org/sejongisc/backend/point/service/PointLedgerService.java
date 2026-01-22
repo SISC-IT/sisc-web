@@ -55,6 +55,7 @@ public class PointLedgerService {
         .transaction(transaction)
         .account(entry.account())
         .amount(entry.amount())
+        .entryType(entry.entryType())
         .build()
       );
     }
