@@ -297,37 +297,65 @@ public class BettingService {
             // 현재 라운드의 베팅 리스트
             List<UserBet> userBets = betMap.getOrDefault(round.getBetRoundID(), Collections.emptyList());
             BetOption resultOption = round.getResultOption();
+            // 해당 라운드에서 나갈 포인트 합
+            long totalStake = 0;
 
             for (UserBet bet : userBets) {
                 if (bet.getBetStatus() != BetStatus.ACTIVE) continue;
 
+                Account userAccount = accountService.getUserAccount(bet.getUserId());
+
                 if (round.isDraw()) {
                     // 가격 변동이 없을 시 참여자 전원 원금 환불
                     if (!bet.isFree() && bet.getStakePoints() > 0) {
-                        pointHistoryService.createPointHistory(
-                            bet.getUserId(),
-                            bet.getStakePoints(),
-                            PointReason.BETTING,
-                            PointOrigin.BETTING,
-                            round.getBetRoundID()
+                        pointLedgerService.processTransaction(
+                            TransactionReason.BETTING_REFUND,
+                            round.getBetRoundID(),
+                            AccountEntry.credit(poolAccount, (long) bet.getStakePoints()),
+                            AccountEntry.debit(userAccount, (long) bet.getStakePoints())
                         );
+                        totalStake += bet.getStakePoints();
                     }
                     bet.draw();
                 } else if (bet.getOption() == resultOption) {
                     // 예측 성공 시 보상 포인트 지급
                     int reward = calculateReward(bet);
                     bet.win(reward);
-                    pointHistoryService.createPointHistory(
-                        bet.getUserId(),
-                        reward,
-                        PointReason.BETTING_WIN,
-                        PointOrigin.BETTING,
-                        round.getBetRoundID()
-                    );
+
+                    if (bet.isFree()) {
+                        // 무료 베팅: 시스템 -> 사용자 보상 지급
+                        pointLedgerService.processTransaction(
+                            TransactionReason.BETTING_REWARD,
+                            round.getBetRoundID(),
+                            AccountEntry.credit(systemAccount, (long) reward),
+                            AccountEntry.debit(userAccount, (long) reward)
+                        );
+                    }
+                    else {
+                        pointLedgerService.processTransaction(
+                            TransactionReason.BETTING_REWARD,
+                            round.getBetRoundID(),
+                            AccountEntry.credit(poolAccount, (long) reward),
+                            AccountEntry.credit(userAccount, (long) reward)
+                        );
+                        totalStake += reward;
+                    }
                 } else {
                     // 예측 실패 시 포인트 소멸
                     bet.lose();
                 }
+            }
+
+            // 보상 소수점 처리 후 잔여금: 베팅 풀 -> 시스템 게정으로 이동
+            long residual = round.getUpTotalPoints() + round.getDownTotalPoints() - totalStake;
+
+            if (residual > 0) {
+                pointLedgerService.processTransaction(
+                    TransactionReason.BETTING_RESIDUAL,
+                    round.getBetRoundID(),
+                    AccountEntry.credit(accountService.getAccountByName(AccountName.BETTING_POOL), residual),
+                    AccountEntry.debit(accountService.getAccountByName(AccountName.SYSTEM_ISSUANCE), residual)
+                );
             }
         }
     }
