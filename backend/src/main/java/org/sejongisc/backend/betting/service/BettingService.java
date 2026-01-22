@@ -225,37 +225,37 @@ public class BettingService {
         // fetch join으로 UserBet 및 BetRound 조회
         UserBet userBet = userBetRepository.findByUserBetIdAndUserIdWithRound(userBetId, userId)
             .orElseThrow(() -> new CustomException(ErrorCode.BET_NOT_FOUND));
-        BetRound betRound = userBet.getRound();
 
         // 이미 처리된 상태인지 검증
         if (userBet.getBetStatus() != BetStatus.ACTIVE) {
             throw new CustomException(ErrorCode.BET_ALREADY_PROCESSED);
         }
 
+        BetRound betRound = userBet.getRound();
         // 베팅 가능한 라운드 상태인지 검증
         betRound.validate();
 
+        int stake = userBet.getStakePoints();
+        UUID roundId = betRound.getBetRoundID();
+
         // 상태 변경 (ACTIVE -> DELETED)
         userBet.cancel();
-        userBetRepository.saveAndFlush(userBet);
 
-        // 포인트 환불
-        if (!userBet.isFree() && userBet.getStakePoints() > 0) {
-            pointHistoryService.createPointHistory(
-                userId,
-                userBet.getStakePoints(),
-                PointReason.BETTING,
-                PointOrigin.BETTING,
-                betRound.getBetRoundID()
+        // 사용자 포인트 환불
+        if (!userBet.isFree() && stake > 0) {
+            pointLedgerService.processTransaction(
+                TransactionReason.BETTING_CANCEL,
+                roundId,
+                AccountEntry.credit(accountService.getAccountByName(AccountName.BETTING_POOL), (long) stake),
+                AccountEntry.debit(accountService.getUserAccount(userId), (long) stake)
             );
         }
 
         // 통계 차감
-        int stake = userBet.getStakePoints();
         if (userBet.getOption() == BetOption.RISE) {
-            betRoundRepository.decrementUpStats(betRound.getBetRoundID(), stake);
+            betRoundRepository.decrementUpStats(roundId, stake);
         } else {
-            betRoundRepository.decrementDownStats(betRound.getBetRoundID(), stake);
+            betRoundRepository.decrementDownStats(roundId, stake);
         }
     }
 
