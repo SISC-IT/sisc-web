@@ -6,15 +6,15 @@ import org.sejongisc.backend.auth.service.EmailService;
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
+import org.sejongisc.backend.point.dto.AccountEntry;
+import org.sejongisc.backend.point.entity.Account;
+import org.sejongisc.backend.point.entity.AccountName;
+import org.sejongisc.backend.point.entity.TransactionReason;
+import org.sejongisc.backend.point.service.AccountService;
+import org.sejongisc.backend.point.service.PointLedgerService;
 import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,8 +35,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 
@@ -54,6 +52,8 @@ public class UserServiceImpl implements UserService {
     private final EmailService emailService;
     private final RedisTemplate<Object, Object> redisTemplate;
     private final RefreshTokenService refreshTokenService;
+    private final AccountService accountService;
+    private final PointLedgerService pointLedgerService;
 
 
     @Override
@@ -99,6 +99,8 @@ public class UserServiceImpl implements UserService {
 
         try {
             User saved = userRepository.save(user);
+            // 포인트 계정 생성 및 기본 포인트 제공
+            completeSignup(saved);
             return SignupResponse.from(saved);
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.DUPLICATE_USER);
@@ -370,4 +372,21 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAllUsersMissingAccount();
     }
 
+    /**
+     * 사용자의 포인트 계정 생성 및 기본 포인트 지급
+     */
+    private void completeSignup(User user) {
+        // 사용자의 포인트 계정 생성
+        Account userAccount = accountService.createUserAccount(user.getUserId());
+
+        // 회원가입 포인트 지급
+        pointLedgerService.processTransaction(
+            TransactionReason.SIGNUP_REWARD,
+            user.getUserId(),
+            AccountEntry.credit(accountService.getAccountByName(AccountName.SYSTEM_ISSUANCE), 100L),
+            AccountEntry.debit(userAccount, 100L)
+        );
+
+        log.info("[SIGNUP_COMPLETE] User: {}, Account created and 100P issued", user.getEmail());
+    }
 }
