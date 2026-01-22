@@ -10,9 +10,12 @@ import org.sejongisc.backend.betting.repository.UserBetRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.annotation.OptimisticRetry;
-import org.sejongisc.backend.point.entity.PointOrigin;
-import org.sejongisc.backend.point.entity.PointReason;
-import org.sejongisc.backend.point.service.PointHistoryService;
+import org.sejongisc.backend.point.dto.AccountEntry;
+import org.sejongisc.backend.point.entity.Account;
+import org.sejongisc.backend.point.entity.AccountName;
+import org.sejongisc.backend.point.entity.TransactionReason;
+import org.sejongisc.backend.point.service.AccountService;
+import org.sejongisc.backend.point.service.PointLedgerService;
 import org.sejongisc.backend.stock.entity.PriceData;
 import org.sejongisc.backend.stock.repository.PriceDataRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,7 +34,8 @@ public class BettingService {
 
     private final BetRoundRepository betRoundRepository;
     private final UserBetRepository userBetRepository;
-    private final PointHistoryService pointHistoryService;
+    private final AccountService accountService;
+    private final PointLedgerService pointLedgerService;
     private final PriceDataRepository priceDataRepository;
 
     private final Random random = new Random();
@@ -169,14 +173,13 @@ public class BettingService {
             betRoundRepository.incrementDownStats(betRound.getBetRoundID(), stake);
         }
 
-        // 포인트 차감 및 이력 생성 (유료 베팅인 경우)
-        if (!userBetRequest.isFree()) {
-            pointHistoryService.createPointHistory(
-                    userId,
-                    -stake, // 포인트 차감
-                    PointReason.BETTING,
-                    PointOrigin.BETTING,
-                    userBetRequest.getRoundId()
+        // 사용자 포인트 차감 및 이력 생성 (유료 베팅인 경우)
+        if (!userBetRequest.isFree() && stake > 0) {
+            pointLedgerService.processTransaction(
+                TransactionReason.BETTING_STAKE,
+                userBetRequest.getRoundId(),
+                AccountEntry.credit(accountService.getUserAccount(userId), (long) stake),
+                AccountEntry.debit(accountService.getAccountByName(AccountName.BETTING_POOL), (long) stake)
             );
         }
 
@@ -264,6 +267,8 @@ public class BettingService {
     @OptimisticRetry
     public void settleUserBets() {
         LocalDateTime now = LocalDateTime.now();
+        Account poolAccount = accountService.getAccountByName(AccountName.BETTING_POOL);
+        Account systemAccount = accountService.getAccountByName(AccountName.SYSTEM_ISSUANCE);
 
         // 정산 대상 활성 라운드 조회
         List<BetRound> activeRounds =
