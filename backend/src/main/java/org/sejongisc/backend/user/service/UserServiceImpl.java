@@ -361,4 +361,13 @@ public class UserServiceImpl implements UserService {
     public List<UserIdNameProjection> getUserProjectionList() {
         return userRepository.findAllUserIdAndName();
     }
+
+    /**
+     * 포인트 계정이 존재하지 않는 사용자 리스트 조회
+     */
+    @Override
+    public List<User> findAllUsersMissingAccount() {
+        return userRepository.findAllUsersMissingAccount();
+    }
+
 }
