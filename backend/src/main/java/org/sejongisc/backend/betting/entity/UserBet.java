@@ -70,6 +70,12 @@ public class UserBet extends BasePostgresEntity {
         this.betStatus = BetStatus.CLOSED;
     }
 
+    public void draw() {
+        this.payoutPoints = this.stakePoints;
+        this.isCorrect = false;
+        this.betStatus = BetStatus.CLOSED;
+    }
+
     // 취소 상태 변경 메서드
     public void cancel() {
         this.betStatus = BetStatus.DELETED;

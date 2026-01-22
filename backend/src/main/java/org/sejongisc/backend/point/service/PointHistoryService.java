@@ -11,13 +11,8 @@ import org.sejongisc.backend.point.entity.PointReason;
 import org.sejongisc.backend.point.repository.PointHistoryRepository;
 import org.sejongisc.backend.user.dao.UserRepository;
 import org.sejongisc.backend.user.entity.User;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -27,6 +22,8 @@ import java.util.UUID;
  * userId에 대한 검증 로직이 없습니다.
  * 따라서 customUserDetails.getUserId() 에서 가져오는 userId를 사용해야합니다.
  * 해당 userId는 필터에서 검증이 완료되기에, 검증할 필요가 없기 때문입니다.
+ * createPointHistory를 호출하는 외부 메서드는 @OptimisticRetry 어노테이션을 붙여야 합니다.
+ * 해당 어노테이션을 붙이면 낙관적 락 예외 발생 시 최초 호출 포함 최대 3회까지 재시도합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -55,15 +52,7 @@ public class PointHistoryService {
   }
 
   // 포인트 증감 기록 생성 및 유저 포인트 업데이트
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  @Retryable(
-      // 어떤 예외가 발생했을 때 재시도할지 지정합니다.
-      include = {OptimisticLockingFailureException.class},
-      // 최대 재시도 횟수를 지정합니다 - 최초 1회 + 재시도 2회 = 총 3회
-      maxAttempts = 3,
-      // 재시도 사이의 지연 시간을 설정합니다 - 100ms
-      backoff = @Backoff(delay = 100)
-  )
+  @Transactional
   public PointHistory createPointHistory(UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
     if (amount == 0) {
       throw new CustomException(ErrorCode.INVALID_POINT_AMOUNT);
@@ -81,27 +70,6 @@ public class PointHistoryService {
 
     PointHistory history = PointHistory.of(userId, amount, reason, origin, originId);
     return pointHistoryRepository.save(history);
-  }
-
-  /**
-   * OptimisticLockingFailureException가 아닌 CustomException이 발생했을 때 재시도 없이 예외를 던집니다.
-   * @param e @Retryable에서 발생한 예외
-   */
-  @Recover
-  public PointHistory recover(CustomException e) {
-    log.warn("포인트 업데이트 중 비즈니스 로직 예외 발생: {}", e.getMessage());
-    throw e;
-  }
-
-  /**
-   * @Retryable에서 모든 재시도를 실패했을 때 호출될 메서드입니다.
-   * @param e @Retryable에서 발생한 마지막 예외
-   * @param userId, ... 원본 메서드와 동일한 파라미터
-   */
-  @Recover
-  public PointHistory recover(OptimisticLockingFailureException e, UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
-    log.error("포인트 업데이트 최종 실패: userId={}, amount={}", userId, amount, e);
-    throw new CustomException(ErrorCode.CONCURRENT_UPDATE);
   }
 
   // 유저 탈퇴 시 특정 유저의 모든 포인트 기록 삭제
