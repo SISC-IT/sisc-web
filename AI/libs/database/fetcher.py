@@ -1,4 +1,6 @@
-﻿import pandas as pd
+﻿#AI/libs/database/fetcher.py
+from typing import Dict
+import pandas as pd
 from sqlalchemy import text
 from .connection import get_engine
 
