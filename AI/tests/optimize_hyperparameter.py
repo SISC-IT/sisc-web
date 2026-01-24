@@ -29,7 +29,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(project_root)
 
-from AI.modules.signal.core.data_loader import SignalDataLoader
+from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models import get_model
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ target_tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META"]
 start_date = "2023-01-01"
 end_date = "2024-12-31"
 
-loader = SignalDataLoader(sequence_length=60)
+loader = DataLoader(sequence_length=60)
 grouped_data = []
 
 for ticker in target_tickers:

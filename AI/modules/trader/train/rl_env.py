@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from AI.modules.trader.core.simulator import Simulator
-from AI.modules.signal.core.data_loader import SignalDataLoader
+from AI.modules.signal.core.data_loader import DataLoader
 
 class StockTradingEnv(gym.Env):
     metadata = {'render_modes': ['human']}
@@ -20,7 +20,7 @@ class StockTradingEnv(gym.Env):
         super(StockTradingEnv, self).__init__()
         
         # 1. 데이터 준비
-        self.loader = SignalDataLoader()
+        self.loader = DataLoader()
         # 학습 속도를 위해 전처리된 데이터를 메모리에 로드해둡니다.
         self.df = self.loader.load_data(ticker, start_date, end_date)
         if self.df is None or len(self.df) < 100:
@@ -85,7 +85,7 @@ class StockTradingEnv(gym.Env):
             avg_price = acc.positions[self.simulator.ticker]['avg_price']
             profit_rate = (current_price - avg_price) / avg_price
 
-        # 2. 시장 데이터 (SignalDataLoader가 만든 지표들 사용)
+        # 2. 시장 데이터 (DataLoader가 만든 지표들 사용)
         # 만약 데이터프레임에 해당 컬럼이 없으면 0으로 처리
         rsi = row.get('rsi', 50) / 100.0
         macd = row.get('macd', 0)
