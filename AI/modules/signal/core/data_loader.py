@@ -1,8 +1,8 @@
 # AI/modules/signal/core/data_loader.py
 """
-[데이터 로더 - 멀티 타임프레임 적용 버전]
-- features.py의 add_technical_indicators 및 add_multi_timeframe_features를 모두 사용합니다.
-- 일봉뿐만 아니라 주봉/월봉 지표까지 학습하여 장기 추세를 반영합니다.
+[데이터 로더 - Multi-Horizon Version]
+- 1, 3, 5, 7일 뒤의 등락을 한 번에 모두 라벨링합니다.
+- 정답(y)의 모양이 (N,)에서 (N, 4)로 바뀝니다.
 """
 
 import numpy as np
@@ -13,13 +13,13 @@ from tqdm import tqdm
 
 import sys
 import os
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.libs.database.connection import get_db_conn
-# [수정] 두 함수 모두 임포트
 from AI.modules.signal.core.features import add_technical_indicators, add_multi_timeframe_features
 
 class DataLoader:
@@ -35,7 +35,6 @@ class DataLoader:
         self._load_metadata()
 
     def _load_metadata(self):
-        """ (기존과 동일) 메타데이터 로드 """
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
         try:
@@ -54,7 +53,6 @@ class DataLoader:
             if conn: conn.close()
 
     def load_data_from_db(self, start_date="2018-01-01") -> pd.DataFrame:
-        """ (기존과 동일) DB 로드 """
         conn = get_db_conn(self.db_name)
         query = f"""
             SELECT date, ticker, open, high, low, close, volume, adjusted_close
@@ -65,85 +63,71 @@ class DataLoader:
         df = pd.read_sql(query, conn)
         conn.close()
         df['date'] = pd.to_datetime(df['date'])
-        
-        # [중요] 주봉/월봉 계산을 위해 인덱스를 날짜로 설정했다가 나중에 풀기 위해 sort
         return df
 
     def create_dataset(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict]:
         X_ts_list = []
         X_ticker_list = []
         X_sector_list = []
-        y_class_list = [] 
+        y_class_list = [] # 이제 여기가 2차원 리스트가 됨
         y_reg_list = []   
         
+        # -----------------------------------------------------------
+        # [설정] Multi-Horizon (1, 3, 5, 7일 뒤 예측)
+        # -----------------------------------------------------------
+        HORIZONS = [1, 3, 5, 7]
+        max_horizon = max(HORIZONS)
+        print(f"🎯 예측 목표: {HORIZONS}일 뒤의 등락을 동시 예측")
+
         tickers = df['ticker'].unique()
         print(f"[DataLoader] {len(tickers)}개 종목에 대해 Feature Engineering 시작...")
 
-        # [Step 1] 지표 추가 (일봉 + 멀티 타임프레임)
         processed_dfs = []
         for ticker in tqdm(tickers, desc="Adding Indicators"):
-            # 날짜순 정렬 및 인덱스 설정 (resample을 위해 필수)
             sub_df = df[df['ticker'] == ticker].copy().sort_values('date')
-            sub_df = sub_df.set_index('date') 
             
-            # 데이터 길이가 너무 짧으면(예: 1년 미만) 월봉 계산이 부정확하므로 스킵 가능
-            # 여기서는 최소 200일 정도로 잡음
             if len(sub_df) < 200: continue
-            
-            # 1) 기본 일봉 지표 추가
+            if sub_df['close'].std() == 0: continue # 좀비 데이터 제거
+
             sub_df = add_technical_indicators(sub_df)
-            
-            # 2) [NEW] 멀티 타임프레임 지표 추가 (주봉/월봉)
             try:
                 sub_df = add_multi_timeframe_features(sub_df)
-            except Exception as e:
-                # 데이터 부족 등으로 실패 시 해당 종목 건너뜀
+            except Exception:
                 continue
             
-            # 인덱스 리셋 (다시 컬럼으로)
-            sub_df = sub_df.reset_index()
             processed_dfs.append(sub_df)
             
-        if not processed_dfs: raise ValueError("[Error] 데이터 없음")
+        if not processed_dfs: raise ValueError("[Error] 유효한 데이터가 없습니다!")
         full_df = pd.concat(processed_dfs)
         
-        # [Step 1.5] 원본 주가 백업
         full_df['raw_close'] = full_df['close']
-
-        # [Step 2] 스케일링 대상 컬럼 확장 (주봉/월봉 포함)
+        
         feature_cols = [
-            # 일봉 (Daily)
-            'open', 'high', 'low', 'close', 'volume',
-            'ma5', 'ma20', 'ma60', 
-            'rsi', 'macd', 'signal_line', 
-            'upper_band', 'lower_band', 'vol_change',
-            
-            # 주봉 (Weekly)
-            'week_ma20', 'week_rsi', 
-            'week_bollinger_upper', 'week_bollinger_lower', 
-            'week_volume_change', 'week_macd', 'week_macd_signal',
-            'dist_week_ma20',
-            
-            # 월봉 (Monthly)
-            'month_ma12', 
-            'month_bollinger_upper', 'month_bollinger_lower', 
-            'month_volume_change', 'month_macd', 'month_macd_signal'
+            'log_return', 
+            'open_ratio', 'high_ratio', 'low_ratio', 
+            'vol_change',
+            'ma5_ratio', 'ma20_ratio', 'ma60_ratio', 
+            'rsi', 
+            'macd_ratio', 
+            'bb_position',
+            'week_ma20_ratio', 'week_rsi', 'week_bb_pos', 'week_vol_change',
+            'month_ma12_ratio', 'month_rsi'
         ]
         
-        # 없는 컬럼이 있으면 에러 나므로 교집합만 사용 (안전장치)
         available_cols = [c for c in feature_cols if c in full_df.columns]
-        
-        # NaN 제거 (지표 계산 초반부 + ffill로 인한 앞쪽 공백)
         full_df = full_df.dropna(subset=available_cols)
         
         print(f">> 데이터 스케일링 중... (Features: {len(available_cols)}개)")
         full_df[available_cols] = self.scaler.fit_transform(full_df[available_cols])
 
-        # [Step 3] 시퀀스 생성
         print(">> 시퀀스 및 라벨 생성 중...")
+        
+        debug_printed = False
+        
         for ticker in tqdm(full_df['ticker'].unique(), desc="Sequencing"):
             sub_df = full_df[full_df['ticker'] == ticker]
-            if len(sub_df) <= self.lookback: continue
+            # 데이터가 (lookback + 가장 먼 미래) 보다 많아야 함
+            if len(sub_df) <= self.lookback + max_horizon: continue
 
             t_id = self.ticker_to_id.get(ticker, 0)
             s_id = self.ticker_sector_map.get(ticker, 0)
@@ -151,35 +135,53 @@ class DataLoader:
             values = sub_df[available_cols].values
             raw_closes = sub_df['raw_close'].values 
             
-            num_samples = len(sub_df) - self.lookback
+            if not debug_printed:
+                print(f"\n[DEBUG Sample] Ticker: {ticker}")
+                print(f"   - Raw Closes (First 5): {raw_closes[:5]}")
+                debug_printed = True
+
+            # 루프 범위: 끝에서 max_horizon 만큼은 정답을 알 수 없으므로 제외
+            num_samples = len(sub_df) - self.lookback - max_horizon + 1
             if num_samples <= 0: continue
 
             for i in range(num_samples):
                 window = values[i : i + self.lookback]
                 curr_raw = raw_closes[i + self.lookback - 1]
-                next_raw = raw_closes[i + self.lookback]
                 
-                label_cls = 1 if next_raw > curr_raw else 0
-                epsilon = 1e-9
-                label_reg = (next_raw - curr_raw) / (curr_raw + epsilon)
+                # [핵심] 1, 3, 5, 7일 뒤 정답을 모두 구해서 리스트로 만듦
+                multi_labels = []
+                
+                for h in HORIZONS:
+                    next_raw = raw_closes[i + self.lookback + h - 1]
+                    threshold = 0.000
+                    
+                    if curr_raw == 0:
+                        label = 0
+                    else:
+                        label = 1 if next_raw > curr_raw * (1 + threshold) else 0
+                    multi_labels.append(label)
+                
+                # 회귀 라벨은 대표값(가장 먼 7일) 하나만 씀 (여기선 분류가 메인이므로)
+                label_reg = 0.0 
                 
                 X_ts_list.append(window)
                 X_ticker_list.append(t_id)
                 X_sector_list.append(s_id)
-                y_class_list.append(label_cls)
+                y_class_list.append(multi_labels) # [0, 1, 1, 0] 형태 저장
                 y_reg_list.append(label_reg)
 
         X_ts = np.array(X_ts_list)
         X_ticker = np.array(X_ticker_list)
         X_sector = np.array(X_sector_list)
-        y_class = np.array(y_class_list)
+        y_class = np.array(y_class_list) # Shape: (N, 4)
         y_reg = np.array(y_reg_list)
         
         info = {
             "n_tickers": len(self.ticker_to_id),
             "n_sectors": len(self.sector_to_id),
             "scaler": self.scaler,
-            "n_features": len(available_cols)
+            "n_features": len(available_cols),
+            "horizons": HORIZONS # 메타데이터에 추가
         }
         
         return X_ts, X_ticker, X_sector, y_class, y_reg, info

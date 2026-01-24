@@ -2,7 +2,7 @@
 from typing import Dict, Any
 from AI.modules.signal.core.base_model import BaseSignalModel
 # 절대 경로로 수정하여 모듈 찾기 에러 방지
-from AI.modules.signal.models.transformer.wrapper import TransformerSignalModel
+from AI.modules.signal.models.PatchTST.wrapper import TransformerSignalModel
 
 # 모델 레지스트리
 MODEL_REGISTRY = {

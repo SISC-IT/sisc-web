@@ -1,20 +1,24 @@
-﻿pandas
+﻿# --- 핵심 데이터 및 GPU ---
+python-dotenv
+pandas
+numpy<2.0
+tensorflow<2.11
+
+# --- DB 및 웹 ---
 psycopg2-binary
-langchain-community
-tqdm
-selenium
-webdriver-manager
-numpy
-scikit-learn
-tensorflow
-yfinance
-groq
 requests
 beautifulsoup4
-pathlib
+selenium
+webdriver-manager
+groq
 fredapi
-matplotlib
-python-dotenv
-stable-baselines3
-shimmy
+yfinance
+
+# --- AI & 강화학습 (SB3는 PyTorch 자동 설치됨) ---
+scikit-learn
+langchain-community
+stable-baselines3[extra]
 gymnasium
+shimmy
+matplotlib
+tqdm
