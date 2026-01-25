@@ -129,10 +129,11 @@ public class AttendanceService {
           .attendanceRound(round)
           .attendanceStatus(newStatus)
           .note(reason)
-          .checkedAt(LocalDateTime.now()) // checkedAt을 수동으로 넣고 싶으면 @CreationTimestamp 제거 권장
+          .deviceId("ADMIN_UPDATE_" + UUID.randomUUID()) // 관리자 수정 출석은 임의의 디바이스 ID 사용
+          .checkedAt(LocalDateTime.now())
           .build();
     } else {
-      attendance.changeStatus(newStatus, reason); // ✅ 엔티티 메서드로 변경
+      attendance.changeStatus(newStatus, reason);
     }
     return AttendanceResponse.from(attendanceRepository.save(attendance));
   }
