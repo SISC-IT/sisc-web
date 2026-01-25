@@ -55,6 +55,12 @@ public class AttendanceService {
 
     LocalDateTime now = LocalDateTime.now();
 
+    String deviceId = request.deviceId();
+    if (deviceId == null || deviceId.isBlank()) {
+      log.error("Device ID 누락: userId={}", userId);
+      throw new CustomException(ErrorCode.DEVICE_ID_REQUIRED);
+    }
+
     // 대리 출석 방지
     if (attendanceRepository.existsByAttendanceRound_RoundIdAndDeviceId(round.getRoundId(), request.deviceId())) {
       log.error("Device ID 중복 출석 시도: userId={}, deviceId={}", userId, request.deviceId());

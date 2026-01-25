@@ -50,7 +50,7 @@ public class SessionUserService {
         .existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId);
 
     if (exists) {
-      throw new IllegalArgumentException("ALREADY_JOINED");
+      throw new CustomException(ErrorCode.ALREADY_JOINED);
     }
 
     SessionUser sessionUser = SessionUser.builder()
@@ -75,7 +75,7 @@ public class SessionUserService {
     authorizationService.ensureOwner(sessionId, actorUserId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-        .orElseThrow(() -> new IllegalArgumentException("SESSION_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
     // SessionUser 삭제
     sessionUserRepository.deleteByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId);
@@ -133,7 +133,7 @@ public class SessionUserService {
     boolean exists = sessionUserRepository.existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId,
         userId);
     if (exists) {
-      throw new IllegalStateException("ALREADY_JOINED");
+      throw new CustomException(ErrorCode.ALREADY_JOINED);
     }
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
@@ -155,7 +155,7 @@ public class SessionUserService {
   public void leaveSession(UUID sessionId, UUID userId) {
     SessionUser su = sessionUserRepository
         .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, userId)
-        .orElseThrow(() -> new IllegalStateException("NOT_SESSION_MEMBER"));
+        .orElseThrow(() -> new CustomException(ErrorCode.NOT_SESSION_MEMBER));
 
     sessionUserRepository.delete(su);
   }
@@ -167,7 +167,7 @@ public class SessionUserService {
   public void addAdmin(UUID sessionId, UUID targetUserId) {
     SessionUser su = sessionUserRepository
         .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
-        .orElseThrow(() -> new IllegalStateException("TARGET_NOT_SESSION_MEMBER"));
+        .orElseThrow(() -> new CustomException(ErrorCode.TARGET_NOT_SESSION_MEMBER));
     su.changeRole(SessionRole.MANAGER);
   }
 
@@ -175,13 +175,12 @@ public class SessionUserService {
   public void removeAdmin(UUID sessionId, UUID targetUserId) {
     SessionUser su = sessionUserRepository
         .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
-        .orElseThrow(() -> new IllegalStateException("TARGET_NOT_SESSION_MEMBER"));
+        .orElseThrow(() -> new CustomException(ErrorCode.TARGET_NOT_SESSION_MEMBER));
 
     // OWNER를 강제로 내릴지 여부는 정책
     if (su.getSessionRole() == SessionRole.OWNER) {
-      throw new IllegalStateException("CANNOT_DEMOTE_OWNER");
+      throw new CustomException(ErrorCode.CANNOT_DEMOTE_OWNER);
     }
     su.changeRole(SessionRole.PARTICIPANT);
   }
-
 }

@@ -119,6 +119,8 @@ public enum ErrorCode {
 
   STATUS_REQUIRED(HttpStatus.BAD_REQUEST, "출석 상태가 필요합니다."),
 
+  DEVICE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "출석 체크를 위한 기기 ID가 필요합니다."),
+
   END_AT_MUST_BE_AFTER_START_AT(HttpStatus.BAD_REQUEST, "출석 라운드 종료 시간은 시작 시간 이후여야 합니다."),
 
   QR_TOKEN_MALFORMED(HttpStatus.BAD_REQUEST, "QR 토큰 형식이 올바르지 않습니다."),
@@ -127,8 +129,15 @@ public enum ErrorCode {
 
   INVALID_ATTENDANCE_STATUS(HttpStatus.BAD_REQUEST, "유효하지 않은 출석 상태입니다."),
 
-  DEVICE_ALREADY_USED(HttpStatus.FORBIDDEN, "해당 기기는 이미 출석 체크에 사용되었습니다.");
+  DEVICE_ALREADY_USED(HttpStatus.FORBIDDEN, "해당 기기는 이미 출석 체크에 사용되었습니다."),
 
+  ALREADY_JOINED(HttpStatus.FORBIDDEN, "이미 출석 세션에 참여 중입니다."),
+
+  NOT_SESSION_MEMBER(HttpStatus.FORBIDDEN, "출석 세션의 멤버가 아닙니다."),
+
+  TARGET_NOT_SESSION_MEMBER(HttpStatus.BAD_REQUEST, "대상 사용자가 출석 세션의 멤버가 아닙니다."),
+
+  CANNOT_DEMOTE_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 강등할 수 없습니다.");
   private final HttpStatus status;
   private final String message;
 
