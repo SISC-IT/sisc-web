@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.backtest.dto.StrategyCondition;
 import org.sejongisc.backend.backtest.dto.StrategyOperand;
 import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.stock.entity.PriceData;
 import org.springframework.stereotype.Service;
 import org.ta4j.core.BarSeries;
@@ -24,11 +25,8 @@ import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
 import org.ta4j.core.indicators.statistics.StandardDeviationIndicator;
 import org.ta4j.core.indicators.StochasticOscillatorKIndicator;
-import org.ta4j.core.indicators.StochasticOscillatorDIndicator;
 import org.ta4j.core.indicators.CCIIndicator;
-import org.ta4j.core.indicators.ATRIndicator;
 import org.ta4j.core.indicators.adx.ADXIndicator;
-import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 
 import java.time.ZoneId;
 import java.util.List;
@@ -126,7 +124,7 @@ public class Ta4jHelperService {
             case "EQ" -> new IsEqualRule(left, right);
             case "CROSSES_ABOVE" -> new CrossedUpIndicatorRule(left, right);
             case "CROSSES_BELOW" -> new CrossedDownIndicatorRule(left, right);
-            default -> throw new IllegalArgumentException("Unknown operator: " + condition.operator());
+            default -> throw new CustomException(ErrorCode.INVALID_BACKTEST_PARAMS);
         };
     }
 
@@ -142,7 +140,6 @@ public class Ta4jHelperService {
             return indicatorCache.get(key);
         }
 
-        Num indicatorOne = series.getBar(0).getClosePrice().numOf(1); // 1.0에 해당하는 Num
 
         Indicator<Num> indicator = switch (operand.type()) {
             case "price" -> createPriceIndicator(operand.priceField(), series);
@@ -161,7 +158,7 @@ public class Ta4jHelperService {
                 Num constValue = series.getBar(0).getClosePrice().numOf(operand.constantValue());
                 yield new ConstantIndicator<>(series, constValue);
             }
-            default -> throw new IllegalArgumentException("Unknown operand type: " + operand.type());
+            default -> throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         };
 
         indicatorCache.put(key, indicator);
@@ -176,7 +173,7 @@ public class Ta4jHelperService {
             case "Low" -> new LowPriceIndicator(series);
             case "Volume" -> new VolumeIndicator(series, 0);
             case "Close" -> new ClosePriceIndicator(series);
-            default -> throw new IllegalArgumentException("Unknown priceField: " + field);
+            default -> throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         };
     }
 
@@ -266,7 +263,7 @@ public class Ta4jHelperService {
                 int adxLength = ((Number) params.get("length")).intValue(); // 보통 14
                 return new ADXIndicator(series, adxLength);
             default:
-                throw new IllegalArgumentException("Unknown indicator code: " + code);
+                throw new CustomException(ErrorCode.BACKTEST_INDICATOR_NOT_FOUND);
         }
     }
 
@@ -319,30 +316,28 @@ public class Ta4jHelperService {
 
     private void validateOperand(StrategyOperand operand) {
         if (operand.type() == null) {
-            throw new IllegalArgumentException("Operand 'type' must not be null.");
+            throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         }
 
         switch (operand.type()) {
             case "price":
                 if (operand.priceField() == null) {
-                    throw new IllegalArgumentException("Operand of type 'price' must have a non-null 'priceField'.");
+                    throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
                 }
+
                 break;
             case "indicator":
-                if (operand.indicatorCode() == null) {
-                    throw new IllegalArgumentException("Operand of type 'indicator' must have a non-null 'indicatorCode'.");
-                }
-                if (operand.params() == null) {
-                    throw new IllegalArgumentException("Operand of type 'indicator' must have non-null 'params'.");
+                if (operand.indicatorCode() == null || operand.params() == null) {
+                    throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
                 }
                 break;
             case "const":
                 if (operand.constantValue() == null) {
-                    throw new IllegalArgumentException("Operand of type 'const' must have a non-null 'constantValue'.");
+                    throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Unknown operand type: " + operand.type());
+                throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         }
     }
 }

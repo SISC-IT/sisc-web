@@ -18,6 +18,14 @@ public enum ErrorCode {
 
   INVALID_BACKTEST_JSON_PARAMS(HttpStatus.BAD_REQUEST, "유효하지 않은 paramsJson 요청값 입니다."),
 
+  INVALID_BACKTEST_PARAMS(HttpStatus.BAD_REQUEST, "유효하지 않은 백테스트 파라미터입니다."),
+
+  BACKTEST_INDICATOR_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원하지 않는 보조지표입니다."),
+
+  BACKTEST_OPERAND_INVALID(HttpStatus.BAD_REQUEST, "전략 피연산자(Operand) 설정이 올바르지 않습니다."),
+
+  BACKTEST_EXECUTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "백테스트 실행 중 오류가 발생했습니다."),
+
   BACKTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 백테스트가 존재하지 않습니다."),
 
   BACKTEST_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "백테스트 소유자가 아닙니다."),
@@ -25,6 +33,8 @@ public enum ErrorCode {
   BACKTEST_TEMPLATE_MISMATCH(HttpStatus.BAD_REQUEST, "백테스트 템플릿이 일치하지 않습니다."),
 
   BACKTEST_METRICS_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 백테스트 결과 정보가 존재하지 않습니다."),
+
+
 
   // TEMPLATE
 
