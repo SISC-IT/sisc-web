@@ -5,10 +5,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sejongisc.backend.backtest.entity.BacktestRun;
-import org.sejongisc.backend.backtest.entity.BacktestStatus;
-import org.sejongisc.backend.template.entity.Template;
-
-import java.time.LocalDate;
 import java.util.List;
 
 
