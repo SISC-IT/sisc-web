@@ -3,15 +3,14 @@ package org.sejongisc.backend.attendance.controller;
 import static org.sejongisc.backend.attendance.util.AuthUserUtil.requireUserId;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.SessionUserResponse;
 import org.sejongisc.backend.attendance.service.SessionUserService;
-import org.sejongisc.backend.attendance.util.AuthUserUtil;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
-import org.sejongisc.backend.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 @RequestMapping("/api/attendance/sessions/users")
+@Tag(
+    name = "세션 유저 API",
+    description = "세션 사용자 관련 API"
+)
 public class SessionUserController {
   private final SessionUserService sessionUserService;
   /**

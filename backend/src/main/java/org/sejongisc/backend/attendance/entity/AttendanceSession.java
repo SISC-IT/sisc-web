@@ -1,14 +1,19 @@
 package org.sejongisc.backend.attendance.entity;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import lombok.*;
-import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
-
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 @Entity
 @Getter
@@ -33,16 +38,4 @@ public class AttendanceSession extends BasePostgresEntity {
 
     @Enumerated(EnumType.STRING)
     private SessionStatus status;
-
-    // 라운드 목록 조회용
-    @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @Builder.Default
-    private List<AttendanceRound> rounds = new ArrayList<>();
-
-    @OneToMany(mappedBy = "attendanceSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @Builder.Default
-    private List<SessionUser> sessionUsers = new ArrayList<>();
-
-
-
 }

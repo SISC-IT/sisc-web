@@ -4,28 +4,32 @@ import static org.sejongisc.backend.attendance.util.AuthUserUtil.requireUserId;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.*;
+import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenResponse;
+import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
+import org.sejongisc.backend.attendance.dto.AttendanceRoundResponse;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
-import org.sejongisc.backend.attendance.service.AttendanceService;
-import org.sejongisc.backend.attendance.util.AuthUserUtil;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/attendance/round")
+@RequestMapping("/api/attendance")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(
-    name = "출석 라운드(Attendance Round) API",
+    name = "출석 라운드 API",
     description = "출석 라운드(주차별 회차) 생성, 조회, 수정, 삭제 및 출석 체크인 관련 API"
 )
 public class AttendanceRoundController {
@@ -100,7 +104,6 @@ public class AttendanceRoundController {
         return ResponseEntity.ok(response);
     }
 
-
     /**
      * 라운드 삭제 (관리자/OWNER)
      * DELETE /api/attendance/rounds/{roundId}
@@ -117,6 +120,4 @@ public class AttendanceRoundController {
         attendanceRoundService.deleteRound(roundId, userId);
         return ResponseEntity.noContent().build();
     }
-
-
 }
