@@ -68,7 +68,7 @@ public class AttendanceSessionController {
   @Operation(
       summary = "세션 상세 조회",
       description = """
-          ## 인증(JWT): **필요없음**
+          ## 인증(JWT): **필요**
           
           ## 요청 파라미터 ( `sessionId` )
           

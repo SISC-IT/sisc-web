@@ -108,6 +108,10 @@ public class AttendanceRoundService {
   @Transactional(readOnly = true)
   public AttendanceRound verifyQrTokenAndGetRound(String qrToken) {
     // 토큰 파싱을 위해 roundId 먼저 뽑고 → 라운드 가져온 뒤 secret으로 검증
+    if (qrToken == null || qrToken.isBlank()) {
+      throw new CustomException(ErrorCode.QR_TOKEN_MALFORMED);
+    }
+
     String[] parts = qrToken.split(":");
     if (parts.length != 3) throw new CustomException(ErrorCode.QR_TOKEN_MALFORMED);
 

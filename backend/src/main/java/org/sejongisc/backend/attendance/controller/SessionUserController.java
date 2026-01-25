@@ -31,19 +31,18 @@ import org.springframework.web.bind.annotation.RestController;
     description = "세션 사용자 관련 API"
 )
 public class SessionUserController {
+
   private final SessionUserService sessionUserService;
+
   /**
-   * 세션에 사용자 추가 (관리자용)
-   * - 사용자를 세션에 추가
-   * - 중복 참여 방지
-   * - 자동으로 이전 라운드들에 결석 처리
+   * 세션에 사용자 추가 (관리자용) - 사용자를 세션에 추가 - 중복 참여 방지 - 자동으로 이전 라운드들에 결석 처리
    */
   @Operation(
       summary = "세션에 사용자 추가",
       description = """
-                ## 인증(JWT): **필요**
-
-                """
+          ## 인증(JWT): **필요**
+          
+          """
   )
   @PostMapping("/{sessionId}/users")
   public ResponseEntity<SessionUserResponse> addUserToSession(
@@ -52,61 +51,45 @@ public class SessionUserController {
       @AuthenticationPrincipal CustomUserDetails userDetails) {
 
     UUID adminUserId = requireUserId(userDetails);
-
-    SessionUserResponse response = sessionUserService.addUserToSession(sessionId,userId,adminUserId);
-
-
+    SessionUserResponse response = sessionUserService.addUserToSession(sessionId, userId, adminUserId);
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
 
   /**
-   * 세션에서 사용자 제거 (관리자용)
-   * - 사용자를 세션에서 제거
-   * - 해당 사용자의 모든 출석 기록도 함께 삭제
+   * 세션에서 사용자 제거 (관리자용) - 사용자를 세션에서 제거 - 해당 사용자의 모든 출석 기록도 함께 삭제
    */
   @Operation(
       summary = "세션에서 사용자 제거",
       description = """
-                ## 인증(JWT): **필요**
-
-                """
+          ## 인증(JWT): **필요**
+          
+          """
   )
   @DeleteMapping("/{sessionId}/users/{userId}")
   public ResponseEntity<Void> removeUserFromSession(
       @PathVariable UUID sessionId,
       @PathVariable UUID userId,
       @AuthenticationPrincipal CustomUserDetails userDetails) {
-    log.info("세션에서 사용자 제거: 세션ID={}, 사용자ID={}", sessionId, userId);
     UUID adminUserId = requireUserId(userDetails);
-
     sessionUserService.removeUserFromSession(sessionId, userId, adminUserId);
-
-    log.info("세션에서 사용자 제거 완료: 세션ID={}, 사용자ID={}", sessionId, userId);
-
     return ResponseEntity.noContent().build();
   }
 
   /**
-   * 세션 참여자 조회
-   * - 세션에 참여 중인 모든 사용자 목록
-   * - 참여 순서대로 정렬
+   * 세션 참여자 조회 - 세션에 참여 중인 모든 사용자 목록 - 참여 순서대로 정렬
    */
   @Operation(
       summary = "세션 참여자 조회",
       description = """
-                ## 인증(JWT): **필요**
-
-                """
+          ## 인증(JWT): **필요**
+          
+          """
   )
   @GetMapping("/{sessionId}/users")
-  public ResponseEntity<List<SessionUserResponse>> getSessionUsers(@PathVariable UUID sessionId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-    log.info("세션 참여자 조회: 세션ID={}", sessionId);
+  public ResponseEntity<List<SessionUserResponse>> getSessionUsers(@PathVariable UUID sessionId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
     UUID adminUserId = requireUserId(userDetails);
-
     List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId, adminUserId);
-
-    log.info("세션 참여자 조회 완료: 세션ID={}, 참여자 수={}", sessionId, users.size());
-
     return ResponseEntity.ok(users);
   }
 
