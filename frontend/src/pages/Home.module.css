@@ -114,16 +114,9 @@
     font-size: 24px;
   }
 
-  .coin3 {
-    width: 220px;
-  }
-
-  .coin4 {
-    width: 170px;
-  }
-
-  .coin5 {
-    width: 190px;
+  /* 태블릿에서 코인 이미지 숨김 */
+  .imgBox {
+    display: none;
   }
 }
 
@@ -149,35 +142,8 @@
     margin-top: 20px;
   }
 
+  /* 데스크톱에서 코인 이미지 숨김 */
   .imgBox {
-    position: absolute;
-    width: 450px;
-    height: 500px;
-    margin-top: 0;
-    top: 50%;
-    right: 200px;
-    left: auto;
-    transform: translateY(-50%);
-  }
-
-  .coin3 {
-    width: 269px;
-    top: 0;
-    left: 50%;
-    transform: translateX(-70%);
-  }
-
-  .coin4 {
-    width: 200px;
-    left: 50%;
-    top: 260px;
-    transform: translateX(0%);
-  }
-
-  .coin5 {
-    width: 241px;
-    top: 100px;
-    left: 50%;
-    transform: translateX(-20%);
+    display: none;
   }
 }
