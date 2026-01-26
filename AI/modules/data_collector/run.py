@@ -1,4 +1,3 @@
-# AI/modules/data_collector/run.py
 import sys
 import os
 import argparse
@@ -26,6 +25,8 @@ from AI.modules.data_collector.macro_data import MacroDataCollector
 from AI.modules.data_collector.crypto_data import CryptoDataCollector
 from AI.modules.data_collector.index_data import IndexDataCollector
 from AI.modules.data_collector.event_data import EventDataCollector
+from AI.modules.data_collector.market_breadth_data import MarketBreadthCollector
+from AI.modules.data_collector.market_breadth_stats import MarketBreadthStatsCollector
 
 def get_stock_tickers(db_name="db"):
     """
@@ -64,12 +65,37 @@ def main():
     parser.add_argument("--skip-macro", action="store_true", help="거시경제 수집 Skip")
     parser.add_argument("--skip-crypto", action="store_true", help="암호화폐 수집 Skip")
     parser.add_argument("--skip-event", action="store_true", help="이벤트 데이터 수집 Skip")
-    
+    parser.add_argument("--skip-breadth", action="store_true", help="시장 폭(ETF) 데이터 수집 Skip")
+    parser.add_argument("--skip-stats", action="store_true", help="시장 통계(NH-NL) 계산 Skip")
+
     parser.add_argument("--repair", action="store_true", help="데이터 누락 복구 모드 (전체 기간 재수집)")
+    
+    # 단독 실행 모드 옵션
     parser.add_argument("--event-only", action="store_true", help="이벤트 데이터만 수집 (나머지 Skip)")
+    parser.add_argument("--market-breadth-only", action="store_true", help="시장 폭(ETF) 데이터만 수집 (나머지 Skip)")
+    parser.add_argument("--stats-only", action="store_true", help="시장 통계 계산만 수행 (나머지 Skip)")
     
     args = parser.parse_args()
 
+    # -------------------------------------------------------
+    # [Only 모드 로직 처리]
+    # 특정 모드가 켜지면 나머지 skip 옵션을 강제로 True로 설정
+    # -------------------------------------------------------
+    
+    # 1. Stats Only
+    if args.stats_only:
+        args.skip_price = True
+        args.skip_index = True
+        args.skip_info = True
+        args.skip_fund = True
+        args.skip_macro = True
+        args.skip_crypto = True
+        args.skip_event = True
+        args.skip_breadth = True
+        args.skip_stats = False # 통계만 실행
+        print(">> [Mode] Market Stats Calculation Only 모드")
+    
+    # 2. Event Only
     if args.event_only:
         args.skip_price = True
         args.skip_index = True
@@ -77,8 +103,23 @@ def main():
         args.skip_fund = True
         args.skip_macro = True
         args.skip_crypto = True
+        args.skip_breadth = True
+        args.skip_stats = True  # [수정] 통계 계산도 Skip 해야 함
         args.skip_event = False
         print(">> [Mode] Event Data Only 모드로 실행합니다.")
+
+    # 3. Market Breadth Only (ETF Sector Returns)
+    if args.market_breadth_only:
+        args.skip_price = True
+        args.skip_index = True
+        args.skip_info = True
+        args.skip_fund = True
+        args.skip_macro = True
+        args.skip_crypto = True
+        args.skip_event = True
+        args.skip_stats = True  # [수정] 통계 계산도 Skip 해야 함
+        args.skip_breadth = False
+        print(">> [Mode] Market Breadth Only 모드로 실행합니다.")
 
     print(f"\n========================================================")
     print(f" [SISC Data Collector] 통합 수집 시작 ({datetime.now()})")
@@ -86,14 +127,19 @@ def main():
 
     start_time = time.time()
 
-    # 1. 주식 종목 선정
-    if args.tickers:
-        stock_tickers = args.tickers
-    else:
-        stock_tickers = get_stock_tickers(args.db)
+    # 1. 주식 종목 선정 (Price, Info, Fund, Event 단계에서만 필요)
+    # Stats 단계는 내부 데이터만 쓰므로 티커 리스트 불필요
+    need_stock_tickers = not (args.skip_price and args.skip_info and args.skip_fund and args.skip_event)
     
-    if not args.event_only:
+    stock_tickers = []
+    if need_stock_tickers:
+        if args.tickers:
+            stock_tickers = args.tickers
+        else:
+            stock_tickers = get_stock_tickers(args.db)
         print(f">> 타겟 주식 종목 수: {len(stock_tickers)}개")
+    else:
+        print(">> 개별 주식 티커 조회를 건너뜁니다.")
 
     # -------------------------------------------------------
     # 2. 순차적 데이터 수집 실행
@@ -159,16 +205,29 @@ def main():
         try:
             print("\n>>> [Step 7] 이벤트 일정(Event Data) 업데이트")
             collector = EventDataCollector(db_name=args.db)
-            
-            # A. 거시경제 일정 (repair 모드일 때 API 강제 호출)
             collector.update_macro_events(force_update=args.repair)
-            
-            # B. 기업 실적 발표일 (주식 종목 대상)
             if stock_tickers:
                 collector.update_earnings_dates(stock_tickers)
-                
         except Exception as e:
             print(f"[Error] Event Data 수집 중단: {e}")
+
+    # (8) 시장 폭 및 섹터 데이터 (Market Breadth - Sector Returns)
+    if not args.skip_breadth:
+        try:
+            print("\n>>> [Step 8] 시장 폭 및 섹터 데이터(Sector Returns) 업데이트")
+            collector = MarketBreadthCollector(db_name=args.db)
+            collector.run(repair_mode=args.repair)
+        except Exception as e:
+            print(f"[Error] Sector Data 수집 중단: {e}")
+
+    # (9) 시장 통계 계산 (Market Breadth Stats - Internal Aggregation)
+    if not args.skip_stats:
+        try:
+            print("\n>>> [Step 9] 시장 통계(NH-NL, MA200%) 계산 및 저장")
+            collector = MarketBreadthStatsCollector(db_name=args.db)
+            collector.run(repair_mode=args.repair)
+        except Exception as e:
+            print(f"[Error] Market Stats 계산 중단: {e}")
 
     elapsed = time.time() - start_time
     print(f"\n========================================================")

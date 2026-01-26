@@ -7,6 +7,8 @@ from .macro_data import MacroDataCollector
 from .crypto_data import CryptoDataCollector
 from .index_data import IndexDataCollector
 from .event_data import EventDataCollector
+from .market_breadth_data import MarketBreadthCollector
+from .market_breadth_stats import MarketBreadthStatsCollector
 # from .news_data import NewsDataCollector  # 뉴스 모듈 구현 시 주석 해제
 
 __all__ = [
@@ -17,5 +19,7 @@ __all__ = [
     "CryptoDataCollector"
     "IndexDataCollector",
     "EventDataCollector",
+    "MarketBreadthCollector",
+    "MarketBreadthStatsCollector",
     # "NewsDataCollector",  # 뉴스 모듈 구현 시 주석 해제
 ]

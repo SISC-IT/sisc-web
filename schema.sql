@@ -95,23 +95,31 @@ CREATE TABLE "company_fundamentals" (
     "roe" numeric(18, 6),              -- 자기자본이익률 (ROE)
     "debt_ratio" numeric(18, 6),       -- 부채비율
     "operating_cash_flow" numeric(30, 6), -- 영업활동현금흐름
+    "interest_coverage" numeric(10, 2);,  -- 이자보상배율
     CONSTRAINT "company_fundamentals_pkey" PRIMARY KEY("ticker","date")
 );
 
 ----------------------------------------------------------------------
--- 5. market_breadth
---    - 시장의 전반적인 건강도(심리/과열도)를 측정하는 지표 저장
+-- 5. Market Breadth Stats
+--    - 전 종목 대상 통계 데이터 저장
+--    - NH-NL (신고가-신저가), MA200 상회 비율 등
 ----------------------------------------------------------------------
-CREATE TABLE "market_breadth" (
-    "date" date PRIMARY KEY,           -- 기준 날짜
-    "advancing_issues" integer,        -- 상승 종목 수
-    "declining_issues" integer,        -- 하락 종목 수
-    "advance_decline_ratio" numeric(10, 4), -- AD 라인 비율
-    "new_highs" integer,               -- 52주 신고가 종목 수
-    "new_lows" integer,                -- 52주 신저가 종목 수
-    "above_ma200_pct" numeric(5, 2),   -- 200일 이동평균선 상회 종목 비중
-    "fear_greed_index" integer         -- 공포와 탐욕 지수
+CREATE TABLE IF NOT EXISTS "market_breadth" (
+    "date" date PRIMARY KEY,
+    
+    -- 1. 신고가 - 신저가 지수 (Net High - Net Low)
+    -- 52주 신고가 종목 수 - 52주 신저가 종목 수
+    "nh_nl_index" integer, 
+    
+    -- 2. 200일 이동평균선 상회 비율 (Market Momemtum)
+    -- (현재가 > MA200 인 종목 수) / 전체 종목 수 * 100
+    "ma200_pct" numeric(5, 2), 
+    
+    "created_at" timestamp DEFAULT now()
 );
+
+-- 인덱스
+CREATE INDEX IF NOT EXISTS "idx_market_breadth_date" ON "market_breadth" ("date");
 
 ----------------------------------------------------------------------
 -- 6. news_sentiment
@@ -220,6 +228,8 @@ CREATE TABLE IF NOT EXISTS "event_calendar" (
     "event_type" varchar(50) NOT NULL, -- 이벤트 타입 ('FOMC', 'CPI', 'EARNINGS', 'GDP' 등)
     "ticker" varchar(20),              -- 관련 티커 (거시지표는 'MACRO' 저장)
     "description" text,                -- 상세 설명 (예: 'FOMC Rate Decision', 'AAPL Earnings')
+    "forecast" numeric(18, 5), -- 시장 예측치 (Consensus)
+    "actual" numeric(18, 5), -- 실제 발표치
     "created_at" timestamp DEFAULT now(), -- 레코드 생성 시각
     
     -- 중복 방지: 같은 날짜, 같은 타입, 같은 대상(티커)의 이벤트는 중복될 수 없음
@@ -227,7 +237,24 @@ CREATE TABLE IF NOT EXISTS "event_calendar" (
 );
 
 ----------------------------------------------------------------------
--- 12. neon_auth.users_sync
+-- 12. sector_returns
+--    - stock_info의 'sector'와 매핑되는 ETF의 일별 수익률 저장
+--    - Wide Format이 아닌 Long Format (Date, Sector) 구조
+----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "sector_returns" (
+    "date" date NOT NULL,               -- 기준 일자
+    "sector" varchar(100) NOT NULL,     -- 섹터명 (stock_info의 sector와 일치, 예: 'Technology')
+    "etf_ticker" varchar(20),           -- 대표 ETF 티커 (예: 'XLK')
+    "return" numeric(10, 6),            -- 일일 등락률 (0.0123 = 1.23%)
+    "close" numeric(10, 2),             -- ETF 종가 (참고용)
+    "created_at" timestamp DEFAULT now(),
+    
+    -- PK: 날짜와 섹터의 조합은 유일해야 함
+    CONSTRAINT "pk_sector_returns" PRIMARY KEY ("date", "sector")
+);
+
+----------------------------------------------------------------------
+-- 13. neon_auth.users_sync
 --    - 인증 서비스(Neon/Clerk 등)와 동기화된 사용자 데이터 정보
 ----------------------------------------------------------------------
 CREATE TABLE "neon_auth"."users_sync" (

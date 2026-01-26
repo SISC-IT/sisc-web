@@ -1,4 +1,4 @@
-# AI/modules/data_collector/fundamentals_data.py
+#AI/modules/data_collector/company_fundamentals_data.py
 import sys
 import os
 import yfinance as yf
@@ -19,7 +19,7 @@ from AI.libs.database.connection import get_db_conn
 class FundamentalsDataCollector:
     """
     기업의 재무제표(손익계산서, 대차대조표, 현금흐름표)를 수집하고
-    주요 퀀트 투자 지표(PER, PBR, ROE 등)를 계산하여 DB에 저장하는 클래스
+    주요 퀀트 투자 지표(PER, PBR, ROE, 이자보상배율 등)를 계산하여 DB에 저장하는 클래스
     """
 
     def __init__(self, db_name: str = "db"):
@@ -41,15 +41,12 @@ class FundamentalsDataCollector:
         stock = yf.Ticker(ticker)
         
         # 1. 재무 데이터 가져오기 (분기 기준)
-        # - financials: 손익계산서
-        # - balance_sheet: 대차대조표
-        # - cashflow: 현금흐름표 (신규 추가)
         try:
             fin_df = stock.quarterly_financials.T
             bal_df = stock.quarterly_balance_sheet.T
             cash_df = stock.quarterly_cashflow.T
         except Exception as e:
-            print(f"   [{ticker}] yfinance 데이터 로드 실패: {e}")
+            # print(f"   [{ticker}] yfinance 데이터 로드 실패: {e}")
             return pd.DataFrame()
 
         if fin_df.empty or bal_df.empty:
@@ -61,13 +58,10 @@ class FundamentalsDataCollector:
         cash_df.index = pd.to_datetime(cash_df.index)
 
         # 3. 데이터프레임 병합 (Inner Join)
-        # 손익계산서와 대차대조표가 모두 있는 날짜를 기준으로 병합
         merged_df = fin_df.join(bal_df, lsuffix='_fin', rsuffix='_bal', how='inner')
-        # 현금흐름표는 없을 수도 있으므로 Left Join
         merged_df = merged_df.join(cash_df, rsuffix='_cash', how='left')
 
         # 4. 주가 데이터 로드 (PER/PBR 계산용)
-        # 재무제표 날짜 범위만큼의 주가 데이터를 한 번에 가져옴
         if not merged_df.empty:
             start_date = merged_df.index.min() - timedelta(days=5)
             end_date = merged_df.index.max() + timedelta(days=5)
@@ -93,42 +87,49 @@ class FundamentalsDataCollector:
             operating_cash_flow = self.get_safe_value(row, ['Operating Cash Flow', 'Total Cash From Operating Activities'])
             shares_issued = self.get_safe_value(row, ['Share Issued', 'Ordinary Shares Number'])
 
+            # --- [추가] 이자보상배율 계산을 위한 항목 ---
+            op_income = self.get_safe_value(row, ['Operating Income', 'EBIT'])
+            int_expense = self.get_safe_value(row, ['Interest Expense', 'Interest Expense Non Operating'])
+
             # --- B. 파생 지표 계산 ---
             
-            # 1. ROE (자기자본이익률) = 당기순이익 / 자본총계
+            # 1. ROE (자기자본이익률)
             roe = None
             if net_income is not None and equity is not None and equity != 0:
                 roe = net_income / equity
 
-            # 2. 부채비율 (Debt Ratio) = 부채총계 / 자본총계
+            # 2. 부채비율 (Debt Ratio)
             debt_ratio = None
             if total_liabilities is not None and equity is not None and equity != 0:
                 debt_ratio = total_liabilities / equity
 
-            # 3. 주가 기반 지표 (PER, PBR)
-            # 재무제표 기준일의 종가(Close)를 찾음 (휴일일 경우 전날 데이터 탐색)
+            # 3. [신규] 이자보상배율 (Interest Coverage) = 영업이익 / |이자비용|
+            interest_coverage = None
+            if op_income is not None and int_expense is not None:
+                abs_int = abs(int_expense)
+                if abs_int > 0:
+                    interest_coverage = op_income / abs_int
+
+            # 4. 주가 기반 지표 (PER, PBR)
             close_price = None
             if not hist_df.empty:
-                # 해당 날짜 혹은 가장 가까운 과거 날짜의 주가 찾기
                 try:
-                    # asof는 정렬된 인덱스에서 근사값을 찾음
                     target_ts = pd.Timestamp(date_val)
                     if target_ts in hist_df.index:
                         close_price = float(hist_df.loc[target_ts]['Close'])
                     else:
-                         # 정확한 날짜가 없으면 해당 날짜 이전의 가장 최근 데이터 사용
                         idx = hist_df.index.get_indexer([target_ts], method='pad')
                         if idx[0] != -1:
                             close_price = float(hist_df.iloc[idx[0]]['Close'])
                 except:
                     close_price = None
 
-            # PER (주가수익비율) = 주가 / EPS
+            # PER
             per = None
             if close_price is not None and eps is not None and eps != 0:
                 per = close_price / eps
 
-            # PBR (주가순자산비율) = 주가 / BPS (BPS = 자본 / 주식수)
+            # PBR
             pbr = None
             if close_price is not None and equity is not None and shares_issued is not None and shares_issued != 0:
                 bps = equity / shares_issued
@@ -143,11 +144,12 @@ class FundamentalsDataCollector:
                 total_liabilities,
                 equity,
                 eps,
-                per,      # DB: per
-                pbr,      # DB: pbr (신규)
-                roe,      # DB: roe (신규)
-                debt_ratio, # DB: debt_ratio (신규)
-                operating_cash_flow # DB: operating_cash_flow (신규)
+                per,
+                pbr,
+                roe,
+                debt_ratio,
+                interest_coverage,  # [추가됨]
+                operating_cash_flow
             ))
 
         return processed_data
@@ -157,17 +159,19 @@ class FundamentalsDataCollector:
         처리된 데이터를 DB에 저장(Upsert)합니다.
         """
         if not data:
-            print(f"   [{ticker}] 저장할 유효한 데이터가 없습니다.")
+            # print(f"   [{ticker}] 저장할 유효한 데이터가 없습니다.")
             return
 
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
 
         try:
+            # [SQL 수정] interest_coverage 컬럼 추가
             insert_query = """
-                INSERT INTO public.company_fundamentals (
+                INSERT INTO public.financial_statements (
                     ticker, date, revenue, net_income, total_assets, 
-                    total_liabilities, equity, eps, per, pbr, roe, debt_ratio, operating_cash_flow
+                    total_liabilities, equity, eps, per, pbr, roe, debt_ratio, 
+                    interest_coverage, operating_cash_flow
                 )
                 VALUES %s
                 ON CONFLICT (ticker, date) 
@@ -182,12 +186,13 @@ class FundamentalsDataCollector:
                     pbr = EXCLUDED.pbr,
                     roe = EXCLUDED.roe,
                     debt_ratio = EXCLUDED.debt_ratio,
+                    interest_coverage = EXCLUDED.interest_coverage,
                     operating_cash_flow = EXCLUDED.operating_cash_flow;
             """
             
             execute_values(cursor, insert_query, data)
             conn.commit()
-            print(f"   [{ticker}] {len(data)}건 펀더멘털 데이터 저장 완료.")
+            print(f"   [{ticker}] {len(data)}건 펀더멘털 데이터(이자보상배율 포함) 저장 완료.")
             
         except Exception as e:
             conn.rollback()
@@ -203,7 +208,7 @@ class FundamentalsDataCollector:
         print(f"[Fundamentals] {len(tickers)}개 종목 재무 데이터 업데이트 시작...")
         
         for ticker in tickers:
-            print(f"   [{ticker}] 재무 정보 분석 및 수집 중...")
+            # print(f"   [{ticker}] 재무 정보 분석 및 수집 중...")
             try:
                 data = self.fetch_and_calculate_metrics(ticker)
                 self.save_to_db(ticker, data)
@@ -230,7 +235,6 @@ if __name__ == "__main__":
     if args.all:
         try:
             cur = conn.cursor()
-            # 가격 데이터가 있는 활성 종목을 기준으로 업데이트
             cur.execute("SELECT DISTINCT ticker FROM public.price_data")
             rows = cur.fetchall()
             target_tickers = [r[0] for r in rows]
