@@ -349,7 +349,7 @@ public class BettingService {
                             TransactionReason.BETTING_REWARD,
                             round.getBetRoundID(),
                             AccountEntry.credit(poolAccount, (long) reward),
-                            AccountEntry.credit(userAccount, (long) reward)
+                            AccountEntry.debit(userAccount, (long) reward)
                         );
                         totalStake += reward;
                     }
