@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
 
 import java.util.UUID;
 
@@ -29,14 +31,16 @@ public class Account extends BasePostgresEntity {
   @Column(columnDefinition = "VARCHAR(255)", nullable = false)
   private AccountType type;
 
-  @Builder.Default
   @Column(nullable = false)
-  private Long balance = 0L;
+  private long balance;
 
   @Version
   private Long version;
 
   public void updateBalance(Long amount) {
+    if (amount == null) {
+      throw new CustomException(ErrorCode.INVALID_POINT_AMOUNT);
+    }
     this.balance += amount;
   }
 }
