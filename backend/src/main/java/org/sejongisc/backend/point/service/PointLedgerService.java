@@ -1,6 +1,7 @@
 package org.sejongisc.backend.point.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.dto.AccountEntry;
@@ -16,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PointLedgerService {
@@ -59,5 +61,7 @@ public class PointLedgerService {
         .build()
       );
     }
+
+    log.info("포인트 거래 완료: reason={}, refId={}", reason, refId);
   }
 }

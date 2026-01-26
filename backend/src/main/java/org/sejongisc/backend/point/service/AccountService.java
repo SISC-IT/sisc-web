@@ -1,6 +1,7 @@
 package org.sejongisc.backend.point.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.entity.Account;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService {
@@ -40,7 +42,8 @@ public class AccountService {
    */
   @Transactional
   public Account createUserAccount(UUID userId) {
-      return saveAccount(userId, AccountName.USER_ACCOUNT, AccountType.USER);
+    log.info("사용자 계정 생성: userId={}", userId);
+    return saveAccount(userId, AccountName.USER_ACCOUNT, AccountType.USER);
   }
 
   /**
