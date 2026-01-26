@@ -5,6 +5,7 @@ import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.auth.service.EmailService;
 import org.sejongisc.backend.auth.service.OauthUnlinkService;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
+import org.sejongisc.backend.common.annotation.OptimisticRetry;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
 import org.sejongisc.backend.point.dto.AccountEntry;
 import org.sejongisc.backend.point.entity.Account;
@@ -58,6 +59,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @OptimisticRetry
     public SignupResponse signUp(SignupRequest dto) {
         log.debug("[SIGNUP] request: {}", dto.getEmail());
         if (userRepository.existsByEmail(dto.getEmail())) {
@@ -387,6 +389,6 @@ public class UserServiceImpl implements UserService {
             AccountEntry.debit(userAccount, 100L)
         );
 
-        log.info("[SIGNUP_COMPLETE] User: {}, Account created and 100P issued", user.getEmail());
+        log.info("회원가입 완료: 회원가입 및 초기 포인트 지급이 완료되었습니다. User: {}", user.getEmail());
     }
 }
