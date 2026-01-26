@@ -22,13 +22,15 @@ public class Account extends BasePostgresEntity {
   private UUID ownerId;
 
   @Enumerated(EnumType.STRING)
-  @Column(columnDefinition = "VARCHAR(255)")
+  @Column(columnDefinition = "VARCHAR(255)", nullable = false)
   private AccountName accountName;
 
   @Enumerated(EnumType.STRING)
-  @Column(columnDefinition = "VARCHAR(255)")
+  @Column(columnDefinition = "VARCHAR(255)", nullable = false)
   private AccountType type;
 
+  @Builder.Default
+  @Column(nullable = false)
   private Long balance = 0L;
 
   @Version

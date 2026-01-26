@@ -20,8 +20,9 @@ public class PointTransaction extends BasePostgresEntity {
   private UUID pointTransactionId;
 
   @Enumerated(EnumType.STRING)
-  @Column(columnDefinition = "VARCHAR(255)")
+  @Column(columnDefinition = "VARCHAR(255)", nullable = false)
   private TransactionReason reason;
 
+  @Column(nullable = false)
   private UUID refId;
 }

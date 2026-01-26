@@ -20,14 +20,17 @@ public class LedgerEntry extends BasePostgresEntity {
   private UUID entryId;
 
   @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "transaction_id", nullable = false)
   private PointTransaction transaction;
 
   @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "account_id", nullable = false)
   private Account account;
 
+  @Column(nullable = false)
   private Long amount;
 
   @Enumerated(EnumType.STRING)
-  @Column(columnDefinition = "VARCHAR(255)")
+  @Column(columnDefinition = "VARCHAR(255)", nullable = false)
   private EntryType entryType;
 }
