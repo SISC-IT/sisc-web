@@ -25,7 +25,7 @@ if project_root not in sys.path:
 
 from AI.libs.database.connection import get_db_conn
 from AI.modules.signal.core.data_loader import DataLoader
-from AI.modules.signal.core.features import add_technical_indicators
+from AI.modules.features.legacy.technical_features import add_technical_indicators
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  추론 함수
@@ -34,9 +34,9 @@ def run_inference(ticker: str, model_type: str = "transformer") -> float:
     print(f"=== [Inference] {ticker} 예측 시작 ===")
 
     # 1. 경로 설정 및 파일 확인
-    base_dir = os.path.join(project_root, "AI", "data", "weights", model_type)
-    model_path = os.path.join(base_dir, "universal_transformer.keras")
-    scaler_path = os.path.join(base_dir, "universal_scaler.pkl")
+    base_dir = os.path.join(project_root, "AI", "data", "weights", "prod" , model_type)
+    model_path = os.path.join(base_dir, "universal_transformer_prod.keras")
+    scaler_path = os.path.join(base_dir, "universal_scaler__prod.pkl")
     
     if not os.path.exists(model_path) or not os.path.exists(scaler_path):
         print(f"[Err] 학습된 모델이나 스케일러가 없습니다.")

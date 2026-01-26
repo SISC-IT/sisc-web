@@ -19,7 +19,7 @@ if project_root not in sys.path:
 
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models import get_model
-from AI.modules.signal.core.features import add_technical_indicators
+from AI.modules.features.legacy.technical_features import add_technical_indicators
 from AI.modules.trader.strategies.portfolio_logic import calculate_portfolio_allocation
 
 class AIPortfolioStrategy(bt.Strategy):
