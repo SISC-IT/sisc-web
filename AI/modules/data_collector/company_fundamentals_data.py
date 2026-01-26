@@ -19,7 +19,8 @@ from AI.libs.database.connection import get_db_conn
 class FundamentalsDataCollector:
     """
     기업의 재무제표(손익계산서, 대차대조표, 현금흐름표)를 수집하고
-    주요 퀀트 투자 지표(PER, PBR, ROE, 이자보상배율 등)를 계산하여 DB에 저장하는 클래스
+    주요 퀀트 투자 지표(ROE, 부채비율, 이자보상배율 등)를 계산하여 DB에 저장하는 클래스
+    per과 pbr은 MarketDataCollector에서 계산하여 저장됨(중복 방지)
     """
 
     def __init__(self, db_name: str = "db"):
@@ -46,7 +47,7 @@ class FundamentalsDataCollector:
             bal_df = stock.quarterly_balance_sheet.T
             cash_df = stock.quarterly_cashflow.T
         except Exception as e:
-            # print(f"   [{ticker}] yfinance 데이터 로드 실패: {e}")
+            print(f"[ERROR][{ticker}] yfinance 데이터 로드 실패: {e}")
             return pd.DataFrame()
 
         if fin_df.empty or bal_df.empty:
@@ -60,17 +61,6 @@ class FundamentalsDataCollector:
         # 3. 데이터프레임 병합 (Inner Join)
         merged_df = fin_df.join(bal_df, lsuffix='_fin', rsuffix='_bal', how='inner')
         merged_df = merged_df.join(cash_df, rsuffix='_cash', how='left')
-
-        # 4. 주가 데이터 로드 (PER/PBR 계산용)
-        if not merged_df.empty:
-            start_date = merged_df.index.min() - timedelta(days=5)
-            end_date = merged_df.index.max() + timedelta(days=5)
-            try:
-                hist_df = stock.history(start=start_date, end=end_date)
-            except:
-                hist_df = pd.DataFrame()
-        else:
-            hist_df = pd.DataFrame()
 
         processed_data = []
 
@@ -87,7 +77,7 @@ class FundamentalsDataCollector:
             operating_cash_flow = self.get_safe_value(row, ['Operating Cash Flow', 'Total Cash From Operating Activities'])
             shares_issued = self.get_safe_value(row, ['Share Issued', 'Ordinary Shares Number'])
 
-            # --- [추가] 이자보상배율 계산을 위한 항목 ---
+            # --- 이자보상배율 계산을 위한 항목 ---
             op_income = self.get_safe_value(row, ['Operating Income', 'EBIT'])
             int_expense = self.get_safe_value(row, ['Interest Expense', 'Interest Expense Non Operating'])
 
@@ -103,37 +93,12 @@ class FundamentalsDataCollector:
             if total_liabilities is not None and equity is not None and equity != 0:
                 debt_ratio = total_liabilities / equity
 
-            # 3. [신규] 이자보상배율 (Interest Coverage) = 영업이익 / |이자비용|
+            # 3. 이자보상배율 (Interest Coverage) = 영업이익 / |이자비용|
             interest_coverage = None
             if op_income is not None and int_expense is not None:
                 abs_int = abs(int_expense)
                 if abs_int > 0:
                     interest_coverage = op_income / abs_int
-
-            # 4. 주가 기반 지표 (PER, PBR)
-            close_price = None
-            if not hist_df.empty:
-                try:
-                    target_ts = pd.Timestamp(date_val)
-                    if target_ts in hist_df.index:
-                        close_price = float(hist_df.loc[target_ts]['Close'])
-                    else:
-                        idx = hist_df.index.get_indexer([target_ts], method='pad')
-                        if idx[0] != -1:
-                            close_price = float(hist_df.iloc[idx[0]]['Close'])
-                except:
-                    close_price = None
-
-            # PER
-            per = None
-            if close_price is not None and eps is not None and eps != 0:
-                per = close_price / eps
-
-            # PBR
-            pbr = None
-            if close_price is not None and equity is not None and shares_issued is not None and shares_issued != 0:
-                bps = equity / shares_issued
-                pbr = close_price / bps
 
             processed_data.append((
                 str(ticker),
@@ -143,12 +108,11 @@ class FundamentalsDataCollector:
                 total_assets,
                 total_liabilities,
                 equity,
+                shares_issued,
                 eps,
-                per,
-                pbr,
                 roe,
                 debt_ratio,
-                interest_coverage,  # [추가됨]
+                interest_coverage,
                 operating_cash_flow
             ))
 
@@ -170,7 +134,7 @@ class FundamentalsDataCollector:
             insert_query = """
                 INSERT INTO public.financial_statements (
                     ticker, date, revenue, net_income, total_assets, 
-                    total_liabilities, equity, eps, per, pbr, roe, debt_ratio, 
+                    total_liabilities, equity, shares_issued, eps, roe, debt_ratio, 
                     interest_coverage, operating_cash_flow
                 )
                 VALUES %s
@@ -181,9 +145,8 @@ class FundamentalsDataCollector:
                     total_assets = EXCLUDED.total_assets,
                     total_liabilities = EXCLUDED.total_liabilities,
                     equity = EXCLUDED.equity,
+                    shares_issued = EXCLUDED.shares_issued,
                     eps = EXCLUDED.eps,
-                    per = EXCLUDED.per,
-                    pbr = EXCLUDED.pbr,
                     roe = EXCLUDED.roe,
                     debt_ratio = EXCLUDED.debt_ratio,
                     interest_coverage = EXCLUDED.interest_coverage,

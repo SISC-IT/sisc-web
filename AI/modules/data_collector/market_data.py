@@ -1,8 +1,9 @@
-#AI/modules/data_collector/market_data.py
+# AI/modules/data_collector/market_data.py
 import sys
 import os
 import yfinance as yf
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 from typing import List
 from psycopg2.extras import execute_values
@@ -21,6 +22,7 @@ class MarketDataCollector:
     - yfinance를 사용하여 데이터 수집
     - 수리(Repair) 모드 지원 (누락 데이터 복구)
     - 거래대금(Amount) 자동 계산
+    - 일별 PER/PBR 고속 계산 (Vectorized)
     """
     
     def __init__(self, db_name: str = "db"):
@@ -57,26 +59,79 @@ class MarketDataCollector:
     def fetch_ohlcv(self, ticker: str, start_date: str) -> pd.DataFrame:
         """
         yfinance에서 OHLCV 데이터를 다운로드하고 전처리합니다.
+        (중복 호출 제거 및 벡터 연산 적용)
         """
         try:
+            # 1. 데이터 다운로드
             # auto_adjust=False: Adj Close 별도 확보
             df = yf.download(ticker, start=start_date, progress=False, auto_adjust=False, threads=False)
             
             if df.empty:
                 return pd.DataFrame()
 
-            # MultiIndex 컬럼 평탄화 (yfinance 버전 이슈 대응)
+            # 2. MultiIndex 컬럼 평탄화 (yfinance 버전 이슈 대응)
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
             
-            # 거래대금(Amount) 계산: 종가 * 거래량 (근사치)
-            # yfinance는 원화/달러 여부에 따라 단위가 다르지만, raw value 유지
+            # 3. 거래대금(Amount) 계산: 종가 * 거래량 (근사치)
             if 'Close' in df.columns and 'Volume' in df.columns:
                 df['Amount'] = df['Close'] * df['Volume']
             else:
                 df['Amount'] = 0
 
+            # 4. PER/PBR 계산을 위한 재무 데이터 조회 (최근 1건)
+            #    매일 변하는 주가에 고정된 최근 실적(EPS, BPS)을 적용합니다.
+            conn = get_db_conn(self.db_name)
+            cursor = conn.cursor()
+            
+            equity, shares_issued, eps = None, None, None
+            try:
+                # 가장 최근 확정 실적 조회
+                query = """
+                    SELECT equity, shares_issued, eps 
+                    FROM public.financial_statements 
+                    WHERE ticker = %s 
+                    ORDER BY date DESC LIMIT 1
+                """
+                cursor.execute(query, (ticker,))
+                result = cursor.fetchone()
+                
+                if result:
+                    equity, shares_issued, eps = result
+                    
+                    # [수정] Decimal 타입을 float로 변환 (나눗셈 에러 방지)
+                    if equity is not None: equity = float(equity)
+                    if shares_issued is not None: shares_issued = float(shares_issued)
+                    if eps is not None: eps = float(eps)
+                    
+            except Exception as e:
+                print(f"   [Warning] 재무 데이터 조회 실패 ({ticker}): {e}")
+            finally:
+                cursor.close()
+                conn.close()
+
+            # 5. 벡터 연산으로 PER/PBR 일괄 계산 (반복문 제거로 속도 향상)
+            
+            # PER 계산 (EPS가 유효할 때만 계산)
+            if eps and eps != 0:
+                # df['Close']는 전체 열을 의미하므로 한 번에 계산됩니다.
+                df['per'] = df['Close'] / eps
+            else:
+                df['per'] = None  # 데이터가 없으면 컬럼을 비워둠
+
+            # PBR 계산 (자본/주식수가 유효할 때만 계산)
+            if equity and shares_issued and shares_issued != 0:
+                bps = equity / shares_issued
+                df['pbr'] = df['Close'] / bps
+            else:
+                df['pbr'] = None
+            
+            # 무한대(inf)나 NaN 값 정리 (DB 저장 에러 방지)
+            df.replace([np.inf, -np.inf], None, inplace=True)
+            df = df.where(pd.notnull(df), None)
+
             return df
+
         except Exception as e:
             print(f"   [Error] {ticker} 다운로드 중 에러: {e}")
             return pd.DataFrame()
@@ -88,9 +143,10 @@ class MarketDataCollector:
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
 
+        # [수정됨] 쿼리 컬럼 개수와 VALUES 매핑 일치
         insert_query = """
             INSERT INTO public.price_data (
-                date, ticker, open, high, low, close, volume, adjusted_close, amount
+                date, ticker, open, high, low, close, volume, adjusted_close, amount, per, pbr
             )
             VALUES %s
             ON CONFLICT (date, ticker) DO UPDATE SET
@@ -100,37 +156,48 @@ class MarketDataCollector:
                 close = EXCLUDED.close,
                 volume = EXCLUDED.volume,
                 adjusted_close = EXCLUDED.adjusted_close,
-                amount = EXCLUDED.amount;
+                amount = EXCLUDED.amount,
+                per = EXCLUDED.per,
+                pbr = EXCLUDED.pbr;
         """
-        # repair_mode에서도 기존 값이 수정될 수 있도록 DO UPDATE로 변경하거나,
-        # 원본 보존을 원하면 DO NOTHING을 유지할 수 있음. 
-        # 여기서는 최신 데이터로 갱신하는 DO UPDATE 전략 채택.
 
         try:
             data_to_insert = []
             has_adj = 'Adj Close' in df.columns
+            # DataFrame에 해당 컬럼이 있는지 확인
+            has_per = 'per' in df.columns
+            has_pbr = 'pbr' in df.columns
 
             for index, row in df.iterrows():
                 date_val = index.date()
                 
-                # 안전한 값 추출 (Series일 경우 첫 번째 값 사용)
-                def get_val(col):
-                    val = row.get(col, 0)
+                # 안전한 값 추출 헬퍼 함수
+                def get_val(col, default=0):
+                    val = row.get(col, default)
+                    # Pandas Series 객체인 경우 처리
                     if hasattr(val, 'iloc'):
-                        return float(val.iloc[0])
-                    return float(val) if pd.notnull(val) else 0
+                        val = val.iloc[0]
+                    # None 체크
+                    if val is None or pd.isna(val):
+                        return None
+                    return float(val)
 
-                open_val = get_val('Open')
-                high_val = get_val('High')
-                low_val = get_val('Low')
-                close_val = get_val('Close')
-                vol_val = int(get_val('Volume'))
-                amount_val = get_val('Amount')
-                
+                open_val = get_val('Open') or 0
+                high_val = get_val('High') or 0
+                low_val = get_val('Low') or 0
+                close_val = get_val('Close') or 0
+                vol_val = int(get_val('Volume') or 0)
+                amount_val = get_val('Amount') or 0
                 adj_close_val = get_val('Adj Close') if has_adj else close_val
+                
+                # [중요] 쿼리에 맞춰 per, pbr 값 추가
+                per_val = get_val('per', None) if has_per else None
+                pbr_val = get_val('pbr', None) if has_pbr else None
 
+                # 튜플 순서: date, ticker, open, high, low, close, volume, adj_close, amount, per, pbr
                 data_to_insert.append((
-                    date_val, ticker, open_val, high_val, low_val, close_val, vol_val, adj_close_val, amount_val
+                    date_val, ticker, open_val, high_val, low_val, close_val, 
+                    vol_val, adj_close_val, amount_val, per_val, pbr_val
                 ))
 
             if data_to_insert:

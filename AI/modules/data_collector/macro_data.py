@@ -1,4 +1,4 @@
-#AI/modules/data_collector/macro_data.py
+# AI/modules/data_collector/macro_data.py
 import sys
 import os
 import pandas as pd
@@ -102,7 +102,6 @@ class MacroDataCollector:
                 data = yf.download(ticker, start=start_date, progress=False)
                 if not data.empty:
                     # 'Close' 컬럼만 추출하여 이름 변경
-                    # yfinance 버전 이슈로 인해 MultiIndex 컬럼일 수 있음 처리
                     if isinstance(data.columns, pd.MultiIndex):
                         price_series = data['Close'][ticker]
                     else:
@@ -172,21 +171,33 @@ class MacroDataCollector:
 
         try:
             data_to_insert = []
+            
             for date_idx, row in combined_df.iterrows():
-                # NaN 값을 None(SQL NULL)으로 변환
-                row = row.where(pd.notnull(row), None)
-                
+                # [수정] Numpy 타입을 Python Native Type으로 변환하는 헬퍼 함수
+                def to_py(val):
+                    # NaN 또는 None 체크
+                    if pd.isna(val) or val is None:
+                        return None
+                    # Numpy 숫자 타입이면 .item()으로 변환
+                    if hasattr(val, 'item'):
+                        return val.item()
+                    return float(val)
+
                 data_to_insert.append((
                     date_idx.date(),
-                    row.get('cpi'), row.get('gdp'), row.get('ppi'), row.get('jolt'), row.get('cci'),
-                    row.get('interest_rate'), row.get('trade_balance'),
-                    row.get('core_cpi'), row.get('real_gdp'), row.get('unemployment_rate'), row.get('consumer_sentiment'),
-                    row.get('ff_targetrate_upper'), row.get('ff_targetrate_lower'),
-                    row.get('pce'), row.get('core_pce'),
-                    row.get('tradebalance_goods'), row.get('trade_import'), row.get('trade_export'),
-                    row.get('us10y'), row.get('us2y'), row.get('yield_spread'),
-                    row.get('vix_close'), row.get('dxy_close'),
-                    row.get('wti_price'), row.get('gold_price'), row.get('credit_spread_hy')
+                    to_py(row.get('cpi')), to_py(row.get('gdp')), to_py(row.get('ppi')), 
+                    to_py(row.get('jolt')), to_py(row.get('cci')),
+                    to_py(row.get('interest_rate')), to_py(row.get('trade_balance')),
+                    to_py(row.get('core_cpi')), to_py(row.get('real_gdp')), 
+                    to_py(row.get('unemployment_rate')), to_py(row.get('consumer_sentiment')),
+                    to_py(row.get('ff_targetrate_upper')), to_py(row.get('ff_targetrate_lower')),
+                    to_py(row.get('pce')), to_py(row.get('core_pce')),
+                    to_py(row.get('tradebalance_goods')), to_py(row.get('trade_import')), 
+                    to_py(row.get('trade_export')),
+                    to_py(row.get('us10y')), to_py(row.get('us2y')), to_py(row.get('yield_spread')),
+                    to_py(row.get('vix_close')), to_py(row.get('dxy_close')),
+                    to_py(row.get('wti_price')), to_py(row.get('gold_price')), 
+                    to_py(row.get('credit_spread_hy'))
                 ))
 
             if data_to_insert:

@@ -1,4 +1,4 @@
-# AI/modules/signal/workflows/train_calibrator.py
+#ㄴ AI/modules/signal/workflows/train_calibrator.py
 """
 [Meta-Labeling / Calibration Model Training]
 - Stage 1: Transformer 모델이 예측한 점수(Probability)를 가져옵니다.
@@ -25,7 +25,7 @@ if project_root not in sys.path:
 
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models.PatchTST.architecture import build_transformer_model
-from AI.modules.signal.core.features import add_technical_indicators, add_multi_timeframe_features
+from AI.modules.features.legacy.technical_features import add_technical_indicators, add_multi_timeframe_features
 
 def train_calibrator():
     print("==================================================")

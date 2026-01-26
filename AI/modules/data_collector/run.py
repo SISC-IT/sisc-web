@@ -23,7 +23,6 @@ from AI.modules.data_collector.stock_info_collector import StockInfoCollector
 from AI.modules.data_collector.company_fundamentals_data import FundamentalsDataCollector
 from AI.modules.data_collector.macro_data import MacroDataCollector
 from AI.modules.data_collector.crypto_data import CryptoDataCollector
-from AI.modules.data_collector.index_data import IndexDataCollector
 from AI.modules.data_collector.event_data import EventDataCollector
 from AI.modules.data_collector.market_breadth_data import MarketBreadthCollector
 from AI.modules.data_collector.market_breadth_stats import MarketBreadthStatsCollector
@@ -59,7 +58,6 @@ def main():
     
     # 모듈별 스킵 옵션
     parser.add_argument("--skip-price", action="store_true", help="주식 시세 수집 Skip")
-    parser.add_argument("--skip-index", action="store_true", help="시장 지수 수집 Skip")
     parser.add_argument("--skip-info", action="store_true", help="주식 정보 수집 Skip")
     parser.add_argument("--skip-fund", action="store_true", help="재무제표 수집 Skip")
     parser.add_argument("--skip-macro", action="store_true", help="거시경제 수집 Skip")
@@ -85,7 +83,6 @@ def main():
     # 1. Stats Only
     if args.stats_only:
         args.skip_price = True
-        args.skip_index = True
         args.skip_info = True
         args.skip_fund = True
         args.skip_macro = True
@@ -98,7 +95,6 @@ def main():
     # 2. Event Only
     if args.event_only:
         args.skip_price = True
-        args.skip_index = True
         args.skip_info = True
         args.skip_fund = True
         args.skip_macro = True
@@ -111,7 +107,6 @@ def main():
     # 3. Market Breadth Only (ETF Sector Returns)
     if args.market_breadth_only:
         args.skip_price = True
-        args.skip_index = True
         args.skip_info = True
         args.skip_fund = True
         args.skip_macro = True
@@ -153,57 +148,48 @@ def main():
             collector.run(lookback_days=365*5 if args.repair else 365*2)
         except Exception as e:
             print(f"[Error] Macro Data 수집 중단: {e}")
-    
-    # (2) 시장 지수 (Index)
-    if not args.skip_index:
-        try:
-            print("\n>>> [Step 2] 시장 지수(Index) 업데이트")
-            collector = IndexDataCollector(db_name=args.db)
-            collector.run(repair_mode=args.repair)
-        except Exception as e:
-            print(f"[Error] Index Data 수집 중단: {e}")
 
-    # (3) 주가 데이터 (Stocks OHLCV)
+    # (2) 주가 데이터 (Stocks OHLCV)
     if not args.skip_price and stock_tickers:
         try:
-            print("\n>>> [Step 3] 개별 주식 시세(OHLCV) 업데이트")
+            print("\n>>> [Step 2] 개별 주식 시세(OHLCV) 업데이트")
             collector = MarketDataCollector(db_name=args.db)
             collector.update_tickers(stock_tickers, repair_mode=args.repair)
         except Exception as e:
             print(f"[Error] Market Data 수집 중단: {e}")
 
-    # (4) 암호화폐 데이터 (Crypto)
+    # (3) 암호화폐 데이터 (Crypto)
     if not args.skip_crypto:
         try:
-            print("\n>>> [Step 4] 암호화폐(Crypto) 업데이트")
+            print("\n>>> [Step 3] 암호화폐(Crypto) 업데이트")
             target_crypto = ["BTC-USD", "ETH-USD"]
             collector = CryptoDataCollector(db_name=args.db)
             collector.update_tickers(target_crypto, repair_mode=args.repair)
         except Exception as e:
             print(f"[Error] Crypto Data 수집 중단: {e}")
 
-    # (5) 재무제표 (Fundamentals)
+    # (4) 재무제표 (Fundamentals)
     if not args.skip_fund and stock_tickers:
         try:
-            print("\n>>> [Step 5] 기업 재무제표(Fundamentals) 업데이트")
+            print("\n>>> [Step 4] 기업 재무제표(Fundamentals) 업데이트")
             collector = FundamentalsDataCollector(db_name=args.db)
             collector.update_tickers(stock_tickers)
         except Exception as e:
             print(f"[Error] Fundamentals 수집 중단: {e}")
 
-    # (6) 주식 기본 정보 (Stock Info)
+    # (5) 주식 기본 정보 (Stock Info)
     if not args.skip_info and stock_tickers:
         try:
-            print("\n>>> [Step 6] 주식 정보(Stock Info) 업데이트")
+            print("\n>>> [Step 5] 주식 정보(Stock Info) 업데이트")
             collector = StockInfoCollector(db_name=args.db)
             collector.update_tickers(stock_tickers)
         except Exception as e:
             print(f"[Error] Stock Info 수집 중단: {e}")
 
-    # (7) 이벤트 일정 (Earnings, Macro Events)
+    # (6) 이벤트 일정 (Earnings, Macro Events)
     if not args.skip_event:
         try:
-            print("\n>>> [Step 7] 이벤트 일정(Event Data) 업데이트")
+            print("\n>>> [Step 6] 이벤트 일정(Event Data) 업데이트")
             collector = EventDataCollector(db_name=args.db)
             collector.update_macro_events(force_update=args.repair)
             if stock_tickers:
@@ -211,19 +197,19 @@ def main():
         except Exception as e:
             print(f"[Error] Event Data 수집 중단: {e}")
 
-    # (8) 시장 폭 및 섹터 데이터 (Market Breadth - Sector Returns)
+    # (7) 시장 폭 및 섹터 데이터 (Market Breadth - Sector Returns)
     if not args.skip_breadth:
         try:
-            print("\n>>> [Step 8] 시장 폭 및 섹터 데이터(Sector Returns) 업데이트")
+            print("\n>>> [Step 9] 시장 폭 및 섹터 데이터(Sector Returns) 업데이트")
             collector = MarketBreadthCollector(db_name=args.db)
             collector.run(repair_mode=args.repair)
         except Exception as e:
             print(f"[Error] Sector Data 수집 중단: {e}")
 
-    # (9) 시장 통계 계산 (Market Breadth Stats - Internal Aggregation)
+    # (8) 시장 통계 계산 (Market Breadth Stats - Internal Aggregation)
     if not args.skip_stats:
         try:
-            print("\n>>> [Step 9] 시장 통계(NH-NL, MA200%) 계산 및 저장")
+            print("\n>>> [Step 8] 시장 통계(NH-NL, MA200%) 계산 및 저장")
             collector = MarketBreadthStatsCollector(db_name=args.db)
             collector.run(repair_mode=args.repair)
         except Exception as e:

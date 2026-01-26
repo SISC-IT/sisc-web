@@ -25,7 +25,7 @@ if project_root not in sys.path:
 
 # 모델 아키텍처 불러오기
 from AI.modules.signal.models.PatchTST.architecture import build_transformer_model
-from AI.modules.signal.core.features import add_technical_indicators, add_multi_timeframe_features
+from AI.modules.features.legacy.technical_features import add_technical_indicators, add_multi_timeframe_features
 from AI.modules.trader.strategies.rule_based import RuleBasedStrategy
 # [추가] 실제 개수 파악을 위한 로더
 from AI.modules.signal.core.data_loader import DataLoader 

@@ -95,7 +95,8 @@ CREATE TABLE "company_fundamentals" (
     "roe" numeric(18, 6),              -- 자기자본이익률 (ROE)
     "debt_ratio" numeric(18, 6),       -- 부채비율
     "operating_cash_flow" numeric(30, 6), -- 영업활동현금흐름
-    "interest_coverage" numeric(10, 2);,  -- 이자보상배율
+    "interest_coverage" numeric(10, 2),  -- 이자보상배율
+    "shares_issued" numeric(20, 2),      -- 유통 주식 수
     CONSTRAINT "company_fundamentals_pkey" PRIMARY KEY("ticker","date")
 );
 
