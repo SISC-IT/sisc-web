@@ -17,7 +17,7 @@ project_root = os.path.abspath(os.path.join(current_dir, "../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from AI.libs.database.fetcher import fetch_ohlcv
+from AI.libs.database.fetcher import fetch_price_data
 from AI.modules.signal.core.features import add_technical_indicators
 
 def evaluate_ticker(ticker: str) -> Dict[str, float]:
@@ -31,7 +31,7 @@ def evaluate_ticker(ticker: str) -> Dict[str, float]:
     start_str = start_dt.strftime("%Y-%m-%d")
     end_str = end_dt.strftime("%Y-%m-%d")
 
-    df = fetch_ohlcv(ticker, start=start_str, end=end_str)
+    df = fetch_price_data(ticker, start_date=start_str, end_date=end_str)
     
     if df.empty or len(df) < 60:
         return {'total_score': 0.0, 'reason': '데이터 부족'}

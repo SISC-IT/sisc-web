@@ -1,4 +1,4 @@
-#AI/modules/data_collector/market_data.py
+#AI/modules/data_collector/crypto_data.py
 import sys
 import os
 import yfinance as yf
@@ -15,31 +15,31 @@ if project_root not in sys.path:
 
 from AI.libs.database.connection import get_db_conn
 
-class MarketDataCollector:
+class CryptoDataCollector:
     """
-    주식 종목의 시세(OHLCV) 데이터를 수집하여 DB에 적재하는 클래스
-    - yfinance를 사용하여 데이터 수집
-    - 수리(Repair) 모드 지원 (누락 데이터 복구)
-    - 거래대금(Amount) 자동 계산
+    암호화폐(Crypto)의 시세 데이터를 수집하여 DB에 적재하는 클래스
+    - 대상 테이블: crypto_price_data
+    - yfinance 티커 예시: BTC-USD, ETH-USD
     """
     
     def __init__(self, db_name: str = "db"):
         self.db_name = db_name
-        # 수집 시작 기준일 (데이터가 아예 없을 경우)
-        self.FIXED_START_DATE = "2015-01-01"
+        # 암호화폐 데이터가 없을 경우 시작할 기본 날짜 (비트코인 등 주요 코인 고려)
+        self.FIXED_START_DATE = "2018-01-01"
 
     def get_start_date(self, ticker: str, repair_mode: bool) -> str:
         """
         DB를 조회하여 수집 시작 날짜를 결정합니다.
         """
-        # 복구 모드이거나 강제 업데이트인 경우 고정 시작일 반환
         if repair_mode:
             return self.FIXED_START_DATE
 
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT MAX(date) FROM public.price_data WHERE ticker = %s", (ticker,))
+            # 티커에서 '-USD'를 제거하거나 그대로 사용할지 정책에 따라 다르지만,
+            # 여기서는 입력받은 티커 그대로 DB에 저장한다고 가정합니다.
+            cursor.execute("SELECT MAX(date) FROM public.crypto_price_data WHERE ticker = %s", (ticker,))
             last_date = cursor.fetchone()[0]
             
             if last_date:
@@ -54,27 +54,26 @@ class MarketDataCollector:
             cursor.close()
             conn.close()
 
-    def fetch_ohlcv(self, ticker: str, start_date: str) -> pd.DataFrame:
+    def fetch_crypto_ohlcv(self, ticker: str, start_date: str) -> pd.DataFrame:
         """
-        yfinance에서 OHLCV 데이터를 다운로드하고 전처리합니다.
+        yfinance에서 암호화폐 OHLCV 데이터를 다운로드합니다.
         """
         try:
-            # auto_adjust=False: Adj Close 별도 확보
+            # Crypto는 24/7 거래되므로 interval='1d'로 일봉 수집
             df = yf.download(ticker, start=start_date, progress=False, auto_adjust=False, threads=False)
             
             if df.empty:
                 return pd.DataFrame()
 
-            # MultiIndex 컬럼 평탄화 (yfinance 버전 이슈 대응)
+            # MultiIndex 컬럼 평탄화
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
             
-            # 거래대금(Amount) 계산: 종가 * 거래량 (근사치)
-            # yfinance는 원화/달러 여부에 따라 단위가 다르지만, raw value 유지
-            if 'Close' in df.columns and 'Volume' in df.columns:
-                df['Amount'] = df['Close'] * df['Volume']
-            else:
-                df['Amount'] = 0
+            # yfinance history 데이터에는 과거 Market Cap이 포함되지 않는 경우가 많음.
+            # 스키마 요구사항에 따라 컬럼은 존재해야 하므로 None으로 초기화하거나
+            # 별도 로직(Close * Circulating Supply)이 필요함. 현재는 None 처리.
+            if 'Market Cap' not in df.columns:
+                df['Market Cap'] = None
 
             return df
         except Exception as e:
@@ -83,54 +82,51 @@ class MarketDataCollector:
 
     def save_to_db(self, ticker: str, df: pd.DataFrame):
         """
-        데이터프레임을 DB에 저장(Upsert)합니다.
+        데이터프레임을 crypto_price_data 테이블에 저장(Upsert)합니다.
         """
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
 
         insert_query = """
-            INSERT INTO public.price_data (
-                date, ticker, open, high, low, close, volume, adjusted_close, amount
+            INSERT INTO public.crypto_price_data (
+                ticker, date, open, high, low, close, volume, market_cap
             )
             VALUES %s
-            ON CONFLICT (date, ticker) DO UPDATE SET
+            ON CONFLICT (ticker, date) DO UPDATE SET
                 open = EXCLUDED.open,
                 high = EXCLUDED.high,
                 low = EXCLUDED.low,
                 close = EXCLUDED.close,
                 volume = EXCLUDED.volume,
-                adjusted_close = EXCLUDED.adjusted_close,
-                amount = EXCLUDED.amount;
+                market_cap = EXCLUDED.market_cap;
         """
-        # repair_mode에서도 기존 값이 수정될 수 있도록 DO UPDATE로 변경하거나,
-        # 원본 보존을 원하면 DO NOTHING을 유지할 수 있음. 
-        # 여기서는 최신 데이터로 갱신하는 DO UPDATE 전략 채택.
 
         try:
             data_to_insert = []
-            has_adj = 'Adj Close' in df.columns
+            has_adj = 'Adj Close' in df.columns # Crypto는 보통 Close == Adj Close
 
             for index, row in df.iterrows():
-                date_val = index.date()
+                # Timestamp to datetime
+                date_val = index.to_pydatetime()
                 
-                # 안전한 값 추출 (Series일 경우 첫 번째 값 사용)
                 def get_val(col):
                     val = row.get(col, 0)
                     if hasattr(val, 'iloc'):
                         return float(val.iloc[0])
-                    return float(val) if pd.notnull(val) else 0
+                    # None(Market Cap) 처리
+                    if pd.isna(val) or val is None:
+                        return None
+                    return float(val)
 
                 open_val = get_val('Open')
                 high_val = get_val('High')
                 low_val = get_val('Low')
                 close_val = get_val('Close')
-                vol_val = int(get_val('Volume'))
-                amount_val = get_val('Amount')
-                
-                adj_close_val = get_val('Adj Close') if has_adj else close_val
+                vol_val = get_val('Volume')
+                mkt_cap_val = get_val('Market Cap')
 
                 data_to_insert.append((
-                    date_val, ticker, open_val, high_val, low_val, close_val, vol_val, adj_close_val, amount_val
+                    ticker, date_val, open_val, high_val, low_val, close_val, vol_val, mkt_cap_val
                 ))
 
             if data_to_insert:
@@ -149,10 +145,10 @@ class MarketDataCollector:
 
     def update_tickers(self, tickers: List[str], repair_mode: bool = False):
         """
-        여러 종목에 대해 수집 작업을 수행하는 메인 로직
+        여러 암호화폐 티커에 대해 수집 작업을 수행합니다.
         """
         mode_msg = "[Repair Mode]" if repair_mode else "[Update Mode]"
-        print(f"[MarketData] {mode_msg} {len(tickers)}개 종목 업데이트 시작...")
+        print(f"[CryptoData] {mode_msg} {len(tickers)}개 코인 업데이트 시작...")
 
         today = datetime.now().strftime("%Y-%m-%d")
 
@@ -168,7 +164,7 @@ class MarketDataCollector:
             print(f"   [{ticker}] 수집 시작 ({start_date} ~ )...")
             
             # 2. 데이터 수집
-            df = self.fetch_ohlcv(ticker, start_date)
+            df = self.fetch_crypto_ohlcv(ticker, start_date)
             
             # 3. DB 저장
             if not df.empty:
@@ -181,37 +177,33 @@ class MarketDataCollector:
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     import argparse
-    from AI.libs.database.ticker_loader import load_all_tickers_from_db
 
-    parser = argparse.ArgumentParser(description="[수동] 주식 데이터 수집기")
-    parser.add_argument("tickers", nargs='*', help="수집할 종목 티커 리스트")
-    parser.add_argument("--all", action="store_true", help="DB에 등록된 모든 종목 업데이트")
+    parser = argparse.ArgumentParser(description="[수동] 암호화폐 데이터 수집기")
+    parser.add_argument("tickers", nargs='*', help="수집할 티커 리스트 (예: BTC-USD ETH-USD)")
+    # --all 옵션 추가: BTC-USD와 ETH-USD만 대상으로 설정
+    parser.add_argument("--all", action="store_true", help="주요 코인(BTC, ETH) 데이터 일괄 업데이트")
     parser.add_argument("--repair", action="store_true", help="[복구모드] 전체 기간 재수집")
     parser.add_argument("--db", default="db", help="DB 이름")
     
     args = parser.parse_args()
     target_tickers = args.tickers
-    
-    # --all 옵션 처리
+
+    # --all 옵션 처리: BTC와 ETH만 강제 지정
     if args.all:
-        try:
-            print(">> DB에서 전체 종목 리스트를 조회합니다...")
-            target_tickers = load_all_tickers_from_db(verbose=True)
-        except Exception as e:
-            print(f"[Error] 종목 로드 실패: {e}")
-            sys.exit(1)
+        target_tickers = ["BTC-USD", "ETH-USD"]
+        print(">> [Info] --all 옵션 활성화: BTC-USD, ETH-USD 만 수집합니다.")
 
     # 입력이 없을 경우 인터랙티브 모드
     if not target_tickers:
         print("\n========================================================")
-        print(" [Manual Mode] 주식 시장 데이터 수집기")
+        print(" [Manual Mode] 암호화폐 데이터 수집기")
         print("========================================================")
         print(" 사용 예시:")
-        print("  1) 특정 종목 수집  : python market_data.py AAPL TSLA")
-        print("  2) 전체 종목 업데이트: python market_data.py --all")
-        print("  3) 누락 데이터 복구 : python market_data.py --all --repair")
+        print("  1) 특정 코인 수집  : python crypto_data.py BTC-USD XRP-USD")
+        print("  2) 주요 코인(BTC/ETH) 업데이트 : python crypto_data.py --all")
+        print("  3) 누락 데이터 복구 : python crypto_data.py --all --repair")
         print("========================================================")
-        print(">> 수집할 종목 코드를 공백으로 구분하여 입력하세요 (종료: Enter)")
+        print(">> 수집할 티커를 입력하세요 (종료: Enter)")
         
         try:
             input_str = sys.stdin.readline().strip()
@@ -223,6 +215,6 @@ if __name__ == "__main__":
             sys.exit(0)
 
     if target_tickers:
-        collector = MarketDataCollector(db_name=args.db)
+        collector = CryptoDataCollector(db_name=args.db)
         collector.update_tickers(target_tickers, repair_mode=args.repair)
-        print("\n[완료] 모든 작업이 끝났습니다.")
+        print("\n[완료] 작업이 끝났습니다.")
