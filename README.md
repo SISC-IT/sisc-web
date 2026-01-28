@@ -1,4 +1,5 @@
-# 세종투자연구회(Sejong Investment Club) 웹사이트 프로젝트
+# 세종투자연구회 웹사이트 프로젝트
+<img width="225" height="225" alt="image" src="https://github.com/user-attachments/assets/6b4be44f-6f50-4b49-a7ee-047340004a21" />
 
 ### 1. 세종투자연구회 웹사이트 개발
 
@@ -22,7 +23,7 @@
 - 기존의 모델들을 학습하고 비교, 분석하여 목표에 어울리는 모델 선정과 데이터 수집 및 정제
 - 데일리 트레이딩을 하여 수익율, 매수/매도한 종목, 투자 근거등을 서비스 사용자에게 제공
 
-<div align=center><h1>📚 STACKS</h1></div>
+<div><h1>📚stacks</h1></div>
 
 <img src="https://img.shields.io/badge/java-007396?style=for-the-badge&logo=java&logoColor=white">
 <img src="https://img.shields.io/badge/springboot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white">
