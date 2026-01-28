@@ -1,20 +1,27 @@
 package org.sejongisc.backend.attendance.entity;
 
-import static java.time.Duration.ofMinutes;
-
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import lombok.*;
-import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
-
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 /**
  * 출석 세션 내 개별 라운드(주차)
@@ -40,7 +47,6 @@ public class AttendanceRound extends BasePostgresEntity {
 
     @Column(nullable = false)
     private LocalDateTime startAt;              // 시작 시간 미리 예약
-
 
     private LocalDateTime closeAt;                // 종료 시간 관리자가 설정 or 일정시간 경과시 자동 설정
 
@@ -86,8 +92,4 @@ public class AttendanceRound extends BasePostgresEntity {
         }
         this.roundStatus = newStatus;
     }
-
-
-
-
 }

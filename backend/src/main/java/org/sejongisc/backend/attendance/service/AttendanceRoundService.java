@@ -12,6 +12,8 @@ import org.sejongisc.backend.attendance.entity.*;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.sejongisc.backend.attendance.util.QrTokenUtil;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,19 +25,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class AttendanceRoundService {
 
   private static final int DEFAULT_ROUND_DURATION_HOURS = 3;
-  private static final long QR_TOKEN_TTL_SECONDS = 90; // 60~120 추천
+  private static final long QR_TOKEN_TTL_SECONDS = 90;
 
   private final AttendanceRoundRepository attendanceRoundRepository;
   private final AttendanceSessionRepository attendanceSessionRepository;
   private final AttendanceAuthorizationService authorizationService;
 
   /** 라운드 생성(관리자/소유자) */
-
   public AttendanceRoundResponse createRound(UUID sessionId, UUID userId, AttendanceRoundRequest req) {
     authorizationService.ensureAdmin(sessionId, userId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-        .orElseThrow(() -> new IllegalArgumentException("SESSION_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
     validateCreateRequest(req);
 
@@ -64,7 +65,7 @@ public class AttendanceRoundService {
   @Transactional(readOnly = true)
   public AttendanceRoundResponse getRound(UUID roundId, UUID userId) {
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
     authorizationService.ensureMember(sessionId, userId);
@@ -89,14 +90,14 @@ public class AttendanceRoundService {
   @Transactional(readOnly = true)
   public AttendanceRoundQrTokenResponse issueQrToken(UUID roundId, UUID userId) {
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
     authorizationService.ensureAdmin(sessionId, userId);
 
     // 라운드가 ACTIVE일 때만 발급하고 싶으면 아래 체크 추가:
     if (round.getRoundStatus() != RoundStatus.ACTIVE) {
-      throw new IllegalStateException("ROUND_NOT_ACTIVE");
+      throw new CustomException(ErrorCode.ROUND_NOT_ACTIVE);
     }
 
     QrTokenUtil.IssuedToken issued = QrTokenUtil.issue(round.getRoundId(), round.getQrSecret(), QR_TOKEN_TTL_SECONDS);
@@ -107,22 +108,26 @@ public class AttendanceRoundService {
   @Transactional(readOnly = true)
   public AttendanceRound verifyQrTokenAndGetRound(String qrToken) {
     // 토큰 파싱을 위해 roundId 먼저 뽑고 → 라운드 가져온 뒤 secret으로 검증
+    if (qrToken == null || qrToken.isBlank()) {
+      throw new CustomException(ErrorCode.QR_TOKEN_MALFORMED);
+    }
+
     String[] parts = qrToken.split(":");
-    if (parts.length != 3) throw new IllegalStateException("QR_TOKEN_MALFORMED");
+    if (parts.length != 3) throw new CustomException(ErrorCode.QR_TOKEN_MALFORMED);
 
     UUID roundId;
     try {
       roundId = UUID.fromString(parts[0]);
     } catch (Exception e) {
-      throw new IllegalStateException("QR_TOKEN_MALFORMED");
+      throw new CustomException(ErrorCode.QR_TOKEN_MALFORMED);
     }
 
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-        .orElseThrow(() -> new IllegalStateException("ROUND_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     // 라운드 상태 체크(선택이 아니라 사실상 필수)
     if (round.getRoundStatus() != RoundStatus.ACTIVE) {
-      throw new IllegalStateException("ROUND_NOT_ACTIVE");
+      throw new CustomException(ErrorCode.ROUND_NOT_ACTIVE);
     }
 
     // 서명/만료 검증
@@ -133,7 +138,7 @@ public class AttendanceRoundService {
   /** 라운드 삭제(관리자/소유자) */
   public void deleteRound(UUID roundId, UUID userId) {
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
     authorizationService.ensureAdmin(sessionId, userId);
@@ -145,7 +150,7 @@ public class AttendanceRoundService {
   /** 라운드 마감(관리자/소유자) */
   public void closeRound(UUID roundId, UUID userId) {
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
     authorizationService.ensureAdmin(sessionId, userId);
@@ -156,15 +161,13 @@ public class AttendanceRoundService {
   /** 라운드 활성화(관리자/소유자) */
   public void openRound(UUID roundId, UUID userId) {
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
-        .orElseThrow(() -> new IllegalArgumentException("ROUND_NOT_FOUND"));
+        .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
     authorizationService.ensureAdmin(sessionId, userId);
 
     round.changeStatus(RoundStatus.ACTIVE);
   }
-
-
 
   @Scheduled(fixedRate = 10_000)
   public void autoActivateAndCloseRounds() {
@@ -178,11 +181,17 @@ public class AttendanceRoundService {
   }
 
   private void validateCreateRequest(AttendanceRoundRequest req) {
-    if (req.roundDate() == null) throw new IllegalArgumentException("ROUND_DATE_REQUIRED");
-    if (req.startAt() == null) throw new IllegalArgumentException("START_AT_REQUIRED");
-    if (req.roundName() == null || req.roundName().isBlank()) throw new IllegalArgumentException("ROUND_NAME_REQUIRED");
+    if (req.roundDate() == null) {
+      throw new CustomException(ErrorCode.ROUND_DATE_REQUIRED);
+    }
+    if (req.startAt() == null) {
+      throw new CustomException(ErrorCode.START_AT_REQUIRED);
+    }
+    if (req.roundName() == null || req.roundName().isBlank()) {
+      throw new CustomException(ErrorCode.ROUND_NAME_REQUIRED);
+    }
     if (req.closeAt() != null && !req.closeAt().isAfter(req.startAt())) {
-      throw new IllegalArgumentException("END_AT_MUST_BE_AFTER_START_AT");
+      throw new CustomException(ErrorCode.END_AT_MUST_BE_AFTER_START_AT);
     }
   }
 }
