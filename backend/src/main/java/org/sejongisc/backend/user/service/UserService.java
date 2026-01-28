@@ -8,7 +8,6 @@ import org.sejongisc.backend.auth.oauth.OauthUserInfo;
 import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface UserService {
@@ -33,4 +32,6 @@ public interface UserService {
     User upsertOAuthUser(String provider, String providerId, String email, String name);
 
     List<UserIdNameProjection> getUserProjectionList();
+
+    List<User> findAllUsersMissingAccount();
 }
