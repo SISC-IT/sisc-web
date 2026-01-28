@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.backtest.dto.BacktestRunRequest;
 import org.sejongisc.backend.backtest.dto.TradeLog;
+import org.sejongisc.backend.backtest.dto.TradeType;
 import org.sejongisc.backend.backtest.entity.BacktestRun;
 import org.sejongisc.backend.backtest.entity.BacktestRunMetrics;
 import org.sejongisc.backend.backtest.entity.BacktestStatus;
@@ -29,6 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.sejongisc.backend.backtest.dto.TradeType.*;
 
 @Service
 @RequiredArgsConstructor
@@ -115,7 +118,7 @@ public class BacktestingEngine {
                     // 거래 로그 기록
                     if (buyShares.compareTo(BigDecimal.ZERO) > 0) {
                         BigDecimal transactionCost = buyShares.multiply(currentClosePrice);
-                        tradeLogs.add(new TradeLog(TradeLog.Type.BUY, currentTime, currentClosePrice, buyShares));
+                        tradeLogs.add(new TradeLog(BUY, currentTime, currentClosePrice, buyShares));
                         shares = shares.add(buyShares);         // 매수 주식 수
                         cash = cash.subtract(transactionCost);  // 잔고에서 매수 대금 차감
                         tradesCount++;                          // 거래 횟수 증가
@@ -131,7 +134,7 @@ public class BacktestingEngine {
                     BigDecimal sharesToSell = shares.multiply(sellRatio).setScale(8, RoundingMode.DOWN);   // 매도 비중 적용
                     BigDecimal tradeValue = sharesToSell.multiply(currentClosePrice);
                     // 거래 로그 기록
-                    TradeLog.Type logType = shouldExitByDays ? TradeLog.Type.SELL_FORCED : TradeLog.Type.SELL;  // 강제 청산 여부에 따른 로그 타입 설정
+                    TradeType logType = shouldExitByDays ? SELL_FORCED : SELL;// 강제 청산 여부에 따른 로그 타입 설정
                     tradeLogs.add(new TradeLog(logType, currentTime, currentClosePrice, sharesToSell));
                     shares = shares.subtract(sharesToSell);     // 매도 주식 수 차감
                     cash = cash.add(tradeValue);                // 잔고에서 매도 대금 추가
@@ -227,10 +230,10 @@ public class BacktestingEngine {
 
         // 매수-매도 쌍을 찾아 보유 기간 계산
         for (TradeLog log : tradeLogs) {
-            if (log.type == TradeLog.Type.BUY) {
-                currentBuyTime = log.time;
-            } else if ((log.type == TradeLog.Type.SELL || log.type == TradeLog.Type.SELL_FORCED) && currentBuyTime != null) {
-                long days = java.time.temporal.ChronoUnit.DAYS.between(currentBuyTime.toLocalDate(), log.time.toLocalDate());
+            if (log.type() == BUY) {
+                currentBuyTime = log.time();
+            } else if ((log.type() == SELL || log.type() == SELL_FORCED) && currentBuyTime != null) {
+                long days = java.time.temporal.ChronoUnit.DAYS.between(currentBuyTime.toLocalDate(), log.time().toLocalDate());
                 holdDurations.add(days);
                 currentBuyTime = null;
             }

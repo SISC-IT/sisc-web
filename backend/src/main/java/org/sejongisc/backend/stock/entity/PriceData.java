@@ -1,6 +1,8 @@
 package org.sejongisc.backend.stock.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
@@ -9,6 +11,8 @@ import java.time.LocalDate;
 @Entity
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "price_data")
 @IdClass(PriceDataId.class)
 public class PriceData {
