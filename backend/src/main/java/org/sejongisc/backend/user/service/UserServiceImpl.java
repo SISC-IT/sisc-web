@@ -112,6 +112,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @OptimisticRetry
     public User findOrCreateUser(OauthUserInfo oauthInfo) {
         String providerUid = oauthInfo.getProviderUid();
 
@@ -127,6 +128,8 @@ public class UserServiceImpl implements UserService {
                             .build();
 
                     User savedUser = userRepository.save(newUser);
+
+                    completeSignup(savedUser);
 
                     String encryptedToken = tokenEncryptor.encrypt(oauthInfo.getAccessToken());
 
