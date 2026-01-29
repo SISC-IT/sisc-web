@@ -17,7 +17,7 @@ project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from AI.modules.signal.core.data_loader import SignalDataLoader
+from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models import get_model
 from AI.modules.signal.core.features import add_technical_indicators
 from AI.modules.trader.strategies.portfolio_logic import calculate_portfolio_allocation
@@ -165,7 +165,7 @@ def run_backtest():
     
     print(f"대상 종목: {target_tickers}")
 
-    loader = SignalDataLoader(sequence_length=60)
+    loader = DataLoader(sequence_length=60)
     loaded_count = 0
     
     for ticker in target_tickers:

@@ -1,0 +1,2532 @@
+{
+    "A": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.022456510477270892
+    },
+    "AAPL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02049534383093394
+    },
+    "ABBV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.022710686100159354
+    },
+    "ABNB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0008585010310646869
+    },
+    "ABT": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012175668747393014
+    },
+    "ACGL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.045113141816391665
+    },
+    "ACN": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011653341379991359
+    },
+    "ADBE": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00013227670145980506
+    },
+    "ADI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.017982306000199844
+    },
+    "ADM": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0014197317931103274
+    },
+    "ADP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00808554464329246
+    },
+    "ADSK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00936138212808456
+    },
+    "AEE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03785890854903824
+    },
+    "AEP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.019959047193490675
+    },
+    "AES": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004689179591830591
+    },
+    "AFL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02372670836184696
+    },
+    "AIG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01567720351502946
+    },
+    "AIZ": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.030189477157589878
+    },
+    "AJG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020639774439902073
+    },
+    "AKAM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.016516615572604868
+    },
+    "ALB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.002839578789296669
+    },
+    "ALGN": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011075634849311742
+    },
+    "ALL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01852441488766215
+    },
+    "ALLE": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04852706992382533
+    },
+    "AMAT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04430837390467678
+    },
+    "AMCR": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004769028437103133
+    },
+    "AMD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01909454405754802
+    },
+    "AME": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02596989353179166
+    },
+    "AMGN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.24854090996906317
+    },
+    "AMP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021201319760378902
+    },
+    "AMT": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007277526179701884
+    },
+    "AMZN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008080268565653104
+    },
+    "ANET": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0465264427687067
+    },
+    "AON": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.019868048496941234
+    },
+    "AOS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021673793370534832
+    },
+    "APA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011821880502724877
+    },
+    "APD": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.027734151648444363
+    },
+    "APH": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01152597668605666
+    },
+    "APO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020793741530252173
+    },
+    "APP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04666917592877263
+    },
+    "APTV": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.003062647377436994
+    },
+    "ARE": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005425968462911576
+    },
+    "ATO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.024906032808065918
+    },
+    "AVB": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.001605894264482386
+    },
+    "AVGO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.09195673123403245
+    },
+    "AVY": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01314797369848331
+    },
+    "AWK": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005709253358678506
+    },
+    "AXON": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.07266641577366612
+    },
+    "AXP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.014634180869250736
+    },
+    "AZO": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.039582835915017725
+    },
+    "BA": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0050775599515865385
+    },
+    "BAC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011883942520709498
+    },
+    "BALL": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00011604203036787664
+    },
+    "BAX": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -2.3894576487711465e-05
+    },
+    "BBY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0016017272405240855
+    },
+    "BDX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00789849439221826
+    },
+    "BEN": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01950316221586171
+    },
+    "BF.B": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0027670897917976534
+    },
+    "BG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00573615938840775
+    },
+    "BIIB": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00045951886899320494
+    },
+    "BK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.028888777516333182
+    },
+    "BKNG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020617823815205345
+    },
+    "BKR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02149166461730833
+    },
+    "BLDR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.039968697130158555
+    },
+    "BLK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.024671775191805138
+    },
+    "BMY": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004427114359378653
+    },
+    "BR": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008420468224876987
+    },
+    "BRK.B": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.033722434932629754
+    },
+    "BRO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005633234428903536
+    },
+    "BSX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.045131367631677966
+    },
+    "BX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01369155241012009
+    },
+    "BXP": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.004076271283579634
+    },
+    "C": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0028754503781018566
+    },
+    "CAG": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0008596777026597799
+    },
+    "CAH": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.1598958498051022
+    },
+    "CARR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.027524282475343175
+    },
+    "CAT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0390030805531202
+    },
+    "CB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0206440187436947
+    },
+    "CBOE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.036574185915021165
+    },
+    "CBRE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021901973103763843
+    },
+    "CCI": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004347757171468557
+    },
+    "CCL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04411363491074017
+    },
+    "CDNS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03435608734537964
+    },
+    "CDW": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0138869721624962
+    },
+    "CEG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04117789897458868
+    },
+    "CF": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0035463268638395618
+    },
+    "CFG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.019933361928479786
+    },
+    "CHD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006373804896978132
+    },
+    "CHRW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008961782944923757
+    },
+    "CHTR": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0070808658284964915
+    },
+    "CI": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.09936238751375194
+    },
+    "CINF": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01314956924869431
+    },
+    "CL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01134655632260156
+    },
+    "CLX": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.015802407122031615
+    },
+    "CMCSA": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0012277464437475542
+    },
+    "CME": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010658707565179282
+    },
+    "CMG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01629960832723322
+    },
+    "CMI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.038856478989109246
+    },
+    "CMS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01217207867507849
+    },
+    "CNC": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007718699011957787
+    },
+    "CNP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.16800202136155434
+    },
+    "COF": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02705496626525608
+    },
+    "COIN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.07896241073708503
+    },
+    "COO": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00012916580708215034
+    },
+    "COP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03874714163674798
+    },
+    "COR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.09950821974468968
+    },
+    "COST": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03788495983099533
+    },
+    "CPAY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03478418896166441
+    },
+    "CPB": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0039275899930288375
+    },
+    "CPRT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025359905143751298
+    },
+    "CPT": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00628485114106235
+    },
+    "CRL": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00439542911953755
+    },
+    "CRM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.017340511992436716
+    },
+    "CRWD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02057721737848473
+    },
+    "CSCO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.017856718607515424
+    },
+    "CSGP": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006257437823979709
+    },
+    "CSX": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010187882715384906
+    },
+    "CTAS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.029627547517556262
+    },
+    "CTRA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.10777342744564503
+    },
+    "CTSH": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.00018323244469639675
+    },
+    "CTVA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010441312131258915
+    },
+    "CVS": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006673991924641342
+    },
+    "CVX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.029410821528188715
+    },
+    "CZR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020422125787847818
+    },
+    "D": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.003301745951865755
+    },
+    "DAL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03953195538575217
+    },
+    "DASH": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0016297900274801706
+    },
+    "DAY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.017301480235204367
+    },
+    "DD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008089886438694427
+    },
+    "DDOG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00524121457459168
+    },
+    "DE": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04205634304529836
+    },
+    "DECK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.052456068937586704
+    },
+    "DELL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04085450014957063
+    },
+    "DG": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00335674349511683
+    },
+    "DGX": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005709342992073677
+    },
+    "DHI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.045202523725062456
+    },
+    "DHR": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008618595526066206
+    },
+    "DIS": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012115085036524814
+    },
+    "DLR": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010839034010961198
+    },
+    "DLTR": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005227862623817644
+    },
+    "DOC": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0035592704849359493
+    },
+    "DOV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013881286845431481
+    },
+    "DOW": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004730118981509747
+    },
+    "DPZ": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0013602205919712649
+    },
+    "DRI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03611911055868812
+    },
+    "DTE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.026414877955791678
+    },
+    "DUK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.06338515879880872
+    },
+    "DVA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007501384297144558
+    },
+    "DVN": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0007713715233065481
+    },
+    "DXCM": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.018368975994534353
+    },
+    "EA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.023407754625661283
+    },
+    "EBAY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020814191492575646
+    },
+    "ECL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025577229070760658
+    },
+    "ED": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.10902598169278048
+    },
+    "EFX": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.014091907256323677
+    },
+    "EG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.018255913772662138
+    },
+    "EIX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.014085917398342437
+    },
+    "EL": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0008718951916127169
+    },
+    "ELV": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.034601295337412206
+    },
+    "EME": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.06426865263933511
+    },
+    "EMN": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007878807625951455
+    },
+    "EMR": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.045325068719353365
+    },
+    "ENPH": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00018326651456304546
+    },
+    "EOG": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.05874479622015653
+    },
+    "EPAM": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0013478220941951613
+    },
+    "EQIX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.049810613099864204
+    },
+    "EQR": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005238375644221408
+    },
+    "EQT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.038643480186230185
+    },
+    "ERIE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021663962989068676
+    },
+    "ES": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005148682950011717
+    },
+    "ESS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0011728570887641486
+    },
+    "ETN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020051587281652145
+    },
+    "ETR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.07368854544511143
+    },
+    "EVRG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01733325061079467
+    },
+    "EW": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0006798045868433036
+    },
+    "EXC": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.028200819061808272
+    },
+    "EXE": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005044416289136351
+    },
+    "EXPD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.028599380162486303
+    },
+    "EXPE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.002439825044585343
+    },
+    "EXR": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006619846978375208
+    },
+    "F": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025395785003343618
+    },
+    "FANG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02325325776906641
+    },
+    "FAST": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03241044711922948
+    },
+    "FCX": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02570520499741781
+    },
+    "FDS": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0036511678804570977
+    },
+    "FDX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007981268222893181
+    },
+    "FE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.10356366269324137
+    },
+    "FFIV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006716472994282761
+    },
+    "FI": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.00644384859905225
+    },
+    "FICO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.032263372979765004
+    },
+    "FIS": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.003396854582025878
+    },
+    "FITB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01164903401242493
+    },
+    "FOX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.017025642136708204
+    },
+    "FOXA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.018802330818018225
+    },
+    "FRT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005754520394022693
+    },
+    "FSLR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04817711776185587
+    },
+    "FTNT": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.001450530577634791
+    },
+    "FTV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01369303978165936
+    },
+    "GD": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005550484497825324
+    },
+    "GDDY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012668295854888517
+    },
+    "GE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02993411831512686
+    },
+    "GEHC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.5274393686577253
+    },
+    "GEN": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004681580210797849
+    },
+    "GEV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.07015721167964849
+    },
+    "GILD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.034565102782163265
+    },
+    "GIS": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0013075644752606626
+    },
+    "GL": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02667447683999382
+    },
+    "GLW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013213242087053064
+    },
+    "GM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01936899585603101
+    },
+    "GNRC": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012641939853178064
+    },
+    "GOOG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007965185213833218
+    },
+    "GOOGL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01020792271990239
+    },
+    "GPC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04541214313452209
+    },
+    "GPN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.002613060185784368
+    },
+    "GRMN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007550183936864069
+    },
+    "GS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03502449722636443
+    },
+    "GWW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.048868909110672897
+    },
+    "HAL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01879136313656384
+    },
+    "HAS": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03154368401624642
+    },
+    "HBAN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.026027041522488817
+    },
+    "HCA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013188121256335459
+    },
+    "HD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.032083946585711655
+    },
+    "HIG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.034273292698209126
+    },
+    "HII": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.042530675370549484
+    },
+    "HLT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03514756926998072
+    },
+    "HOLX": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0035882861942869645
+    },
+    "HON": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01853669838271439
+    },
+    "HOOD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.05331524949693846
+    },
+    "HPE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03235829912160224
+    },
+    "HPQ": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.00020043348071140528
+    },
+    "HRL": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006899379416574585
+    },
+    "HSIC": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01578665171876027
+    },
+    "HST": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.015113769059230984
+    },
+    "HSY": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.015493661756227855
+    },
+    "HUBB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.050276598478549345
+    },
+    "HUM": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025288112484511256
+    },
+    "HWM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.05658812095567256
+    },
+    "IBKR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02215810655007073
+    },
+    "IBM": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008911367014773554
+    },
+    "ICE": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.019188156179077098
+    },
+    "IDXX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012866248341207103
+    },
+    "IEX": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013052727830587437
+    },
+    "IFF": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.002630082316467898
+    },
+    "INCY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008120287445032699
+    },
+    "INTC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013643123438904368
+    },
+    "INTU": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007894699573422747
+    },
+    "INVH": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010198092236900711
+    },
+    "IP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0012568156479069279
+    },
+    "IPG": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012147770814985609
+    },
+    "IQV": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007542097454665839
+    },
+    "IR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0364006968011885
+    },
+    "IRM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04886259329265204
+    },
+    "ISRG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03078938920935255
+    },
+    "IT": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -5.450958874359716e-06
+    },
+    "ITW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01640486195774281
+    },
+    "IVZ": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012106322020705797
+    },
+    "J": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01831504955246983
+    },
+    "JBHT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0049236988695983445
+    },
+    "JBL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.05188775627720684
+    },
+    "JCI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02965386840328523
+    },
+    "JKHY": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005657076073135356
+    },
+    "JNJ": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.023536304866580985
+    },
+    "JPM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03646167508160583
+    },
+    "K": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.014855583670550067
+    },
+    "KDP": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0037789916642864763
+    },
+    "KEY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007476924412543194
+    },
+    "KEYS": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008357434496928162
+    },
+    "KHC": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01916530311083957
+    },
+    "KIM": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.026651187297696666
+    },
+    "KKR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.016206752449379244
+    },
+    "KLAC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.026525617069171153
+    },
+    "KMB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013690974123669179
+    },
+    "KMI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021234536375777362
+    },
+    "KMX": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.009844462754869039
+    },
+    "KO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.015353442532989809
+    },
+    "KR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.019013356786123405
+    },
+    "KVUE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0049224192679438086
+    },
+    "L": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04034491939755167
+    },
+    "LDOS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0214383535669111
+    },
+    "LEN": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03432023127014073
+    },
+    "LH": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011903891263584527
+    },
+    "LHX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006334875699201588
+    },
+    "LII": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.024720776538844254
+    },
+    "LIN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02266378474634082
+    },
+    "LKQ": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013590580556834719
+    },
+    "LLY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.10055164200033598
+    },
+    "LMT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.040085151196261555
+    },
+    "LNT": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.029048251571361552
+    },
+    "LOW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02925778184462678
+    },
+    "LRCX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.019177779139405146
+    },
+    "LULU": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010760655891867053
+    },
+    "LUV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0048430011783150055
+    },
+    "LVS": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012767563469802925
+    },
+    "LW": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.015875332843576204
+    },
+    "LYB": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0009568212631967145
+    },
+    "LYV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013826519331604939
+    },
+    "MA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.022482045057817802
+    },
+    "MAA": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.003658445088228392
+    },
+    "MAR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03274898150580463
+    },
+    "MAS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.022790097002640983
+    },
+    "MCD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.023513585493584684
+    },
+    "MCHP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013176597756739163
+    },
+    "MCK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.1267292412198785
+    },
+    "MCO": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025713096429330198
+    },
+    "MDLZ": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007233304238912553
+    },
+    "MDT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.002538240154277184
+    },
+    "MET": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012587435279343483
+    },
+    "META": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.035422033126645
+    },
+    "MGM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01793687522630953
+    },
+    "MHK": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010657199302997394
+    },
+    "MKC": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010769971841224699
+    },
+    "MKTX": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010357806749711226
+    },
+    "MLM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02928622588451553
+    },
+    "MMC": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00863185155192436
+    },
+    "MMM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.009722169638043171
+    },
+    "MNST": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0615752479107986
+    },
+    "MO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.07918818762937457
+    },
+    "MOH": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.003394194105208437
+    },
+    "MOS": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007613011483227958
+    },
+    "MPC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 2.77469775335425
+    },
+    "MPWR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04508458114404418
+    },
+    "MRK": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02172299011081995
+    },
+    "MRNA": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 7.029866799945477e-05
+    },
+    "MS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03015928656765513
+    },
+    "MSCI": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.027485251494535054
+    },
+    "MSFT": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011925034118959569
+    },
+    "MSI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03317877966223666
+    },
+    "MTB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013538427213159013
+    },
+    "MTCH": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004674007608812283
+    },
+    "MTD": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012670082772950716
+    },
+    "MU": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013636285332725784
+    },
+    "NCLH": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01116018415915655
+    },
+    "NDAQ": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01644036850364205
+    },
+    "NDSN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.016421153168454983
+    },
+    "NEE": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.009553097316534736
+    },
+    "NEM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006872858733162665
+    },
+    "NFLX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01980241859321401
+    },
+    "NI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01989744952059543
+    },
+    "NKE": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0028794167921486606
+    },
+    "NOC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.016987510658144602
+    },
+    "NOW": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0019731854858200054
+    },
+    "NRG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.06677383197993908
+    },
+    "NSC": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010255882487889542
+    },
+    "NTAP": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005670172228427307
+    },
+    "NTRS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007322105080486793
+    },
+    "NUE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.045899144892529206
+    },
+    "NVDA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03161827970534995
+    },
+    "NVR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02796143912147699
+    },
+    "NWS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00904839292032116
+    },
+    "NWSA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012521508759631282
+    },
+    "NXPI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021608422416784834
+    },
+    "O": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011936220703103153
+    },
+    "ODFL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.027107023943597174
+    },
+    "OKE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.019500210516592675
+    },
+    "OMC": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007742171900358807
+    },
+    "ON": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007936432188854767
+    },
+    "ORCL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0022056035200249528
+    },
+    "ORLY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.038449812878991255
+    },
+    "OTIS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021364796855975293
+    },
+    "OXY": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020193745968969685
+    },
+    "PANW": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.009307863201553539
+    },
+    "PAYC": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0061092738270020625
+    },
+    "PAYX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006118072174577938
+    },
+    "PCAR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03083713022422575
+    },
+    "PCG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04208883551505898
+    },
+    "PEG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.030935064761556115
+    },
+    "PEP": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005679734410290501
+    },
+    "PFE": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0018610366121172802
+    },
+    "PFG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013417099855127169
+    },
+    "PG": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.024924466483576973
+    },
+    "PGR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04545526942025802
+    },
+    "PH": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.045775163879303006
+    },
+    "PHM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03847339221514499
+    },
+    "PKG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.27591013541571874
+    },
+    "PLD": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.020523211476638575
+    },
+    "PLTR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.05416876186865757
+    },
+    "PM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.1268001394610288
+    },
+    "PNC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0051005666577510905
+    },
+    "PNR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025962882420139916
+    },
+    "PNW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.035893198971231284
+    },
+    "PODD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012170814635463677
+    },
+    "POOL": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006656713576661838
+    },
+    "PPG": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011583914914602589
+    },
+    "PPL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02695040312098297
+    },
+    "PRU": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012086033834888333
+    },
+    "PSA": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.016327021654593935
+    },
+    "PSKY": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0035546001017910055
+    },
+    "PSX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.08640867988833388
+    },
+    "PTC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021287228478378932
+    },
+    "PWR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.08033600244678511
+    },
+    "PYPL": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.002963912525432549
+    },
+    "QCOM": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.002208914997605312
+    },
+    "RCL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.029147106553077545
+    },
+    "REG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0228416155585926
+    },
+    "REGN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004427248808765081
+    },
+    "RF": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02803013220789661
+    },
+    "RJF": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011293072615966446
+    },
+    "RL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.040475205384158636
+    },
+    "RMD": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011480887546206294
+    },
+    "ROK": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02788316288227484
+    },
+    "ROL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02656379183856795
+    },
+    "ROP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0003913658932790882
+    },
+    "ROST": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.06522384030104166
+    },
+    "RSG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.016201216965507647
+    },
+    "RTX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.027425167053992477
+    },
+    "RVTY": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00771393798751316
+    },
+    "SBAC": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.00429827032931792
+    },
+    "SBUX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01942267015398264
+    },
+    "SCHW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.002432007995893304
+    },
+    "SHW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.016887222656400778
+    },
+    "SJM": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.024129980246589265
+    },
+    "SLB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.08523695615785752
+    },
+    "SMCI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.3720039149495522
+    },
+    "SNA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.08697511086931527
+    },
+    "SNPS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.009420674102795821
+    },
+    "SO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.05741659685273285
+    },
+    "SOLV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0459766659857534
+    },
+    "SPG": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0192287839970916
+    },
+    "SPGI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01948589803050125
+    },
+    "SRE": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.028262602066060644
+    },
+    "STE": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.023762598834339375
+    },
+    "STLD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04843859732128495
+    },
+    "STT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.014148753031226329
+    },
+    "STX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021186610517288398
+    },
+    "STZ": {
+        "buy_threshold": 0.7,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0010316869744532654
+    },
+    "SW": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.014322146557129491
+    },
+    "SWK": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0005100052676955899
+    },
+    "SWKS": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013394311324463806
+    },
+    "SYF": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02381351364524207
+    },
+    "SYK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.023036296341200448
+    },
+    "SYY": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.012204713791472574
+    },
+    "T": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.015327992036488549
+    },
+    "TAP": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0646094688435329
+    },
+    "TDG": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03768481401299163
+    },
+    "TDY": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006565632339429464
+    },
+    "TECH": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.009495930391332003
+    },
+    "TEL": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0032668983241646117
+    },
+    "TER": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.030470867845529916
+    },
+    "TFC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.001353281950236618
+    },
+    "TGT": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.009122607919529919
+    },
+    "TJX": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.038755299985882126
+    },
+    "TKO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01848245934468345
+    },
+    "TMO": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013280764492030086
+    },
+    "TMUS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.11676713030356957
+    },
+    "TPL": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.08329584407717962
+    },
+    "TPR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.015759313891253807
+    },
+    "TRGP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.07995947751937718
+    },
+    "TRMB": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013533474518396432
+    },
+    "TROW": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01380641015100224
+    },
+    "TRV": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.014254025513611377
+    },
+    "TSCO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.011876991829991126
+    },
+    "TSLA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.018977405405838543
+    },
+    "TSN": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": -0.0004406262657472293
+    },
+    "TT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03945738001591943
+    },
+    "TTD": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0212444696475059
+    },
+    "TTWO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013685316922183792
+    },
+    "TXN": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02539476774110109
+    },
+    "TXT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.010582367180207856
+    },
+    "TYL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007471404212660224
+    },
+    "UAL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.08865519619177503
+    },
+    "UBER": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03461021338160235
+    },
+    "UDR": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0036403621338742128
+    },
+    "UHS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.031005258155354366
+    },
+    "ULTA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.10855814933062118
+    },
+    "UNH": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013096638236885437
+    },
+    "UNP": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.009778272416261703
+    },
+    "UPS": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0024920157022982974
+    },
+    "URI": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03927795943464213
+    },
+    "USB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.008408233749815398
+    },
+    "V": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021601492221114897
+    },
+    "VICI": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04997173177598327
+    },
+    "VLO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.8156955651992406
+    },
+    "VLTO": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.10298436007281533
+    },
+    "VMC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.03164787086117653
+    },
+    "VRSK": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007047129232811964
+    },
+    "VRSN": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.004693857794303562
+    },
+    "VRTX": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.04104543996339114
+    },
+    "VST": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.2159669871783186
+    },
+    "VTR": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.003186045549961806
+    },
+    "VTRS": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0189945960877483
+    },
+    "VZ": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0013189755596723816
+    },
+    "WAB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.030258998719206495
+    },
+    "WAT": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.002491289110176495
+    },
+    "WBD": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005580148119481983
+    },
+    "WDAY": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0051220934456574435
+    },
+    "WDC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0590241809898375
+    },
+    "WEC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013027777780811912
+    },
+    "WELL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.027102341055231818
+    },
+    "WFC": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.021545755592598376
+    },
+    "WM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.013970895347420634
+    },
+    "WMB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.06673683774427797
+    },
+    "WMT": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.07882986602754093
+    },
+    "WRB": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.06303946093587044
+    },
+    "WSM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025308728709230614
+    },
+    "WST": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005102609062548102
+    },
+    "WTW": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.006577431925467818
+    },
+    "WY": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.025386054173713753
+    },
+    "WYNN": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02343699675936961
+    },
+    "XEL": {
+        "buy_threshold": 0.75,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.007901663378365146
+    },
+    "XOM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 2.195088906127965
+    },
+    "XYL": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.02494615859566667
+    },
+    "XYZ": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.01661220633750101
+    },
+    "YUM": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0344308229588415
+    },
+    "ZBH": {
+        "buy_threshold": 0.65,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.003080935794188021
+    },
+    "ZBRA": {
+        "buy_threshold": 0.55,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.005430518516068299
+    },
+    "ZTS": {
+        "buy_threshold": 0.6,
+        "sell_threshold": 0.4,
+        "expected_return_3d": 0.0008394998320470081
+    }
+}

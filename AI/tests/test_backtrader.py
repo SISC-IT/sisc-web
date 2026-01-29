@@ -4,6 +4,9 @@
 - 가상 데이터(Mock Data) 생성 -> Backtrader 엔진 주입 -> 전략 실행 검증
 - unittest.mock을 사용하여 실제 DB 연결 없이 전체 파이프라인을 테스트합니다.
 - 'run_backtrader_engine'이 정상 동작하는지 확인합니다.
+- 기술적 지표 생성 로직도 포함하여 전체 흐름 점검합니다.
+- 실제 가중치 파일이 없어도 엔진이 예외 없이 동작하는지 확인합니다.
+- 실전 데이터 테스트는  backtrader_single.py  에서 수행합니다.
 """
 
 import sys
@@ -22,7 +25,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 # 모듈 임포트
-from AI.modules.signal.core.data_loader import SignalDataLoader
+from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models import get_model
 from AI.modules.trader.backtrader.backtrader_engine import run_backtrader_engine 
 from AI.modules.signal.core.features import add_technical_indicators
@@ -79,7 +82,7 @@ def test_integration():
     # (B) 모델 로드 부분도 가중치 파일이 없으므로 Mock 처리 (선택사항)
     #     하지만 엔진 내부에서 파일 없으면 랜덤 스코어 처리하도록 했으므로 그대로 둠
     
-    with patch('AI.modules.signal.core.data_loader.SignalDataLoader.load_data') as mock_load:
+    with patch('AI.modules.signal.core.data_loader.DataLoader.load_data') as mock_load:
         mock_load.return_value = mock_df
         
         try:

@@ -42,6 +42,12 @@ public enum ErrorCode {
 
   CONCURRENT_UPDATE(HttpStatus.CONFLICT, "동시성 업데이트에 실패했습니다. 다시 시도해주세요."),
 
+  ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 포인트 계정을 찾을 수 없습니다."),
+
+  ACCOUNT_REQUIRED(HttpStatus.BAD_REQUEST, "계정 정보는 필수입니다."),
+
+  POINT_TRANSACTION_TOTAL_MISMATCH(HttpStatus.BAD_REQUEST, "포인트 거래 내역의 합계가 0이 아닙니다."),
+
   // AUTH
 
   UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패했습니다."),

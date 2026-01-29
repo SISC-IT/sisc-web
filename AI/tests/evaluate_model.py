@@ -29,8 +29,8 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.models import get_model
-from AI.modules.signal.core.data_loader import SignalDataLoader
-from AI.modules.finder.selector import load_all_tickers_from_db
+from AI.modules.signal.core.data_loader import DataLoader
+from AI.libs.database.ticker_loader import load_all_tickers_from_db
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  평가 설정 (CONFIG)
@@ -136,8 +136,8 @@ def evaluate_market_signals():
     # 5. 종목별 데이터 로드 및 예측 (Loop)
     for ticker in tqdm(tickers, desc="시그널 스캔 중"):
         try:
-            # (1) 데이터 로드 (DB)
-            loader = SignalDataLoader(sequence_length=CONFIG['seq_len'])
+            # (1) 데이터 로드 (DB) 
+            loader = DataLoader(sequence_length=CONFIG['seq_len'])
             loader.scaler = global_scaler # ★ 글로벌 스케일러 주입
             
             df = loader.load_data(ticker, fetch_start_str, CONFIG['eval_end_date'])

@@ -25,7 +25,7 @@ from AI.modules.trader.strategies.portfolio_logic import calculate_portfolio_all
 from AI.modules.analysis.generator import ReportGenerator
 from AI.modules.collector.market_data import update_market_data
 from AI.libs.database.repository import save_executions_to_db, save_reports_to_db, get_current_position
-from AI.modules.signal.core.data_loader import SignalDataLoader 
+from AI.modules.signal.core.data_loader import DataLoader 
 
 def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xai: bool = True):
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -45,7 +45,7 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
 
     try:
         # 모델 가중치 로드 (경로는 환경에 맞게 수정)
-        weights_path = os.path.join(project_root, "AI/data/weights/transformer/universal_transformer.keras")
+        weights_path = os.path.join(project_root, "AI/data/weights/transformer/multi_horizon_model.keras")
         model = get_model("transformer", model_config)
         # Build model (dummy input)
         model.build((None, strategy_config['seq_len'], len(feature_columns)))
@@ -77,7 +77,7 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
         print(f"⚠️ 데이터 업데이트 오류 (기존 데이터 사용): {e}")
 
     # 모든 종목의 데이터 로드 (strategy_core에 넘기기 위함)
-    loader = SignalDataLoader(sequence_length=60)
+    loader = DataLoader(sequence_length=60)
     data_map = {}
     
     print(f"2. 데이터 로딩 중 ({len(target_tickers)}종목)...")

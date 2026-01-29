@@ -27,4 +27,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         from User u
         """)
     List<UserIdNameProjection> findAllUserIdAndName();
+
+    @Query(
+        "SELECT u FROM User u " +
+        "LEFT JOIN Account a ON u.userId = a.ownerId " +
+        "WHERE a.accountId IS NULL")
+    List<User> findAllUsersMissingAccount();
 }
