@@ -129,19 +129,38 @@ public class AuthController {
 
         LoginResponse response = loginService.login(request);
 
-        ResponseCookie cookie = ResponseCookie.from("refresh", response.getRefreshToken())
+        // accessToken을 HttpOnly 쿠키로 설정
+        ResponseCookie accessCookie = ResponseCookie.from("access", response.getAccessToken())
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
                 .path("/")
-                .maxAge(60L * 60 * 24 * 14)
+                .maxAge(60L * 60)  // 1 hour
                 .build();
 
+        // refreshToken을 HttpOnly 쿠키로 설정
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh", response.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(60L * 60 * 24 * 14)  // 2 weeks
+                .build();
+
+        // JSON 응답에서 토큰 제거, 유저 정보만 포함
+        LoginResponse safeResponse = LoginResponse.builder()
+                .userId(response.getUserId())
+                .email(response.getEmail())
+                .name(response.getName())
+                .role(response.getRole())
+                .phoneNumber(response.getPhoneNumber())
+                .point(response.getPoint())
+                .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + response.getAccessToken())
-                .body(response);
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(safeResponse);
     }
 
     @Operation(
@@ -203,8 +222,19 @@ public class AuthController {
                 response.header(HttpHeaders.SET_COOKIE, cookie.toString());
             }
 
-            // 응답 반환
-            return response.body(Map.of("accessToken", tokens.get("accessToken")));
+            // accessToken을 HttpOnly 쿠키로 설정
+            ResponseCookie accessCookie = ResponseCookie.from("access", tokens.get("accessToken"))
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("None")
+                    .path("/")
+                    .maxAge(60L * 60)  // 1 hour
+                    .build();
+
+            response.header(HttpHeaders.SET_COOKIE, accessCookie.toString());
+
+            // JSON에서 accessToken 제거
+            return response.body(Map.of("message", "토큰 갱신 성공"));
 
         } catch (Exception e) {
             log.warn("토큰 재발급 실패: {}", e.getMessage());
@@ -215,7 +245,7 @@ public class AuthController {
 
     @Operation(
             summary = "로그아웃 API",
-            description = "Access Token을 무효화하고 Refresh Token 쿠키를 삭제합니다.",
+            description = "Access Token을 무효화하고 Access/Refresh Token 쿠키를 삭제합니다. 토큰이 없어도 정상적으로 처리됩니다.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -226,45 +256,38 @@ public class AuthController {
                                               "message": "로그아웃 성공"
                                             }
                                             """))
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "Authorization 헤더 형식이 잘못됨",
-                            content = @Content(mediaType = "application/json",
-                                    examples = @ExampleObject(value = """
-                                            {
-                                              "message": "잘못된 Authorization 헤더 형식입니다."
-                                            }
-                                            """))
                     )
             }
     )
     @PostMapping("/logout")
     public ResponseEntity<?> logout(
-            @Parameter(description = "Bearer 토큰", example = "Bearer eyJhbGciOiJIUzI1NiJ9...")
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+            @Parameter(description = "Access Token 쿠키", example = "access=abc123")
+            @CookieValue(value = "access", required = false) String accessToken,
+            @Parameter(description = "Refresh Token 쿠키", example = "refresh=abc123")
+            @CookieValue(value = "refresh", required = false) String refreshToken
     ) {
-        //  헤더 유효성 검사
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("message", "잘못된 Authorization 헤더 형식입니다."));
+        // 토큰이 없어도 로그아웃 처리 (멱등성 보장)
+        if (accessToken != null && !accessToken.isEmpty()) {
+            try {
+                loginService.logout(accessToken);
+            } catch (JwtException | IllegalArgumentException e) {
+                log.warn("Invalid or expired JWT during logout: {}", e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error during logout", e);
+            }
         }
 
-        String token = authorizationHeader.substring(7);
-
-        // 예외 처리 및 멱등성 보장
-        try {
-            loginService.logout(token);
-        } catch (JwtException | IllegalArgumentException e) {
-            // 이미 만료되었거나 잘못된 토큰이라도 200 OK로 응답 (멱등성 보장)
-            log.warn("Invalid or expired JWT during logout: {}", e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error during logout", e);
-            // 내부 예외는 500으로 보내지 않고 안전하게 처리
-        }
+        // Access Token 쿠키 삭제
+        ResponseCookie deleteAccessCookie = ResponseCookie.from("access", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
 
         // Refresh Token 쿠키 삭제
-        ResponseCookie deleteCookie = ResponseCookie.from("refresh", "")
+        ResponseCookie deleteRefreshCookie = ResponseCookie.from("refresh", "")
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
@@ -273,7 +296,8 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, deleteAccessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, deleteRefreshCookie.toString())
                 .body(Map.of("message", "로그아웃 성공"));
     }
 
