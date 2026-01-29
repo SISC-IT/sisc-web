@@ -45,7 +45,7 @@ public class AttendanceController {
    * 라운드별 출석 명단 조회(관리자/OWNER)
    */
   @Operation(summary = "라운드 출석 명단 조회", description = "특정 라운드의 출석 기록을 조회합니다. (관리자/OWNER)")
-  @GetMapping("/rounds/{roundId}")
+  @GetMapping("/rounds/{roundId}/records")
   public ResponseEntity<List<AttendanceResponse>> getAttendancesByRound(
       @PathVariable UUID roundId,
       @AuthenticationPrincipal CustomUserDetails userDetails
