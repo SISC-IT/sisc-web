@@ -106,7 +106,7 @@ public class User extends BasePostgresEntity{
 
     public static User createUserWithSignupAndPending(SignupRequest request, String encodedPw) {
         return User.builder()
-            .role(Role.PENDING_MEMBER)
+            .role(Role.TEAM_MEMBER)     // TODO : 운영진 승인 로직 추가 후 PENDING_MEMBER로 변경 필요
             .studentId(request.getStudentId())
             .name(request.getName())
             .passwordHash(encodedPw)

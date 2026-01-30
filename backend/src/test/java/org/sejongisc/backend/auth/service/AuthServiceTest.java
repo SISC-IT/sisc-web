@@ -68,7 +68,7 @@ class AuthServiceTest {
                 .build();
 
         AuthRequest request = new AuthRequest();
-        request.setStudentNumber("test@example.com");
+        request.setStudentId("test@example.com");
         request.setPassword(rawPassword);
 
         given(userRepository.findUserByEmail("test@example.com"))
@@ -94,7 +94,7 @@ class AuthServiceTest {
     void login_userNotFound() {
         // given
         AuthRequest request = new AuthRequest();
-        request.setStudentNumber("notfound@example.com");
+        request.setStudentId("notfound@example.com");
         request.setPassword("password");
 
         given(userRepository.findUserByEmail("notfound@example.com"))
@@ -123,7 +123,7 @@ class AuthServiceTest {
                 .build();
 
         AuthRequest request = new AuthRequest();
-        request.setStudentNumber("test@example.com");
+        request.setStudentId("test@example.com");
         request.setPassword("wrongPassword");
 
         given(userRepository.findUserByEmail("test@example.com"))
@@ -153,7 +153,7 @@ class AuthServiceTest {
                 .build();
 
         AuthRequest request = new AuthRequest();
-        request.setStudentNumber("test@example.com");
+        request.setStudentId("test@example.com");
         request.setPassword("somePassword");
 
         given(userRepository.findUserByEmail("test@example.com"))

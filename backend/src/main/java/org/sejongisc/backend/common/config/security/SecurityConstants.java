@@ -2,7 +2,7 @@ package org.sejongisc.backend.common.config.security;
 
 public class SecurityConstants {
     public static final String[] WHITELIST_URLS = {
-            "/api/auth/signup",
+            "/api/user/signup",
             "/api/auth/login",
             "/api/auth/login/**",
             "/api/auth/logout",

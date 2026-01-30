@@ -31,7 +31,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(AuthRequest request) {
-        User user = userRepository.findUserByEmail(request.getStudentNumber())
+        User user = userRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);

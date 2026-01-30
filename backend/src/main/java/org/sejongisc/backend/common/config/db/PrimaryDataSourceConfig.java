@@ -74,7 +74,7 @@ public class PrimaryDataSourceConfig {
         Map<String, Object> jpaProps = new HashMap<>();
         jpaProps.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
 
-        jpaProps.put("hibernate.hbm2ddl.auto", "update");
+        jpaProps.put("hibernate.hbm2ddl.auto", "create");
 
         return builder
                 .dataSource(dataSource)

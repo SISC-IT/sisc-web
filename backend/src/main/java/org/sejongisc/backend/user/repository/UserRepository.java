@@ -20,11 +20,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findUserByEmail(String email);
 
-    Optional<User> findByNameAndPhoneNumber(String name, String phoneNumber);
-
     @Query(
         "SELECT u FROM User u " +
         "LEFT JOIN Account a ON u.userId = a.ownerId " +
         "WHERE a.accountId IS NULL")
     List<User> findAllUsersMissingAccount();
+
+    Optional<User> findByStudentId(String studentId);
 }
