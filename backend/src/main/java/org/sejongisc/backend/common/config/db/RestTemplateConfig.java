@@ -1,4 +1,4 @@
-package org.sejongisc.backend.common.config;
+package org.sejongisc.backend.common.config.db;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

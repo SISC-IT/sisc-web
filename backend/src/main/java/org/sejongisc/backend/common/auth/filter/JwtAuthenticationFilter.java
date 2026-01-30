@@ -1,8 +1,6 @@
 package org.sejongisc.backend.common.auth.filter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -11,11 +9,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
-import java.util.List;
+import java.util.Arrays;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.auth.jwt.JwtParser;
+import org.sejongisc.backend.common.config.security.SecurityConstants;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.ErrorResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,22 +35,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final ObjectMapper objectMapper;
 
-    // TODO : 인증 제외 경로 클래스화 필요 (securityConfig와 중복) + JWTParser, JWTProvider 코드 중복 개선 필요
-    private static final List<String> EXCLUDE_PATTERNS = List.of(
-            "/api/auth/signup",
-            "/api/auth/login",
-            "/api/auth/login/**",
-            "/api/auth/logout",
-            "/api/auth/reissue",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui/index.html",
-            "/swagger-resources/**",
-            "/webjars/**",
-            "/login/**",
-            "/oauth2/**"
-    );
-
     @Override
     protected void doFilterInternal(@NotNull HttpServletRequest request,
                                     @NotNull HttpServletResponse response,
@@ -68,7 +51,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String token = resolveTokenFromHeader(request);
-
             if (token == null) {
                 token = resolveTokenFromCookie(request);
             }
@@ -99,7 +81,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
 
-        boolean excluded = EXCLUDE_PATTERNS.stream()
+        boolean excluded = Arrays.stream(SecurityConstants.WHITELIST_URLS)
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
 
         // 어떤 요청이 필터 예외로 분류됐는지 콘솔에 표시
@@ -132,14 +114,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return cookie.getValue();
             }
         }
-
         return null;
     }
-
-    private String toJson(ErrorResponse errorResponse) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        return mapper.writeValueAsString(errorResponse);
-    }
-
 }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.common.config.SecurityConfig;
+import org.sejongisc.backend.common.config.security.SecurityConfig;
 import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.template.dto.TemplateRequest;
 import org.sejongisc.backend.template.dto.TemplateResponse;

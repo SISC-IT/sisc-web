@@ -292,7 +292,7 @@ class AuthControllerTest {
                 .name("홍길동")
                 .email("hong@example.com")
                 .password("Password123!")
-                .role(Role.TEAM_MEMBER)
+                //.role(Role.TEAM_MEMBER)
                 .phoneNumber("01012345678")
                 .build();
 

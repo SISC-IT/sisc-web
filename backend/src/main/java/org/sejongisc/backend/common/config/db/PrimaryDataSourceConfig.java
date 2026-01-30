@@ -1,4 +1,4 @@
-package org.sejongisc.backend.common.config;
+package org.sejongisc.backend.common.config.db;
 
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;

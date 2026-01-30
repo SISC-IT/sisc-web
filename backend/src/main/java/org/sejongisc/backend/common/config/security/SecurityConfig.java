@@ -1,14 +1,17 @@
-package org.sejongisc.backend.common.config;
+package org.sejongisc.backend.common.config.security;
 
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.common.auth.service.oauth2.GithubServiceImpl;
 import org.sejongisc.backend.common.exception.controller.JwtAccessDeniedHandler;
 import org.sejongisc.backend.common.exception.controller.JwtAuthenticationEntryPoint;
 import org.sejongisc.backend.common.auth.filter.JwtAuthenticationFilter;
+import org.sejongisc.backend.user.entity.Role;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -42,17 +45,23 @@ public class SecurityConfig {
 
     private final Environment env;
 
-    private boolean isProd() {
-        return List.of(env.getActiveProfiles()).contains("prod");
-    }
-    private boolean isDev() {
-        return List.of(env.getActiveProfiles()).contains("dev");
-    }
-
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
         return new HttpSessionOAuth2AuthorizationRequestRepository();
     }
+
+    // 계층적 권한 설정
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+            .role(Role.SYSTEM_ADMIN.name()).implies(Role.PRESIDENT.name())
+            .role(Role.PRESIDENT.name()).implies(Role.VICE_PRESIDENT.name())
+            .role(Role.VICE_PRESIDENT.name()).implies(Role.TEAM_LEADER.name())
+            .role(Role.TEAM_LEADER.name()).implies(Role.TEAM_MEMBER.name())
+            // PENDING_MEMBER는 계층에 포함시키지 않음 (접근 불가)
+            .build();
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -87,38 +96,23 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> {
-                    auth
-                            .requestMatchers(
-                                    "/api/auth/signup",
-                                    "/api/auth/login",
-                                    "/api/auth/login/**",
-                                    "/actuator",
-                                    "/actuator/**",
-                                    "/api/auth/logout",
-                                    "/api/auth/reissue",
-                                    "/v3/api-docs/**",
-                                    "/swagger-ui/**",
-                                    "/api/user/id/find",
-                                    "/api/user/password/reset/**",
-                                    "/api/email/**",
-                                    "/swagger-resources/**",
-                                    "/webjars/**",
-                                    "/login/**",
-                                    "/oauth2/**"
-                            ).permitAll();
+                    // 모두 접근 가능한 API
+                    auth.requestMatchers(SecurityConstants.WHITELIST_URLS).permitAll();
+                    // 관리자 전용 API
+                    auth.requestMatchers(SecurityConstants.ADMIN_ONLY_URLS).hasAnyRole(Role.PRESIDENT.name(), Role.SYSTEM_ADMIN.name());
+                    // 일반 서비스 API (정회원 이상만 접근 가능, PENDING_MEMBER 자동 차단)
+                    // RoleHierarchy 덕분에 TEAM_MEMBER만 적어도 상위 직급은 다 통과됨
+                    auth.requestMatchers(SecurityConstants.MEMBER_ONLY_URLS).hasRole(Role.TEAM_MEMBER.name());
 
-                            auth.requestMatchers(
-                                "/api/user/**",
-                                "/api/user-bets/**"
-                                ).authenticated();
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                            auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-//                            .anyRequest().authenticated();
-                            .anyRequest().permitAll();
+                        .anyRequest().authenticated();
+                        //.anyRequest().permitAll();
                 })
+                //꼭 필요할 때만(OAuth 로그인 과정 등) 세션 생성
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+                // TODO : OAUTH2를 쿠키에 저장 시 OR OAUTH2 를 안쓸 시 STATELESS로 변경 고려
                 //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
         if(jwtAuthenticationFilter != null) {
             http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -146,7 +140,12 @@ public class SecurityConfig {
         return source;
     }
 
-
+    private boolean isProd() {
+        return List.of(env.getActiveProfiles()).contains("prod");
+    }
+    private boolean isDev() {
+        return List.of(env.getActiveProfiles()).contains("dev");
+    }
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

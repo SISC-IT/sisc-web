@@ -31,29 +31,45 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	// OAuth2 Client
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+	// Test Dependencies
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'io.projectreactor:reactor-test'
-	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'org.postgresql:postgresql'
-	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// PostgreSQL Driver
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
+	// OkHttp MockWebServer
 	testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
-	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 	// Mockito + AssertJ
 	testImplementation "org.mockito:mockito-junit-jupiter:5.12.0"
 	testImplementation "org.assertj:assertj-core:3.26.3"
 
-	// GreenMail: SMTP 가짜 서버
-	testImplementation "com.icegreen:greenmail:1.6.14"
+	// mail
+	testImplementation "com.icegreen:greenmail:1.6.14"		// GreenMail: SMTP 가짜 서버
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+	// Spring Boot Admin Server & Client
+	implementation 'de.codecentric:spring-boot-admin-starter-server:3.2.1'
+	implementation 'de.codecentric:spring-boot-admin-starter-client:3.2.1'
+
+	// Actuator
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 	// spring-retry
 	implementation 'org.springframework.retry:spring-retry'
@@ -64,16 +80,12 @@ dependencies {
 	// swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.3'
 
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
-
 	// backtesting library
 	implementation 'org.ta4j:ta4j-core:0.15'
 
-	// mail
-	implementation 'org.springframework.boot:spring-boot-starter-mail'
-
 	//validation
 	implementation 'commons-validator:commons-validator:1.10.0'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
 	// Redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'

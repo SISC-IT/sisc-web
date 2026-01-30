@@ -1,5 +1,7 @@
 package org.sejongisc.backend.user.entity;
 
+// 일반 회원가입 : 회장 승인이 있어야만 설정 가능
+// 엑셀 회원가입 : 회장 승인 없이 설정 가능 (user.isManagerPosition 으로 판단)
 public enum Role {
     SYSTEM_ADMIN,      // 시스템 관리자
     PRESIDENT,          // 회장

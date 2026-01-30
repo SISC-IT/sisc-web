@@ -67,7 +67,7 @@ class UserServiceTest {
                 .name("홍길동")
                 .email("hong@example.com")
                 .password("Password123!")
-                .role(Role.TEAM_MEMBER)
+                //.role(Role.TEAM_MEMBER)
                 .phoneNumber("01012345678")
                 .build();
 
@@ -115,7 +115,7 @@ class UserServiceTest {
                 .name("홍길동")
                 .email("dup@example.com")
                 .password("Password123!")
-                .role(Role.TEAM_MEMBER)
+                //.role(Role.TEAM_MEMBER)
                 .phoneNumber("01012345678")
                 .build();
 
@@ -175,7 +175,7 @@ class UserServiceTest {
                 .name("성춘향")
                 .email("spring@example.com")
                 .password("Password!123")
-                .role(Role.TEAM_MEMBER)
+                //.role(Role.TEAM_MEMBER)
                 .phoneNumber("01011112222")
                 .build();
 
@@ -202,7 +202,7 @@ class UserServiceTest {
                 .name("임꺽정")
                 .email("im@example.com")
                 .password("Pw123456!")
-                .role(Role.TEAM_MEMBER)
+                //.role(Role.TEAM_MEMBER)
                 .phoneNumber("01077778888")
                 .build();
 
