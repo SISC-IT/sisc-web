@@ -1,4 +1,4 @@
-package org.sejongisc.backend.auth.service;
+package org.sejongisc.backend.auth.service.oauth2;
 
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.auth.dto.GithubTokenResponse;
@@ -9,7 +9,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserter;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;

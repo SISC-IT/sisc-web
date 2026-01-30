@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.auth.dto.GithubTokenResponse;
 import org.sejongisc.backend.auth.dto.GithubUserInfoResponse;
+import org.sejongisc.backend.auth.service.oauth2.GithubServiceImpl;
 
 import java.io.IOException;
 

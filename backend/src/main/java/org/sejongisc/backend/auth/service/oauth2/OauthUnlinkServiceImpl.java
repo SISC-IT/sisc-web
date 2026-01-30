@@ -1,4 +1,4 @@
-package org.sejongisc.backend.auth.service;
+package org.sejongisc.backend.auth.service.oauth2;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

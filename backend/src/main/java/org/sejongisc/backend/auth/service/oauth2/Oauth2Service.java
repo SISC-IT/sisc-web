@@ -1,4 +1,4 @@
-package org.sejongisc.backend.auth.service;
+package org.sejongisc.backend.auth.service.oauth2;
 
 public interface Oauth2Service<TToken, TUserInfo> {
 

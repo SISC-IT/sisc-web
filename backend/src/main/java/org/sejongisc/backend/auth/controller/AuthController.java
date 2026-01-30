@@ -49,7 +49,6 @@ public class AuthController {
 
     private final LoginService loginService;
     private final UserService userService;
-    private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
 
 

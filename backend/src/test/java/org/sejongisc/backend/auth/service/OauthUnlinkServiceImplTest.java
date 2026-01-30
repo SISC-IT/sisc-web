@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.sejongisc.backend.auth.service.oauth2.OauthUnlinkServiceImpl;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 

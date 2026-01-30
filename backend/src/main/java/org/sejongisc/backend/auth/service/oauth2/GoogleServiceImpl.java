@@ -1,6 +1,5 @@
-package org.sejongisc.backend.auth.service;
+package org.sejongisc.backend.auth.service.oauth2;
 
-import io.netty.handler.codec.http.HttpHeaderValues;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.auth.dto.GoogleTokenResponse;
 import org.sejongisc.backend.auth.dto.GoogleUserInfoResponse;

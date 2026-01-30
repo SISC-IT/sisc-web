@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.auth.dto.GoogleTokenResponse;
 import org.sejongisc.backend.auth.dto.GoogleUserInfoResponse;
+import org.sejongisc.backend.auth.service.oauth2.GoogleServiceImpl;
 
 import java.io.IOException;
 

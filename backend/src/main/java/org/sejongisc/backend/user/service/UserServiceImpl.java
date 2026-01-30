@@ -3,7 +3,7 @@ package org.sejongisc.backend.user.service;
 
 import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.auth.service.EmailService;
-import org.sejongisc.backend.auth.service.OauthUnlinkService;
+import org.sejongisc.backend.auth.service.oauth2.OauthUnlinkService;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.annotation.OptimisticRetry;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
