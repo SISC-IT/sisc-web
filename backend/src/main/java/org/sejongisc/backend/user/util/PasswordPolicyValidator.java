@@ -11,12 +11,20 @@ public class PasswordPolicyValidator {
     private static final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#$%^&*()_+=\\-{};:'\",.<>/?]).{8,20}$");
 
-    public static void validate(String password) {
-        if (password == null || password.trim().isEmpty()) {
+    public static String getValidatedPassword(String password) {
+        String trimmed = sanitize(password);
+
+        if (!PASSWORD_PATTERN.matcher(trimmed).matches()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
-        if (!PASSWORD_PATTERN.matcher(password).matches()) {
+
+        return trimmed;
+    }
+
+    private static String sanitize(String password) {
+        if (password == null || password.isBlank()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
+        return password.trim();
     }
 }

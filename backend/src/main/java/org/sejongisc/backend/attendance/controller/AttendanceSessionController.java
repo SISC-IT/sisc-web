@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceSessionResponse;
 import org.sejongisc.backend.attendance.service.AttendanceSessionService;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

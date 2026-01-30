@@ -1,7 +1,6 @@
 package org.sejongisc.backend.template.service;
 
 
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.backtest.repository.BacktestRunRepository;
@@ -11,7 +10,7 @@ import org.sejongisc.backend.template.dto.TemplateRequest;
 import org.sejongisc.backend.template.dto.TemplateResponse;
 import org.sejongisc.backend.template.entity.Template;
 import org.sejongisc.backend.template.repository.TemplateRepository;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 

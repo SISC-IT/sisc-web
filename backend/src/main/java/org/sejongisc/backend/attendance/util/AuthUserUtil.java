@@ -1,7 +1,8 @@
 package org.sejongisc.backend.attendance.util;
 
 import java.util.UUID;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 
 public class AuthUserUtil {
   private AuthUserUtil() {}

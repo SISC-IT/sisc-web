@@ -14,7 +14,7 @@ import org.sejongisc.backend.template.dto.TemplateResponse;
 import org.sejongisc.backend.template.entity.Template;
 import org.sejongisc.backend.template.repository.TemplateRepository;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 
 import java.util.Optional;
 import java.util.UUID;

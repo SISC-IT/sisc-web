@@ -12,7 +12,7 @@ import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.sejongisc.backend.attendance.repository.SessionUserRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
