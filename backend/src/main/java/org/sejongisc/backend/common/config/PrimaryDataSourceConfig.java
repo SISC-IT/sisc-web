@@ -80,7 +80,7 @@ public class PrimaryDataSourceConfig {
                 .dataSource(dataSource)
                 .packages(
                         "org.sejongisc.backend.attendance.entity",
-                        "org.sejongisc.backend.auth.entity",
+                        "org.sejongisc.backend.common.auth.entity",
                         "org.sejongisc.backend.backtest.entity",
                         "org.sejongisc.backend.betting.entity",
                         "org.sejongisc.backend.board.entity",

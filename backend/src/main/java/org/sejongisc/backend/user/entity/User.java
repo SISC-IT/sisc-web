@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
-import org.sejongisc.backend.auth.entity.UserOauthAccount;
+import org.sejongisc.backend.common.auth.entity.UserOauthAccount;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 import java.util.ArrayList;

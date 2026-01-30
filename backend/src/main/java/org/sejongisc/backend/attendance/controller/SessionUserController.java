@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.SessionUserResponse;
 import org.sejongisc.backend.attendance.service.SessionUserService;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

@@ -1,37 +1,280 @@
 package org.sejongisc.backend.user.service;
 
-import org.sejongisc.backend.auth.dto.SignupRequest;
-import org.sejongisc.backend.auth.dto.SignupResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.common.auth.dto.SignupRequest;
+import org.sejongisc.backend.common.auth.dto.SignupResponse;
+import org.sejongisc.backend.common.auth.entity.AuthProvider;
+import org.sejongisc.backend.common.auth.entity.UserOauthAccount;
+import org.sejongisc.backend.common.auth.dto.oauth.OauthUserInfo;
+import org.sejongisc.backend.common.auth.repository.UserOauthAccountRepository;
+import org.sejongisc.backend.common.auth.service.EmailService;
+import org.sejongisc.backend.common.auth.service.RefreshTokenService;
+import org.sejongisc.backend.common.auth.service.oauth2.OauthUnlinkService;
+import org.sejongisc.backend.common.annotation.OptimisticRetry;
+import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
+import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.point.dto.AccountEntry;
+import org.sejongisc.backend.point.entity.Account;
+import org.sejongisc.backend.point.entity.AccountName;
+import org.sejongisc.backend.point.entity.TransactionReason;
+import org.sejongisc.backend.point.service.AccountService;
+import org.sejongisc.backend.point.service.PointLedgerService;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.auth.dto.oauth.OauthUserInfo;
-import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
+import org.sejongisc.backend.user.repository.UserRepository;
+import org.sejongisc.backend.user.util.PasswordPolicyValidator;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
-public interface UserService {
-    SignupResponse signUp(SignupRequest dto);
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class UserService {
 
-    User findOrCreateUser(OauthUserInfo oauthInfo);
+    private final UserRepository userRepository;
+    private final UserOauthAccountRepository oauthAccountRepository;
+    private final OauthUnlinkService oauthUnlinkService;
+    private final PasswordEncoder passwordEncoder;
+    private final TokenEncryptor tokenEncryptor;
+    private final EmailService emailService;
+    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RefreshTokenService refreshTokenService;
+    private final AccountService accountService;
+    private final PointLedgerService pointLedgerService;
 
-    void updateUser(UUID userId, UserUpdateRequest request);
+    // --- 핵심 회원 서비스 ---
 
-    User getUserById(UUID userId);
+    @Transactional
+    @OptimisticRetry
+    public SignupResponse signup(SignupRequest dto) {
+        validateDuplicateUser(dto.getEmail(), dto.getPhoneNumber());
 
-    void deleteUserWithOauth(UUID userId);
+        String trimmedPassword = validateAndGetTrimmedPassword(dto.getPassword());
+        PasswordPolicyValidator.validate(trimmedPassword);
 
-    String findEmailByNameAndPhone(String name, String phoneNumber);
+        User user = User.builder()
+            .name(dto.getName())
+            .email(dto.getEmail())
+            .passwordHash(passwordEncoder.encode(trimmedPassword))
+            .role(dto.getRole() != null ? dto.getRole() : Role.TEAM_MEMBER)
+            .point(0)
+            .phoneNumber(dto.getPhoneNumber())
+            .build();
 
-    void passwordReset(String email);
+        try {
+            User saved = userRepository.save(user);
+            Account userAccount = accountService.createUserAccount(user.getUserId());
+            pointLedgerService.processTransaction(
+                TransactionReason.SIGNUP_REWARD,
+                user.getUserId(),
+                AccountEntry.credit(accountService.getAccountByName(AccountName.SYSTEM_ISSUANCE), 100L),
+                AccountEntry.debit(userAccount, 100L)
+            );
+            log.info("포인트 계정 생성 및 초기 포인트 지급 완료: {}", user.getEmail());
+            return SignupResponse.from(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.DUPLICATE_USER);
+        }
+    }
 
-    String verifyResetCodeAndIssueToken(String email, String code);
+    @Transactional
+    public void updateUser(UUID userId, UserUpdateRequest request) {
+        User user = findUserById(userId);
 
-    void resetPasswordByToken(String resetToken, String newPassword);
+        if (isNotBlank(request.getName())) {
+            user.setName(request.getName().trim());
+        }
 
-    User upsertOAuthUser(String provider, String providerId, String email, String name);
+        if (isNotBlank(request.getPhoneNumber())) {
+            user.setPhoneNumber(request.getPhoneNumber().trim());
+        }
 
-    List<UserIdNameProjection> getUserProjectionList();
+        if (request.getPassword() != null) {
+            String trimmedPassword = validateAndGetTrimmedPassword(request.getPassword());
+            PasswordPolicyValidator.validate(trimmedPassword);
+            user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
+        }
 
-    List<User> findAllUsersMissingAccount();
+        log.info("회원 정보 수정 완료: userId={}", userId);
+    }
+
+
+    public String findEmailByNameAndPhone(String name, String phone) {
+        String nName = validateNotBlank(name, "이름");
+        String nPhone = validateNotBlank(phone, "전화번호");
+
+        return userRepository.findByNameAndPhoneNumber(nName, nPhone)
+            .map(User::getEmail)
+            .orElse(null);
+    }
+
+    public void passwordReset(String email) {
+        String nEmail = validateNotBlank(email, "이메일");
+
+        if (!userRepository.existsByEmail(nEmail)) {
+            log.debug("존재하지 않는 이메일로 비밀번호 재설정 요청: {}", nEmail);
+            return;
+        }
+
+        emailService.sendResetEmail(nEmail);
+    }
+
+    public String verifyResetCodeAndIssueToken(String email, String code) {
+        String nEmail = validateNotBlank(email, "이메일");
+        String nCode = validateNotBlank(code, "인증코드");
+
+        emailService.verifyResetEmail(nEmail, nCode);
+
+        String token = UUID.randomUUID().toString();
+        saveResetTokenToRedis(token, nEmail);
+
+        return token;
+    }
+
+    @Transactional
+    public void resetPasswordByToken(String resetToken, String newPassword) {
+        String email = getEmailFromRedis(resetToken);
+        User user = userRepository.findUserByEmail(email)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        String trimmedPassword = validateAndGetTrimmedPassword(newPassword);
+        PasswordPolicyValidator.validate(trimmedPassword);
+
+        user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
+
+        deleteResetTokenFromRedis(resetToken);
+        refreshTokenService.deleteByUserId(user.getUserId());
+    }
+
+    public List<User> findAllUsersMissingAccount() {
+        return userRepository.findAllUsersMissingAccount();
+    }
+
+    // --- 내부 헬퍼 메서드 ---
+
+    private User findUserById(UUID userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private void validateDuplicateUser(String email, String phone) {
+        if (userRepository.existsByEmail(email)) throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        if (userRepository.existsByPhoneNumber(phone)) throw new CustomException(ErrorCode.DUPLICATE_PHONE);
+    }
+
+    private String validateAndGetTrimmedPassword(String password) {
+        if (password == null || password.trim().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        return password.trim();
+    }
+
+    private String validateNotBlank(String value, String fieldName) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        return value.trim();
+    }
+
+    private boolean isNotBlank(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private void completeSignup(User user) {
+
+    }
+
+    private void saveResetTokenToRedis(String token, String email) {
+        try {
+            redisTemplate.opsForValue().set("PASSWORD_RESET:" + token, email, Duration.ofMinutes(10));
+        } catch (Exception e) {
+            log.error("Redis 저장 실패", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private String getEmailFromRedis(String token) {
+        try {
+            String email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + token);
+            if (email == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
+            return email;
+        } catch (Exception e) {
+            log.error("Redis 조회 실패", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void deleteResetTokenFromRedis(String token) {
+        try {
+            redisTemplate.delete("PASSWORD_RESET:" + token);
+        } catch (Exception e) {
+            log.error("Redis 삭제 실패", e);
+        }
+    }
+
+    // ------------------------ (비활성화) OAuth2 관련 로직 ------------------------
+
+    @Transactional
+    public User upsertOAuthUser(String provider, String providerUid, String email, String name) {
+        AuthProvider authProvider = AuthProvider.valueOf(provider.toUpperCase());
+        return oauthAccountRepository.findByProviderAndProviderUid(authProvider, providerUid)
+            .map(UserOauthAccount::getUser)
+            .orElseGet(() -> {
+                User savedUser = userRepository.save(User.builder().email(email).name(name).role(Role.TEAM_MEMBER).build());
+                oauthAccountRepository.save(UserOauthAccount.builder().user(savedUser).provider(authProvider).providerUid(providerUid).build());
+                return savedUser;
+            });
+    }
+
+    // 기존 findOrCreateUser는 upsertOAuthUser와 로직이 겹치므로 통합 권장하나, 유지 시 하단에 배치
+    @Transactional
+    @OptimisticRetry
+    public User findOrCreateUser(OauthUserInfo oauthInfo) {
+        return oauthAccountRepository.findByProviderAndProviderUid(oauthInfo.getProvider(), oauthInfo.getProviderUid())
+            .map(UserOauthAccount::getUser)
+            .orElseGet(() -> {
+                User savedUser = userRepository.save(User.builder().name(oauthInfo.getName()).role(Role.TEAM_MEMBER).build());
+                Account userAccount = accountService.createUserAccount(savedUser.getUserId());
+                pointLedgerService.processTransaction(
+                    TransactionReason.SIGNUP_REWARD,
+                    savedUser.getUserId(),
+                    AccountEntry.credit(accountService.getAccountByName(AccountName.SYSTEM_ISSUANCE), 100L),
+                    AccountEntry.debit(userAccount, 100L)
+                );
+                log.info("포인트 계정 생성 및 초기 포인트 지급 완료: {}", savedUser.getEmail());
+                oauthAccountRepository.save(UserOauthAccount.builder()
+                    .user(savedUser).provider(oauthInfo.getProvider()).providerUid(oauthInfo.getProviderUid())
+                    .accessToken(tokenEncryptor.encrypt(oauthInfo.getAccessToken())).build());
+                return savedUser;
+            });
+    }
+
+    @Transactional
+    public void deleteUserWithOauth(UUID userId) {
+        User user = findUserById(userId);
+        user.getOauthAccounts().forEach(account -> {
+            String provider = account.getProvider().name().toLowerCase();
+            String accessToken = tokenEncryptor.decrypt(account.getAccessToken());
+            switch (provider) {
+                case "kakao" -> oauthUnlinkService.unlinkKakao(accessToken);
+                case "google" -> oauthUnlinkService.unlinkGoogle(accessToken);
+                case "github" -> oauthUnlinkService.unlinkGithub(accessToken);
+                default -> log.warn("지원하지 않는 소셜 서비스: {}", provider);
+            }
+        });
+
+        userRepository.delete(user);
+        log.info("회원 탈퇴 완료: userId={}", userId);
+    }
 }

@@ -6,9 +6,9 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.sejongisc.backend.auth.dto.oauth.GithubTokenResponse;
-import org.sejongisc.backend.auth.dto.oauth.GithubUserInfoResponse;
-import org.sejongisc.backend.auth.service.oauth2.GithubServiceImpl;
+import org.sejongisc.backend.common.auth.dto.oauth.GithubTokenResponse;
+import org.sejongisc.backend.common.auth.dto.oauth.GithubUserInfoResponse;
+import org.sejongisc.backend.common.auth.service.oauth2.GithubServiceImpl;
 
 import java.io.IOException;
 

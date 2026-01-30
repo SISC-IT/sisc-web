@@ -3,10 +3,9 @@ package org.sejongisc.backend.template.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.sejongisc.backend.common.auth.config.SecurityConfig;
+import org.sejongisc.backend.common.config.SecurityConfig;
+import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.sejongisc.backend.common.auth.jwt.JwtParser;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
-import org.sejongisc.backend.common.auth.springsecurity.JwtAuthenticationFilter;
 import org.sejongisc.backend.template.dto.TemplateRequest;
 import org.sejongisc.backend.template.dto.TemplateResponse;
 import org.sejongisc.backend.template.entity.Template;
@@ -14,7 +13,6 @@ import org.sejongisc.backend.template.service.TemplateService;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -25,14 +23,9 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -71,7 +64,7 @@ class TemplateControllerTest {
         .userId(uid).name("tester").email("test@example.com")
         .role(Role.TEAM_MEMBER).point(0).build();
 
-    CustomUserDetails customUserDetails = new CustomUserDetails(domainUser);
+    LoginResponse.CustomUserDetails customUserDetails = new LoginResponse.CustomUserDetails(domainUser);
 
     // SecurityConfig 에서 hasRole("TEAM_MEMBER") 라면 ROLE_ 접두어 필요
     return new UsernamePasswordAuthenticationToken(customUserDetails, "", List.of(new SimpleGrantedAuthority("ROLE_TEAM_MEMBER")));

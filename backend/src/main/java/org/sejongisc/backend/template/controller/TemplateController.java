@@ -3,7 +3,8 @@ package org.sejongisc.backend.template.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.sejongisc.backend.template.dto.TemplateRequest;
 import org.sejongisc.backend.template.dto.TemplateResponse;
 import org.sejongisc.backend.template.service.TemplateService;
@@ -11,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 

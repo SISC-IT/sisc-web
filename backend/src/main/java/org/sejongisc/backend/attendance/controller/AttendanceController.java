@@ -11,7 +11,7 @@ import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceStatusUpdateRequest;
 import org.sejongisc.backend.attendance.service.AttendanceService;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

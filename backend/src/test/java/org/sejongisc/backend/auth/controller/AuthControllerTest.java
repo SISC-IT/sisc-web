@@ -11,14 +11,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sejongisc.backend.auth.dto.*;
-import org.sejongisc.backend.auth.dto.oauth.*;
-import org.sejongisc.backend.auth.service.LoginService;
-import org.sejongisc.backend.auth.service.oauth2.Oauth2Service;
-import org.sejongisc.backend.auth.service.oauth2.OauthStateService;
-import org.sejongisc.backend.auth.service.RefreshTokenService;
+import org.sejongisc.backend.common.auth.controller.AuthController;
+import org.sejongisc.backend.common.auth.controller.AuthCookieHelper;
+import org.sejongisc.backend.common.auth.dto.*;
+import org.sejongisc.backend.common.auth.dto.oauth.*;
+import org.sejongisc.backend.common.auth.service.AuthService;
+import org.sejongisc.backend.common.auth.service.oauth2.Oauth2Service;
+import org.sejongisc.backend.common.auth.service.oauth2.OauthStateService;
+import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
@@ -59,11 +60,14 @@ class AuthControllerTest {
     @Mock Oauth2Service<KakaoTokenResponse, KakaoUserInfoResponse> kakaoService;
     @Mock Oauth2Service<GithubTokenResponse, GithubUserInfoResponse> githubService;
 
-    @Mock LoginService loginService;
+    @Mock
+    AuthService authService;
     @Mock UserService userService;
     @Mock JwtProvider jwtProvider;
     @Mock OauthStateService oauthStateService;
     @Mock RefreshTokenService refreshTokenService;
+    @Mock
+    AuthCookieHelper authCookieHelper;
 
     @InjectMocks
     AuthController authController;
@@ -79,14 +83,7 @@ class AuthControllerTest {
                 "GITHUB", githubService
         );
 
-        authController = new AuthController(
-                oauth2Services,
-                loginService,
-                userService,
-                jwtProvider,
-                oauthStateService,
-                refreshTokenService
-        );
+        authController = new AuthController(authService, refreshTokenService, authCookieHelper);
 
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -127,7 +124,7 @@ class AuthControllerTest {
                 .point(100)
                 .build();
 
-        when(loginService.login(any(LoginRequest.class))).thenReturn(resp);
+        when(authService.login(any(LoginRequest.class))).thenReturn(resp);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -144,7 +141,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/auth/login - 존재하지 않는 사용자면 404 반환")
     void login_userNotFound() throws Exception {
-        when(loginService.login(any(LoginRequest.class)))
+        when(authService.login(any(LoginRequest.class)))
                 .thenThrow(new CustomException(ErrorCode.USER_NOT_FOUND));
 
         LoginRequest req = new LoginRequest("notfound@example.com", "Password123!");
@@ -159,7 +156,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/auth/login - 비밀번호 틀리면 401 반환")
     void login_wrongPassword() throws Exception {
-        when(loginService.login(any(LoginRequest.class)))
+        when(authService.login(any(LoginRequest.class)))
                 .thenThrow(new CustomException(ErrorCode.UNAUTHORIZED));
 
         LoginRequest req = new LoginRequest("hong@example.com", "WrongPassword!");
@@ -262,7 +259,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("로그아웃 성공"));
 
-        verify(loginService, times(1)).logout(token);
+        verify(authService, times(1)).logout(token);
     }
 
     // Authorization 헤더 누락
@@ -272,14 +269,14 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("잘못된 Authorization 헤더 형식입니다."));
-        verify(loginService, never()).logout(anyString());
+        verify(authService, never()).logout(anyString());
     }
 
     // 잘못된 토큰 (JwtException)
     @Test
     @DisplayName("POST /api/auth/logout - 잘못된 토큰이어도 200 OK 응답 (멱등성 보장)")
     void logout_invalidToken() throws Exception {
-        doThrow(new JwtException("Invalid Token")).when(loginService).logout(anyString());
+        doThrow(new JwtException("Invalid Token")).when(authService).logout(anyString());
 
         mockMvc.perform(post("/api/auth/logout")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer invalid.token"))
@@ -310,7 +307,7 @@ class AuthControllerTest {
                 .build();
 
         SignupResponse resp = SignupResponse.from(entity);
-        when(userService.signUp(any(SignupRequest.class))).thenReturn(resp);
+        when(userService.signup(any(SignupRequest.class))).thenReturn(resp);
 
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
