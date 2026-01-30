@@ -3,13 +3,12 @@ package org.sejongisc.backend.common.auth.config;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
+import org.sejongisc.backend.auth.repository.UserOauthAccountRepository;
 import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -17,7 +16,6 @@ import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 

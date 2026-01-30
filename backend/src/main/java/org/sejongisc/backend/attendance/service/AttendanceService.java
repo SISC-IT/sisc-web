@@ -15,7 +15,7 @@ import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;

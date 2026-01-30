@@ -1,25 +1,20 @@
 package org.sejongisc.backend.auth.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.auth.dto.LoginRequest;
 import org.sejongisc.backend.auth.dto.LoginResponse;
 import org.sejongisc.backend.user.entity.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.sql.Ref;
 import java.util.UUID;
 
 @Slf4j

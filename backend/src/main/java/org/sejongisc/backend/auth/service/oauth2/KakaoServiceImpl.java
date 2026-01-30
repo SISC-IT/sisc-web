@@ -2,8 +2,8 @@ package org.sejongisc.backend.auth.service.oauth2;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.auth.dto.KakaoTokenResponse;
-import org.sejongisc.backend.auth.dto.KakaoUserInfoResponse;
+import org.sejongisc.backend.auth.dto.oauth.KakaoTokenResponse;
+import org.sejongisc.backend.auth.dto.oauth.KakaoUserInfoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;

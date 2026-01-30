@@ -4,7 +4,7 @@ import org.sejongisc.backend.auth.dto.SignupRequest;
 import org.sejongisc.backend.auth.dto.SignupResponse;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.auth.oauth.OauthUserInfo;
+import org.sejongisc.backend.auth.dto.oauth.OauthUserInfo;
 import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 
 import java.util.List;

@@ -9,7 +9,7 @@ import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 

@@ -11,13 +11,11 @@ import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.auth.dto.LoginRequest;
 import org.sejongisc.backend.auth.dto.LoginResponse;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -26,7 +24,6 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 
 

@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.auth.dto.*;
+import org.sejongisc.backend.auth.dto.oauth.*;
 import org.sejongisc.backend.auth.service.LoginService;
 import org.sejongisc.backend.auth.service.oauth2.Oauth2Service;
 import org.sejongisc.backend.auth.service.oauth2.OauthStateService;

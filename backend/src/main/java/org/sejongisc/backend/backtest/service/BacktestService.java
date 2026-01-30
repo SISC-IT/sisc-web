@@ -1,7 +1,6 @@
 package org.sejongisc.backend.backtest.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.backtest.dto.BacktestRequest;
@@ -17,7 +16,7 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.stock.repository.PriceDataRepository;
 import org.sejongisc.backend.template.entity.Template;
 import org.sejongisc.backend.template.repository.TemplateRepository;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

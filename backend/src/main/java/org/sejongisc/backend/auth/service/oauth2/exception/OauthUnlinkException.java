@@ -1,4 +1,4 @@
-package org.sejongisc.backend.auth.exception;
+package org.sejongisc.backend.auth.service.oauth2.exception;
 
 public class OauthUnlinkException extends RuntimeException {
     public OauthUnlinkException(String message) {

@@ -5,26 +5,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.auth.dto.*;
-import org.sejongisc.backend.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.auth.service.*;
-import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
-import org.sejongisc.backend.common.exception.CustomException;
-import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.auth.oauth.GithubUserInfoAdapter;
-import org.sejongisc.backend.auth.oauth.GoogleUserInfoAdapter;
-import org.sejongisc.backend.auth.oauth.KakaoUserInfoAdapter;
 import org.sejongisc.backend.user.service.UserService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -32,9 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j

@@ -2,7 +2,7 @@ package org.sejongisc.backend.auth.service.oauth2;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.auth.exception.OauthUnlinkException;
+import org.sejongisc.backend.auth.service.oauth2.exception.OauthUnlinkException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;

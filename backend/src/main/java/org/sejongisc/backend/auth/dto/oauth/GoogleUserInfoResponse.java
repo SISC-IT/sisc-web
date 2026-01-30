@@ -1,4 +1,4 @@
-package org.sejongisc.backend.auth.dto;
+package org.sejongisc.backend.auth.dto.oauth;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

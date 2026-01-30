@@ -1,8 +1,8 @@
 package org.sejongisc.backend.auth.service.oauth2;
 
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.auth.dto.GithubTokenResponse;
-import org.sejongisc.backend.auth.dto.GithubUserInfoResponse;
+import org.sejongisc.backend.auth.dto.oauth.GithubTokenResponse;
+import org.sejongisc.backend.auth.dto.oauth.GithubUserInfoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;

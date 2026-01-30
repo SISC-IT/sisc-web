@@ -1,6 +1,5 @@
-package org.sejongisc.backend.auth.oauth;
+package org.sejongisc.backend.auth.dto.oauth;
 
-import org.sejongisc.backend.auth.dto.KakaoUserInfoResponse;
 import org.sejongisc.backend.auth.entity.AuthProvider;
 
 import java.util.Optional;

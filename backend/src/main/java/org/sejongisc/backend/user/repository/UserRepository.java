@@ -1,4 +1,4 @@
-package org.sejongisc.backend.user.dao;
+package org.sejongisc.backend.user.repository;
 
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.service.projection.UserIdNameProjection;

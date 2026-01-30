@@ -11,7 +11,7 @@ import org.sejongisc.backend.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 

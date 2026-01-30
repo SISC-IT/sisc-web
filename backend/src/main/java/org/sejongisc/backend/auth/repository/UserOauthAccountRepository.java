@@ -1,4 +1,4 @@
-package org.sejongisc.backend.auth.dao;
+package org.sejongisc.backend.auth.repository;
 
 import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;

@@ -1,37 +1,29 @@
 package org.sejongisc.backend.common.auth.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
-import org.sejongisc.backend.auth.dao.UserOauthAccountRepository;
+import org.sejongisc.backend.auth.repository.UserOauthAccountRepository;
 import org.sejongisc.backend.auth.entity.AuthProvider;
 import org.sejongisc.backend.auth.entity.UserOauthAccount;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.auth.service.RefreshTokenService;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @Component
