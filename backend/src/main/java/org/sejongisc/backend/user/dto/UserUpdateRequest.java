@@ -32,7 +32,6 @@ public class UserUpdateRequest {
     )
     private String phoneNumber;
     */
-    @NotBlank(message = "이메일은 필수입니다.")
     @Email(message = "유효한 이메일 형식이 아닙니다.")
     @Schema(description = "비밀번호 재설정용 이메일", example = "sira@sejong.ac.kr")
     private String email;
