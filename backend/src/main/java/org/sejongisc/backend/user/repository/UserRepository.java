@@ -1,10 +1,7 @@
 package org.sejongisc.backend.user.repository;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.user.service.projection.UserIdNameProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 

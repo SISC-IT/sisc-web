@@ -46,7 +46,7 @@ public class JwtParser {
     // Authentication 생성
     public UsernamePasswordAuthenticationToken getAuthentication(String token) {
         Claims claims = parseClaims(token);
-        // TODO : 유지보수성을 위해 클레임 키 상수화 고려 및
+        // TODO : 유지보수성을 위해 클레임 키 상수화 고려
         String userId = claims.get("uid", String.class);
         String roleStr = claims.get("role", String.class);
         if (roleStr == null) {

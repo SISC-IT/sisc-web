@@ -29,7 +29,6 @@ import java.util.Map;
 public class UserController {
 
   private final UserService userService;
-  private final RefreshTokenService refreshTokenService;
   private final AuthCookieHelper authCookieHelper;
 
   @Operation(summary = "회원 가입", description = "회장이 승인하기 전까지 PENDING 상태가 유지되며, 웹사이트를 사용할 수 없습니다.")
@@ -43,8 +42,6 @@ public class UserController {
   @DeleteMapping("/withdraw")
   public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
     userService.deleteUserSoftDelete(user.getUserId());
-    refreshTokenService.deleteByUserId(user.getUserId());
-
     return ResponseEntity.noContent()
         .header(HttpHeaders.SET_COOKIE, authCookieHelper.deleteCookie("refresh").toString())
         .build();

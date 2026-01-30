@@ -13,6 +13,7 @@ import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.AuthRequest;
 import org.sejongisc.backend.common.auth.dto.AuthResponse;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +34,8 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         User user = userRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(request.getPassword());
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(trimmedPassword, user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
         String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());

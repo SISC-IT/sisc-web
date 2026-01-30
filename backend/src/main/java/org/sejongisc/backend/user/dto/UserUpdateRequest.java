@@ -42,7 +42,7 @@ public class UserUpdateRequest {
         example = "password123!"
     )
     @Size(min = 8, message = "비밀번호는 최소 8자 이상 입력해야 합니다.")
-    private String password;
+    private String currentPassword;
 
     @Schema(
             description = "변경할 비밀번호 (변경 시에만 포함)",

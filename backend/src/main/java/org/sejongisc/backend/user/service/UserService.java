@@ -83,7 +83,7 @@ public class UserService {
 
         // 비밀번호 변경 로직 (새 비밀번호가 입력된 경우에만 실행)
         if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
-            if (!passwordEncoder.matches(request.getNewPassword(), request.getNewPassword())) {
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
                 throw new CustomException(ErrorCode.INVALID_INPUT); // 비밀번호 불일치 에러
             }
             // 새 비밀번호 정제 및 정책 검증
@@ -177,6 +177,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public void deleteUserSoftDelete(UUID userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
