@@ -6,7 +6,6 @@ import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.sejongisc.backend.user.entity.User;
 
 @Getter

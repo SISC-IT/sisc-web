@@ -22,18 +22,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String userId) throws UsernameNotFoundException {
-        UUID uuid;
         try {
-            uuid = UUID.fromString(userId);
+            UUID uuidUserId = UUID.fromString(userId);
+            User findUser = userRepository.findById(uuidUserId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+            return new CustomUserDetails(findUser);
         } catch (IllegalArgumentException e) {
-            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN);
+            throw new CustomException(ErrorCode.INVALID_INPUT);
         }
-        User findUser = userRepository.findById(uuid).orElseThrow(
-                () -> new CustomException(ErrorCode.USER_NOT_FOUND)
-        );
-
-        return new CustomUserDetails(findUser);
-
     }
-
 }

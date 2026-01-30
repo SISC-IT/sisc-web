@@ -12,7 +12,6 @@ import org.sejongisc.backend.betting.entity.BetRound;
 import org.sejongisc.backend.betting.entity.Scope;
 import org.sejongisc.backend.betting.service.BettingService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;

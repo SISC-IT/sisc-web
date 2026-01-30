@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.auth.controller.AuthCookieHelper;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
@@ -21,7 +20,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -41,42 +39,42 @@ public class UserController {
     return ResponseEntity.status(HttpStatus.CREATED).body(userService.signup(request));
   }
 
-  @Operation(summary = "회원 탈퇴", description = "리프레시 토큰을 삭제합니다.")
+  @Operation(summary = "회원 탈퇴", description = "UserStatus.OUT 으로 변경하여 softDelete 처리 후, 리프레시 토큰을 삭제합니다.")
   @DeleteMapping("/withdraw")
-  public ResponseEntity<?> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
-    userService.deleteUserWithOauth(user.getUserId());
+  public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
+    userService.deleteUserSoftDelete(user.getUserId());
     refreshTokenService.deleteByUserId(user.getUserId());
 
-    return ResponseEntity.ok()
+    return ResponseEntity.noContent()
         .header(HttpHeaders.SET_COOKIE, authCookieHelper.deleteCookie("refresh").toString())
-        .body(Map.of("message", "회원 탈퇴가 완료되었습니다."));
+        .build();
   }
 
   @Operation(summary = "내 정보 조회")
   @GetMapping("/details")
-  public ResponseEntity<?> getUserInfo(@AuthenticationPrincipal CustomUserDetails user) {
+  public ResponseEntity<UserInfoResponse> getUserInfo(@AuthenticationPrincipal CustomUserDetails user) {
     return ResponseEntity.ok(new UserInfoResponse(user.getUserId(), user.getName(), user.getEmail(), user.getPhoneNumber(), user.getPoint(), user.getRole().name(), user.getAuthorities()));
   }
 
   @Operation(summary = "내 정보 수정")
-  @PatchMapping("/{userId}")
-  public ResponseEntity<?> updateUser(
-      @PathVariable UUID userId,
-      @RequestBody @Valid UserUpdateRequest request,
-      @AuthenticationPrincipal CustomUserDetails customUserDetails
-  ) {
-    userService.updateUser(userId, request);
-    return ResponseEntity.ok("회원 정보가 수정되었습니다.");
+  @PatchMapping("/details")
+  public ResponseEntity<Void> updateUser(@RequestBody @Valid UserUpdateRequest request,
+                                      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    userService.updateUser(customUserDetails.getUserId(), request);
+    return ResponseEntity.ok().build();
   }
 
+  /*
   @Operation(summary = "아이디 찾기")
   @PostMapping("/id/find")
   public ResponseEntity<?> findUserID(@RequestBody @Valid UserIdFindRequest request) {
     String email = userService.findEmailByNameAndPhone(request.name(), request.phoneNumber());
     return ResponseEntity.ok(Map.of("email", email));
   }
+  */
 
-  @Operation(summary = "비밀번호 재설정")
+  // TODO : 비밀번호 재설정 시 학번 입력 고려
+  @Operation(summary = "비밀번호 재설정 : 이메일로 인증코드를 전송합니다.")
   @PostMapping("/password/reset/send")
   public ResponseEntity<?> sendReset(@RequestBody @Valid PasswordResetSendRequest req){
     userService.passwordReset(req.email().trim());

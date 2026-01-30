@@ -113,8 +113,8 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/auth/login - 로그인 성공 시 200 OK")
     void login_success() throws Exception {
-        LoginRequest req = new LoginRequest("hong@example.com", "Password123!");
-        LoginResponse resp = LoginResponse.builder()
+        AuthRequest req = new AuthRequest("hong@example.com", "Password123!");
+        AuthResponse resp = AuthResponse.builder()
                 .accessToken("mockAccessToken")
                 .refreshToken("mockRefreshToken")
                 .userId(UUID.randomUUID())
@@ -124,7 +124,7 @@ class AuthControllerTest {
                 .point(100)
                 .build();
 
-        when(authService.login(any(LoginRequest.class))).thenReturn(resp);
+        when(authService.login(any(AuthRequest.class))).thenReturn(resp);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -141,10 +141,10 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/auth/login - 존재하지 않는 사용자면 404 반환")
     void login_userNotFound() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
+        when(authService.login(any(AuthRequest.class)))
                 .thenThrow(new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        LoginRequest req = new LoginRequest("notfound@example.com", "Password123!");
+        AuthRequest req = new AuthRequest("notfound@example.com", "Password123!");
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -156,10 +156,10 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/auth/login - 비밀번호 틀리면 401 반환")
     void login_wrongPassword() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
+        when(authService.login(any(AuthRequest.class)))
                 .thenThrow(new CustomException(ErrorCode.UNAUTHORIZED));
 
-        LoginRequest req = new LoginRequest("hong@example.com", "WrongPassword!");
+        AuthRequest req = new AuthRequest("hong@example.com", "WrongPassword!");
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))

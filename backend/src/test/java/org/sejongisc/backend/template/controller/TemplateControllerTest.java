@@ -3,8 +3,8 @@ package org.sejongisc.backend.template.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.sejongisc.backend.common.config.SecurityConfig;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.template.dto.TemplateRequest;
 import org.sejongisc.backend.template.dto.TemplateResponse;
@@ -32,7 +32,6 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -64,7 +63,7 @@ class TemplateControllerTest {
         .userId(uid).name("tester").email("test@example.com")
         .role(Role.TEAM_MEMBER).point(0).build();
 
-    LoginResponse.CustomUserDetails customUserDetails = new LoginResponse.CustomUserDetails(domainUser);
+    CustomUserDetails customUserDetails = new CustomUserDetails(domainUser);
 
     // SecurityConfig 에서 hasRole("TEAM_MEMBER") 라면 ROLE_ 접두어 필요
     return new UsernamePasswordAuthenticationToken(customUserDetails, "", List.of(new SimpleGrantedAuthority("ROLE_TEAM_MEMBER")));

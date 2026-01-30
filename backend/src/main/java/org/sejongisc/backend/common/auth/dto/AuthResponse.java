@@ -5,23 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import org.sejongisc.backend.user.entity.Role;
-import org.sejongisc.backend.user.entity.User;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 
 @Getter
 @Builder
 @AllArgsConstructor
-@Schema(
-        name = "LoginResponse",
-        description = "로그인 성공 시 반환되는 응답 객체"
-)
-public class LoginResponse {
+public class AuthResponse {
 
     @Schema(
             description = "Access Token (JWT 형식, API 요청 시 Authorization 헤더에 사용)",
@@ -54,8 +44,8 @@ public class LoginResponse {
     private String name;
 
     @Schema(
-            description = "사용자 역할 (예: USER, ADMIN)",
-            example = "USER"
+            description = "사용자 직위",
+            example = "PRESIDENT"
     )
     private Role role;
 

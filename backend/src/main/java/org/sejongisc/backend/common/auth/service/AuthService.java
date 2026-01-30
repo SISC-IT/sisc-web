@@ -10,8 +10,8 @@ import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.repository.UserRepository;
-import org.sejongisc.backend.common.auth.dto.LoginRequest;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
+import org.sejongisc.backend.common.auth.dto.AuthRequest;
+import org.sejongisc.backend.common.auth.dto.AuthResponse;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,14 +30,12 @@ public class AuthService {
     private final JwtParser jwtParser;
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findUserByEmail(request.getEmail())
+    public AuthResponse login(AuthRequest request) {
+        User user = userRepository.findUserByEmail(request.getStudentNumber())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
         if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
-
         String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
 
@@ -54,7 +52,7 @@ public class AuthService {
 
         log.info("RefreshToken 저장 완료: userId={}", user.getUserId());
 
-        return LoginResponse.builder()
+        return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .userId(user.getUserId())

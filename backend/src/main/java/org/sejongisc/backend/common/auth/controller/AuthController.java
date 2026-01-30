@@ -5,8 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.common.auth.dto.LoginRequest;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
+import org.sejongisc.backend.common.auth.dto.AuthRequest;
+import org.sejongisc.backend.common.auth.dto.AuthResponse;
 import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.springframework.http.HttpHeaders;
@@ -30,13 +30,13 @@ public class AuthController {
 
     @Operation(summary = "일반 로그인 API", description = "")
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
+        AuthResponse response = authService.login(request);
 
         ResponseCookie accessCookie = cookieHelper.createAccessCookie(response.getAccessToken());
         ResponseCookie refreshCookie = cookieHelper.createRefreshCookie(response.getRefreshToken());
 
-        LoginResponse safeResponse = LoginResponse.builder()
+        AuthResponse safeResponse = AuthResponse.builder()
             .userId(response.getUserId()).email(response.getEmail())
             .name(response.getName()).role(response.getRole())
             .phoneNumber(response.getPhoneNumber()).point(response.getPoint())
@@ -51,22 +51,14 @@ public class AuthController {
     @Operation(summary = "Access Token 재발급 API", description = "...")
     @PostMapping("/reissue")
     public ResponseEntity<?> reissue(@CookieValue(value = "refresh", required = false) String refreshToken) {
-        if (refreshToken == null || refreshToken.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Refresh Token이 없습니다."));
-        }
-
         try {
             Map<String, String> tokens = refreshTokenService.reissueTokens(refreshToken);
-            ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.get("accessToken"));
-
+            ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok().header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.get("accessToken"));
             if (tokens.containsKey("refreshToken")) {
                 responseBuilder.header(HttpHeaders.SET_COOKIE, cookieHelper.createRefreshCookie(tokens.get("refreshToken")).toString());
             }
-
             responseBuilder.header(HttpHeaders.SET_COOKIE, cookieHelper.createAccessCookie(tokens.get("accessToken")).toString());
             return responseBuilder.body(Map.of("message", "토큰 갱신 성공"));
-
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Refresh Token이 유효하지 않거나 만료되었습니다."));
         }
@@ -75,10 +67,7 @@ public class AuthController {
     @Operation(summary = "로그아웃 API", description = "...")
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@CookieValue(value = "access", required = false) String accessToken) {
-        if (accessToken != null && !accessToken.isEmpty()) {
-            authService.logout(accessToken);
-        }
-
+        authService.logout(accessToken);
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, cookieHelper.deleteCookie("access").toString())
             .header(HttpHeaders.SET_COOKIE, cookieHelper.deleteCookie("refresh").toString())

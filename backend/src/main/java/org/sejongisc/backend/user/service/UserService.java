@@ -4,15 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
-import org.sejongisc.backend.common.auth.entity.AuthProvider;
-import org.sejongisc.backend.common.auth.entity.UserOauthAccount;
-import org.sejongisc.backend.common.auth.dto.oauth.OauthUserInfo;
-import org.sejongisc.backend.common.auth.repository.UserOauthAccountRepository;
 import org.sejongisc.backend.common.auth.service.EmailService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
-import org.sejongisc.backend.common.auth.service.oauth2.OauthUnlinkService;
 import org.sejongisc.backend.common.annotation.OptimisticRetry;
-import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.dto.AccountEntry;
@@ -22,8 +16,8 @@ import org.sejongisc.backend.point.entity.TransactionReason;
 import org.sejongisc.backend.point.service.AccountService;
 import org.sejongisc.backend.point.service.PointLedgerService;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
-import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,10 +37,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final UserOauthAccountRepository oauthAccountRepository;
-    private final OauthUnlinkService oauthUnlinkService;
     private final PasswordEncoder passwordEncoder;
-    private final TokenEncryptor tokenEncryptor;
     private final EmailService emailService;
     private final RedisTemplate<Object, Object> redisTemplate;
     private final RefreshTokenService refreshTokenService;
@@ -57,20 +48,14 @@ public class UserService {
 
     @Transactional
     @OptimisticRetry
-    public SignupResponse signup(SignupRequest dto) {
-        validateDuplicateUser(dto.getEmail(), dto.getPhoneNumber());
-
-        String trimmedPassword = validateAndGetTrimmedPassword(dto.getPassword());
-        PasswordPolicyValidator.validate(trimmedPassword);
-
-        User user = User.builder()
-            .name(dto.getName())
-            .email(dto.getEmail())
-            .passwordHash(passwordEncoder.encode(trimmedPassword))
-            .role(dto.getRole() != null ? dto.getRole() : Role.TEAM_MEMBER)
-            .point(0)
-            .phoneNumber(dto.getPhoneNumber())
-            .build();
+    public SignupResponse signup(SignupRequest request) {
+        if (userRepository.existsByEmailOrStudentId(request.getEmail(), request.getStudentId())) {
+            if (userRepository.existsByStudentId(request.getStudentId())) throw new CustomException(ErrorCode.DUPLICATE_USER);
+            throw new CustomException(ErrorCode.DUPLICATE_PHONE);
+        }
+        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(request.getPassword());
+        String encodedPw = passwordEncoder.encode(trimmedPassword);
+        User user = User.createUserWithSignupAndPending(request, encodedPw);
 
         try {
             User saved = userRepository.save(user);
@@ -90,33 +75,27 @@ public class UserService {
 
     @Transactional
     public void updateUser(UUID userId, UserUpdateRequest request) {
-        User user = findUserById(userId);
-
-        if (isNotBlank(request.getName())) {
-            user.setName(request.getName().trim());
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail().trim());
         }
 
-        if (isNotBlank(request.getPhoneNumber())) {
-            user.setPhoneNumber(request.getPhoneNumber().trim());
-        }
+        // 비밀번호 변경 로직 (새 비밀번호가 입력된 경우에만 실행)
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
+            if (!passwordEncoder.matches(request.getNewPassword(), request.getNewPassword())) {
+                throw new CustomException(ErrorCode.INVALID_INPUT); // 비밀번호 불일치 에러
+            }
+            // 새 비밀번호 정제 및 정책 검증
+            String cleanNewPassword = PasswordPolicyValidator.getValidatedPassword(request.getNewPassword());
 
-        if (request.getPassword() != null) {
-            String trimmedPassword = validateAndGetTrimmedPassword(request.getPassword());
-            PasswordPolicyValidator.validate(trimmedPassword);
-            user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
-        }
+            // 새 비밀번호 인코딩 및 설정
+            user.setPasswordHash(passwordEncoder.encode(cleanNewPassword));
 
+            // 비밀번호 변경 시 모든 기기 로그아웃 처리 (선택 사항)
+            refreshTokenService.deleteByUserId(user.getUserId());
+        }
         log.info("회원 정보 수정 완료: userId={}", userId);
-    }
-
-
-    public String findEmailByNameAndPhone(String name, String phone) {
-        String nName = validateNotBlank(name, "이름");
-        String nPhone = validateNotBlank(phone, "전화번호");
-
-        return userRepository.findByNameAndPhoneNumber(nName, nPhone)
-            .map(User::getEmail)
-            .orElse(null);
     }
 
     public void passwordReset(String email) {
@@ -148,8 +127,7 @@ public class UserService {
         User user = userRepository.findUserByEmail(email)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        String trimmedPassword = validateAndGetTrimmedPassword(newPassword);
-        PasswordPolicyValidator.validate(trimmedPassword);
+        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(newPassword);
 
         user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
 
@@ -163,23 +141,6 @@ public class UserService {
 
     // --- 내부 헬퍼 메서드 ---
 
-    private User findUserById(UUID userId) {
-        return userRepository.findById(userId)
-            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-    }
-
-    private void validateDuplicateUser(String email, String phone) {
-        if (userRepository.existsByEmail(email)) throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
-        if (userRepository.existsByPhoneNumber(phone)) throw new CustomException(ErrorCode.DUPLICATE_PHONE);
-    }
-
-    private String validateAndGetTrimmedPassword(String password) {
-        if (password == null || password.trim().isEmpty()) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-        return password.trim();
-    }
-
     private String validateNotBlank(String value, String fieldName) {
         if (value == null || value.trim().isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
@@ -187,14 +148,7 @@ public class UserService {
         return value.trim();
     }
 
-    private boolean isNotBlank(String value) {
-        return value != null && !value.trim().isEmpty();
-    }
-
-    private void completeSignup(User user) {
-
-    }
-
+    // TODO : RedisService로 분리 고려
     private void saveResetTokenToRedis(String token, String email) {
         try {
             redisTemplate.opsForValue().set("PASSWORD_RESET:" + token, email, Duration.ofMinutes(10));
@@ -223,8 +177,17 @@ public class UserService {
         }
     }
 
+    public void deleteUserSoftDelete(UUID userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.setStatus(UserStatus.OUT);
+        refreshTokenService.deleteByUserId(userId);
+        log.info("회원 softdelete 처리 완료: userId={}", userId);
+    }
+
     // ------------------------ (비활성화) OAuth2 관련 로직 ------------------------
 
+    /*
     @Transactional
     public User upsertOAuthUser(String provider, String providerUid, String email, String name) {
         AuthProvider authProvider = AuthProvider.valueOf(provider.toUpperCase());
@@ -277,4 +240,5 @@ public class UserService {
         userRepository.delete(user);
         log.info("회원 탈퇴 완료: userId={}", userId);
     }
+    */
 }

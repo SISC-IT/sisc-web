@@ -13,8 +13,8 @@ import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.repository.UserRepository;
-import org.sejongisc.backend.common.auth.dto.LoginRequest;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
+import org.sejongisc.backend.common.auth.dto.AuthRequest;
+import org.sejongisc.backend.common.auth.dto.AuthResponse;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -67,8 +67,8 @@ class AuthServiceTest {
                 .point(100)
                 .build();
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("test@example.com");
+        AuthRequest request = new AuthRequest();
+        request.setStudentNumber("test@example.com");
         request.setPassword(rawPassword);
 
         given(userRepository.findUserByEmail("test@example.com"))
@@ -78,7 +78,7 @@ class AuthServiceTest {
                 .willReturn("mocked-jwt-token");
 
         // when
-        LoginResponse response = authService.login(request);
+        AuthResponse response = authService.login(request);
 
         // then
         assertThat(response).isNotNull();
@@ -93,8 +93,8 @@ class AuthServiceTest {
     @DisplayName("이메일이 존재하지 않으면 USER_NOT_FOUND 예외 발생")
     void login_userNotFound() {
         // given
-        LoginRequest request = new LoginRequest();
-        request.setEmail("notfound@example.com");
+        AuthRequest request = new AuthRequest();
+        request.setStudentNumber("notfound@example.com");
         request.setPassword("password");
 
         given(userRepository.findUserByEmail("notfound@example.com"))
@@ -122,8 +122,8 @@ class AuthServiceTest {
                 .point(50)
                 .build();
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("test@example.com");
+        AuthRequest request = new AuthRequest();
+        request.setStudentNumber("test@example.com");
         request.setPassword("wrongPassword");
 
         given(userRepository.findUserByEmail("test@example.com"))
@@ -152,8 +152,8 @@ class AuthServiceTest {
                 .point(0)
                 .build();
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("test@example.com");
+        AuthRequest request = new AuthRequest();
+        request.setStudentNumber("test@example.com");
         request.setPassword("somePassword");
 
         given(userRepository.findUserByEmail("test@example.com"))

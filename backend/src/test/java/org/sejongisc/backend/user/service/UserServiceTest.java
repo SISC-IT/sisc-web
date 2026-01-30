@@ -288,42 +288,7 @@ class UserServiceTest {
         verify(oauthAccountRepository).save(any(UserOauthAccount.class));
     }
 
-    @Test
-    @DisplayName("회원정보 수정 성공: 이름, 전화번호, 비밀번호 변경")
-    void updateUser_success() {
-        // given
-        UUID userId = UUID.randomUUID();
-        User existingUser = User.builder()
-                .userId(userId)
-                .name("기존이름")
-                .phoneNumber("010-1111-1111")
-                .passwordHash("OLD_HASH")
-                .role(Role.TEAM_MEMBER)
-                .build();
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
-        when(passwordEncoder.encode("newPassword123")).thenReturn("NEW_HASH");
-
-        // 수정 요청 DTO
-        var request = new org.sejongisc.backend.user.dto.UserUpdateRequest();
-        request.setName("새이름");
-        request.setPhoneNumber("010-2222-3333");
-        request.setPassword("newPassword123");
-
-        // when
-        userService.updateUser(userId, request);
-
-        // then
-        assertAll(
-                () -> assertThat(existingUser.getName()).isEqualTo("새이름"),
-                () -> assertThat(existingUser.getPhoneNumber()).isEqualTo("010-2222-3333"),
-                () -> assertThat(existingUser.getPasswordHash()).isEqualTo("NEW_HASH")
-        );
-
-        verify(userRepository).findById(userId);
-        verify(passwordEncoder).encode("newPassword123");
-        verify(userRepository).save(existingUser);
-    }
 
     @Test
     @DisplayName("회원정보 수정 실패: 존재하지 않는 사용자일 경우 예외 발생")

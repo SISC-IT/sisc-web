@@ -17,10 +17,10 @@ public class CustomUserDetails implements UserDetails {
     private final UUID userId;
     private final String name;
     private final String email;
-    private final String password;
-    private final String phoneNumber;
+    private final String password;          // TODO : 보안을 위해 password 필드 제거 고려
+    private final String phoneNumber;       // TODO : 굳이 있어야하나? 제거 고려
     private final Role role;
-    private final Integer point;
+    private final Integer point;            // TODO : 사용자 포인트는 가변적이기 때문에, 제거 고려
 
     public CustomUserDetails(User user) {
         this.userId = user.getUserId();
@@ -35,7 +35,10 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        // role.name()이 "PRESIDENT"라면 "ROLE_PRESIDENT"로 변환해서 반환해야 함
+        // Spring Security에서는 권한 앞에 "ROLE_" 접두사를 붙이는 것이 관례임
+        // hasRole("PRESIDENT") 같은 메서드 호출 시 "ROLE_PRESIDENT"와 매칭되기 때문
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override

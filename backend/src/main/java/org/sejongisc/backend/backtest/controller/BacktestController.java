@@ -12,7 +12,6 @@ import org.sejongisc.backend.backtest.dto.BacktestRequest;
 import org.sejongisc.backend.backtest.dto.BacktestResponse;
 import org.sejongisc.backend.backtest.service.BacktestService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

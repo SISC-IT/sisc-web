@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.common.auth.dto.LoginResponse;
 import org.sejongisc.backend.point.dto.PointHistoryResponse;
 import org.sejongisc.backend.point.service.PointHistoryService;
 import org.springframework.data.domain.PageRequest;

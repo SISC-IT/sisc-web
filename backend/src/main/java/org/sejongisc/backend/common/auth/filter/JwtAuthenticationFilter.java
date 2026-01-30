@@ -34,8 +34,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtParser jwtParser;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
+    private final ObjectMapper objectMapper;
 
-
+    // TODO : 인증 제외 경로 클래스화 필요 (securityConfig와 중복) + JWTParser, JWTProvider 코드 중복 개선 필요
     private static final List<String> EXCLUDE_PATTERNS = List.of(
             "/api/auth/signup",
             "/api/auth/login",
@@ -54,24 +55,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NotNull HttpServletRequest request,
                                     @NotNull HttpServletResponse response,
-                                    @NotNull FilterChain filterChain)
-            throws ServletException, IOException {
+                                    @NotNull FilterChain filterChain) throws ServletException, IOException {
 
         String requestURI = request.getRequestURI();
 
         // 인증 제외 경로
-        if (shouldNotFilter(request)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+        // 브라우저가 실제 요청 전에 서버에 보내는 CORS 예비 요청(Preflight 요청)은 OPTIONS 메서드 사용 (JWT 검사 제외)
+        if (shouldNotFilter(request) || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            String token = resolveToken(request);
+            String token = resolveTokenFromHeader(request);
 
             if (token == null) {
                 token = resolveTokenFromCookie(request);
@@ -84,18 +80,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } else {
                 log.warn("토큰이 없거나 유효하지 않음");
             }
-
+            filterChain.doFilter(request, response);
         } catch (JwtException e) {
             log.error("JWT validation failed: {}", e.getMessage(), e);
-            ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.INVALID_ACCESS_TOKEN);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(toJson(errorResponse));
+            sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
             return; //  예외 시 여기서 중단
         }
-
-        //  필터 체인은 항상 마지막에 한 번만 호출
-        filterChain.doFilter(request, response);
     }
 
 
@@ -118,7 +108,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return excluded;
     }
 
-    private String resolveToken(HttpServletRequest request) {
+    private void sendErrorResponse(HttpServletResponse response, ErrorCode errorCode) throws IOException {
+        ErrorResponse errorResponse = ErrorResponse.of(errorCode);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+    }
+
+    private String resolveTokenFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if(StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);

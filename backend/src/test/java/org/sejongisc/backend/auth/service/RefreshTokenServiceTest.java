@@ -9,7 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.auth.entity.RefreshToken;
 import org.sejongisc.backend.common.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
-import org.sejongisc.backend.common.auth.service.RefreshTokenServiceImpl;
+import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.repository.UserRepository;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 
 
 @ExtendWith(MockitoExtension.class)
-class RefreshTokenServiceImplTest {
+class RefreshTokenServiceTest {
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
@@ -35,7 +35,7 @@ class RefreshTokenServiceImplTest {
     private JwtProvider jwtProvider;
 
     @InjectMocks
-    private RefreshTokenServiceImpl refreshTokenService;
+    private RefreshTokenService refreshTokenService;
 
     private UUID userId;
     private String refreshToken;
