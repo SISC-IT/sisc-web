@@ -8,7 +8,6 @@ export const api = axios.create({
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    // 토큰 로직
     const originRequest = err.config;
 
     // 액세스 토큰 만료 확인
@@ -16,24 +15,22 @@ api.interceptors.response.use(
       originRequest._retry = true;
 
       try {
-        const rt = localStorage.getItem('refreshToken');
-        const res = await axios.post(
+        // refreshToken은 쿠키에서 자동으로 전송됨
+        await axios.post(
           `${import.meta.env.VITE_API_URL}/api/auth/reissue`,
-          { refreshToken: rt },
+          {},  // body 비움
           { withCredentials: true }
         );
 
-        const newAccessToken = res.data.accessToken;
+        // 새로운 accessToken은 쿠키에 자동 저장됨
+        // localStorage 업데이트 불필요
+        // Authorization 헤더 설정 불필요
 
-        localStorage.setItem('accessToken', newAccessToken);
-        originRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
+        // 원래 요청 재시도
         return api(originRequest);
       } catch (refreshError) {
         console.error('Token refresh failed: ', refreshError);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-
+        // localStorage에서 토큰 제거 불필요 (쿠키는 백엔드에서 관리)
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -49,7 +46,7 @@ api.interceptors.response.use(
 );
 
 api.interceptors.request.use((config) => {
-  const at = localStorage.getItem('accessToken');
-  if (at) config.headers.Authorization = `Bearer ${at}`;
+  // Authorization 헤더 설정 제거
+  // 쿠키가 자동으로 전송됨 (withCredentials: true)
   return config;
 });

@@ -1,40 +1,38 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// 쿠키에서 특정 값 읽기
-const getCookie = (name) => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
-  return null;
-};
+import { api } from '../utils/axios';
 
 const OAuthSuccess = () => {
   const nav = useNavigate();
   const [status, setStatus] = useState('처리 중...');
 
   useEffect(() => {
-    // 쿠키에서 토큰 읽기
-    const accessToken = getCookie('access');
-    const refreshToken = getCookie('refresh');
-
-    if (accessToken && refreshToken) {
-      // localStorage에 저장
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      
-      setStatus('로그인 완료! 이동 중...');
-      
-      // 홈으로 이동
-      setTimeout(() => {
-        nav('/', { replace: true });
-      }, 500);
-    } else {
-      setStatus('로그인 실패: 토큰을 받지 못했습니다.');
-      setTimeout(() => {
-        nav('/login', { replace: true });
-      }, 2000);
-    }
+    const fetchUserInfo = async () => {
+      try {
+        // 쿠키에 토큰이 저장되어 있으므로 바로 API 호출
+        const { data } = await api.get('/api/user/details');
+        
+        // 선택사항: 유저 정보를 localStorage에 저장
+        localStorage.setItem('user', JSON.stringify({
+          userId: data.userId,
+          name: data.name,
+          email: data.email,
+          phoneNumber: data.phoneNumber,
+          point: data.point,
+          role: data.role
+        }));
+        
+        setStatus('로그인 완료! 이동 중...');
+        setTimeout(() => nav('/', { replace: true }), 500);
+        
+      } catch (error) {
+        console.error('유저 정보 조회 실패:', error);
+        setStatus('로그인 실패: 유저 정보를 가져올 수 없습니다.');
+        setTimeout(() => nav('/login', { replace: true }), 2000);
+      }
+    };
+    
+    fetchUserInfo();
   }, [nav]);
 
   return (

@@ -91,6 +91,26 @@
   opacity: 0.5;
 }
 
+.logoutButton {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.logoutButton:hover {
+  opacity: 0.7;
+}
+
+.logoutButton:active {
+  opacity: 0.5;
+}
+
 /* 태블릿 이상 */
 @media (min-width: 768px) {
   .header {

@@ -64,7 +64,6 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String providerStr = (String) attrs.get("provider");
         String providerUid = (String) attrs.get("providerUid");
-
         if (providerStr == null) {
             throw new IllegalStateException("OAuth provider attribute missing from attributes");
         }
@@ -98,7 +97,6 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // 4. RefreshToken 생성
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
-
         // 5. RefreshToken 저장(DB or Redis)
         refreshTokenService.saveOrUpdateToken(user.getUserId(), refreshToken);
 
@@ -126,23 +124,32 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
 
         // 6.  HttpOnly 쿠키로 refreshToken 저장
-        ResponseCookie accessCookie = ResponseCookie.from("access", accessToken)
+        ResponseCookie.ResponseCookieBuilder accessCookieBuilder = ResponseCookie.from("access", accessToken)
                 .httpOnly(true)
                 .secure(secure)    // 로컬=false, 배포=true
                 .sameSite(sameSite)  // 로컬= "Lax", 배포="None"
-                .domain(domain)
                 .path("/")
-                .maxAge(60L * 60)  // 1 hour
-                .build();
+                .maxAge(60L * 60);  // 1 hour
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh", refreshToken)
+        // 로컬 환경에서는 domain 설정하지 않음
+        if (isProd || isDev) {
+            accessCookieBuilder.domain(domain);
+        }
+
+        ResponseCookie.ResponseCookieBuilder refreshCookieBuilder = ResponseCookie.from("refresh", refreshToken)
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite(sameSite)
-                .domain(domain)
                 .path("/")
-                .maxAge(60L * 60 * 24 * 14) // 2 weeks
-                .build();
+                .maxAge(60L * 60 * 24 * 14); // 2 weeks
+
+        // 로컬 환경에서는 domain 설정하지 않음
+        if (isProd || isDev) {
+            refreshCookieBuilder.domain(domain);
+        }
+
+        ResponseCookie accessCookie = accessCookieBuilder.build();
+        ResponseCookie refreshCookie = refreshCookieBuilder.build();
 
       
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());

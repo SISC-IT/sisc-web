@@ -1,6 +1,6 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../utils/axios';
 import { toast } from 'react-toastify';
 
@@ -25,27 +25,36 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const [selectedBoard, setSelectedBoard] = useState(
     currentBoard?.name || '전체 게시판'
   );
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    !!localStorage.getItem('accessToken')
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // 로그인 상태 확인 - location 변경 시마다 재확인
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        await api.get('/api/user/details');
+        setIsLoggedIn(true);
+      } catch (error) {
+        setIsLoggedIn(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkLoginStatus();
+  }, [location.pathname]); // location 변경 시마다 확인
 
   const logout = async () => {
-    const accessToken = localStorage.getItem('accessToken');
     try {
-      await api.post(
-        '/api/auth/logout',
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-    } catch {
-      toast.error('오류가 발생했습니다.');
+      await api.post('/api/auth/logout');
+    } catch (error) {
+      // 로그아웃 API 실패해도 무시 (토큰이 없을 수 있음)
+      console.log('로그아웃 API 호출 실패:', error.message);
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // localStorage 유저 정보 삭제
+      localStorage.removeItem('user');
+      
+      // API 성공 여부와 관계없이 항상 로그아웃 처리
       setIsLoggedIn(false);
       navigate('/');
       toast.success('로그아웃 되었습니다.');
@@ -174,51 +183,36 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
           <div className={styles['menu-section']}>
             <span className={styles['menu-title']}>계정</span>
             <ul>
-              {isLoggedIn ? (
-                <>
-                  <li>
-                    <NavLink
-                      to="/mypage"
-                      className={({ isActive }) =>
-                        isActive
-                          ? styles['active-link']
-                          : styles['inactive-link']
-                      }
-                      onClick={handleNavLinkClick}
-                    >
-                      마이페이지
-                    </NavLink>
-                  </li>
+              <li>
+                <NavLink
+                  to="/mypage"
+                  className={({ isActive }) =>
+                    isActive
+                      ? styles['active-link']
+                      : styles['inactive-link']
+                  }
+                  onClick={handleNavLinkClick}
+                >
+                  마이페이지
+                </NavLink>
+              </li>
 
-                  <li>
-                    <NavLink
-                      to="/"
-                      className={styles['inactive-link']}
-                      onClick={(e) => {
-                        logout();
-                        handleNavLinkClick();
-                      }}
-                    >
-                      로그아웃
-                    </NavLink>
-                  </li>
-                </>
+              {isLoggedIn ? (
+                <li>
+                  <NavLink
+                    to="/"
+                    className={styles['inactive-link']}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      logout();
+                      handleNavLinkClick();
+                    }}
+                  >
+                    로그아웃
+                  </NavLink>
+                </li>
               ) : (
                 <>
-                  <li>
-                    <NavLink
-                      to="/mypage"
-                      className={({ isActive }) =>
-                        isActive
-                          ? styles['active-link']
-                          : styles['inactive-link']
-                      }
-                      onClick={handleNavLinkClick}
-                    >
-                      마이페이지
-                    </NavLink>
-                  </li>
-
                   <li>
                     <NavLink
                       to="/login"
