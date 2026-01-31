@@ -1,12 +1,12 @@
-package org.sejongisc.backend.template.controller;
+package org.sejongisc.backend.backtest.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.template.dto.TemplateRequest;
-import org.sejongisc.backend.template.dto.TemplateResponse;
-import org.sejongisc.backend.template.service.TemplateService;
+import org.sejongisc.backend.backtest.dto.TemplateRequest;
+import org.sejongisc.backend.backtest.dto.TemplateResponse;
+import org.sejongisc.backend.backtest.service.TemplateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -38,8 +38,8 @@ public class TemplateController {
   @GetMapping("/{templateId}")
   @Operation(
       summary = "템플릿 상세 조회",
-      description = "지정된 템플릿 ID에 대한 상세 정보 및 템플릿에 저장된 백테스트 실행 기록들을 조회합니다."
-  )
+  description = "지정된 템플릿 ID에 대한 상세 정보 및 템플릿에 저장된 백테스트 실행 기록들을 조회합니다."
+          )
   public ResponseEntity<TemplateResponse> getTemplateById(@PathVariable UUID templateId,
                                                           @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(templateService.findById(templateId, customUserDetails.getUserId()));
@@ -53,8 +53,7 @@ public class TemplateController {
   )
   public ResponseEntity<TemplateResponse> createTemplate(@RequestBody TemplateRequest request,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetail) {
-    request.setUserId(customUserDetail.getUserId());
-    return ResponseEntity.ok(templateService.createTemplate(request));
+    return ResponseEntity.ok(templateService.createTemplate(request, customUserDetail.getUserId()));
   }
 
   // 템플릿 수정
@@ -63,10 +62,9 @@ public class TemplateController {
       summary = "템플릿 수정",
       description = "기존의 백테스트 템플릿을 수정합니다."
   )
-  public ResponseEntity<TemplateResponse> updateTemplate(@RequestBody TemplateRequest request,
+  public ResponseEntity<TemplateResponse> updateTemplate(@PathVariable UUID templateId, @RequestBody TemplateRequest request,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    request.setUserId(customUserDetails.getUserId());
-    return ResponseEntity.ok(templateService.updateTemplate(request));
+    return ResponseEntity.ok(templateService.updateTemplate(templateId, customUserDetails.getUserId(), request));
   }
 
   // 템플릿 삭제

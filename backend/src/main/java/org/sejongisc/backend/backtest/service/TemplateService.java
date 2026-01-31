@@ -1,4 +1,4 @@
-package org.sejongisc.backend.template.service;
+package org.sejongisc.backend.backtest.service;
 
 
 import lombok.RequiredArgsConstructor;
@@ -6,17 +6,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.backtest.repository.BacktestRunRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.template.dto.TemplateRequest;
-import org.sejongisc.backend.template.dto.TemplateResponse;
-import org.sejongisc.backend.template.entity.Template;
-import org.sejongisc.backend.template.repository.TemplateRepository;
+import org.sejongisc.backend.backtest.dto.TemplateRequest;
+import org.sejongisc.backend.backtest.dto.TemplateResponse;
+import org.sejongisc.backend.backtest.entity.Template;
+import org.sejongisc.backend.backtest.repository.TemplateRepository;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Slf4j
 public class TemplateService {
@@ -43,12 +45,13 @@ public class TemplateService {
   }
 
   // 템플릿 생성
-  public TemplateResponse createTemplate(TemplateRequest request) {
-    User user = userRepository.findById(request.getUserId())
+  @Transactional
+  public TemplateResponse createTemplate(TemplateRequest request, UUID userId) {
+    User user = userRepository.findById(userId)
         .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-    Template template = Template.of(user, request.getTitle(),
-        request.getDescription(), request.getIsPublic());
+    Template template = Template.of(user, request.title(),
+        request.description(), request.isPublic());
 
     templateRepository.save(template);
 
@@ -58,9 +61,10 @@ public class TemplateService {
   }
 
   // 템플릿 수정
-  public TemplateResponse updateTemplate(TemplateRequest request) {
-    Template template = authorizeTemplateOwner(request.getTemplateId(), request.getUserId());
-    template.update(request.getTitle(), request.getDescription(), request.getIsPublic());
+  @Transactional
+  public TemplateResponse updateTemplate(UUID templateId, UUID userId, TemplateRequest request) {
+    Template template = authorizeTemplateOwner(templateId, userId);
+    template.update(request.title(), request.description(), request.isPublic());
     templateRepository.save(template);
 
     return TemplateResponse.builder()
@@ -69,9 +73,10 @@ public class TemplateService {
   }
 
   // 템플릿 삭제
+  @Transactional
   public void deleteTemplate(UUID templateId, UUID userId) {
     Template template = authorizeTemplateOwner(templateId, userId);
-    // TODO : 좋아요 / 북마크 삭제
+    // TODO : 좋아요 / 북마크 삭제 - cascade 옵션 또는 별도 처리 필요
     templateRepository.delete(template);
   }
 

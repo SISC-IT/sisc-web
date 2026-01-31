@@ -1,6 +1,6 @@
-package org.sejongisc.backend.template.repository;
+package org.sejongisc.backend.backtest.repository;
 
-import org.sejongisc.backend.template.entity.Template;
+import org.sejongisc.backend.backtest.entity.Template;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

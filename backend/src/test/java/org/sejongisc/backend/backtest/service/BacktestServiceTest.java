@@ -14,8 +14,8 @@ import org.sejongisc.backend.backtest.repository.BacktestRunMetricsRepository;
 import org.sejongisc.backend.backtest.repository.BacktestRunRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.template.entity.Template;
-import org.sejongisc.backend.template.repository.TemplateRepository;
+import org.sejongisc.backend.backtest.entity.Template;
+import org.sejongisc.backend.backtest.repository.TemplateRepository;
 import org.sejongisc.backend.user.entity.User;
 
 import java.math.BigDecimal;

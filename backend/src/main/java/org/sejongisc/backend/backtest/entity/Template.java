@@ -1,11 +1,10 @@
-package org.sejongisc.backend.template.entity;
+package org.sejongisc.backend.backtest.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
-import org.sejongisc.backend.template.dto.TemplateRequest;
 import org.sejongisc.backend.user.entity.User;
 
 import java.util.UUID;
