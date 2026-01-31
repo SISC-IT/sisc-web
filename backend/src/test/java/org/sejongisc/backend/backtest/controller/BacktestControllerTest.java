@@ -10,7 +10,7 @@
 //import org.sejongisc.backend.backtest.service.BacktestService;
 //import org.sejongisc.backend.common.auth.config.SecurityConfig;
 //import org.sejongisc.backend.common.auth.jwt.JwtParser;
-//import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+//import org.sejongisc.backend.common.auth.dto.LoginResponse.CustomUserDetails;
 //import org.sejongisc.backend.user.entity.Role;
 //import org.sejongisc.backend.user.entity.User;
 //import org.springframework.beans.factory.annotation.Autowired;

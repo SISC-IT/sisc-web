@@ -2,79 +2,29 @@ package org.sejongisc.backend.point.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.common.exception.CustomException;
-import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.point.dto.PointHistoryItem;
 import org.sejongisc.backend.point.dto.PointHistoryResponse;
-import org.sejongisc.backend.point.entity.PointHistory;
-import org.sejongisc.backend.point.entity.PointOrigin;
-import org.sejongisc.backend.point.entity.PointReason;
-import org.sejongisc.backend.point.repository.PointHistoryRepository;
-import org.sejongisc.backend.user.dao.UserRepository;
-import org.sejongisc.backend.user.entity.User;
-import org.springframework.data.domain.PageRequest;
+import org.sejongisc.backend.point.repository.LedgerEntryRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-/**
- * 포인트 증감 기록 서비스
- * userId에 대한 검증 로직이 없습니다.
- * 따라서 customUserDetails.getUserId() 에서 가져오는 userId를 사용해야합니다.
- * 해당 userId는 필터에서 검증이 완료되기에, 검증할 필요가 없기 때문입니다.
- * createPointHistory를 호출하는 외부 메서드는 @OptimisticRetry 어노테이션을 붙여야 합니다.
- * 해당 어노테이션을 붙이면 낙관적 락 예외 발생 시 최초 호출 포함 최대 3회까지 재시도합니다.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PointHistoryService {
+  private final LedgerEntryRepository ledgerEntryRepository;
 
-  private final PointHistoryRepository pointHistoryRepository;
-  private final UserRepository userRepository;
-
-  public PointHistoryResponse getPointLeaderboard(int period) {
-    // period: 1(일간), 7(주간), 30(월간)
-    if (period != 1 && period != 7 && period != 30) {
-      throw new CustomException(ErrorCode.INVALID_PERIOD);
-    }
-
-    return PointHistoryResponse.builder()
-        .leaderboardUsers(userRepository.findAllByOrderByPointDesc())
-        .build();
-  }
-
-  // 특정 유저의 포인트 기록 페이징 조회 (포인트 기록은 많아질 수 있으므로 페이징 처리)
-  public PointHistoryResponse getPointHistoryListByUserId(UUID userId, PageRequest pageRequest) {
-    return PointHistoryResponse.builder()
-        .pointHistoryPage(pointHistoryRepository.findAllByUserId(userId, pageRequest))
-        .build();
-  }
-
-  // 포인트 증감 기록 생성 및 유저 포인트 업데이트
-  @Transactional
-  public PointHistory createPointHistory(UUID userId, int amount, PointReason reason, PointOrigin origin, UUID originId) {
-    if (amount == 0) {
-      throw new CustomException(ErrorCode.INVALID_POINT_AMOUNT);
-    }
-
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-    if (user.getPoint() + amount < 0) {
-      throw new CustomException(ErrorCode.NOT_ENOUGH_POINT_BALANCE);
-    }
-
-    log.info("포인트 업데이트 시도: userId={}, currentPoint={}, amount={}", userId, user.getPoint(), amount);
-    user.updatePoint(amount);
-
-    PointHistory history = PointHistory.of(userId, amount, reason, origin, originId);
-    return pointHistoryRepository.save(history);
-  }
-
-  // 유저 탈퇴 시 특정 유저의 모든 포인트 기록 삭제
-  @Transactional
-  public void deleteAllPointHistoryByUserId(UUID userId) {
-    pointHistoryRepository.deleteAllByUserId(userId);
+  /**
+   * 특정 유저의 포인트 기록 페이징 조회
+   */
+  @Transactional(readOnly = true)
+  public PointHistoryResponse getPointHistory(UUID userId, Pageable pageable) {
+    return new PointHistoryResponse(
+      ledgerEntryRepository.findAllByOwnerId(userId, pageable)
+        .map(PointHistoryItem::from)
+    );
   }
 }
