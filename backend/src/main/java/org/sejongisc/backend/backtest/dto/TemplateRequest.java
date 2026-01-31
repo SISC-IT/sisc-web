@@ -1,4 +1,4 @@
-package org.sejongisc.backend.template.dto;
+package org.sejongisc.backend.backtest.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;

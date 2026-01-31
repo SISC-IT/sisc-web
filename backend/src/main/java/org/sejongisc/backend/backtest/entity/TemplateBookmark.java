@@ -1,4 +1,4 @@
-package org.sejongisc.backend.template.entity;
+package org.sejongisc.backend.backtest.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

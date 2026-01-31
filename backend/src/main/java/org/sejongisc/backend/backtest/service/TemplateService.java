@@ -1,4 +1,4 @@
-package org.sejongisc.backend.template.service;
+package org.sejongisc.backend.backtest.service;
 
 
 import lombok.RequiredArgsConstructor;
@@ -6,10 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.backtest.repository.BacktestRunRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.template.dto.TemplateRequest;
-import org.sejongisc.backend.template.dto.TemplateResponse;
-import org.sejongisc.backend.template.entity.Template;
-import org.sejongisc.backend.template.repository.TemplateRepository;
+import org.sejongisc.backend.backtest.dto.TemplateRequest;
+import org.sejongisc.backend.backtest.dto.TemplateResponse;
+import org.sejongisc.backend.backtest.entity.Template;
+import org.sejongisc.backend.backtest.repository.TemplateRepository;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;

@@ -7,12 +7,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.sejongisc.backend.backtest.service.TemplateService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.template.dto.TemplateRequest;
-import org.sejongisc.backend.template.dto.TemplateResponse;
-import org.sejongisc.backend.template.entity.Template;
-import org.sejongisc.backend.template.repository.TemplateRepository;
+import org.sejongisc.backend.backtest.dto.TemplateRequest;
+import org.sejongisc.backend.backtest.dto.TemplateResponse;
+import org.sejongisc.backend.backtest.entity.Template;
+import org.sejongisc.backend.backtest.repository.TemplateRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.repository.UserRepository;
 

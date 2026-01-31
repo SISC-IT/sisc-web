@@ -1,9 +1,9 @@
-package org.sejongisc.backend.template.dto;
+package org.sejongisc.backend.backtest.dto;
 
 import lombok.Builder;
 import lombok.Getter;
 import org.sejongisc.backend.backtest.entity.BacktestRun;
-import org.sejongisc.backend.template.entity.Template;
+import org.sejongisc.backend.backtest.entity.Template;
 
 import java.util.List;
 
