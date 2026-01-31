@@ -38,8 +38,8 @@ public class TemplateController {
   @GetMapping("/{templateId}")
   @Operation(
       summary = "템플릿 상세 조회",
-      description = "지정된 템플릿 ID에 대한 상세 정보 및 템플릿에 저장된 백테스트 실행 기록들을 조회합니다."
-  )
+  description = "지정된 템플릿 ID에 대한 상세 정보 및 템플릿에 저장된 백테스트 실행 기록들을 조회합니다."
+          )
   public ResponseEntity<TemplateResponse> getTemplateById(@PathVariable UUID templateId,
                                                           @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(templateService.findById(templateId, customUserDetails.getUserId()));
@@ -62,9 +62,9 @@ public class TemplateController {
       summary = "템플릿 수정",
       description = "기존의 백테스트 템플릿을 수정합니다."
   )
-  public ResponseEntity<TemplateResponse> updateTemplate(@RequestBody TemplateRequest request,
+  public ResponseEntity<TemplateResponse> updateTemplate(@PathVariable UUID templateId, @RequestBody TemplateRequest request,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    return ResponseEntity.ok(templateService.updateTemplate(request, customUserDetails.getUserId()));
+    return ResponseEntity.ok(templateService.updateTemplate(templateId, customUserDetails.getUserId(), request));
   }
 
   // 템플릿 삭제

@@ -13,10 +13,12 @@ import org.sejongisc.backend.backtest.repository.TemplateRepository;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Slf4j
 public class TemplateService {
@@ -43,6 +45,7 @@ public class TemplateService {
   }
 
   // 템플릿 생성
+  @Transactional
   public TemplateResponse createTemplate(TemplateRequest request, UUID userId) {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -58,8 +61,9 @@ public class TemplateService {
   }
 
   // 템플릿 수정
-  public TemplateResponse updateTemplate(TemplateRequest request, UUID userId) {
-    Template template = authorizeTemplateOwner(request.templateId(), userId);
+  @Transactional
+  public TemplateResponse updateTemplate(UUID templateId, UUID userId, TemplateRequest request) {
+    Template template = authorizeTemplateOwner(templateId, userId);
     template.update(request.title(), request.description(), request.isPublic());
     templateRepository.save(template);
 
@@ -69,9 +73,10 @@ public class TemplateService {
   }
 
   // 템플릿 삭제
+  @Transactional
   public void deleteTemplate(UUID templateId, UUID userId) {
     Template template = authorizeTemplateOwner(templateId, userId);
-    // TODO : 좋아요 / 북마크 삭제
+    // TODO : 좋아요 / 북마크 삭제 - cascade 옵션 또는 별도 처리 필요
     templateRepository.delete(template);
   }
 
