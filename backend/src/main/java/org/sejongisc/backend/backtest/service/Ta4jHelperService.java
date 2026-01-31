@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.backtest.dto.StrategyCondition;
 import org.sejongisc.backend.backtest.dto.StrategyOperand;
 import org.sejongisc.backend.common.exception.CustomException;
+import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.stock.entity.PriceData;
 import org.springframework.stereotype.Service;
 import org.ta4j.core.BarSeries;
@@ -24,11 +25,8 @@ import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
 import org.ta4j.core.indicators.statistics.StandardDeviationIndicator;
 import org.ta4j.core.indicators.StochasticOscillatorKIndicator;
-import org.ta4j.core.indicators.StochasticOscillatorDIndicator;
 import org.ta4j.core.indicators.CCIIndicator;
-import org.ta4j.core.indicators.ATRIndicator;
 import org.ta4j.core.indicators.adx.ADXIndicator;
-import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 
 import java.time.ZoneId;
 import java.util.List;
@@ -115,10 +113,10 @@ public class Ta4jHelperService {
      */
     private Rule buildSingleRule(StrategyCondition condition, BarSeries series,
                                  Map<String, Indicator<Num>> indicatorCache) {
-        Indicator<Num> left = resolveOperand(condition.getLeftOperand(), series, indicatorCache);
-        Indicator<Num> right = resolveOperand(condition.getRightOperand(), series, indicatorCache);
+        Indicator<Num> left = resolveOperand(condition.leftOperand(), series, indicatorCache);
+        Indicator<Num> right = resolveOperand(condition.rightOperand(), series, indicatorCache);
 
-        return switch (condition.getOperator()) {
+        return switch (condition.operator()) {
             case "GT" -> new OverIndicatorRule(left, right);
             case "GTE" -> new IsEqualRule(left, right).or(new OverIndicatorRule(left, right));
             case "LT" -> new UnderIndicatorRule(left, right);
@@ -126,7 +124,7 @@ public class Ta4jHelperService {
             case "EQ" -> new IsEqualRule(left, right);
             case "CROSSES_ABOVE" -> new CrossedUpIndicatorRule(left, right);
             case "CROSSES_BELOW" -> new CrossedDownIndicatorRule(left, right);
-            default -> throw new IllegalArgumentException("Unknown operator: " + condition.getOperator());
+            default -> throw new CustomException(ErrorCode.INVALID_BACKTEST_PARAMS);
         };
     }
 
@@ -142,10 +140,9 @@ public class Ta4jHelperService {
             return indicatorCache.get(key);
         }
 
-        Num indicatorOne = series.getBar(0).getClosePrice().numOf(1); // 1.0에 해당하는 Num
 
-        Indicator<Num> indicator = switch (operand.getType()) {
-            case "price" -> createPriceIndicator(operand.getPriceField(), series);
+        Indicator<Num> indicator = switch (operand.type()) {
+            case "price" -> createPriceIndicator(operand.priceField(), series);
             case "indicator" -> {
                 Indicator<Num> baseIndicator = createIndicator(operand, series, indicatorCache);
                 // Transform 로직 추가
@@ -158,10 +155,10 @@ public class Ta4jHelperService {
                 yield baseIndicator;
             }
             case "const" -> {
-                Num constValue = series.getBar(0).getClosePrice().numOf(operand.getConstantValue());
+                Num constValue = series.getBar(0).getClosePrice().numOf(operand.constantValue());
                 yield new ConstantIndicator<>(series, constValue);
             }
-            default -> throw new IllegalArgumentException("Unknown operand type: " + operand.getType());
+            default -> throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         };
 
         indicatorCache.put(key, indicator);
@@ -176,15 +173,15 @@ public class Ta4jHelperService {
             case "Low" -> new LowPriceIndicator(series);
             case "Volume" -> new VolumeIndicator(series, 0);
             case "Close" -> new ClosePriceIndicator(series);
-            default -> throw new IllegalArgumentException("Unknown priceField: " + field);
+            default -> throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         };
     }
 
     // 팩토리 헬퍼 2: 보조 지표 생성
     private Indicator<Num> createIndicator(StrategyOperand operand, BarSeries series,
                                            Map<String, Indicator<Num>> cache) {
-        String code = operand.getIndicatorCode();
-        Map<String, Object> params = operand.getParams();
+        String code = operand.indicatorCode();
+        Map<String, Object> params = operand.params();
 
         Indicator<Num> baseIndicator = createPriceIndicator("Close", series);
         Indicator<Num> closePrice = createPriceIndicator("Close", series);
@@ -207,7 +204,7 @@ public class Ta4jHelperService {
                 MACDIndicator macd = new MACDIndicator(baseIndicator, fast, slow);
                 Indicator<Num> signalLine = new EMAIndicator(macd, signal);
 
-                return switch (operand.getOutput()) {
+                return switch (operand.output()) {
                     case "macd" -> macd;
                     case "signal" -> signalLine;
                     case "hist" -> new ManualMACDHistogramIndicator(macd, signalLine);
@@ -227,7 +224,7 @@ public class Ta4jHelperService {
                 // 표준편차 생성
                 StandardDeviationIndicator sd = new StandardDeviationIndicator(closePrice, bbLength);
 
-                return switch (operand.getOutput() != null ? operand.getOutput() : "middle") {
+                return switch (operand.output() != null ? operand.output() : "middle") {
                     // bbSma 대신 bbMiddle을 전달해야 함
                     case "upper" -> new BollingerBandsUpperIndicator(bbMiddle, sd, series.numOf(bbK));
                     case "lower" -> new BollingerBandsLowerIndicator(bbMiddle, sd, series.numOf(bbK));
@@ -245,7 +242,7 @@ public class Ta4jHelperService {
 
                 StochasticOscillatorKIndicator stochK = new StochasticOscillatorKIndicator(series, kLength);
 
-                if ("d".equalsIgnoreCase(operand.getOutput())) {
+                if ("d".equalsIgnoreCase(operand.output())) {
                     // D 라인은 보통 K 라인의 SMA 입니다.
                     return new SMAIndicator(stochK, dLength);
                 }
@@ -266,26 +263,26 @@ public class Ta4jHelperService {
                 int adxLength = ((Number) params.get("length")).intValue(); // 보통 14
                 return new ADXIndicator(series, adxLength);
             default:
-                throw new IllegalArgumentException("Unknown indicator code: " + code);
+                throw new CustomException(ErrorCode.BACKTEST_INDICATOR_NOT_FOUND);
         }
     }
 
     // Operand DTO 로부터 Map의 키를 생성
     private String generateIndicatorKey(StrategyOperand operand) {
         if (operand == null) return "null_operand";
-        switch (operand.getType()) {
+        switch (operand.type()) {
             case "price":
-                return operand.getPriceField();
+                return operand.priceField();
             case "const":
-                return "const_" + operand.getConstantValue().toString();
+                return "const_" + operand.constantValue().toString();
             case "indicator":
-                String params = operand.getParams().entrySet().stream()
+                String params = operand.params().entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .map(e -> e.getValue().toString())
                     .collect(Collectors.joining(","));
-                String key = String.format("%s(%s)", operand.getIndicatorCode(), params);
-                if (operand.getOutput() != null && !"value".equals(operand.getOutput())) {
-                    key += "." + operand.getOutput();
+                String key = String.format("%s(%s)", operand.indicatorCode(), params);
+                if (operand.output() != null && !"value".equals(operand.output())) {
+                    key += "." + operand.output();
                 }
                 // Transform 정보도 Key에 포함
                 //if (operand.getTransform() != null) {
@@ -318,31 +315,29 @@ public class Ta4jHelperService {
     }
 
     private void validateOperand(StrategyOperand operand) {
-        if (operand.getType() == null) {
-            throw new IllegalArgumentException("Operand 'type' must not be null.");
+        if (operand.type() == null) {
+            throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         }
 
-        switch (operand.getType()) {
+        switch (operand.type()) {
             case "price":
-                if (operand.getPriceField() == null) {
-                    throw new IllegalArgumentException("Operand of type 'price' must have a non-null 'priceField'.");
+                if (operand.priceField() == null) {
+                    throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
                 }
+
                 break;
             case "indicator":
-                if (operand.getIndicatorCode() == null) {
-                    throw new IllegalArgumentException("Operand of type 'indicator' must have a non-null 'indicatorCode'.");
-                }
-                if (operand.getParams() == null) {
-                    throw new IllegalArgumentException("Operand of type 'indicator' must have non-null 'params'.");
+                if (operand.indicatorCode() == null || operand.params() == null) {
+                    throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
                 }
                 break;
             case "const":
-                if (operand.getConstantValue() == null) {
-                    throw new IllegalArgumentException("Operand of type 'const' must have a non-null 'constantValue'.");
+                if (operand.constantValue() == null) {
+                    throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Unknown operand type: " + operand.getType());
+                throw new CustomException(ErrorCode.BACKTEST_OPERAND_INVALID);
         }
     }
 }

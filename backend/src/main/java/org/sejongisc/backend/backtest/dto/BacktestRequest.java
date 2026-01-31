@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
-import org.sejongisc.backend.user.entity.User;
 
 import java.time.LocalDate;
 import java.util.List;
