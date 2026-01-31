@@ -6,12 +6,9 @@ import org.sejongisc.backend.backtest.entity.BacktestRun;
 import org.sejongisc.backend.backtest.entity.Template;
 
 import java.util.List;
-
-
 @Builder
-@Getter
-public class TemplateResponse {
-  private List<Template> templates;
-  private Template template;
-  private List<BacktestRun> backtestRuns;
-}
+public record TemplateResponse(
+        List<Template> templates,
+        Template template,
+        List<BacktestRun> backtestRuns
+) {}

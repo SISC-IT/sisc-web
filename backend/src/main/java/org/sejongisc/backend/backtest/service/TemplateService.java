@@ -43,12 +43,12 @@ public class TemplateService {
   }
 
   // 템플릿 생성
-  public TemplateResponse createTemplate(TemplateRequest request) {
-    User user = userRepository.findById(request.getUserId())
+  public TemplateResponse createTemplate(TemplateRequest request, UUID userId) {
+    User user = userRepository.findById(userId)
         .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-    Template template = Template.of(user, request.getTitle(),
-        request.getDescription(), request.getIsPublic());
+    Template template = Template.of(user, request.title(),
+        request.description(), request.isPublic());
 
     templateRepository.save(template);
 
@@ -58,9 +58,9 @@ public class TemplateService {
   }
 
   // 템플릿 수정
-  public TemplateResponse updateTemplate(TemplateRequest request) {
-    Template template = authorizeTemplateOwner(request.getTemplateId(), request.getUserId());
-    template.update(request.getTitle(), request.getDescription(), request.getIsPublic());
+  public TemplateResponse updateTemplate(TemplateRequest request, UUID userId) {
+    Template template = authorizeTemplateOwner(request.templateId(), userId);
+    template.update(request.title(), request.description(), request.isPublic());
     templateRepository.save(template);
 
     return TemplateResponse.builder()

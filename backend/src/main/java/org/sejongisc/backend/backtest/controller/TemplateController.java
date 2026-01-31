@@ -53,8 +53,7 @@ public class TemplateController {
   )
   public ResponseEntity<TemplateResponse> createTemplate(@RequestBody TemplateRequest request,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetail) {
-    request.setUserId(customUserDetail.getUserId());
-    return ResponseEntity.ok(templateService.createTemplate(request));
+    return ResponseEntity.ok(templateService.createTemplate(request, customUserDetail.getUserId()));
   }
 
   // 템플릿 수정
@@ -65,8 +64,7 @@ public class TemplateController {
   )
   public ResponseEntity<TemplateResponse> updateTemplate(@RequestBody TemplateRequest request,
                                                          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    request.setUserId(customUserDetails.getUserId());
-    return ResponseEntity.ok(templateService.updateTemplate(request));
+    return ResponseEntity.ok(templateService.updateTemplate(request, customUserDetails.getUserId()));
   }
 
   // 템플릿 삭제
