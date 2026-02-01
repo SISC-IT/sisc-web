@@ -1,69 +1,133 @@
-﻿# libs/database/fetcher.py
-from __future__ import annotations
-from typing import Optional
+﻿#AI/libs/database/fetcher.py
+from typing import Dict
 import pandas as pd
 from sqlalchemy import text
-
-# DB용 유틸: SQLAlchemy Engine 생성 함수 사용 (get_engine)
 from .connection import get_engine
 
-def fetch_ohlcv(
+def fetch_price_data(
     ticker: str,
-    start: str,
-    end: str,
-    interval: str = "1d",
-    db_name: str = "db",
+    start_date: str,
+    db_name: str = "db"
 ) -> pd.DataFrame:
     """
-    특정 티커, 날짜 범위의 OHLCV 데이터를 DB에서 불러오기 (SQLAlchemy 엔진 사용)
-
-    Args:
-        ticker (str): 종목 코드 (예: "AAPL")
-        start (str): 시작일자 'YYYY-MM-DD' (inclusive)
-        end (str): 종료일자 'YYYY-MM-DD' (inclusive)
-        interval (str): 데이터 간격 ('1d' 등) - 현재 테이블이 일봉만 제공하면 무시됨
-        db_name (str): get_engine()가 참조할 설정 블록 이름 (예: "db", "report_DB")
-
-    Returns:
-        pd.DataFrame: 컬럼 = [ticker, date, open, high, low, close, adjusted_close, volume]
-                      (date 컬럼은 pandas datetime으로 변환됨)
+    [기본] 종목별 시세 데이터 조회 (Price Data)
     """
-
-    # 1) SQLAlchemy engine 얻기 (configs/config.json 기준)
     engine = get_engine(db_name)
-
-    # 2) 쿼리: named parameter(:ticker 등) 사용 -> 안전하고 가독성 좋음
-    #    - interval 분기가 필요하면 테이블/파티션 구조에 따라 쿼리를 분기하도록 확장 가능
     query = text("""
-        SELECT ticker, date, open, high, low, close, adjusted_close, volume
+        SELECT date, ticker, open, high, low, close, adjusted_close, volume, amount
         FROM public.price_data
         WHERE ticker = :ticker
-          AND date BETWEEN :start AND :end
-        ORDER BY date;
+          AND date >= :start_date
+        ORDER BY date ASC;
     """)
 
-    # 3) DB에서 읽기 (with 문으로 커넥션 자동 정리)
     with engine.connect() as conn:
-        df = pd.read_sql(
-            query,
-            con=conn,  # 꼭 키워드 인자로 con=conn
-            params={"ticker": ticker, "start": start, "end": end},  # 튜플 X, 딕셔너리 O
-            )
+        df = pd.read_sql(query, conn, params={"ticker": ticker, "start_date": start_date})
 
-    # 4) 후처리: 컬럼 정렬 및 date 타입 통일
-    if df is None or df.empty:
-        # 빈 DataFrame이면 일관된 컬럼 스키마로 반환
-        return pd.DataFrame(columns=["ticker", "date", "open", "high", "low", "close", "adjusted_close", "volume"])
-
-    # date 컬럼을 datetime으로 변경 (UTC로 맞추고 싶으면 pd.to_datetime(..., utc=True) 사용)
-    if "date" in df.columns:
+    if not df.empty:
         df["date"] = pd.to_datetime(df["date"])
+        # 수정주가 처리
+        if "adjusted_close" in df.columns:
+            df["close"] = df["adjusted_close"].fillna(df["close"])
+            
+    return df
 
-    # 선택: 컬럼 순서 고정 (일관성 유지)
-    desired_cols = ["ticker", "date", "open", "high", "low", "close", "adjusted_close", "volume"]
-    # 존재하는 컬럼만 가져오기
-    cols_present = [c for c in desired_cols if c in df.columns]
-    df = df.loc[:, cols_present]
+def fetch_macro_indicators(
+    start_date: str,
+    db_name: str = "db"
+) -> pd.DataFrame:
+    """
+    [공통] 거시경제 지표 조회 (모든 종목 공통 적용)
+    """
+    engine = get_engine(db_name)
+    query = text("""
+        SELECT date, 
+               us10y, us2y, yield_spread, 
+               vix_close, dxy_close, wti_price, gold_price, 
+               credit_spread_hy
+        FROM public.macroeconomic_indicators
+        WHERE date >= :start_date
+        ORDER BY date ASC;
+    """)
+
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn, params={"start_date": start_date})
+    
+    if not df.empty:
+        df["date"] = pd.to_datetime(df["date"])
+        
+    return df
+
+def fetch_market_breadth(
+    start_date: str,
+    db_name: str = "db"
+) -> pd.DataFrame:
+    """
+    [공통] 시장 건전성 지표 (Market Breadth)
+    """
+    engine = get_engine(db_name)
+    query = text("""
+        SELECT date, 
+               advance_decline_ratio, fear_greed_index, 
+               new_highs, new_lows, above_ma200_pct
+        FROM public.market_breadth
+        WHERE date >= :start_date
+        ORDER BY date ASC;
+    """)
+
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn, params={"start_date": start_date})
+    
+    if not df.empty:
+        df["date"] = pd.to_datetime(df["date"])
 
     return df
 
+def fetch_news_sentiment(
+    ticker: str,
+    start_date: str,
+    db_name: str = "db"
+) -> pd.DataFrame:
+    """
+    [개별] 뉴스 심리 지수 조회
+    """
+    engine = get_engine(db_name)
+    query = text("""
+        SELECT date, sentiment_score, risk_keyword_cnt, article_count
+        FROM public.news_sentiment
+        WHERE ticker = :ticker
+          AND date >= :start_date
+        ORDER BY date ASC;
+    """)
+
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn, params={"ticker": ticker, "start_date": start_date})
+    
+    if not df.empty:
+        df["date"] = pd.to_datetime(df["date"])
+        
+    return df
+
+def fetch_fundamentals(
+    ticker: str,
+    db_name: str = "db"
+) -> pd.DataFrame:
+    """
+    [개별] 기업 펀더멘털 데이터 (재무제표)
+    """
+    engine = get_engine(db_name)
+    # 재무제표는 start_date 제한 없이 가져와서 ffill 하는 것이 안전함
+    query = text("""
+        SELECT date, per, pbr, roe, debt_ratio, operating_cash_flow
+        FROM public.company_fundamentals
+        WHERE ticker = :ticker
+        ORDER BY date ASC;
+    """)
+
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn, params={"ticker": ticker})
+        
+    if not df.empty:
+        df["date"] = pd.to_datetime(df["date"])
+        
+    return df

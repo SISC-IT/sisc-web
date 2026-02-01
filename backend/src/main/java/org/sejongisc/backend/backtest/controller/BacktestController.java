@@ -7,10 +7,11 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
 import org.sejongisc.backend.backtest.dto.BacktestRequest;
 import org.sejongisc.backend.backtest.dto.BacktestResponse;
 import org.sejongisc.backend.backtest.service.BacktestService;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -61,132 +62,193 @@ public class BacktestController {
   // 백테스트 실행
   @PostMapping("/runs")
   @Operation(
-      summary = "백테스트 실행",
-      description = "사용자가 요청한 전략을 기반으로 백테스트를 실행합니다."
+          summary = "백테스팅 실행",
+          description = "다양한 보조지표를 조합하여 비동기 백테스팅을 실행합니다. 아래 Examples에서 원하는 전략을 선택하여 테스트하세요.",
+          requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                  content = @Content(
+                          schema = @Schema(implementation = BacktestRequest.class),
+                          examples = {
+                                  @ExampleObject(
+                                          name = "1. [추세] 이동평균 골든크로스 (SMA)",
+                                          description = "단기 이평선이 장기 이평선을 돌파할 때 매수합니다.",
+                                          value = """
+                            {
+                              "title": "SMA 5일/20일 골든크로스",
+                              "startDate": "2023-01-01",
+                              "endDate": "2023-12-31",
+                              "strategy": {
+                                "ticker": "AAPL",
+                                "initialCapital": 10000000,
+                                "defaultExitDays": 0,
+                                "buyConditions": [
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "SMA", "params": { "length": 5 } },
+                                    "operator": "CROSSES_ABOVE",
+                                    "rightOperand": { "type": "indicator", "indicatorCode": "SMA", "params": { "length": 20 } },
+                                    "isAbsolute": true
+                                  }
+                                ],
+                                "sellConditions": [
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "SMA", "params": { "length": 5 } },
+                                    "operator": "CROSSES_BELOW",
+                                    "rightOperand": { "type": "indicator", "indicatorCode": "SMA", "params": { "length": 20 } },
+                                    "isAbsolute": true
+                                  }
+                                ]
+                              }
+                            }
+                            """
+                                  ),
+                                  @ExampleObject(
+                                          name = "2. [모멘텀] RSI & MACD 조합",
+                                          description = "RSI 과매도 + MACD 상승 반전 시 매수",
+                                          value = """
+                            {
+                              "title": "RSI + MACD 복합 전략",
+                              "startDate": "2023-01-01",
+                              "endDate": "2023-12-31",
+                              "strategy": {
+                                "ticker": "TSLA",
+                                "initialCapital": 10000000,
+                                "defaultExitDays": 0,
+                                "buyConditions": [
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "RSI", "params": { "length": 14 } },
+                                    "operator": "LT",
+                                    "rightOperand": { "type": "const", "constantValue": 40 },
+                                    "isAbsolute": false
+                                  },
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "MACD", "output": "macd", "params": { "fast": 12, "slow": 26, "signal": 9 } },
+                                    "operator": "GT",
+                                    "rightOperand": { "type": "indicator", "indicatorCode": "MACD", "output": "signal", "params": { "fast": 12, "slow": 26, "signal": 9 } },
+                                    "isAbsolute": false
+                                  }
+                                ],
+                                "sellConditions": [
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "RSI", "params": { "length": 14 } },
+                                    "operator": "GT",
+                                    "rightOperand": { "type": "const", "constantValue": 70 },
+                                    "isAbsolute": true
+                                  }
+                                ]
+                              }
+                            }
+                            """
+                                  ),
+                                  @ExampleObject(
+                                          name = "3. [변동성] 볼린저 밴드 (Bollinger Bands)",
+                                          description = "하단 밴드 터치 시 매수, 상단 밴드 터치 시 매도",
+                                          value = """
+                            {
+                              "title": "볼린저 밴드 역추세",
+                              "startDate": "2023-01-01",
+                              "endDate": "2023-12-31",
+                              "strategy": {
+                                "ticker": "MSFT",
+                                "initialCapital": 5000000,
+                                "defaultExitDays": 0,
+                                "buyConditions": [
+                                  {
+                                    "leftOperand": { "type": "price", "priceField": "Close" },
+                                    "operator": "LT",
+                                    "rightOperand": { "type": "indicator", "indicatorCode": "BB", "output": "lower", "params": { "length": 20, "k": 2.0 } },
+                                    "isAbsolute": true
+                                  }
+                                ],
+                                "sellConditions": [
+                                  {
+                                    "leftOperand": { "type": "price", "priceField": "Close" },
+                                    "operator": "GT",
+                                    "rightOperand": { "type": "indicator", "indicatorCode": "BB", "output": "upper", "params": { "length": 20, "k": 2.0 } },
+                                    "isAbsolute": true
+                                  }
+                                ]
+                              }
+                            }
+                            """
+                                  ),
+                                  @ExampleObject(
+                                          name = "4. [오실레이터] 스토캐스틱 & CCI",
+                                          description = "스토캐스틱 골든크로스 & CCI 과매수 청산",
+                                          value = """
+                            {
+                              "title": "Stochastic & CCI 전략",
+                              "startDate": "2023-01-01",
+                              "endDate": "2023-12-31",
+                              "strategy": {
+                                "ticker": "NVDA",
+                                "initialCapital": 10000000,
+                                "defaultExitDays": 0,
+                                "buyConditions": [
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "STOCH", "output": "k", "params": { "kLength": 14, "dLength": 3 } },
+                                    "operator": "CROSSES_ABOVE",
+                                    "rightOperand": { "type": "const", "constantValue": 20 },
+                                    "isAbsolute": true
+                                  }
+                                ],
+                                "sellConditions": [
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "CCI", "params": { "length": 14 } },
+                                    "operator": "GT",
+                                    "rightOperand": { "type": "const", "constantValue": 100 },
+                                    "isAbsolute": true
+                                  }
+                                ]
+                              }
+                            }
+                            """
+                                  ),
+                                  @ExampleObject(
+                                          name = "5. [추세강도] ADX & ATR (고급)",
+                                          description = "ADX로 추세 확인 후 EMA 돌파 매매",
+                                          value = """
+                            {
+                              "title": "ADX 추세 추종 & ATR 활용",
+                              "startDate": "2023-01-01",
+                              "endDate": "2023-12-31",
+                              "strategy": {
+                                "ticker": "AMD",
+                                "initialCapital": 10000000,
+                                "defaultExitDays": 30,
+                                "buyConditions": [
+                                  {
+                                    "leftOperand": { "type": "indicator", "indicatorCode": "ADX", "params": { "length": 14 } },
+                                    "operator": "GT",
+                                    "rightOperand": { "type": "const", "constantValue": 25 },
+                                    "isAbsolute": false
+                                  },
+                                  {
+                                    "leftOperand": { "type": "price", "priceField": "Close" },
+                                    "operator": "GT",
+                                    "rightOperand": { "type": "indicator", "indicatorCode": "EMA", "params": { "length": 20 } },
+                                    "isAbsolute": false
+                                  }
+                                ],
+                                "sellConditions": [
+                                  {
+                                    "leftOperand": { "type": "price", "priceField": "Close" },
+                                    "operator": "LT",
+                                    "rightOperand": { "type": "indicator", "indicatorCode": "EMA", "params": { "length": 20 } },
+                                    "isAbsolute": true
+                                  }
+                                ]
+                              }
+                            }
+                            """
+                                  )
+                          }
+                  )
+          )
   )
-  @io.swagger.v3.oas.annotations.parameters.RequestBody(
-      description = "백테스트 실행을 위한 기본 정보 및 전략",
-      required = true,
-      content = @Content(
-          mediaType = "application/json",
-          schema = @Schema(implementation = BacktestRequest.class),
-          examples = {
-              @ExampleObject(
-                  summary = "SMA 골든크로스 및 RSI 필터 전략 예시",
-                  value = """
-                {
-                  "title": "골든크로스 + RSI 필터 (AAPL)",
-                  "startDate": "2023-01-01",
-                  "endDate": "2024-12-31",
-                  "templateId": null,
-                  "strategy": {
-                    "initialCapital": 100000.00,
-                    "ticker": "AAPL",
-                    "defaultExitDays" : 30,
-                    "buyConditions": [
-                      {
-                        "leftOperand": {
-                          "type": "indicator",
-                          "indicatorCode": "RSI",
-                          "output": "value",
-                          "params": {
-                            "length": 14
-                          }
-                        },
-                        "operator": "LT",
-                        "rightOperand": {
-                          "type": "const",
-                          "constantValue": 30
-                        },
-                        "isAbsolute": true
-                      },
-                      {
-                        "leftOperand": {
-                          "type": "indicator",
-                          "indicatorCode": "SMA",
-                          "output": "value",
-                          "params": {
-                            "length": 50
-                          }
-                        },
-                        "operator": "CROSSES_ABOVE",
-                        "rightOperand": {
-                          "type": "indicator",
-                          "indicatorCode": "SMA",
-                          "output": "value",
-                          "params": {
-                            "length": 200
-                          }
-                        },
-                        "isAbsolute": false
-                      },
-                      {
-                        "leftOperand": {
-                          "type": "price",
-                          "priceField": "Close"
-                        },
-                        "operator": "GTE",
-                        "rightOperand": {
-                          "type": "indicator",
-                          "indicatorCode": "SMA",
-                          "output": "value",
-                          "params": {
-                            "length": 200
-                          }
-                        },
-                        "isAbsolute": false
-                      }
-                    ],
-                    "sellConditions": [
-                      {
-                        "leftOperand": {
-                          "type": "indicator",
-                          "indicatorCode": "RSI",
-                          "output": "value",
-                          "params": {
-                            "length": 14
-                          }
-                        },
-                        "operator": "GT",
-                        "rightOperand": {
-                          "type": "const",
-                          "constantValue": 70
-                        },
-                        "isAbsolute": true
-                      },
-                      {
-                        "leftOperand": {
-                          "type": "indicator",
-                          "indicatorCode": "SMA",
-                          "output": "value",
-                          "params": {
-                            "length": 50
-                          }
-                        },
-                        "operator": "CROSSES_BELOW",
-                        "rightOperand": {
-                          "type": "indicator",
-                          "indicatorCode": "SMA",
-                          "output": "value",
-                          "params": {
-                            "length": 200
-                          }
-                        },
-                        "isAbsolute": false
-                      }
-                    ],
-                    "note": "간단한 골든크로스 전략 테스트. RSI 과매수/과매도 시 우선 청산/진입."
-                  }
-                }
-                """
-              )
-          }
-      )
-  )
-  public ResponseEntity<BacktestResponse> runBacktest(@RequestBody BacktestRequest request,
+  public ResponseEntity<BacktestResponse> runBacktest(@org.springframework.web.bind.annotation.RequestBody BacktestRequest request, //
                                                       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    request.setUserId(customUserDetails.getUserId());
-    return ResponseEntity.ok(backtestService.runBacktest(request));
+    request.setUserId(customUserDetails.getUserId()); // 사용자 ID 주입
+    BacktestResponse response = backtestService.runBacktest(request);
+    return ResponseEntity.ok(response);
   }
 
   // 백테스트 실행 정보 삭제

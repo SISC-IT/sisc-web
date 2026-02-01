@@ -19,7 +19,7 @@ import org.sejongisc.backend.betting.repository.UserBetRepository;
 import org.sejongisc.backend.point.entity.PointHistory;
 import org.sejongisc.backend.point.repository.PointHistoryRepository;
 import org.sejongisc.backend.point.service.PointHistoryService;
-import org.sejongisc.backend.user.dao.UserRepository;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;

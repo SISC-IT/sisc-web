@@ -18,6 +18,14 @@ public enum ErrorCode {
 
   INVALID_BACKTEST_JSON_PARAMS(HttpStatus.BAD_REQUEST, "유효하지 않은 paramsJson 요청값 입니다."),
 
+  INVALID_BACKTEST_PARAMS(HttpStatus.BAD_REQUEST, "유효하지 않은 백테스트 파라미터입니다."),
+
+  BACKTEST_INDICATOR_NOT_FOUND(HttpStatus.BAD_REQUEST, "지원하지 않는 보조지표입니다."),
+
+  BACKTEST_OPERAND_INVALID(HttpStatus.BAD_REQUEST, "전략 피연산자(Operand) 설정이 올바르지 않습니다."),
+
+  BACKTEST_EXECUTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "백테스트 실행 중 오류가 발생했습니다."),
+
   BACKTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 백테스트가 존재하지 않습니다."),
 
   BACKTEST_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "백테스트 소유자가 아닙니다."),
@@ -25,6 +33,8 @@ public enum ErrorCode {
   BACKTEST_TEMPLATE_MISMATCH(HttpStatus.BAD_REQUEST, "백테스트 템플릿이 일치하지 않습니다."),
 
   BACKTEST_METRICS_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 백테스트 결과 정보가 존재하지 않습니다."),
+
+
 
   // TEMPLATE
 
@@ -42,11 +52,19 @@ public enum ErrorCode {
 
   CONCURRENT_UPDATE(HttpStatus.CONFLICT, "동시성 업데이트에 실패했습니다. 다시 시도해주세요."),
 
+  ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 포인트 계정을 찾을 수 없습니다."),
+
+  ACCOUNT_REQUIRED(HttpStatus.BAD_REQUEST, "계정 정보는 필수입니다."),
+
+  POINT_TRANSACTION_TOTAL_MISMATCH(HttpStatus.BAD_REQUEST, "포인트 거래 내역의 합계가 0이 아닙니다."),
+
   // AUTH
 
   UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패했습니다."),
 
   MISSING_AUTH_TOKEN(HttpStatus.UNAUTHORIZED, "인증 토큰이 필요합니다."),
+
+  MISSING_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 필요합니다."),
 
   INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 엑세스 토큰입니다."),
 
@@ -71,7 +89,7 @@ public enum ErrorCode {
   DUPLICATE_PHONE(HttpStatus.CONFLICT, "이미 사용 중인 전화번호입니다."),
   DUPLICATE_USER(HttpStatus.CONFLICT, "이미 가입된 사용자입니다."),
   INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
-  
+
   // BETTING
 
   STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "주식 종목이 존재하지 않습니다."),
@@ -103,13 +121,41 @@ public enum ErrorCode {
 
   INVALID_BOARD_TYPE(HttpStatus.BAD_REQUEST, "상위 게시판에는 글을 작성할 수 없습니다."),
 
-  // SESSION
+  // ATTENDANCE
 
-  SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 세션이 존재하지 않습니다.");
+  SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 세션이 존재하지 않습니다."),
 
+  ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 라운드가 존재하지 않습니다."),
 
+  ROUND_NOT_ACTIVE(HttpStatus.FORBIDDEN, "출석 라운드가 진행 중이 아닙니다."),
 
+  ROUND_DATE_REQUIRED(HttpStatus.BAD_REQUEST, "출석 라운드 날짜가 필요합니다."),
 
+  START_AT_REQUIRED(HttpStatus.BAD_REQUEST, "출석 라운드 시작 시간이 필요합니다."),
+
+  ROUND_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "출석 라운드 이름이 필요합니다."),
+
+  STATUS_REQUIRED(HttpStatus.BAD_REQUEST, "출석 상태가 필요합니다."),
+
+  DEVICE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "출석 체크를 위한 기기 ID가 필요합니다."),
+
+  END_AT_MUST_BE_AFTER_START_AT(HttpStatus.BAD_REQUEST, "출석 라운드 종료 시간은 시작 시간 이후여야 합니다."),
+
+  QR_TOKEN_MALFORMED(HttpStatus.BAD_REQUEST, "QR 토큰 형식이 올바르지 않습니다."),
+
+  ALREADY_CHECKED_IN(HttpStatus.FORBIDDEN, "이미 출석 체크되었습니다."),
+
+  INVALID_ATTENDANCE_STATUS(HttpStatus.BAD_REQUEST, "유효하지 않은 출석 상태입니다."),
+
+  DEVICE_ALREADY_USED(HttpStatus.FORBIDDEN, "해당 기기는 이미 출석 체크에 사용되었습니다."),
+
+  ALREADY_JOINED(HttpStatus.FORBIDDEN, "이미 출석 세션에 참여 중입니다."),
+
+  NOT_SESSION_MEMBER(HttpStatus.FORBIDDEN, "출석 세션의 멤버가 아닙니다."),
+
+  TARGET_NOT_SESSION_MEMBER(HttpStatus.BAD_REQUEST, "대상 사용자가 출석 세션의 멤버가 아닙니다."),
+
+  CANNOT_DEMOTE_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 강등할 수 없습니다.");
   private final HttpStatus status;
   private final String message;
 

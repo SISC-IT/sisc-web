@@ -6,7 +6,9 @@ import org.sejongisc.backend.betting.entity.Scope;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Component
 @Slf4j
@@ -16,33 +18,23 @@ public class BettingScheduler {
     private final BettingService bettingService;
 
     @Scheduled(cron = "0 0 9 * * MON-FRI", zone = "Asia/Seoul")
-    public void dailyOpenScheduler() {
+    public void openScheduler() {
+        // 일일 라운드 생성
         bettingService.createBetRound(Scope.DAILY);
-//        log.info("✅ 스케줄러 정상 작동 중: {}", LocalDateTime.now());
-    }
 
-    @Scheduled(cron = "0 0 9 * * MON", zone = "Asia/Seoul")
-    public void weeklyOpenScheduler() {
-        bettingService.createBetRound(Scope.WEEKLY);
+        // 월요일: 주간 라운드 생성
+        if (LocalDate.now(ZoneId.of("Asia/Seoul")).getDayOfWeek() == DayOfWeek.MONDAY) {
+            bettingService.createBetRound(Scope.WEEKLY);
+        }
     }
 
     @Scheduled(cron = "0 0 22 * * MON-FRI", zone = "Asia/Seoul")
-    public void dailyCloseScheduler() {
-        bettingService.closeBetRound();
-    }
-
-    @Scheduled(cron = "0 0 22 * * FRI", zone = "Asia/Seoul")
-    public void weeklyCloseScheduler() {
+    public void closeScheduler() {
         bettingService.closeBetRound();
     }
 
     @Scheduled(cron = "0 5 22 * * MON-FRI", zone = "Asia/Seoul")
-    public void dailySettleScheduler() {
-        bettingService.settleUserBets();
-    }
-
-    @Scheduled(cron = "0 5 22 * * FRI", zone = "Asia/Seoul")
-    public void weeklySettleScheduler() {
+    public void settleScheduler() {
         bettingService.settleUserBets();
     }
 

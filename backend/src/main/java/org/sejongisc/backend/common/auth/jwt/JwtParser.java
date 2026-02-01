@@ -5,8 +5,7 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetailsService;
+import org.sejongisc.backend.common.auth.service.CustomUserDetailsService;
 import org.sejongisc.backend.user.entity.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -47,8 +46,8 @@ public class JwtParser {
     // Authentication 생성
     public UsernamePasswordAuthenticationToken getAuthentication(String token) {
         Claims claims = parseClaims(token);
+        // TODO : 유지보수성을 위해 클레임 키 상수화 고려
         String userId = claims.get("uid", String.class);
-
         String roleStr = claims.get("role", String.class);
         if (roleStr == null) {
             throw new JwtException("JWT에 role 클레임이 없습니다.");
@@ -66,7 +65,7 @@ public class JwtParser {
         }
 
         // DB에서 다시 유저를 불러오기 (CustomUserDetailsService 사용)
-        UserDetails userDetails = customUserDetailsService.loadUserByUsername(userId);
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(userId);  // TODO : 성능 고려해서 DB 조회 제거 고민
 
         log.debug("인증 객체 생성 완료");
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

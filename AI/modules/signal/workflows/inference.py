@@ -1,122 +1,150 @@
+# AI/modules/signal/workflows/inference.py
 """
 [모델 추론 스크립트]
-- 학습된 '글로벌 범용 모델(Universal Model)'을 로드합니다.
-- 특정 종목의 최신 데이터를 DB에서 조회합니다.
-- 데이터의 최근 패턴을 0~1로 정규화(Local Scaling)하여 모델에 입력합니다.
-- 최종적으로 익일 주가 상승 확률을 예측하여 반환합니다.
+- 학습된 'Universal Transformer' 모델을 로드합니다.
+- 특정 종목의 최신 데이터를 DB에서 조회하고, 학습과 동일한 전처리를 수행합니다.
+- (시계열 데이터 + 티커 ID + 섹터 ID) 3가지 입력을 모델에 넣어 상승 확률을 예측합니다.
 """
 
 import sys
 import os
 import argparse
-import joblib
+import pickle
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  경로 설정 (프로젝트 루트 추가)
+#  경로 설정
 # ─────────────────────────────────────────────────────────────────────────────
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from AI.modules.signal.core.data_loader import SignalDataLoader
-from AI.modules.signal.models import get_model
+from AI.libs.database.connection import get_db_conn
+from AI.modules.signal.core.data_loader import DataLoader
+from AI.modules.signal.core.features import add_technical_indicators
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  추론 함수
 # ─────────────────────────────────────────────────────────────────────────────
 def run_inference(ticker: str, model_type: str = "transformer") -> float:
-    print(f"=== [Inference] {ticker} ({model_type}) 추론 시작 ===")
+    print(f"=== [Inference] {ticker} 예측 시작 ===")
 
-    # 1. 모델 파일 경로 설정 (Universal Model)
-    # train.py에서 저장한 'universal_transformer.keras'를 바라봅니다.
-    save_dir = os.path.join(project_root, "AI", "data", "weights", model_type)
-    weights_path = os.path.join(save_dir, "universal_transformer.keras")
+    # 1. 경로 설정 및 파일 확인
+    base_dir = os.path.join(project_root, "AI", "data", "weights", model_type)
+    model_path = os.path.join(base_dir, "universal_transformer.keras")
+    scaler_path = os.path.join(base_dir, "universal_scaler.pkl")
     
-    # 모델 파일 존재 확인
-    if not os.path.exists(weights_path):
-        print(f"[Err] 모델 파일이 존재하지 않습니다.")
-        print(f"      Path: {weights_path}")
-        print("      -> 먼저 'train.py'를 실행하여 범용 모델을 학습시켜 주세요.")
+    if not os.path.exists(model_path) or not os.path.exists(scaler_path):
+        print(f"[Err] 학습된 모델이나 스케일러가 없습니다.")
+        print(f"      - Model: {model_path}")
+        print(f"      - Scaler: {scaler_path}")
         return -1.0
 
-    # 2. 최신 데이터 로드
-    # 시퀀스 길이(60일) + 보조지표 계산용 여유분(SMA200 등 고려) 확보를 위해 300일 전부터 조회
-    end_date = datetime.now().strftime("%Y-%m-%d")
+    # 2. 메타데이터(ID 매핑) 준비
+    # DataLoader를 초기화하면 DB에서 종목/섹터 정보를 읽어와 ID 매핑을 만듭니다.
+    print(">> 메타데이터 로드 중...")
+    loader = DataLoader(lookback=60)
+    
+    # 해당 종목의 ID 찾기 (없으면 0: Unknown)
+    ticker_id = loader.ticker_to_id.get(ticker, 0)
+    sector_id = loader.ticker_sector_map.get(ticker, 0)
+    
+    print(f"   - Ticker ID: {ticker_id}")
+    print(f"   - Sector ID: {sector_id}")
+
+    # 3. DB에서 최신 데이터 조회
+    # 기술적 지표(MA60, RSI 등) 계산을 위해 최소 200일치 정도의 여유 데이터를 가져옵니다.
+    print(f">> [{ticker}] 시세 데이터 조회 중...")
     start_date = (datetime.now() - timedelta(days=300)).strftime("%Y-%m-%d")
     
-    loader = SignalDataLoader(sequence_length=60)
+    conn = get_db_conn()
+    query = """
+        SELECT date, ticker, open, high, low, close, volume, adjusted_close
+        FROM public.price_data
+        WHERE ticker = %s AND date >= %s
+        ORDER BY date ASC
+    """
+    df = pd.read_sql(query, conn, params=(ticker, start_date))
+    conn.close()
     
+    # 데이터 유효성 체크
+    if df.empty or len(df) < 100:
+        print(f"[Err] 데이터가 너무 적습니다. (Rows: {len(df)})")
+        return -1.0
+        
+    df['date'] = pd.to_datetime(df['date'])
+
+    # 4. 전처리 (Feature Engineering + Scaling)
     try:
-        df = loader.load_data(ticker, start_date, end_date)
+        # (1) 기술적 지표 추가
+        df = add_technical_indicators(df)
+        
+        # (2) 최근 60일 데이터만 잘라내기 전에, 스케일링을 위해 필요한 컬럼 선택
+        # 학습 때 사용한 feature_cols와 순서가 정확히 일치해야 함!
+        feature_cols = [
+            'open', 'high', 'low', 'close', 'volume',
+            'ma5', 'ma20', 'ma60', 
+            'rsi', 'macd', 'signal_line', 
+            'upper_band', 'lower_band', 'vol_change'
+        ]
+        
+        # NaN 제거 (지표 계산 초반부)
+        df_clean = df.dropna(subset=feature_cols)
+        
+        if len(df_clean) < 60:
+            print("[Err] 지표 계산 후 유효 데이터가 60일 미만입니다.")
+            return -1.0
+
+        # (3) 저장된 스케일러 로드 및 적용
+        with open(scaler_path, "rb") as f:
+            loaded_scaler = pickle.load(f)
+            
+        # 전체를 변환하고 마지막 60개만 씀
+        scaled_data = loaded_scaler.transform(df_clean[feature_cols])
+        
+        # (4) 입력 텐서 생성
+        # Shape: (1, 60, 14)
+        last_sequence = scaled_data[-60:]
+        input_ts = np.expand_dims(last_sequence, axis=0)
+        
+        # Shape: (1, 1)
+        input_ticker = np.array([[ticker_id]])
+        input_sector = np.array([[sector_id]])
+
     except Exception as e:
-        print(f"[Err] 데이터 로드 실패: {e}")
-        return -1.0
-    
-    # 데이터 부족 시 중단 (최소 60일 + 지표 계산분 필요)
-    if df.empty or len(df) < 60:
-        print(f"[Err] 추론을 위한 데이터가 부족합니다. (현재: {len(df)} row)")
+        print(f"[Err] 전처리 중 오류 발생: {e}")
         return -1.0
 
+    # 5. 모델 로드 및 추론
     try:
-        # 3. 데이터 전처리 (Local Scaling)
-        # ★ 중요: 범용 모델은 '패턴'을 보므로, 현재 주가 범위에 맞춰 새로 스케일링합니다.
-        # 저장된 스케일러를 쓰지 않고, 현재 데이터로 fit_transform 합니다.
+        print(">> 모델 로드 및 추론...")
+        # 커스텀 객체나 설정 없이 저장된 Keras 모델 통째로 로드
+        model = tf.keras.models.load_model(model_path)
         
-        # (1) 학습에 사용되는 수치형 컬럼만 선택
-        features = df.select_dtypes(include=[np.number]).columns.tolist()
+        # predict는 리스트 형태로 입력을 받습니다: [시계열, 티커, 섹터]
+        prediction = model.predict([input_ts, input_ticker, input_sector], verbose=0)
         
-        # (2) 스케일링 (0~1 범위로 정규화)
-        # 전체 기간 데이터를 기준으로 fit하되, 입력은 마지막 60일치만 사용됨
-        scaled_data = loader.scaler.fit_transform(df[features])
-        
-        # (3) 모델 입력 형태 생성 (Samples, TimeSteps, Features)
-        # 마지막 60일치 데이터 추출
-        last_sequence = scaled_data[-60:] 
-        
-        # 차원 확장: (60, features) -> (1, 60, features)
-        input_tensor = np.expand_dims(last_sequence, axis=0)
-
-        # 4. 모델 로드 및 구조 빌드
-        # Config는 load_weights 시 자동 적용되거나, 저장된 포맷에 따라 다르나
-        # 여기서는 get_model로 껍데기를 만들고 가중치를 입히는 방식을 사용
-        model = get_model(model_type, {
-            # 입력 형태를 명시하여 모델 구조를 확정합니다.
-            "input_shape": (input_tensor.shape[1], input_tensor.shape[2]),
-            # 아래 파라미터는 로드 시 덮어써지거나, build용으로 사용됨
-            "head_size": 256, "num_heads": 4, "ff_dim": 4,
-            "num_blocks": 4, "mlp_units": [128], "dropout": 0.4
-        })
-        
-        # 모델 빌드 (가중치 로드 전 필수)
-        model.build(input_shape=(None, input_tensor.shape[1], input_tensor.shape[2]))
-        
-        # 가중치 로드
-        model.load(weights_path)
-        
-        # 5. 예측 수행
-        # predict 반환값: [[0.732]] 형태의 확률값 (Sigmoid 출력)
-        prediction = model.predict(input_tensor)
         score = float(prediction[0][0])
-        
-        print(f"Result ▷ [{ticker}] 상승 확률: {score*100:.2f}%")
+        print(f"\n✅ Result ▷ [{ticker}] 상승 확률: {score*100:.2f}%")
         
         return score
-        
+
     except Exception as e:
-        print(f"[Err] 추론 중 치명적인 오류 발생: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"[Err] 추론 실패: {e}")
         return -1.0
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  실행부
+# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AI 모델 추론 실행기")
-    parser.add_argument("--ticker", type=str, required=True, help="추론할 종목 코드 (예: AAPL)")
-    parser.add_argument("--model", type=str, default="transformer", help="사용할 모델 종류")
+    parser = argparse.ArgumentParser(description="AI 모델 추론기")
+    parser.add_argument("ticker", type=str, help="종목 코드 (예: AAPL)")
     
     args = parser.parse_args()
     
-    run_inference(args.ticker, args.model)
+    # 실행
+    run_inference(args.ticker)

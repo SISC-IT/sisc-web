@@ -4,7 +4,7 @@ package org.sejongisc.backend.point.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.sejongisc.backend.point.dto.PointHistoryResponse;
 import org.sejongisc.backend.point.service.PointHistoryService;
 import org.springframework.data.domain.PageRequest;
@@ -33,17 +33,10 @@ public class PointHistoryController {
   )
   public ResponseEntity<PointHistoryResponse> getPointHistory(@RequestParam int pageNumber, @RequestParam int pageSize,
                                                               @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    return ResponseEntity.ok(pointHistoryService.getPointHistoryListByUserId(
+    return ResponseEntity.ok(pointHistoryService.getPointHistory(
         customUserDetails.getUserId(), PageRequest.of(pageNumber, pageSize))
     );
   }
 
-  @GetMapping("/leaderboard")
-  @Operation(
-      summary = "포인트 리더보드 조회",
-      description = "지정된 기간 동안의 포인트 리더보드를 조회합니다. 기간은 일간, 주간, 월간 단위의 요청이 가능합니다. ex) /leaderboard?period=1 or 7 or 30"
-  )
-  public ResponseEntity<PointHistoryResponse> getPointLeaderboard(@RequestParam int period) {
-    return ResponseEntity.ok(pointHistoryService.getPointLeaderboard(period));
-  }
+  // TODO: 리더보드 조회 API 추가
 }

@@ -1,10 +1,10 @@
 # AI/modules/signal/core/__init__.py
 from .base_model import BaseSignalModel
-from .data_loader import SignalDataLoader
+from .data_loader import DataLoader
 from .features import add_technical_indicators
 
 __all__ = [
     "BaseSignalModel",
-    "SignalDataLoader",
+    "DataLoader",
     "add_technical_indicators",
 ]

@@ -8,9 +8,10 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceResponse;
+import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceStatusUpdateRequest;
 import org.sejongisc.backend.attendance.service.AttendanceService;
-import org.sejongisc.backend.common.auth.springsecurity.CustomUserDetails;
+import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "출석(Attendance) API", description = "체크인, 출석명단 조회, 출석상태 수정 등 출석 관련 API")
+@Tag(name = "출석 API", description = "체크인, 출석명단 조회, 출석상태 수정 등 출석 관련 API")
 public class AttendanceController {
 
   private final AttendanceService attendanceService;
@@ -33,10 +34,10 @@ public class AttendanceController {
   @PostMapping("/check-in")
   public ResponseEntity<Void> checkIn(
       @AuthenticationPrincipal CustomUserDetails userDetails,
-      @RequestParam String qrToken
+      @RequestBody AttendanceRoundQrTokenRequest request
   ) {
     UUID userId = requireUserId(userDetails);
-    attendanceService.checkIn(userId, qrToken);
+    attendanceService.checkIn(userId, request);
     return ResponseEntity.ok().build();
   }
 
@@ -44,7 +45,7 @@ public class AttendanceController {
    * 라운드별 출석 명단 조회(관리자/OWNER)
    */
   @Operation(summary = "라운드 출석 명단 조회", description = "특정 라운드의 출석 기록을 조회합니다. (관리자/OWNER)")
-  @GetMapping("/rounds/{roundId}")
+  @GetMapping("/rounds/{roundId}/records")
   public ResponseEntity<List<AttendanceResponse>> getAttendancesByRound(
       @PathVariable UUID roundId,
       @AuthenticationPrincipal CustomUserDetails userDetails
