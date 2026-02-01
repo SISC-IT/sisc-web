@@ -27,8 +27,11 @@ public class AuthCookieHelper {
     private ResponseCookie createCookie(String name, String value, long maxAge) {
         return ResponseCookie.from(name, value)
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
+                // 로컬에서
+            .secure(false)
+            .sameSite("Lax")
+//                .secure(true)
+//                .sameSite("None")
                 .path("/")
                 .maxAge(maxAge)
                 .build();

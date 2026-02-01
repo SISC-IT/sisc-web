@@ -165,7 +165,11 @@ public class AttendanceService {
   }
 
   private boolean decideLate(AttendanceRound round, LocalDateTime checkedAt) {
-    var threshold = round.getStartAt().plusMinutes(5);
+    Integer allowedMinutes =
+        round.getAttendanceSession() != null ? round.getAttendanceSession().getAllowedMinutes() : null;
+
+    long minutes = (allowedMinutes == null || allowedMinutes <= 0) ? 5L : allowedMinutes.longValue();
+    var threshold = round.getStartAt().plusMinutes(minutes);
     return checkedAt.isAfter(threshold);
   }
 }
