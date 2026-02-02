@@ -200,7 +200,7 @@ def main():
     # (7) 시장 폭 및 섹터 데이터 (Market Breadth - Sector Returns)
     if not args.skip_breadth:
         try:
-            print("\n>>> [Step 9] 시장 폭 및 섹터 데이터(Sector Returns) 업데이트")
+            print("\n>>> [Step 7] 시장 폭 및 섹터 데이터(Sector Returns) 업데이트")
             collector = MarketBreadthCollector(db_name=args.db)
             collector.run(repair_mode=args.repair)
         except Exception as e:
