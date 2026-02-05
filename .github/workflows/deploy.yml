@@ -130,8 +130,8 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
-    #needs: [changes, build-back, build-front]
+    #if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
+    needs: [changes, build-back, build-front]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
     # - manual 실행(workflow_dispatch)이면 무조건 실행
     # - push일 때는 둘 중 하나라도 성공한 경우에만 실행 (둘 다 failure가 아닌 이상 OK)
     runs-on: ubuntu-latest

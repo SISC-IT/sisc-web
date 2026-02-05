@@ -4,7 +4,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # 밖에서 던져준 build-args를 잡는 그물망
 ARG VITE_API_URL
