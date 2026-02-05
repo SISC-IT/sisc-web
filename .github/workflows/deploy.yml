@@ -58,7 +58,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
-        with: { registry: ghcr.io, username: ${{ secrets.GHCR_READ_USER }}, password: ${{ secrets.GHCR_READ_TOKEN }} }
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_READ_USER }}
+          password: ${{ secrets.GHCR_READ_TOKEN }}
       - uses: docker/setup-buildx-action@v3
 
       # 이미지 태그를 예쁘게 만들지만, 개발서버는 latest만 있으면 됨. (예: sha-a1b2c3d, v1.0.0, pr-123)
@@ -76,7 +79,7 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ env.IMAGE_BACK }:latest
+          tags: ${{ env.IMAGE_BACK }}:latest
           #tags: ${{ steps.meta-back.outputs.tags }}
           #labels: ${{ steps.meta-back.outputs.labels }}
           cache-from: type=gha
@@ -93,7 +96,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
-        with: { registry: ghcr.io, username: ${{ secrets.GHCR_READ_USER }}, password: ${{ secrets.GHCR_READ_TOKEN }} }
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}         # 실행 중인 유저 이름 자동 할당
+          password: ${{ secrets.GITHUB_TOKEN }} # 별도 설정 없이 바로 사용 가능
 
       #- name: Meta (tags/labels) - frontend
       #  id: meta-front
@@ -131,8 +137,8 @@ jobs:
 
       - name: Make .env file
         run: |
-          # 1. 기본 설정
-          echo "SPRING_PROFILES_ACTIVE=prod" >> .env
+          # 1. 기본 설정, 첫 줄은 > (덮어쓰기, >>:이어쓰기)
+          echo "SPRING_PROFILES_ACTIVE=prod" > .env
           
           # 2. DB (GitHub Secrets)
           echo "DB_URL=${{ secrets.DB_URL }}" >> .env
