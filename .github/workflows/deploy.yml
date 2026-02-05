@@ -117,7 +117,7 @@ jobs:
           context: ./frontend    # ⬅ 프론트 도커 컨텍스트 위치
           push: true
           platforms: linux/amd64
-          tags: ${{ env.IMAGE_FRONT }:latest
+          tags: ${{ env.IMAGE_FRONT }}:latest
           #tags: ${{ steps.meta-front.outputs.tags }}
           #labels: ${{ steps.meta-front.outputs.labels }}
           build-args: |
