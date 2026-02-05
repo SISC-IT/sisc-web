@@ -21,7 +21,7 @@ import java.util.Map;
 
 @Configuration
 @EnableTransactionManagement
-@Profile("dev")
+@Profile("prod")
 @EnableJpaRepositories(
         basePackages = "org.sejongisc.backend",
         entityManagerFactoryRef = "primaryEntityManagerFactory",
@@ -86,9 +86,6 @@ public class PrimaryDataSourceConfig {
                         "org.sejongisc.backend.board.entity",
                         "org.sejongisc.backend.common.entity.postgres",
                         "org.sejongisc.backend.point.entity",
-                        "org.sejongisc.backend.stock.entity",
-                        "org.sejongisc.backend.template.entity",
-                        "org.sejongisc.backend.betting.entity",
                         "org.sejongisc.backend.user.entity"
                 )
                 .persistenceUnit("primary")
