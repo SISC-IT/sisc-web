@@ -9,8 +9,6 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        show_sql: true
-        format_sql: true
-        open-in-view: false
-        use_sql_comments: true
-
+        show_sql: false
+        format_sql: false       # 가로로 너무 길어지는 게 싫다면 이것도 false
+        use_sql_comments: false # 부가 설명 제거
