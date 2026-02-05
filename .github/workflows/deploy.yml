@@ -64,8 +64,8 @@ jobs:
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_READ_USER }}
-          password: ${{ secrets.GHCR_READ_TOKEN }}
+          username: ${{ github.actor }}         # 실행 중인 유저 이름 자동 할당
+          password: ${{ secrets.GITHUB_TOKEN }} # 별도 설정 없이 바로 사용 가능
       - uses: docker/setup-buildx-action@v3
 
       # 이미지 태그를 예쁘게 만들지만, 개발서버는 latest만 있으면 됨. (예: sha-a1b2c3d, v1.0.0, pr-123)
@@ -131,7 +131,7 @@ jobs:
 
   deploy:
     #if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
-    needs: [changes, build-back, build-front]
+    #needs: [changes, build-back, build-front]
     # - manual 실행(workflow_dispatch)이면 무조건 실행
     # - push일 때는 둘 중 하나라도 성공한 경우에만 실행 (둘 다 failure가 아닌 이상 OK)
     runs-on: ubuntu-latest
