@@ -130,7 +130,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    #if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
+    if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
     #needs: [changes, build-back, build-front]
     # - manual 실행(workflow_dispatch)이면 무조건 실행
     # - push일 때는 둘 중 하나라도 성공한 경우에만 실행 (둘 다 failure가 아닌 이상 OK)
@@ -181,8 +181,8 @@ jobs:
             # GHCR 로그인 (백/프론트 둘 다 같은 레지스트리 사용)
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
             # 실행 
-            docker compose pull     # 최신 이미지 받기
-            docker compose up -d --remove-orphans api web redis  # 컨테이너 재기동 (AI 제외하고 backend, frontend만)
+            docker compose pull api web redis                     # 최신 이미지 받기 (AI 제외하고 backend, frontend만)
+            docker compose up -d --remove-orphans api web redis   # 컨테이너 재기동 (AI 제외하고 backend, frontend만)
             docker image prune -f
             
             # 백엔드 헬스체크 (서비스 이름이 api일 때)
