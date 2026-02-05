@@ -52,7 +52,7 @@ jobs:
               - '.github/workflows/deploy.yml'     # ⬅ 추가
   # 2. 백엔드 빌드
   build-back:
-    needs: [changes]
+    needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
     #if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
@@ -90,7 +90,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   build-front:
-    needs: [changes]
+    needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
     #if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
