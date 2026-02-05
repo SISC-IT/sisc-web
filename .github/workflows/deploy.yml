@@ -44,12 +44,16 @@ jobs:
           filters: |
             back:
               - 'backend/**'
+              - 'docker-compose.yml'              # ⬅ 추가
+              - '.github/workflows/deploy.yml'     # ⬅ 추가
             front:
               - 'frontend/**'
+              - 'docker-compose.yml'              # ⬅ 추가
+              - '.github/workflows/deploy.yml'     # ⬅ 추가
   # 2. 백엔드 빌드
   build-back:
     needs: [changes]
-    if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
+    #if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     #defaults:
@@ -87,7 +91,7 @@ jobs:
 
   build-front:
     needs: [changes]
-    if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
+    #if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     #defaults:    # context: ./frontend
@@ -126,7 +130,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
+    #if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
     needs: [changes, build-back, build-front]
     # - manual 실행(workflow_dispatch)이면 무조건 실행
     # - push일 때는 둘 중 하나라도 성공한 경우에만 실행 (둘 다 failure가 아닌 이상 OK)
