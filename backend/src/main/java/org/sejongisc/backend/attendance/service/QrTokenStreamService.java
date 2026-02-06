@@ -28,8 +28,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * QR 토큰을 폴링 없이 서버가 PUSH 해주는 SSE 스트림 서비스.
  *
  * - 관리자(OWNER/MANAGER)가 QR 화면을 열면 subscribe()
- * - 서버는 즉시 현재 3분 윈도우 토큰을 보내고,
- * - 이후 3분 윈도우 경계마다 자동으로 새로운 토큰을 push 합니다.
+ * - 서버는 즉시 현재 윈도우 토큰을 보내고,
+ * - 이후 윈도우 경계마다 자동으로 새로운 토큰을 push 합니다.
  *
  * 참고: 프록시/로드밸런서 환경에서 SSE 연결이 idle timeout으로 끊기지 않도록 ping 이벤트를 주기적으로 보냅니다.
  */
@@ -103,21 +103,33 @@ public class QrTokenStreamService {
       log.info("SSE token broadcaster scheduled: roundId={}, initialDelaySec={}, periodSec={}",
           rid, initialDelay, WINDOW_SECONDS);
 
-      return scheduler.scheduleAtFixedRate(() -> broadcastNewToken(rid), initialDelay, WINDOW_SECONDS, TimeUnit.SECONDS);
+      // scheduleAtFixedRate 내부 예외 발생 시 태스크가 영구 중단될 수 있으니 최상위 try-catch로 보호
+      return scheduler.scheduleAtFixedRate(() -> {
+        try {
+          broadcastNewToken(rid);
+        } catch (Exception ex) {
+          log.error("Token broadcast failed: roundId={}", rid, ex);
+        }
+      }, initialDelay, WINDOW_SECONDS, TimeUnit.SECONDS);
     });
 
     pingTaskByRound.computeIfAbsent(roundId, rid -> scheduler.scheduleAtFixedRate(() -> {
-      var emitters = emittersByRound.get(rid);
-      if (emitters == null || emitters.isEmpty()) {
-        stopRoundTasksIfNoEmitters(rid);
-        return;
-      }
-      for (SseEmitter emitter : emitters) {
-        try {
-          emitter.send(SseEmitter.event().name("ping").data("ok"));
-        } catch (Exception e) {
-          removeEmitter(rid, emitter);
+      // ping 태스크도 최상위 try-catch로 보호
+      try {
+        var emitters = emittersByRound.get(rid);
+        if (emitters == null || emitters.isEmpty()) {
+          stopRoundTasksIfNoEmitters(rid);
+          return;
         }
+        for (SseEmitter emitter : emitters) {
+          try {
+            emitter.send(SseEmitter.event().name("ping").data("ok"));
+          } catch (Exception e) {
+            removeEmitter(rid, emitter);
+          }
+        }
+      } catch (Exception ex) {
+        log.error("Ping task failed: roundId={}", rid, ex);
       }
     }, PING_SECONDS, PING_SECONDS, TimeUnit.SECONDS));
   }
@@ -159,25 +171,24 @@ public class QrTokenStreamService {
   }
 
   private void removeEmitter(UUID roundId, SseEmitter emitter) {
-    CopyOnWriteArrayList<SseEmitter> emitters = emittersByRound.get(roundId);
-    if (emitters != null) {
+    emittersByRound.computeIfPresent(roundId, (key, emitters) -> {
       emitters.remove(emitter);
-      if (emitters.isEmpty()) {
-        emittersByRound.remove(roundId);
-      }
-    }
+      return emitters.isEmpty() ? null : emitters;
+    });
+
     stopRoundTasksIfNoEmitters(roundId);
   }
 
   private void completeAll(UUID roundId) {
-    List<SseEmitter> emitters = emittersByRound.get(roundId);
-    if (emitters == null) return;
-    for (SseEmitter e : emitters) {
+    List<SseEmitter> removed = emittersByRound.remove(roundId);
+    if (removed == null) return;
+
+    for (SseEmitter e : removed) {
       try {
         e.complete();
-      } catch (Exception ignore) {}
+      } catch (Exception ignore) {
+      }
     }
-    emittersByRound.remove(roundId);
   }
 
   private void stopRoundTasksIfNoEmitters(UUID roundId) {
@@ -191,13 +202,15 @@ public class QrTokenStreamService {
     if (pingFuture != null) pingFuture.cancel(false);
   }
 
-
   @PreDestroy
   public void cleanup() {
-    // SSE 연결 종료 (원하면)
+    // SSE 연결 종료
     emittersByRound.forEach((rid, list) -> {
       for (SseEmitter e : list) {
-        try { e.complete(); } catch (Exception ignore) {}
+        try {
+          e.complete();
+        } catch (Exception ignore) {
+        }
       }
     });
     emittersByRound.clear();
@@ -219,5 +232,4 @@ public class QrTokenStreamService {
       Thread.currentThread().interrupt();
     }
   }
-
 }
