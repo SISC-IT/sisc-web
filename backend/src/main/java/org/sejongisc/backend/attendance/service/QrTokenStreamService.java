@@ -1,5 +1,6 @@
 package org.sejongisc.backend.attendance.service;
 
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -189,4 +190,34 @@ public class QrTokenStreamService {
     ScheduledFuture<?> pingFuture = pingTaskByRound.remove(roundId);
     if (pingFuture != null) pingFuture.cancel(false);
   }
+
+
+  @PreDestroy
+  public void cleanup() {
+    // SSE 연결 종료 (원하면)
+    emittersByRound.forEach((rid, list) -> {
+      for (SseEmitter e : list) {
+        try { e.complete(); } catch (Exception ignore) {}
+      }
+    });
+    emittersByRound.clear();
+
+    // 예약 작업 취소
+    tokenTaskByRound.values().forEach(f -> f.cancel(false));
+    pingTaskByRound.values().forEach(f -> f.cancel(false));
+    tokenTaskByRound.clear();
+    pingTaskByRound.clear();
+
+    // 스레드풀 종료
+    scheduler.shutdown();
+    try {
+      if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+        scheduler.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      scheduler.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
+  }
+
 }

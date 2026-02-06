@@ -28,10 +28,10 @@ public class AuthCookieHelper {
         return ResponseCookie.from(name, value)
                 .httpOnly(true)
                 // 로컬에서
-            .secure(false)
-            .sameSite("Lax")
-//                .secure(true)
-//                .sameSite("None")
+//            .secure(false)
+//            .sameSite("Lax")
+                .secure(true)
+                .sameSite("None")
                 .path("/")
                 .maxAge(maxAge)
                 .build();

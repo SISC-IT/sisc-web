@@ -10,7 +10,7 @@ import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.springframework.stereotype.Component;
 
 /**
- * 라운드 상태 자동 전환(UPCOMING->ACTIVE, ACTIVE->CLOSED) Quartz Job
+ * 라운드 상태 자동 전환(UPCOMING->ACTIVE, ACTIVE->CLOSED)
  */
 @Component
 @RequiredArgsConstructor
