@@ -12,8 +12,10 @@ import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundResponse;
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
+import org.sejongisc.backend.attendance.service.QrTokenStreamService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/attendance")
@@ -35,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AttendanceRoundController {
 
   private final AttendanceRoundService attendanceRoundService;
+  private final QrTokenStreamService qrTokenStreamService;
 
   /**
    * 라운드 생성 (관리자/OWNER) POST /api/attendance/sessions/{sessionId}/rounds
@@ -97,6 +101,19 @@ public class AttendanceRoundController {
 
     AttendanceRoundQrTokenResponse response = attendanceRoundService.issueQrToken(roundId, userId);
     return ResponseEntity.ok(response);
+  }
+  /**
+   * QR 토큰 SSE 스트림 (관리자/OWNER) - 폴링 없이 3분마다 PUSH
+   * GET /api/attendance/rounds/{roundId}/qr-stream
+   */
+  @Operation(summary = "QR 토큰 SSE 스트림", description = "폴링 없이 SSE로 3분마다 갱신되는 QR 토큰을 push합니다. (관리자/OWNER, 라운드 ACTIVE)")
+  @GetMapping(value = "/rounds/{roundId}/qr-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public SseEmitter streamQrToken(
+      @PathVariable UUID roundId,
+      @AuthenticationPrincipal CustomUserDetails userDetails
+  ) {
+    UUID userId = requireUserId(userDetails);
+    return qrTokenStreamService.subscribe(roundId, userId);
   }
 
   /**
