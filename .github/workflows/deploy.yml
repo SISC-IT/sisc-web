@@ -7,6 +7,7 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"              # ⬅ 프론트 변경에도 트리거
+      - "docker-compose.yml"
       - ".github/workflows/deploy.yml"
 
 concurrency:
@@ -15,11 +16,16 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  REPO: sisc-it/sisc-web
   IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
   IMAGE_FRONT: ghcr.io/sisc-it/sisc-web-front   # ⬅ 프론트 이미지 추가
+  SSH_HOST: ${{ secrets.SSH_HOST }}
+  SSH_USER: ${{ secrets.SSH_USER }}
+  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+  SSH_PORT: ${{ secrets.SSH_PORT }}
+
 
 jobs:
+  # 1. 변경 감지 (변동 없음)
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -28,8 +34,8 @@ jobs:
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        #with:                # Git 히스토리를 처음부터 끝까지 가져오기.
+         # fetch-depth: 0     # 개발 배포는 최신 코드만 있으면 됨 (기본값 1)
 
       - name: Detect path changes
         id: filter
@@ -38,89 +44,76 @@ jobs:
           filters: |
             back:
               - 'backend/**'
+              - 'docker-compose.yml'              # ⬅ 추가
+              - '.github/workflows/deploy.yml'     # ⬅ 추가
             front:
               - 'frontend/**'
-
+              - 'docker-compose.yml'              # ⬅ 추가
+              - '.github/workflows/deploy.yml'     # ⬅ 추가
+  # 2. 백엔드 빌드
   build-back:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
+    #if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    defaults:
-      run:
-        working-directory: backend
+    permissions: { contents: read, packages: write }
+    #defaults:
+     # run:
+      #  working-directory: backend     # context: ./backend 로 지정했기 때문에 필요X
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.actor }}         # 실행 중인 유저 이름 자동 할당
+          password: ${{ secrets.GITHUB_TOKEN }} # 별도 설정 없이 바로 사용 가능
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Meta (tags/labels) - backend
-        id: meta-back
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_BACK }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-,format=short
+      # 이미지 태그를 예쁘게 만들지만, 개발서버는 latest만 있으면 됨. (예: sha-a1b2c3d, v1.0.0, pr-123)
+      #- name: Meta (tags/labels) - backend
+      #  id: meta-back
+      #  uses: docker/metadata-action@v5
+      #  with:
+      #    images: ${{ env.IMAGE_BACK }}
+      #    tags: |
+      #     type=raw,value=latest
+      #     type=sha,prefix=sha-,format=short
 
       - name: Build & Push (backend)
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
-          platforms: linux/amd64
-          tags: ${{ steps.meta-back.outputs.tags }}
-          labels: ${{ steps.meta-back.outputs.labels }}
+          tags: ${{ env.IMAGE_BACK }}:latest
+          #tags: ${{ steps.meta-back.outputs.tags }}
+          #labels: ${{ steps.meta-back.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   build-front:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
+    #if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    defaults:
-      run:
-        working-directory: frontend
+    permissions: { contents: read, packages: write }
+    #defaults:    # context: ./frontend
+     # run:
+      #  working-directory: frontend
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Create .env.production
-        run: |
-          echo "VITE_API_URL=https://sisc-web.duckdns.org" > .env.production
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.actor }}         # 실행 중인 유저 이름 자동 할당
+          password: ${{ secrets.GITHUB_TOKEN }} # 별도 설정 없이 바로 사용 가능
 
-      - name: Meta (tags/labels) - frontend
-        id: meta-front
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_FRONT }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-,format=short
+      #- name: Meta (tags/labels) - frontend
+      #  id: meta-front
+      #  uses: docker/metadata-action@v5
+      #  with:
+      #    images: ${{ env.IMAGE_FRONT }}
+      #    tags: |
+      #      type=raw,value=latest
+      #      type=sha,prefix=sha-,format=short
+      - uses: docker/setup-buildx-action@v3
 
       - name: Build & Push (frontend)
         uses: docker/build-push-action@v6
@@ -128,26 +121,60 @@ jobs:
           context: ./frontend    # ⬅ 프론트 도커 컨텍스트 위치
           push: true
           platforms: linux/amd64
-          tags: ${{ steps.meta-front.outputs.tags }}
-          labels: ${{ steps.meta-front.outputs.labels }}
+          tags: ${{ env.IMAGE_FRONT }}:latest
+          #tags: ${{ steps.meta-front.outputs.tags }}
+          #labels: ${{ steps.meta-front.outputs.labels }}
+          build-args: |
+            VITE_API_URL=${{ secrets.DEV_API_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
-    needs: [changes, build-back, build-front]
+    #if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
+    needs: [changes, build-back, build-front]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
     # - manual 실행(workflow_dispatch)이면 무조건 실행
     # - push일 때는 둘 중 하나라도 성공한 경우에만 실행 (둘 다 failure가 아닌 이상 OK)
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
     runs-on: ubuntu-latest
-    environment: production
+    environment: production     # production 환경의 시크릿 사용
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Make .env file
+        run: |
+          # 1. 기본 설정, 첫 줄은 > (덮어쓰기, >>:이어쓰기)
+          echo "SPRING_PROFILES_ACTIVE=prod" > .env
+          
+          # 2. DB (GitHub Secrets)
+          echo "DB_URL=${{ secrets.DB_URL }}" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+              
+          # 3. 기타 Secrets
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+          echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          
+          # 필요하다면 풀 사이즈 변수도 추가
+          # echo "DB_POOL_MAX=30" >> .env
+          # echo "STOCK_POOL_MAX=10" >> .envx
+
+      - name: 파일 전송 (docker-compose, .env to EC2)
+        uses: appleboy/scp-action@master
+        with:
+            host: ${{ env.SSH_HOST }}
+            username: ${{ env.SSH_USER }}
+            key: ${{ env.SSH_PRIVATE_KEY }}
+            port: ${{ env.SSH_PORT }}
+            source: "docker-compose.yml, .env"
+            target: "/home/ubuntu/apps/sisc-web/"
+
       - name: SSH deploy
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ env.SSH_PRIVATE_KEY }}
+          port: ${{ env.SSH_PORT }}
           script_stop: true
           script: |
             set -euo pipefail
@@ -155,13 +182,11 @@ jobs:
 
             # GHCR 로그인 (백/프론트 둘 다 같은 레지스트리 사용)
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
-
-            # 최신 이미지 받기
-            docker compose pull
-
-            # 컨테이너 재기동
-            docker compose up -d --remove-orphans
-
+            # 실행 
+            docker compose pull api web redis                     # 최신 이미지 받기 (AI 제외하고 backend, frontend만)
+            docker compose up -d --remove-orphans api web redis   # 컨테이너 재기동 (AI 제외하고 backend, frontend만)
+            docker image prune -f
+            
             # 백엔드 헬스체크 (서비스 이름이 api일 때)
             if docker ps --format '{{.Names}}' | grep -q "^api$"; then
               echo "Waiting for api to be healthy..."

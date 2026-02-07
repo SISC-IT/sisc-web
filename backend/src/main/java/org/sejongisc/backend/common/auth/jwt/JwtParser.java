@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Slf4j
@@ -27,8 +28,8 @@ public class JwtParser {
 
     @PostConstruct
     public void init() {
-        byte[] keyBytes = Base64.getDecoder().decode(rawSecretKey);
-        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+        //byte[] keyBytes = Base64.getDecoder().decode(rawSecretKey); // rawSecretKey의 base64 규격 이슈로 아래 코드로 대체
+        this.secretKey = Keys.hmacShaKeyFor(rawSecretKey.getBytes(StandardCharsets.UTF_8));
     }
 
     // 토큰 유효성 검사

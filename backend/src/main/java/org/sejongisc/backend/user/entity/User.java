@@ -59,9 +59,9 @@ public class User extends BasePostgresEntity{
     @Column(name = "position_name")     // 엑셀의 '직위' 컬럼 데이터 그대로 저장
     private String positionName;
 
-    //OAuth 전용 계정 대비 nullable 허용 가능
-    @Column(columnDefinition = "citext", unique = true, nullable = true)
-    private String email;               // 추후 비밀번호 찾기용 및 공지 발송용
+    //OAuth 전용 계정 대비 nullable 허용 가능, 확장성 문제로 citext 설정 보류
+    @Column(unique = true, nullable = true)
+    private String email;               // 추후 비밀번호 찾기용 및 공지 발송용, citext 형식이 아니기 때문에 대소문자 구별 불가능 주의!!
 
     @Enumerated(EnumType.STRING)        // 새 장부 업로드 시: 기존에 ACTIVE한 모든 인원을 INACTIVE로 일괄 업데이트
     @Column(nullable = false)           // 새 엑셀에 있는 studentId을 대조하여, 명단에 있는 사람만 다시 ACTIVE로 바꾸고

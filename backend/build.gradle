@@ -40,6 +40,7 @@ dependencies {
 	testImplementation 'io.projectreactor:reactor-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -67,6 +68,9 @@ dependencies {
 	implementation 'de.codecentric:spring-boot-admin-starter-server:3.5.7'
 	implementation 'de.codecentric:spring-boot-admin-starter-client:3.5.7'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	implementation 'org.springframework.boot:spring-boot-starter-quartz'
+
 
 	// Actuator
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'

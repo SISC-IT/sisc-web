@@ -58,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (token != null && jwtParser.validationToken(token) ) {
                 UsernamePasswordAuthenticationToken authentication = jwtParser.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.info("SecurityContext에 인증 저장됨: {}", authentication.getName());
+                log.debug("SecurityContext에 인증 저장됨: {}", authentication.getName());
             } else {
                 log.warn("토큰이 없거나 유효하지 않음");
             }
@@ -85,7 +85,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
 
         // 어떤 요청이 필터 예외로 분류됐는지 콘솔에 표시
-        log.info("JwtFilter check path: {} → excluded={}", path, excluded);
+        log.debug("JwtFilter check path: {} → excluded={}", path, excluded);
 
         return excluded;
     }
@@ -110,7 +110,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         for (Cookie cookie : request.getCookies()) {
             if ("access".equals(cookie.getName())) {
-                log.info("쿠키에서 access token 추출됨");
+                log.debug("쿠키에서 access token 추출됨");
                 return cookie.getValue();
             }
         }

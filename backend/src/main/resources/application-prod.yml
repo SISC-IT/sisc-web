@@ -1,0 +1,57 @@
+jwt:
+  secret: ${JWT_SECRET}
+  expireDate:
+    accessToken: 3600000
+    refreshToken: 1209600000
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  application:
+    name: Sejong-ISC-Backend
+
+
+  # 메인 DB (Postgres) - 도커가 주입해주는 환경변수 사용
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}           # .env의 DB_URL 값
+    username: ${DB_USERNAME} # .env의 DB_USERNAME 값
+    password: ${DB_PASSWORD} # .env의 DB_PASSWORD 값
+    hikari:
+      pool-name: HikariPool
+      maximum-pool-size: ${DB_POOL_MAX:10} # t2.micro니까 커넥션 풀 작게 유지
+
+  stock:
+    datasource:
+      driver-class-name: org.postgresql.Driver
+      url: ${DB_URL}           # .env의 DB_URL 값
+      username: ${DB_USERNAME} # .env의 DB_USERNAME 값
+      password: ${DB_PASSWORD} # .env의 DB_PASSWORD 값
+      default_schema: public
+      hikari:
+        pool-name: StockHikariPool
+        maximum-pool-size: ${STOCK_POOL_MAX:5}   # 커넥션 풀 작게 유지
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
