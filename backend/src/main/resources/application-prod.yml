@@ -16,16 +16,6 @@ spring:
   application:
     name: Sejong-ISC-Backend
 
-  management:
-    endpoints:
-      web:
-        exposure:
-          include: "*" # 모든 모니터링 기능 개방 (보안상 실제 운영시엔 IP제한 필수)
-    endpoint:
-      health:
-        show-details: always
-      logfile:
-        external-file: ./logs/application.log # 로그 파일 경로 지정 시 실시간 뷰어 활성화
 
   # 메인 DB (Postgres) - 도커가 주입해주는 환경변수 사용
   datasource:
