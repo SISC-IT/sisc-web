@@ -169,7 +169,7 @@ public class AttendanceRoundService {
     round.changeStatus(RoundStatus.ACTIVE);
   }
 
-  @Scheduled(fixedRate = 10_000)
+  @Scheduled(fixedRate = 300_000)
   public void autoActivateAndCloseRounds() {
     LocalDateTime now = LocalDateTime.now();
     int closed = attendanceRoundRepository.closeDueRounds(now);

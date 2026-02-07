@@ -14,3 +14,20 @@ spring:
         open-in-view: false
         use_sql_comments: true
 
+  boot:
+    admin:
+      context-path: /admin
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: "health,info,metrics,logfile,httpexchanges,threaddump,heapdump"
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  file:
+    name: ./logs/application.log

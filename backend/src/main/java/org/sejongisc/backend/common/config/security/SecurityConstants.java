@@ -9,7 +9,6 @@ public class SecurityConstants {
             "/api/auth/reissue",
             "/api/user/password/reset/**",
             "/api/email/**",
-            "/actuator/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
