@@ -16,8 +16,10 @@ public class SecurityConstants {
             "/swagger-resources/**",
             "/webjars/**",
             "/login/**",
-            "/oauth2/**",
+            //"/oauth2/**",
             "/favicon.ico",
+            "/actuator",
+            "/actuator/**",
             "/error"
     };
 
