@@ -25,7 +25,7 @@ if project_root not in sys.path:
 from AI.libs.database.connection import get_db_conn
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models.PatchTST.architecture import build_transformer_model
-from AI.modules.signal.core.features import add_technical_indicators, add_multi_timeframe_features
+from AI.modules.features.legacy.technical_features import add_technical_indicators, add_multi_timeframe_features
 
 def optimize_thresholds():
     print("==================================================")

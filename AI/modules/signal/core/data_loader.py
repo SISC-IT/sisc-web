@@ -29,7 +29,7 @@ from AI.libs.database.fetcher import (
     fetch_news_sentiment, 
     fetch_fundamentals
 )
-from AI.modules.signal.core.features import add_technical_indicators
+from AI.modules.features.legacy.technical_features import add_technical_indicators
 
 class DataLoader:
     def __init__(self, db_name="db", lookback=60, horizons: List[int] = None):

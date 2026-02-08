@@ -5,7 +5,6 @@ from .stock_info_collector import StockInfoCollector
 from .company_fundamentals_data import FundamentalsDataCollector
 from .macro_data import MacroDataCollector
 from .crypto_data import CryptoDataCollector
-from .index_data import IndexDataCollector
 from .event_data import EventDataCollector
 from .market_breadth_data import MarketBreadthCollector
 from .market_breadth_stats import MarketBreadthStatsCollector
@@ -16,8 +15,7 @@ __all__ = [
     "StockInfoCollector",
     "FundamentalsDataCollector",
     "MacroDataCollector",
-    "CryptoDataCollector"
-    "IndexDataCollector",
+    "CryptoDataCollector",
     "EventDataCollector",
     "MarketBreadthCollector",
     "MarketBreadthStatsCollector",
