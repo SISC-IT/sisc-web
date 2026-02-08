@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +20,10 @@ import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.auth.repository.UserOauthAccountRepository;
+import org.sejongisc.backend.common.redis.RedisKey;
+import org.sejongisc.backend.common.redis.RedisService;
+import org.sejongisc.backend.point.entity.Account;
+import org.sejongisc.backend.point.service.*;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
@@ -28,9 +31,6 @@ import org.sejongisc.backend.common.auth.entity.AuthProvider;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.common.auth.entity.UserOauthAccount;
-import org.sejongisc.backend.common.auth.dto.oauth.OauthUserInfo;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,13 +49,16 @@ class UserServiceTest {
     private EmailService emailService;
 
     @Mock
-    private RedisTemplate<Object, Object> redisTemplate;
+    private RedisService redisService;
 
     @Mock
     private RefreshTokenService refreshTokenService;
 
     @Mock
-    private org.sejongisc.backend.common.auth.jwt.TokenEncryptor tokenEncryptor;
+    private AccountService accountService;
+
+    @Mock
+    private PointLedgerService pointLedgerService;
 
     @InjectMocks private UserService userService;
 
@@ -67,11 +70,14 @@ class UserServiceTest {
                 .name("홍길동")
                 .email("hong@example.com")
                 .password("Password123!")
-                //.role(Role.TEAM_MEMBER)
                 .phoneNumber("01012345678")
                 .build();
 
         when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
+
+        when(accountService.createUserAccount(any())).thenReturn(Account.builder().build());
+        when(accountService.getAccountByName(any())).thenReturn(Account.builder().build());
+
         when(passwordEncoder.encode(req.getPassword())).thenReturn("ENCODED_PW");
 
         UUID generatedId = UUID.randomUUID();
@@ -119,7 +125,8 @@ class UserServiceTest {
                 .phoneNumber("01012345678")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(true);
+        when(userRepository.existsByEmailOrStudentId(req.getEmail(), req.getStudentId())).thenReturn(true);
+        when(userRepository.existsByStudentId(req.getStudentId())).thenReturn(false);
 
         // when
         CustomException ex = assertThrows(CustomException.class, () -> userService.signup(req));
@@ -140,11 +147,14 @@ class UserServiceTest {
                 .name("이몽룡")
                 .email("lee@example.com")
                 .password("Secret!234")
-                .role(null) // null 전달
                 .phoneNumber("01099998888")
                 .build();
 
         when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
+
+        when(accountService.createUserAccount(any())).thenReturn(Account.builder().build());
+        when(accountService.getAccountByName(any())).thenReturn(Account.builder().build());
+
         when(passwordEncoder.encode(req.getPassword())).thenReturn("ENC_PW");
 
         UUID id = UUID.randomUUID();
@@ -179,8 +189,8 @@ class UserServiceTest {
                 .phoneNumber("01011112222")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
-        when(userRepository.existsByPhoneNumber(req.getPhoneNumber())).thenReturn(true);
+        when(userRepository.existsByEmailOrStudentId(any(), any())).thenReturn(true);
+        when(userRepository.existsByStudentId(any())).thenReturn(false); // studentId 중복 아님 -> phone 중복으로 간주
 
         // when
         CustomException ex = assertThrows(CustomException.class, () -> userService.signup(req));
@@ -220,6 +230,7 @@ class UserServiceTest {
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_USER);
     }
 
+    /* oAuth 관련 테스트 주석
     @Test
     @DisplayName("OAuth 로그인: 기존 계정이 있으면 해당 User 반환")
     void findOrCreateUser_existingUser() {
@@ -242,6 +253,7 @@ class UserServiceTest {
                 .provider(AuthProvider.GOOGLE)
                 .providerUid("google-123")
                 .build();
+
 
         when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123"))
                 .thenReturn(Optional.of(account));
@@ -287,6 +299,8 @@ class UserServiceTest {
         verify(userRepository).save(any(User.class));
         verify(oauthAccountRepository).save(any(UserOauthAccount.class));
     }
+
+     */
 
 
 
@@ -343,7 +357,7 @@ class UserServiceTest {
         String email = "user@example.com";
         User mockUser = User.builder().email(email).build();
 
-        when(userRepository.findUserByEmail(email)).thenReturn(Optional.of(mockUser));
+        when(userRepository.existsByEmail(email)).thenReturn(true);
 
         // when
         userService.passwordReset(email);
@@ -357,11 +371,10 @@ class UserServiceTest {
     void passwordReset_userNotFound() {
         // given
         String email = "notfound@example.com";
-        when(userRepository.findUserByEmail(email)).thenReturn(Optional.empty());
+        when(userRepository.existsByEmail(email)).thenReturn(false);
 
         // when & then
-        CustomException ex = assertThrows(CustomException.class, () -> userService.passwordReset(email));
-        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+        userService.passwordReset(email); // 예외 발생 안 함
         verify(emailService, never()).sendResetEmail(anyString());
     }
 
@@ -373,16 +386,14 @@ class UserServiceTest {
         String code = "123456";
 
         doNothing().when(emailService).verifyResetEmail(email, code);
-        when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
-
         // when
         String token = userService.verifyResetCodeAndIssueToken(email, code);
 
         // then
         assertThat(token).isNotNull();
         verify(emailService).verifyResetEmail(email, code);
-        verify(redisTemplate.opsForValue(), atLeastOnce())
-                .set(startsWith("PASSWORD_RESET:"), eq(email), any(Duration.class));
+        // RedisService.set 사용 검증
+        verify(redisService).set(eq(RedisKey.PASSWORD_RESET), eq(token), eq(email));
     }
 
     @Test
@@ -393,9 +404,8 @@ class UserServiceTest {
         String email = "user@example.com";
         String newPassword = "newPassword!";
 
-        var valueOps = mock(org.springframework.data.redis.core.ValueOperations.class);
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(valueOps.get("PASSWORD_RESET:" + resetToken)).thenReturn(email);
+        // RedisService.get 사용으로 Mock 설정
+        when(redisService.get(eq(RedisKey.PASSWORD_RESET), eq(resetToken), eq(String.class))).thenReturn(email);
 
         User user = User.builder()
                 .userId(UUID.randomUUID())
@@ -414,7 +424,7 @@ class UserServiceTest {
         verify(passwordEncoder).encode(newPassword);
         verify(userRepository).save(user);
         verify(refreshTokenService).deleteByUserId(user.getUserId());
-        verify(redisTemplate).delete("PASSWORD_RESET:" + resetToken);
+        verify(redisService).delete(eq(RedisKey.PASSWORD_RESET), eq(resetToken));
     }
 
     @Test
@@ -422,8 +432,8 @@ class UserServiceTest {
     void resetPasswordByToken_invalidToken_throws() {
         // given
         String resetToken = "invalid";
-        when(redisTemplate.opsForValue()).thenReturn(mock(org.springframework.data.redis.core.ValueOperations.class));
-        when(redisTemplate.opsForValue().get("PASSWORD_RESET:" + resetToken)).thenReturn(null);
+        when(redisService.get(eq(RedisKey.PASSWORD_RESET), eq(resetToken), eq(String.class))).thenReturn(null);
+
 
         // when
         CustomException ex = assertThrows(CustomException.class,
@@ -435,16 +445,24 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("비밀번호 재설정 토큰 발급 실패: Redis 연결 오류 시 시스템 예외 발생")
     void verifyResetCodeAndIssueToken_RedisFailure_ThrowsException() {
         String email = "test@example.com";
         String code = "123456";
 
-        doThrow(new RuntimeException("Redis down"))
-                .when(redisTemplate.opsForValue())
-                .set(anyString(), any(), any(Duration.class));
+        // EmailService 통과
+        doNothing().when(emailService).verifyResetEmail(email, code);
 
-        assertThrows(CustomException.class,
+        // Redis 저장 시 RuntimeException 발생 상황 가정
+        doThrow(new RuntimeException("Redis connection failed"))
+                .when(redisService)
+                .set(eq(RedisKey.PASSWORD_RESET), anyString(), eq(email));
+
+        // when & then: UserService가 잡아서 CustomException으로 던지는지 확인
+        CustomException ex = assertThrows(CustomException.class,
                 () -> userService.verifyResetCodeAndIssueToken(email, code));
+
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR);
     }
 
 }

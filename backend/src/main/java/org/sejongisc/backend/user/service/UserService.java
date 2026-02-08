@@ -116,7 +116,12 @@ public class UserService {
         emailService.verifyResetEmail(nEmail, nCode);
 
         String token = UUID.randomUUID().toString();
-        redisService.set(RedisKey.PASSWORD_RESET, token, nEmail);
+        try {
+            redisService.set(RedisKey.PASSWORD_RESET, token, nEmail);
+        } catch (Exception e) {
+            log.error("Redis 저장 실패 - 비밀번호 재설정 토큰 발급 실패: email={}", nEmail, e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
 
         return token;
     }
