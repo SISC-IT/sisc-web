@@ -59,8 +59,6 @@ public class EmailService {
   // 메일 발송
   public void sendEmail(@Email String email) {
 
-    // 이미 24시간 내 인증된 이메일인지 확인
-    String verifiedKey = emailProperties.getKeyPrefix().getVerified() + email;
     if (redisService.hasKey(RedisKey.EMAIL_VERIFIED, email)) {
       throw new CustomException(ErrorCode.EMAIL_ALREADY_VERIFIED);
     }

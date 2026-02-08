@@ -73,7 +73,7 @@ class UserServiceTest {
                 .phoneNumber("01012345678")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
+        when(userRepository.existsByEmailOrStudentId(req.getEmail(), req.getStudentId())).thenReturn(false);
 
         when(accountService.createUserAccount(any())).thenReturn(Account.builder().build());
         when(accountService.getAccountByName(any())).thenReturn(Account.builder().build());
@@ -108,7 +108,7 @@ class UserServiceTest {
                 () -> assertThat(res.getUpdatedAt()).isEqualTo(now)
         );
 
-        verify(userRepository, times(1)).existsByEmail("hong@example.com");
+        verify(userRepository, times(1)).existsByEmailOrStudentId(req.getEmail(), req.getStudentId());
         verify(userRepository, times(1)).save(any(User.class));
         verify(passwordEncoder, times(1)).encode("Password123!");
     }
@@ -150,7 +150,7 @@ class UserServiceTest {
                 .phoneNumber("01099998888")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
+        when(userRepository.existsByEmailOrStudentId(any(), any())).thenReturn(false);
 
         when(accountService.createUserAccount(any())).thenReturn(Account.builder().build());
         when(accountService.getAccountByName(any())).thenReturn(Account.builder().build());
@@ -216,7 +216,7 @@ class UserServiceTest {
                 .phoneNumber("01077778888")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
+        when(userRepository.existsByEmailOrStudentId(any(), any())).thenReturn(false);
         when(userRepository.existsByPhoneNumber(req.getPhoneNumber())).thenReturn(false);
         when(passwordEncoder.encode(req.getPassword())).thenReturn("ENCODED_PW");
 
