@@ -67,7 +67,6 @@ dependencies {
 	// Spring Boot Admin Server & Client
 	implementation 'de.codecentric:spring-boot-admin-starter-server:3.5.7'
 	implementation 'de.codecentric:spring-boot-admin-starter-client:3.5.7'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
 
 	implementation 'org.springframework.boot:spring-boot-starter-quartz'
 

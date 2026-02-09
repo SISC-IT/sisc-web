@@ -76,7 +76,7 @@ public class AdminSecurityConfig {
             .requestMatchers(adminContextPath + "/instances", adminContextPath + "/instances/**").permitAll()
 
             // 7. 헬스체크: 시스템 생존 여부 확인용 API 공개
-            .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+            .requestMatchers("/actuator/health", "/actuator/info").hasRole("ADMIN")
 
             // 8. 그 외 모든 관리자 페이지는 위에서 설정한 admin 계정 인증 필요
             .anyRequest().authenticated()

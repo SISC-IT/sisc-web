@@ -25,10 +25,10 @@ management:
     web:
       base-path: /actuator
       exposure:
-        include: "health,info,metrics,logfile,httpexchanges,threaddump,heapdump"
+        include: "health,info,metrics,logfile,httpexchanges,threaddump"
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
   health:
     mail:
       enabled: false
