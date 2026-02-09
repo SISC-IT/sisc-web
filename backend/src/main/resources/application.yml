@@ -16,6 +16,9 @@ spring:
   boot:
     admin:
       context-path: /admin
+      notify:
+        mail:
+          enabled: false
 
 management:
   endpoints:
@@ -26,6 +29,9 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    mail:
+      enabled: false
 
 logging:
   file:

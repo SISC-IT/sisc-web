@@ -77,7 +77,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // 1) /actuator 전체 무조건 스킵
         if ("/actuator".equals(path) || path.startsWith("/actuator/") || path.startsWith("/admin")) {
-            log.info("JwtFilter skip actuator: {}", path);
             return true;
         }
 
