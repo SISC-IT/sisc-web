@@ -36,7 +36,7 @@ public class AdminSecurityConfig {
   public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
     String adminContextPath = adminServerProperties.getContextPath();
 
-    // 1. 메모리 기반 관리자 계정 설정
+    // 관리자 계정 설정
     UserDetails adminUser = User.withUsername(adminUsername)
         .password(passwordEncoder.encode(adminPassword))
         .roles("ADMIN")
@@ -44,42 +44,37 @@ public class AdminSecurityConfig {
 
     InMemoryUserDetailsManager userDetailsService = new InMemoryUserDetailsManager(adminUser);
 
-    // 2. 관리자 전용 인증 프로바이더 설정
+    // 관리자 전용 인증 프로바이더 설정
     DaoAuthenticationProvider adminAuthenticationProvider = new DaoAuthenticationProvider();
     adminAuthenticationProvider.setUserDetailsService(userDetailsService);
     adminAuthenticationProvider.setPasswordEncoder(passwordEncoder);
 
     http
-        // 3. 적용 범위 지정: /admin/** 경로에만 이 필터가 작동
-        .securityMatcher(adminContextPath + "/**")
+        // 매칭 범위에 /actuator/** 를 명시적으로 포함
+        .securityMatcher(adminContextPath + "/**", "/actuator/**")
         .authenticationProvider(adminAuthenticationProvider)
-
-        // 4. CSRF 예외: 클라이언트 서비스가 서버에 정보를 등록(POST)할 때 막히지 않도록 설정
         .csrf(csrf -> csrf.ignoringRequestMatchers(
             adminContextPath + "/instances",
-            adminContextPath + "/instances/**"
+            adminContextPath + "/instances/**",
+            "/actuator/**"
         ))
-
         .authorizeHttpRequests(auth -> auth
-            // 5. 정적 리소스 및 파비콘: 로그인 없이도 브라우저가 읽을 수 있게 허용 (에러 방지)
+            // 누구나 볼 수 있는 정적 리소스 및 헬스체크
             .requestMatchers(
                 adminContextPath + "/assets/**",
                 adminContextPath + "/login",
                 "/favicon.ico",
-                adminContextPath + "/favicon.ico"
+                adminContextPath + "/favicon.ico",
+                "/actuator/health",
+                "/actuator/info"
             ).permitAll()
 
-            // 6. 인스턴스 등록: 인증된(authenticated) 클라이언트만 허용
+            // SBA 클라이언트 등록 엔드포인트 보호
             .requestMatchers(adminContextPath + "/instances", adminContextPath + "/instances/**").authenticated()
 
-            // 7. 헬스체크: 시스템 생존 여부 확인용 API 공개
-            .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-
-            // 8. 그 외 모든 관리자 페이지는 위에서 설정한 admin 계정 인증 필요
+            // 나머지 모든 /admin/** 및 /actuator/** (metrics, env, log 등)는 관리자 인증 필수
             .anyRequest().authenticated()
         )
-
-        // 9. 로그인 방식: 웹 UI는 폼 로그인, API 통신은 Basic 인증 사용
         .formLogin(form -> form
             .loginPage(adminContextPath + "/login")
             .defaultSuccessUrl(adminContextPath + "/", true)
