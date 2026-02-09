@@ -75,10 +75,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
 
-        // 1) /actuator 전체 무조건 스킵
-        if ("/actuator".equals(path) || path.startsWith("/actuator/") || path.startsWith("/admin")) {
-            return true;
-        }
+      boolean isAdminZone = Arrays.stream(SecurityConstants.ADMIN_URLS)
+          .anyMatch(pattern -> pathMatcher.match(pattern, path));
+
+      if (isAdminZone) {
+        return true;
+      }
 
         boolean excluded = Arrays.stream(SecurityConstants.WHITELIST_URLS)
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));

@@ -36,4 +36,17 @@ public class SecurityConstants {
         //"/api/attendance/**"
 
     };
+
+  public static final String[] ADMIN_URLS = {
+      "/admin/**", "/actuator/**"
+  };
+
+  public static final String[] ADMIN_PUBLIC_URLS = {
+      "/admin/assets/**",
+      "/admin/login",
+      "/favicon.ico",
+      "/admin/favicon.ico",
+      "/actuator/health",
+      "/actuator/info"
+  };
 }

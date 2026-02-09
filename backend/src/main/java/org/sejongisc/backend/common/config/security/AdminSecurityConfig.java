@@ -50,8 +50,7 @@ public class AdminSecurityConfig {
     adminAuthenticationProvider.setPasswordEncoder(passwordEncoder);
 
     http
-        // 매칭 범위에 /actuator/** 를 명시적으로 포함
-        .securityMatcher(adminContextPath + "/**", "/actuator/**")
+        .securityMatcher(SecurityConstants.ADMIN_URLS)
         .authenticationProvider(adminAuthenticationProvider)
         .csrf(csrf -> csrf.ignoringRequestMatchers(
             adminContextPath + "/instances",
@@ -59,20 +58,13 @@ public class AdminSecurityConfig {
             "/actuator/**"
         ))
         .authorizeHttpRequests(auth -> auth
-            // 누구나 볼 수 있는 정적 리소스 및 헬스체크
-            .requestMatchers(
-                adminContextPath + "/assets/**",
-                adminContextPath + "/login",
-                "/favicon.ico",
-                adminContextPath + "/favicon.ico",
-                "/actuator/health",
-                "/actuator/info"
-            ).permitAll()
+            // 무인증 허용 리스트
+            .requestMatchers(SecurityConstants.ADMIN_PUBLIC_URLS).permitAll()
 
             // SBA 클라이언트 등록 엔드포인트 보호
             .requestMatchers(adminContextPath + "/instances", adminContextPath + "/instances/**").authenticated()
 
-            // 나머지 모든 /admin/** 및 /actuator/** (metrics, env, log 등)는 관리자 인증 필수
+            // 나머지는 관리자 인증 필수
             .anyRequest().authenticated()
         )
         .formLogin(form -> form
