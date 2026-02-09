@@ -5,14 +5,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -51,8 +50,8 @@ public class AdminSecurityConfig {
     adminAuthenticationProvider.setPasswordEncoder(passwordEncoder);
 
     http
-        // 3. 적용 범위 지정: /admin/** 및 /actuator/** 경로에만 이 필터가 작동
-        .securityMatcher(adminContextPath + "/**", "/actuator/**")
+        // 3. 적용 범위 지정: /admin/** 경로에만 이 필터가 작동
+        .securityMatcher(adminContextPath + "/**")
         .authenticationProvider(adminAuthenticationProvider)
 
         // 4. CSRF 예외: 클라이언트 서비스가 서버에 정보를 등록(POST)할 때 막히지 않도록 설정
@@ -62,8 +61,6 @@ public class AdminSecurityConfig {
         ))
 
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
             // 5. 정적 리소스 및 파비콘: 로그인 없이도 브라우저가 읽을 수 있게 허용 (에러 방지)
             .requestMatchers(
                 adminContextPath + "/assets/**",
@@ -72,11 +69,11 @@ public class AdminSecurityConfig {
                 adminContextPath + "/favicon.ico"
             ).permitAll()
 
-            // 6. 인스턴스 등록: 모니터링 대상 서버(Client)들의 자동 등록 허용
-            .requestMatchers(adminContextPath + "/instances", adminContextPath + "/instances/**").permitAll()
+            // 6. 인스턴스 등록: 인증된(authenticated) 클라이언트만 허용
+            .requestMatchers(adminContextPath + "/instances", adminContextPath + "/instances/**").authenticated()
 
             // 7. 헬스체크: 시스템 생존 여부 확인용 API 공개
-            .requestMatchers("/actuator/health", "/actuator/info").hasRole("ADMIN")
+            .requestMatchers("/actuator/health", "/actuator/info").permitAll()
 
             // 8. 그 외 모든 관리자 페이지는 위에서 설정한 admin 계정 인증 필요
             .anyRequest().authenticated()
