@@ -25,7 +25,9 @@ spring:
     password: ${DB_PASSWORD} # .env의 DB_PASSWORD 값
     hikari:
       pool-name: HikariPool
-      maximum-pool-size: ${DB_POOL_MAX:10} # t2.micro니까 커넥션 풀 작게 유지
+      maximum-pool-size: ${DB_POOL_MAX:4} # t2.micro니까 커넥션 풀 작게 유지
+      minimum-idle: 2
+
 
   stock:
     datasource:
@@ -36,8 +38,8 @@ spring:
       default_schema: public
       hikari:
         pool-name: StockHikariPool
-        maximum-pool-size: ${STOCK_POOL_MAX:5}   # 커넥션 풀 작게 유지
-
+        maximum-pool-size: ${STOCK_POOL_MAX:2}   # 커넥션 풀 작게 유지
+        minimum-idle: 1
   data:
     redis:
       host: redis
