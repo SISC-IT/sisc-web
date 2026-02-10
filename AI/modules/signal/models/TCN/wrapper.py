@@ -2,14 +2,14 @@
 import torch
 import numpy as np
 import pandas as pd
-from ..base_model import BaseModel # 기존 base_model 계승
+from AI.modules.signal.core.base_model import BaseSignalModel
 
-class TCNWrapper(BaseModel):
+class TCNWrapper(BaseSignalModel):
     """
     TCN 모델 Wrapper: 단기 패턴 및 전환점 포착 엔진 [명세서 3번 준수]
     """
     def __init__(self, model_path=None, config=None):
-        super().__init__(model_path, config)
+        super().__init__(config)
         self.model_name = "TCN_Local_Pattern"
         # 명세서에 정의된 핵심 및 보조 입력 키 정의
         self.feature_cols = [

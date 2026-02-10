@@ -2,10 +2,10 @@
 import torch
 import numpy as np
 import pandas as pd
-from ..base_model import BaseModel #
-from .architecture import PatchTST_Model # 기존 파일 활용
+from AI.modules.signal.core.base_model import BaseSignalModel
+#from .architecture import build_transformer_model
 
-class PatchTSTWrapper(BaseModel):
+class PatchTSTWrapper(BaseSignalModel):
     """
     PatchTST 모델 Wrapper: 중장기 추세 및 패턴 분석 엔진 [명세서 3번 준수]
     """

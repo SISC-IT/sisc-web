@@ -8,14 +8,27 @@
 
 import sys
 import os
+import warnings
+
+# 지저분한 경고 무시
+# [설정 1] TensorFlow oneDNN 최적화 메시지 숨기기
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+# [설정 2] TensorFlow 일반 로그(INFO, WARNING) 숨기기 (ERROR만 출력)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+# [설정 3] NumPy/Keras의 np.object 관련 FutureWarning 숨기기
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module='sklearn')
+warnings.filterwarnings("ignore", category=UserWarning, module='pandas')
+
+import shutil
 import pickle
 import backtrader as bt
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-import warnings
-# 지저분한 sklearn 경고 무시
-warnings.filterwarnings("ignore", category=UserWarning, module='sklearn')
+
 
 # 프로젝트 루트 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -23,11 +36,9 @@ project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-# 모델 아키텍처 불러오기
-from AI.modules.signal.models.PatchTST.architecture import build_transformer_model
+from AI.modules.signal.models.transformer.architecture import build_transformer_model
 from AI.modules.features.legacy.technical_features import add_technical_indicators, add_multi_timeframe_features
 from AI.modules.trader.strategies.rule_based import RuleBasedStrategy
-# [추가] 실제 개수 파악을 위한 로더
 from AI.modules.signal.core.data_loader import DataLoader 
 
 class MultiHorizonScoreObserver(bt.Observer):
@@ -85,17 +96,14 @@ class MultiHorizonStrategy(bt.Strategy):
     def _load_model(self):
         path = self.p.model_path
         if not path or not os.path.exists(path):
-            self.log("⚠️ 모델 파일이 없습니다.")
+            self.log(f"⚠️ 모델 파일이 없습니다: {path}")
             return None
         
         try:
-            # [수정] DataLoader를 통해 실제 DB에 저장된 종목/섹터 개수를 가져옵니다.
-            # 그래야 저장된 가중치 파일(weights)과 크기가 딱 맞습니다.
+            # DataLoader를 통해 실제 DB에 저장된 종목/섹터 개수를 가져옵니다.
             loader = DataLoader()
             real_n_tickers = len(loader.ticker_to_id)
             real_n_sectors = len(loader.sector_to_id)
-            
-            # self.log(f"DEBUG: Tickers={real_n_tickers}, Sectors={real_n_sectors}")
 
             # 모델 껍데기 생성 (동적 크기 할당)
             model = build_transformer_model(
@@ -105,13 +113,45 @@ class MultiHorizonStrategy(bt.Strategy):
                 n_outputs=4 
             )
             
-            # 가중치 로드
-            model.load_weights(path)
-            self.log("✅ 멀티 호라이즌 AI 모델 로드 완료")
-            return model
+            # ------------------------------------------------------------------
+            # [핵심 수정] HDF5 / Zip 포맷 호환성 처리
+            # ------------------------------------------------------------------
+            try:
+                # 1차 시도: 기본 로드 (.keras = Zip 포맷 가정)
+                model.load_weights(path)
+                self.log("✅ 멀티 호라이즌 AI 모델 로드 완료 (Standard)")
+                return model
+
+            except Exception as e:
+                # 에러 메시지에 'zip' 혹은 'header' 관련 내용이 있다면 포맷 불일치 가능성 높음
+                if "not a zip file" in str(e) or "header" in str(e):
+                    self.log(f"⚠️ Zip 포맷 로드 실패 ({e}). HDF5 방식으로 재시도합니다.")
+                    
+                    # 확장자를 .h5로 변경한 임시 파일 생성 (Keras가 확장자를 보고 로더를 결정함)
+                    temp_h5_path = path.replace(".keras", "_temp_fallback.h5")
+                    
+                    try:
+                        shutil.copyfile(path, temp_h5_path)
+                        # 임시 파일로 가중치 로드
+                        model.load_weights(temp_h5_path)
+                        self.log("✅ 멀티 호라이즌 AI 모델 로드 완료 (HDF5 Fallback)")
+                        
+                        # 성공 시 모델 반환 (임시 파일 삭제는 finally에서)
+                        return model
+                    except Exception as e_h5:
+                        self.log(f"❌ HDF5 로드도 실패했습니다: {e_h5}")
+                        return None
+                    finally:
+                        # 임시 파일 정리
+                        if os.path.exists(temp_h5_path):
+                            os.remove(temp_h5_path)
+                else:
+                    # 다른 종류의 에러라면 그대로 출력
+                    self.log(f"⚠️ 모델 가중치 로드 중 알 수 없는 오류: {e}")
+                    return None
             
         except Exception as e:
-            self.log(f"⚠️ 모델 로드 실패: {e}")
+            self.log(f"⚠️ 모델 초기화 실패: {e}")
             return None
 
     def _load_scaler(self):
@@ -194,19 +234,29 @@ def run_single_backtest(ticker="AAPL", start_date="2024-01-01", end_date="2025-0
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
     weights_dir = os.path.join(project_root, "AI/data/weights/transformer")
+    
+    # [주의] 파일 경로가 정확한지 확인 (경로 오류 방지)
     model_path = os.path.join(weights_dir, "tests/multi_horizon_model_test.keras")
     scaler_path = os.path.join(weights_dir, "tests/multi_horizon_scaler_test.pkl")
     
     # 2. 데이터 로드 (DB 연결)
     from AI.libs.database.connection import get_db_conn
     conn = get_db_conn()
+    
+    # [수정] SQLAlchemy 경고 방지를 위해 try-except 및 read_sql_query 권장
     query = f"""
         SELECT date, open, high, low, close, volume, adjusted_close, ticker 
         FROM price_data 
         WHERE ticker = '{ticker}' AND date >= '2022-01-01'
         ORDER BY date ASC
     """
-    df = pd.read_sql(query, conn)
+    try:
+        df = pd.read_sql(query, conn)
+    except Exception as e:
+        print(f"❌ 데이터베이스 조회 실패: {e}")
+        conn.close()
+        return
+
     conn.close()
     
     if df.empty:
@@ -216,11 +266,20 @@ def run_single_backtest(ticker="AAPL", start_date="2024-01-01", end_date="2025-0
     df['date'] = pd.to_datetime(df['date'])
     
     print(">> 지표 생성 중...")
-    df = add_technical_indicators(df)
-    df = add_multi_timeframe_features(df)
+    try:
+        df = add_technical_indicators(df)
+        df = add_multi_timeframe_features(df)
+    except Exception as e:
+        print(f"⚠️ 지표 생성 중 오류 발생: {e}")
+        return
     
     mask = (df['date'] >= start_date) & (df['date'] <= end_date)
     backtest_df = df.loc[mask].copy()
+
+    if backtest_df.empty:
+        print(f"❌ 해당 기간({start_date}~{end_date}) 데이터 없음")
+        return
+
     backtest_df.set_index('date', inplace=True)
     
     # 3. Backtrader 설정
@@ -249,15 +308,26 @@ def run_single_backtest(ticker="AAPL", start_date="2024-01-01", end_date="2025-0
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
 
     print(f"💰 시작 자산: {cerebro.broker.getvalue():,.0f}원")
-    results = cerebro.run()
     
+    try:
+        results = cerebro.run()
+    except Exception as e:
+        print(f"❌ 백테스트 실행 중 오류 발생: {e}")
+        return
+
     strat = results[0]
     final_val = cerebro.broker.getvalue()
-    mdd = strat.analyzers.drawdown.get_analysis()['max']['drawdown']    # MDD(Maximum Drawdown): 최대 낙폭
-    # 안전하게 가져오기 (None이면 0.0으로)
-    sharpe_analysis = strat.analyzers.sharpe.get_analysis()
-    sharpe = sharpe_analysis.get('sharperatio')
-    if sharpe is None:
+    
+    # 결과 분석 (안전하게 가져오기)
+    try:
+        mdd_analysis = strat.analyzers.drawdown.get_analysis()
+        mdd = mdd_analysis.get('max', {}).get('drawdown', 0.0)
+        
+        sharpe_analysis = strat.analyzers.sharpe.get_analysis()
+        sharpe = sharpe_analysis.get('sharperatio')
+        if sharpe is None: sharpe = 0.0
+    except:
+        mdd = 0.0
         sharpe = 0.0
     
     print("\n" + "="*40)
@@ -270,7 +340,10 @@ def run_single_backtest(ticker="AAPL", start_date="2024-01-01", end_date="2025-0
     print("="*40 + "\n")
 
     if enable_plot:
-        cerebro.plot(style='candlestick', volume=False)
+        try:
+            cerebro.plot(style='candlestick', volume=False)
+        except Exception as e:
+            print(f"⚠️ 차트 그리기 실패: {e}")
 
 if __name__ == "__main__":
     # 원하는 종목으로 변경해서 테스트 (예: AAPL, 005930, TSLA)
