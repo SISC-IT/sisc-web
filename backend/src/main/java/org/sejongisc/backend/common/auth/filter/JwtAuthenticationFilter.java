@@ -74,6 +74,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+
+      boolean isAdminZone = Arrays.stream(SecurityConstants.ADMIN_URLS)
+          .anyMatch(pattern -> pathMatcher.match(pattern, path));
+
+      if (isAdminZone) {
+        return true;
+      }
+
         boolean excluded = Arrays.stream(SecurityConstants.WHITELIST_URLS)
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
 
