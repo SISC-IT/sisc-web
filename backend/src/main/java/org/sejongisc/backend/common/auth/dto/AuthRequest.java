@@ -15,7 +15,7 @@ public class AuthRequest {
 
     @Schema(
             description = "사용자 학번 (String)",
-            example = "21001001",
+            example = "21010000",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "학번은 필수 입력값입니다.")
@@ -23,7 +23,7 @@ public class AuthRequest {
 
     @Schema(
             description = "사용자 비밀번호 (8자 이상, 특수문자 포함)",
-            example = "1234abcd!",
+            example = "Sira1234!",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "비밀번호는 필수 입력값입니다.")
