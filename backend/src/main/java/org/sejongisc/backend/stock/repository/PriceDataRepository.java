@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.lang.ScopedValue;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +21,8 @@ public interface PriceDataRepository extends JpaRepository<PriceData, PriceDataI
      */
     @Query("SELECT DISTINCT p.ticker FROM PriceData p")
     List<String> findDistinctTickers();
+
+    // 모든 티커 중 중복을 제거하고 랜덤으로 하나만 가져옵니다.
+    @Query(value = "SELECT DISTINCT ticker FROM price_data ORDER BY RANDOM() LIMIT 1", nativeQuery = true)
+    Optional<String> findRandomTicker();
 }
