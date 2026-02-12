@@ -34,4 +34,13 @@ export default defineConfig({
     //   },
     // }),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://54.180.175.139:8080', // 예: http://54.180.175.139
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });

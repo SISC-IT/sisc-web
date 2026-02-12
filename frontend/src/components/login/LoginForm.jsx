@@ -3,52 +3,40 @@ import { useNavigate, NavLink } from 'react-router-dom';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 
-import SocialLoginButtons from './SocialLoginButtons';
-import VerificationModal from './../VerificationModal';
+// import SocialLoginButtons from './SocialLoginButtons';
+// import VerificationModal from './../VerificationModal';
 import ResetPasswordModal from './ResetPasswordModal';
-import FindEmailResultModal from './FindEmailResultModal';
+// import FindEmailResultModal from './FindEmailResultModal';
 
-import { login } from '../../utils/auth';
-import { api } from './../../utils/axios.js';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LoginForm = () => {
   const nav = useNavigate();
 
-  const [email, setEmail] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [modalStep, setModalStep] = useState('closed');
-  const [foundEmail, setFoundEmail] = useState('');
-
-  // 전화번호 인증 성공 시 호출하는 함수
-  const handlePhoneVerificationSuccess = () => {
-    if (modalStep === 'verifyPhoneForEmail') {
-      setFoundEmail('example@google.com');
-      setModalStep('showEmail');
-    } else if (modalStep === 'verifyPhoneForPassword') {
-      setModalStep('resetPassword');
-    }
-  };
+  const { login: authLogin } = useAuth();
 
   const closeModal = () => {
     setModalStep('closed');
   };
 
-  const isFormValid = email.trim() !== '' && password.trim() !== '';
+  const isFormValid = studentId.trim().length === 8 && password.trim() !== '';
 
   const abortRef = useRef(null);
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    // 도중에 요청 시 전 요청 취소
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
     try {
-      await login(
+      await authLogin(
         {
-          email,
+          studentId,
           password,
         },
         abortRef.current.signal
@@ -57,16 +45,8 @@ const LoginForm = () => {
       nav('/');
     } catch (err) {
       console.dir(err);
-      toast.error('로그인에 실패하였습니다. 이메일과 비밀번호를 확인해주세요.');
+      toast.error('로그인에 실패하였습니다. 학번과 비밀번호를 확인해주세요.');
     }
-  };
-
-  const handleSocialLogin = (provider) => {
-    // console.log(
-    //   `${import.meta.env.VITE_API_URL}/oauth2/authorization/${provider}`
-    // );
-    window.location.href = `${import.meta.env.VITE_API_URL}/oauth2/authorization/${provider}`;
-    // window.location.href = `/oauth2/authorization/${provider}`;
   };
 
   return (
@@ -86,16 +66,21 @@ const LoginForm = () => {
           </div>
 
           <div className={styles.inputGroup}>
-            <label htmlFor="email">Email</label>
+            <label htmlFor="studentId">학번</label>
             <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일을 입력하세요"
-              autoComplete="email"
+              type="text"
+              id="studentId"
+              value={studentId}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 8) setStudentId(value);
+              }}
+              placeholder="8자리 학번을 입력하세요"
+              maxLength={8}
+              inputMode="numeric"
             />
           </div>
+
           <div className={styles.inputGroup}>
             <label htmlFor="password">비밀번호</label>
             <input
@@ -107,6 +92,7 @@ const LoginForm = () => {
               autoComplete="current-password"
             />
           </div>
+
           <button
             type="submit"
             className={styles.loginButton}
@@ -115,22 +101,14 @@ const LoginForm = () => {
             로그인
           </button>
         </form>
+
         <div className={styles.textContainer}>
           <div>
             <a
               className={styles.text}
-              onClick={() => setModalStep('verifyPhoneForEmail')}
+              onClick={() => setModalStep('resetPassword')}
             >
-              이메일 찾기
-            </a>
-            <span className={styles.divider} aria-hidden="true">
-              |
-            </span>
-            <a
-              className={styles.text}
-              onClick={() => setModalStep('verifyPhoneForPassword')}
-            >
-              비밀번호 찾기
+              비밀번호 초기화
             </a>
           </div>
           <NavLink to="/signup" className={styles.text}>
@@ -138,29 +116,8 @@ const LoginForm = () => {
           </NavLink>
         </div>
 
-        <SocialLoginButtons onSocialLogin={handleSocialLogin} />
+        {/* <SocialLoginButtons onSocialLogin={handleSocialLogin} /> */}
       </div>
-
-      {(modalStep === 'verifyPhoneForEmail' ||
-        modalStep === 'verifyPhoneForPassword') && (
-        <VerificationModal
-          title={
-            modalStep === 'verifyPhoneForEmail'
-              ? '이메일 찾기'
-              : '비밀번호 찾기'
-          }
-          onClose={closeModal}
-          onSuccess={handlePhoneVerificationSuccess}
-        />
-      )}
-
-      {modalStep === 'showEmail' && (
-        <FindEmailResultModal
-          title="이메일 찾기 결과"
-          onClose={closeModal}
-          result={foundEmail}
-        />
-      )}
 
       {modalStep === 'resetPassword' && (
         <ResetPasswordModal onClose={closeModal} />
