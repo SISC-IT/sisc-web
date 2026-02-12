@@ -85,7 +85,7 @@ export const AttendanceProvider = ({ children }) => {
     const fetchSessions = async () => {
       try {
         const res = await getAttendanceSessions();
-        setSessions(res.data || []);
+        setSessions(res || []);
       } catch (error) {
         console.error('모든 세션 데이터를 가져오는 데 실패했습니다: ', error);
         setSessions([]);

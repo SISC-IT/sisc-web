@@ -14,7 +14,7 @@ const Header = ({ isRoot, onToggleSidebar, isOpen }) => {
   const handleLogout = async () => {
     await logout();
     toast.success('로그아웃 되었습니다.');
-    navigate('/');
+    nav('/login');
   };
   return (
     <header className={`${styles.header} ${isRoot ? styles.transparent : ''}`}>

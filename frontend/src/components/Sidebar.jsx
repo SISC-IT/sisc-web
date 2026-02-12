@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar = ({ isOpen, isRoot, onClose }) => {
-  const navigate = useNavigate();
+  const nav = useNavigate();
   const location = useLocation();
 
   const boardList = [
@@ -31,7 +31,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const handleLogout = async () => {
     await logout();
     toast.success('로그아웃 되었습니다.');
-    navigate('/');
+    nav('/login');
   };
 
   const handleNavLinkClick = () => {
@@ -69,7 +69,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                 );
                 if (selected) {
                   setSelectedBoard(newBoard);
-                  navigate(selected.path);
+                  nav(selected.path);
                   handleNavLinkClick();
                 }
               }}
@@ -171,7 +171,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                     className={styles['inactive-link']}
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLogoutogout();
+                      handleLogout();
                       handleNavLinkClick();
                     }}
                   >
