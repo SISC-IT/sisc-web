@@ -17,11 +17,10 @@ export const signUp = async (
   return res.data;
 };
 
-export const login = async ({ email, password }, signal) => {
-  const paylaod = { email, password };
+export const login = async ({ studentId, password }, signal) => {
+  const paylaod = { studentId, password };
 
   const res = await api.post('/api/auth/login', paylaod, { signal });
-
   // 토큰은 자동으로 쿠키에 저장됨 (백엔드가 Set-Cookie 헤더로 전송)
   // res.data에는 유저 정보만 있음 (accessToken, refreshToken 제거됨)
 
@@ -42,6 +41,14 @@ export const checkVerificationNumber = async (
 ) => {
   const res = await api.post('/api/email/verify', null, {
     params: { email, code: verificationNumber },
+    signal,
+  });
+
+  return res.data;
+};
+export const resetPassword = async ({ email }, signal) => {
+  const res = await api.post('/api/user/password/reset/send', null, {
+    params: { email },
     signal,
   });
 
