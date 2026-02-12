@@ -28,7 +28,7 @@ if project_root not in sys.path:
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models import get_model
 from AI.modules.trader.backtrader.backtrader_engine import run_backtrader_engine 
-from AI.modules.signal.core.features import add_technical_indicators
+from AI.modules.features.legacy.technical_features import add_technical_indicators
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  테스트 헬퍼 함수
