@@ -90,7 +90,7 @@ public class AdminUserController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "회원 강제 탈퇴", description = "시스템에서 유저를 완전히 삭제합니다. (시스템 관리자용)")
+    @Operation(summary = "회원 강제 탈퇴", description = "시스템에서 유저를 탈퇴 처리합니다. (시스템 관리자용)")
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<?> forceDeleteUser(@PathVariable UUID userId) {
