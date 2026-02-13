@@ -4,6 +4,15 @@ jwt:
     accessToken: 3600000
     refreshToken: 1209600000
 
+email:
+  code:
+    charset: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    length: 6
+  key-prefix:
+    verify: "EMAIL_VERIFY:"
+    reset: "PASSWORD_RESET:"
+  code-expire: 180
+
 logging:
   level:
     org.hibernate.SQL: DEBUG

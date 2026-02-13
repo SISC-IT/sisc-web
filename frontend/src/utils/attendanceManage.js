@@ -18,6 +18,8 @@ import { api } from './axios.js';
 export const getAttendanceSessions = async () => {
   try {
     const res = await api.get('/api/attendance/sessions');
+    // console.log('API BASE URL:', import.meta.env.VITE_API_URL);
+    console.log(res.data);
     return res.data;
   } catch (err) {
     console.error('출석 세션 불러오기 중 오류 발생: ', err);

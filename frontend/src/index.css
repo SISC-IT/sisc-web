@@ -4,11 +4,13 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
+  background-color: white;
 }
 
 body {
@@ -39,7 +41,7 @@ html {
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
   }
-  
+
   /* 모바일에서 사이드바 열릴 때 스크롤 방지 */
   body.no-scroll {
     overflow: hidden;

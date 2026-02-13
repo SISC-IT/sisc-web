@@ -1,12 +1,11 @@
-import { useAttendance } from '../../contexts/AttendanceContext';
 import styles from './SessionManagementCard.module.css';
 import calendarAddIcon from '../../assets/calendar-icon.svg';
 
-import { getRounds } from '../../utils/attendanceManage';
+import { getAttendanceSessions } from '../../utils/attendanceManage';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 
-// 날짜 포맷 함수 추가
+// 날짜 포맷 함수
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
@@ -15,52 +14,40 @@ const formatDate = (dateStr) => {
   return `${month}/${day}`;
 };
 
-// 시간 포맷 함수 추가 (초 제거)
-const formatTime = (timeStr) => {
-  if (!timeStr) return '';
-  return timeStr.substring(0, 5); // "14:30:00" -> "14:30"
-};
-
 const SessionManagementCard = ({ styles: commonStyles }) => {
-  const {
-    sessions,
-    selectedSessionId,
-    setSelectedSessionId,
-    selectedRound,
-    setSelectedRound,
-    setEditingRound,
-    setEditingSession,
-    openRoundModifyModal,
-    openSessionModifyModal,
-    openAddRoundsModal,
-    roundsVersion,
-    openAddUsersModal,
-  } = useAttendance();
+  const [sessionList, setSessionList] = useState([]); //  세션 목록
+  const [selectedSessionId, setSelectedSessionId] = useState(''); //  선택된 세션
+  const [currentDisplayedRounds, setCurrentDisplayedRounds] = useState([]); // 나중에 API 연결
 
-  const [currentDisplayedRounds, setCurrentDisplayedRounds] = useState([]);
+  //  최초 렌더: 세션 목록 불러오기
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const sessions = await getAttendanceSessions();
+        setSessionList(sessions || []);
+      } catch (e) {
+        toast.error('세션 목록을 불러오지 못했습니다.');
+        setSessionList([]);
+      }
+    };
+    fetchSessions();
+  }, []);
 
-  const currentSession = sessions.find(
+  // 현재 선택된 세션
+  const currentSession = sessionList.find(
     (session) => session.attendanceSessionId === selectedSessionId
   );
 
+  // *라운드 조회 API 연결필요
   useEffect(() => {
-    const fetchRounds = async () => {
-      if (selectedSessionId) {
-        setCurrentDisplayedRounds([]);
-        const rounds = await getRounds(selectedSessionId);
+    if (!selectedSessionId) {
+      setCurrentDisplayedRounds([]);
+      return;
+    }
 
-        const sortedRounds = (rounds || []).sort(
-          (a, b) =>
-            new Date(`${a.date}T${a.startTime}`) -
-            new Date(`${b.date}T${b.startTime}`)
-        );
-        setCurrentDisplayedRounds(sortedRounds);
-      } else {
-        setCurrentDisplayedRounds([]);
-      }
-    };
-    fetchRounds();
-  }, [selectedSessionId, roundsVersion]);
+    // TODO: 추후 getRounds(selectedSessionId) 연결
+    setCurrentDisplayedRounds([]); // 임시
+  }, [selectedSessionId]);
 
   return (
     <div className={styles.sessionManagementCardContainer}>
@@ -75,7 +62,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
                 toast.error('세션을 먼저 선택해주세요.');
                 return;
               }
-              openAddRoundsModal();
+              // openAddRoundsModal();
             }}
           >
             <div className={commonStyles.iconGroup}>
@@ -83,37 +70,21 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               <div className={commonStyles.text}>출석일자 추가</div>
             </div>
           </button>
-          <button
-            className={commonStyles.iconButton}
-            onClick={() => {
-              if (!currentSession) {
-                toast.error('세션을 먼저 선택해주세요.');
-                return;
-              }
-              openAddUsersModal();
-            }}
-          >
-            <div className={commonStyles.iconGroup}>
-              <img src={calendarAddIcon} alt="사용자 추가" />
-              <div className={commonStyles.text}>세션에 사용자 추가</div>
-            </div>
-          </button>
         </div>
       </div>
+
+      {/*세션 선택 드롭다운 */}
       <div className={styles.selectGroup}>
         <select
           id="sessionSelect"
           className={styles.sessionSelect}
-          value={selectedSessionId || ''}
-          onChange={(e) => {
-            setSelectedSessionId(e.target.value);
-            setSelectedRound(null);
-          }}
+          value={selectedSessionId}
+          onChange={(e) => setSelectedSessionId(e.target.value)}
         >
           <option value="" disabled>
             ------ 세션을 선택하세요 ------
           </option>
-          {sessions.map((session) => (
+          {sessionList.map((session) => (
             <option
               key={session.attendanceSessionId}
               value={session.attendanceSessionId}
@@ -122,65 +93,32 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
             </option>
           ))}
         </select>
-        <button
-          type="button"
-          className={styles.menuButton}
-          onClick={() => {
-            if (currentSession) {
-              setEditingSession(currentSession);
-              openSessionModifyModal();
-            } else {
-              alert('세션을 선택해주세요.');
-            }
-          }}
-        >
-          ···
-        </button>
       </div>
+
+      {/* 라운드 테이블 (API 연결 전 구조만) */}
       <div className={styles.tableGroup}>
-        <table className={styles.table} role="grid">
+        <table className={styles.table}>
           <thead>
             <tr>
               <th>일자</th>
               <th>시간</th>
               <th>가능(분)</th>
               <th>회차</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
             {currentDisplayedRounds.length > 0 ? (
-              currentDisplayedRounds.map((round, index) => {
-                return (
-                  <tr
-                    key={round.id}
-                    className={`${styles.row} ${selectedRound === round.id ? styles.selectedRound : ''}`}
-                    onClick={() => setSelectedRound(round.id)}
-                    title={`${round.date} ${round.startTime}`}
-                  >
-                    <td className={styles.dateCell}>{formatDate(round.date)}</td>
-                    <td className={styles.timeCell}>{formatTime(round.startTime)}</td>
-                    <td className={styles.minutesCell}>{round.availableMinutes}</td>
-                    <td className={styles.roundCell}>{index + 1}</td>
-                    <td className={styles.menuCell}>
-                      <button
-                        className={styles.menuButton}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedRound(null);
-                          setEditingRound(round);
-                          openRoundModifyModal();
-                        }}
-                      >
-                        ···
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              currentDisplayedRounds.map((round, index) => (
+                <tr key={round.id}>
+                  <td>{formatDate(round.date)}</td>
+                  <td>{round.startTime?.substring(0, 5)}</td>
+                  <td>{round.availableMinutes}</td>
+                  <td>{index + 1}</td>
+                </tr>
+              ))
             ) : (
               <tr>
-                <td colSpan="5" className={styles.noData}>
+                <td colSpan="4" className={styles.noData}>
                   회차 정보가 없습니다.
                 </td>
               </tr>

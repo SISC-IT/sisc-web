@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: '',
   withCredentials: true,
 });
 
@@ -18,7 +18,7 @@ api.interceptors.response.use(
         // refreshToken은 쿠키에서 자동으로 전송됨
         await axios.post(
           `${import.meta.env.VITE_API_URL}/api/auth/reissue`,
-          {},  // body 비움
+          {}, // body 비움
           { withCredentials: true }
         );
 
@@ -30,8 +30,6 @@ api.interceptors.response.use(
         return api(originRequest);
       } catch (refreshError) {
         console.error('Token refresh failed: ', refreshError);
-        // localStorage에서 토큰 제거 불필요 (쿠키는 백엔드에서 관리)
-        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

@@ -26,10 +26,13 @@ import MonthlyReportDetail from './pages/external/MonthlyReportDetail.jsx';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import ProtectedRoute from './components/protectedRoute.jsx';
+
 function App() {
   return (
     <>
       <Routes>
+        {/* Public */}
         <Route path="/main" element={<Main />} />
         <Route path="/main/intro" element={<Intro />} />
         <Route path="/main/leaders" element={<Leaders />} />
@@ -39,24 +42,30 @@ function App() {
           path="/main/monthly-report-detail"
           element={<MonthlyReportDetail />}
         />
+
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/oauth/success" element={<OAuthSuccess />} />
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/attendance-manage" element={<AttendanceManage />} />
-          <Route path="/board" element={<Board />} />
-          <Route path="/board/:team" element={<Board />} />
-          <Route path="/board/:team/:postId" element={<PostDetail />} />
-          <Route path="/board/:team/post/:postId" element={<PostDetail />} />
-          <Route path="/quant-bot" element={<QuantTradingDashboard />} />
-          <Route path="/stock-game" element={<StockGame />} />
-          <Route path="/backtest" element={<BackTest />} />
-          <Route path="/backtest/result" element={<BacktestResult />} />
-          <Route path="/mypage" element={<Mypage />} />
+
+        {/* Protected */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/attendance-manage" element={<AttendanceManage />} />
+            <Route path="/board" element={<Board />} />
+            <Route path="/board/:team" element={<Board />} />
+            <Route path="/board/:team/:postId" element={<PostDetail />} />
+            <Route path="/board/:team/post/:postId" element={<PostDetail />} />
+            <Route path="/quant-bot" element={<QuantTradingDashboard />} />
+            <Route path="/stock-game" element={<StockGame />} />
+            <Route path="/backtest" element={<BackTest />} />
+            <Route path="/backtest/result" element={<BacktestResult />} />
+            <Route path="/mypage" element={<Mypage />} />
+          </Route>
         </Route>
       </Routes>
+
       <ToastContainer
         position="top-center"
         autoClose={2000}
