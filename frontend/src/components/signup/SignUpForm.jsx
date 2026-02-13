@@ -19,10 +19,17 @@ const passwordPolicy = [
 ];
 
 const SignUpForm = () => {
-  const [nickname, setNickname] = useState('');
+  const [studentName, setStudentName] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [verificationNumber, setVerificationNumber] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [gender, setGender] = useState('');
+  const [college, setCollege] = useState(''); //단과대학
+  const [department, setDepartment] = useState(''); //학과
+  const [generation, setGeneration] = useState(''); //기수
+  const [teamName, setTeamName] = useState(''); //소속팀
+  const [remark, setRemark] = useState(''); //비고
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordValid, setPasswordValid] = useState(
@@ -55,22 +62,61 @@ const SignUpForm = () => {
 
   // 핸드폰 번호 유효성 검사
   const isPhoneNumberValid = () => {
-    const phoneRegex = /^0\d{8,10}$/;
+    const phoneRegex = /^01(?:0|1|[6-9])-(?:\d{3}|\d{4})-\d{4}$/;
     return phoneRegex.test(phoneNumber);
   };
 
+  //학번 유효성 검사
+  const isStudentIdValid = () => {
+    const studentIdRegex = /^\d{8}$/; // 8자리 숫자만 허용
+    return studentIdRegex.test(studentId);
+  };
+
+  // 기수 유효성검사
+  const isGenerationValid = () => {
+    const generationRegex = /^\d+$/; // 숫자만 허용
+    return generationRegex.test(generation);
+  };
+
   // 회원가입 제출 유효성 검사
-  const isPasswordValid = passwordValid.every(Boolean);
+  const areRequiredFieldsFilled =
+    studentName.trim() !== '' &&
+    studentId.trim() !== '' &&
+    email.trim() !== '' &&
+    phoneNumber.trim() !== '' &&
+    gender !== '' &&
+    college.trim() !== '' &&
+    department.trim() !== '' &&
+    generation.trim() !== '' &&
+    teamName.trim() !== '' &&
+    password !== '';
 
   const isFormValid =
-    nickname.trim() !== '' &&
+    areRequiredFieldsFilled &&
+    isStudentIdValid &&
     isEmailValid() &&
     isVerificationSent &&
     isVerificationChecked &&
     isPhoneNumberValid &&
+    isGenerationValid &&
     isPasswordValid &&
     password === confirmPassword;
 
+  const handlePhoneChange = (e) => {
+    // 숫자 이외의 문자 제거+하이픈자동추가
+    const value = e.target.value.replace(/\D/g, '');
+
+    let formattedValue = '';
+    if (value.length <= 3) {
+      formattedValue = value;
+    } else if (value.length <= 7) {
+      formattedValue = `${value.slice(0, 3)}-${value.slice(3)}`;
+    } else {
+      formattedValue = `${value.slice(0, 3)}-${value.slice(3, 7)}-${value.slice(7, 11)}`;
+    }
+
+    setPhoneNumber(formattedValue);
+  };
   const handleSendVerificationNumber = async (e) => {
     e.preventDefault();
 
@@ -123,10 +169,17 @@ const SignUpForm = () => {
     try {
       await signUp(
         {
-          nickname,
+          studentName,
+          studentId,
           email,
           password,
           phoneNumber,
+          gender,
+          college,
+          department,
+          generation,
+          teamName,
+          remark,
         },
         abortRef.current.signal
       );
@@ -154,13 +207,54 @@ const SignUpForm = () => {
           </div>
 
           <div className={styles.inputGroup}>
-            <label htmlFor="nickname">닉네임</label>
+            <label htmlFor="studentName">이름</label>
             <input
               type="text"
-              id="nickname"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="닉네임을 입력해주세요"
+              id="studentName"
+              value={studentName}
+              onChange={(e) => setStudentName(e.target.value)}
+              placeholder="학번을 입력해주세요"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="studentId">학번</label>
+            <input
+              type="text"
+              id="studentId"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              placeholder="학번을 입력해주세요"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="password">비밀번호</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={handlePasswordChange}
+              placeholder="비밀번호를 입력해주세요"
+              autoComplete="new-password"
+            />
+            <ul className={styles.passwordPolicy}>
+              {passwordPolicy.map((rule, index) => (
+                <li
+                  key={rule.label}
+                  className={passwordValid[index] ? styles.valid : ''}
+                >
+                  {rule.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="confirm-password">비밀번호 확인</label>
+            <input
+              type="password"
+              id="confirm-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="비밀번호를 한번 더 입력해주세요"
             />
           </div>
           <div className={styles.inputGroup}>
@@ -214,45 +308,88 @@ const SignUpForm = () => {
               type="text"
               id="phoneNumber"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={handlePhoneChange}
               placeholder="ex) 01012345678"
               autoComplete="tel"
             />
           </div>
-          <div className={styles.inputGroup}>
-            <label htmlFor="password">비밀번호</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={handlePasswordChange}
-              placeholder="비밀번호를 입력해주세요"
-              autoComplete="new-password"
-            />
-            <ul className={styles.passwordPolicy}>
-              {passwordPolicy.map((rule, index) => (
-                <li
-                  key={rule.label}
-                  className={passwordValid[index] ? styles.valid : ''}
-                >
-                  {rule.label}
-                </li>
-              ))}
-            </ul>
+          <div className={styles.radioGroup}>
+            <label>성별</label>
+            <div className={styles.radioOptions}>
+              <input
+                type="radio"
+                id="male"
+                name="gender"
+                value="male"
+                checked={gender === 'male'}
+                onChange={(e) => setGender(e.target.value)}
+              />
+              <label htmlFor="male">남성</label>
+
+              <input
+                type="radio"
+                id="female"
+                name="gender"
+                value="female"
+                checked={gender === 'female'}
+                onChange={(e) => setGender(e.target.value)}
+              />
+              <label htmlFor="female">여성</label>
+            </div>
           </div>
           <div className={styles.inputGroup}>
-            <label htmlFor="confirm-password">비밀번호 확인</label>
+            <label htmlFor="college">단과대학</label>
             <input
-              type="password"
-              id="confirm-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="비밀번호를 한번 더 입력해주세요"
+              type="text"
+              id="college"
+              value={college}
+              onChange={(e) => setCollege(e.target.value)}
+              placeholder="ex) 소프트웨어융합대학"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="department">학과</label>
+            <input
+              type="text"
+              id="department"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              placeholder="ex) 컴퓨터공학과"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="generation">기수</label>
+            <input
+              type="text"
+              id="generation"
+              value={generation}
+              onChange={(e) => setGeneration(e.target.value)}
+              placeholder="ex) 25"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="teamName">팀</label>
+            <input
+              type="text"
+              id="teamName"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="ex) 금융IT"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label htmlFor="remark">특이사항</label>
+            <input
+              type="text"
+              id="remark"
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              placeholder="특이사항이 있으면 작성해주세요"
             />
           </div>
           <button
             type="submit"
-            className={styles.loginButton}
+            className={styles.signUpButton}
             disabled={!isFormValid}
           >
             회원가입
