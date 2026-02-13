@@ -104,34 +104,4 @@ public class AdminUserSyncService {
         String clean = genStr.replaceAll("[^0-9]", "");
         return clean.isEmpty() ? 0 : Integer.parseInt(clean);
     }
-
-    /**
-     * 회원 등급(정/준회원) 매핑
-     */
-    private Grade mapGrade(String gradeStr) {
-        if (gradeStr.contains("정회원")) return Grade.REGULAR_MEMBER;
-        if (gradeStr.contains("준회원")) return Grade.ASSOCIATE_MEMBER;
-        return Grade.NEW_MEMBER;
-    }
-
-    /**
-     * 직위 텍스트를 통한 시스템 접근 권한(Role) 결정
-     */
-    private Role mapRole(String position) {
-        if (position == null || position.isBlank()) return Role.TEAM_MEMBER;
-        if (position.contains("회장") && !position.contains("부회장")) return Role.PRESIDENT;
-        if (position.contains("부회장") || position.contains("부대표자")) return Role.VICE_PRESIDENT;
-        if (position.contains("팀장")) return Role.TEAM_LEADER;
-        return Role.TEAM_MEMBER;
-    }
-
-    /**
-     * 성별 텍스트 변환
-     */
-    private Gender mapGender(String genderStr) {
-        if (genderStr == null || genderStr.isBlank()) return null;
-        if (genderStr.contains("남")) return Gender.MALE;
-        if (genderStr.contains("여")) return Gender.FEMALE;
-        return null;
-    }
 }
