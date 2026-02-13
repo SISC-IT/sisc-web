@@ -51,7 +51,8 @@ public class User extends BasePostgresEntity{
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Grade grade; // 신입/준/정회원
+    @Builder.Default
+    private Grade grade = Grade.NEW_MEMBER; // 신입/준/정회원
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
