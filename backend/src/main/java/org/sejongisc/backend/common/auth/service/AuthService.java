@@ -36,7 +36,7 @@ public class AuthService {
 
         // 탈퇴 회원 로그인 차단
         if (!user.canLogin()) {
-            throw new CustomException(ErrorCode.USER_NOT_ACTIVE);
+            throw new CustomException(ErrorCode.USER_WITHDRAWN);
         }
 
         // 비밀번호 일치 확인

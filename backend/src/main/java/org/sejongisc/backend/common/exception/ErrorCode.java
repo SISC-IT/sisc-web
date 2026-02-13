@@ -89,7 +89,7 @@ public enum ErrorCode {
   DUPLICATE_PHONE(HttpStatus.CONFLICT, "이미 사용 중인 전화번호입니다."),
   DUPLICATE_USER(HttpStatus.CONFLICT, "이미 가입된 사용자입니다."),
   INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
-  USER_NOT_ACTIVE(HttpStatus.FORBIDDEN, "현재 활동 상태의 회원이 아닙니다."),
+  USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 회원은 로그인할 수 없습니다."),
 
   // EXCEL
 
