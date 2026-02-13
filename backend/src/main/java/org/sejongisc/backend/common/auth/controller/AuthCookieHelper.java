@@ -15,23 +15,16 @@ public class AuthCookieHelper {
     }
 
     public ResponseCookie deleteCookie(String name) {
-        return ResponseCookie.from(name, "")
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/")
-                .maxAge(0)
-                .build();
+        return createCookie(name, "", 0);
     }
 
     private ResponseCookie createCookie(String name, String value, long maxAge) {
         return ResponseCookie.from(name, value)
                 .httpOnly(true)
-                // 로컬에서
-//            .secure(false)
-//            .sameSite("Lax")
-                .secure(true)
-                .sameSite("None")
+                .secure(false)      // 개발서버 설정 (http)
+                .sameSite("Lax")
+                //.secure(true)       // 배포서버 설정 (https)
+                //.sameSite("None")
                 .path("/")
                 .maxAge(maxAge)
                 .build();
