@@ -48,6 +48,7 @@ public interface AdminUserRepository extends JpaRepository<User, UUID> {
             AND (:generation IS NULL OR u.generation = :generation)
             AND (:role IS NULL OR u.role = :role)
             AND (:status IS NULL OR u.status = :status)
+        ORDER BY u.generation DESC, u.name ASC
         """)
     List<AdminUserResponse> findAllByAdminFilter(
         @Param("keyword") String keyword,
