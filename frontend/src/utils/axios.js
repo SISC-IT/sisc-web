@@ -1,7 +1,7 @@
 import axios from 'axios';
-
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 export const api = axios.create({
-  baseURL: '',
+  baseURL: BASE_URL,
   withCredentials: true,
 });
 
@@ -17,7 +17,7 @@ api.interceptors.response.use(
       try {
         // refreshToken은 쿠키에서 자동으로 전송됨
         await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/auth/reissue`,
+          `${BASE_URL}/api/auth/reissue`,
           {}, // body 비움
           { withCredentials: true }
         );
