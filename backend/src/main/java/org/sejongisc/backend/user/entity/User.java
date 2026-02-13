@@ -123,4 +123,30 @@ public class User extends BasePostgresEntity{
             .status(UserStatus.ACTIVE)              // 기본 활동 상태
             .build();
     }
+
+    public void applyExcelData(
+        String name,
+        String phone,
+        String teamName,
+        Integer generation,
+        String college,
+        String department,
+        Grade grade,
+        String position,
+        Role role,
+        Gender gender
+    ) {
+        this.name = name;
+        this.phoneNumber = phone;
+        this.teamName = teamName;
+        this.generation = generation;
+        this.college = college;
+        this.department = department;
+        this.status = UserStatus.ACTIVE;
+        this.grade = grade;
+        this.positionName = position;
+        this.role = role;
+        this.gender = gender;
+    }
+
 }
