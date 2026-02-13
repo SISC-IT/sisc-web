@@ -12,7 +12,7 @@ ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 COPY . .
 RUN npm run build
-
+RUN echo "VITE_API_URL is set to: ${VITE_API_URL}"
 
 # --- 2. Nginx Stage ---
 FROM nginx:1.27-alpine
