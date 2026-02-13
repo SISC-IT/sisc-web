@@ -28,12 +28,13 @@ public class AdminUserService {
     private final AdminUserRepository adminUserRepository;
     private final AdminUserSyncService adminUserSyncService;
     private final UserService userService;
-    private final DataFormatter formatter = new DataFormatter();
 
     /**
      * 엑셀 파일을 읽어 동기화 프로세스 시작
      */
     public ExcelSyncResponse syncUsersFromExcel(MultipartFile file) {
+        DataFormatter formatter = new DataFormatter();
+
         // 엑셀 파일 검증
         validateFile(file);
         List<UserExcelRow> excelRows = new ArrayList<>();
@@ -46,11 +47,11 @@ public class AdminUserService {
                 if (row == null) continue;
 
                 // 학번 없으면 빈 행으로 간주
-                String studentId = getCellValue(row, 4);
+                String studentId = getCellValue(row, 4, formatter);
                 if (studentId.isEmpty()) continue;
 
                 // 필수값 검증 및 UserExcelRow 리스트에 추가
-                excelRows.add(buildExcelRow(row, studentId, i));
+                excelRows.add(buildExcelRow(row, studentId, i, formatter));
             }
 
             // 추가할 내용이 없는 빈 파일의 경우 예외
@@ -114,7 +115,7 @@ public class AdminUserService {
     /**
      * 엑셀 파일의 셀을 문자열로 변환
      */
-    private String getCellValue(Row row, int cellIndex) {
+    private String getCellValue(Row row, int cellIndex, DataFormatter formatter) {
         Cell cell = row.getCell(cellIndex);
         if (cell == null) return "";
 
@@ -134,11 +135,11 @@ public class AdminUserService {
     /**
      * 엑셀의 특정 행을 읽어 UserExcelRow 생성
      */
-    private UserExcelRow buildExcelRow(Row row, String studentId, int rowIndex) {
-        String name = getCellValue(row, 3);
-        String phone = getCellValue(row, 5);
-        String team = getCellValue(row, 1);
-        String grade = getCellValue(row, 8);
+    private UserExcelRow buildExcelRow(Row row, String studentId, int rowIndex, DataFormatter formatter) {
+        String name = getCellValue(row, 3, formatter);
+        String phone = getCellValue(row, 5, formatter);
+        String team = getCellValue(row, 1, formatter);
+        String grade = getCellValue(row, 8, formatter);
 
         // 학번은 있지만 필수 데이터가 누락된 경우
         if (name.isEmpty() || phone.isEmpty() || team.isEmpty() || grade.isEmpty()) {
@@ -151,12 +152,12 @@ public class AdminUserService {
             .name(name)
             .phone(phone.replaceAll("[^0-9]", ""))
             .teamName(team)
-            .generation(getCellValue(row, 2))
-            .college(getCellValue(row, 6))
-            .department(getCellValue(row, 7))
+            .generation(getCellValue(row, 2, formatter))
+            .college(getCellValue(row, 6, formatter))
+            .department(getCellValue(row, 7, formatter))
             .grade(grade)
-            .position(getCellValue(row, 9))
-            .gender(getCellValue(row, 10))
+            .position(getCellValue(row, 9, formatter))
+            .gender(getCellValue(row, 10, formatter))
             .build();
     }
 }
