@@ -38,8 +38,10 @@ public class AdminUserSyncService {
         int createdCount = 0;
         int updatedCount = 0;
 
-        // 기존 활동 인원 일괄 비활성화
+        // 기존 활동 인원 일괄 비활성화 (SYSTEM_ADMIN 제외)
         userRepository.findAllByStatus(UserStatus.ACTIVE)
+            .stream()
+            .filter(user -> user.getRole() != Role.SYSTEM_ADMIN)
             .forEach(user -> user.setStatus(UserStatus.INACTIVE));
 
         for (UserExcelRow rowData : excelRows) {
