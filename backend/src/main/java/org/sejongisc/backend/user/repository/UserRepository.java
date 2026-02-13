@@ -2,6 +2,7 @@ package org.sejongisc.backend.user.repository;
 
 
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -20,8 +21,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query(
         "SELECT u FROM User u " +
         "LEFT JOIN Account a ON u.userId = a.ownerId " +
-        "WHERE a.accountId IS NULL")
+        "WHERE a.accountId IS NULL"
+    )
     List<User> findAllUsersMissingAccount();
 
     Optional<User> findByStudentId(String studentId);
+
+    List<User> findAllByStatus(UserStatus status);
 }
