@@ -49,8 +49,9 @@ public class User extends BasePostgresEntity{
     @Enumerated(EnumType.STRING)
     private Gender gender;       // 성별
 
-    @Column(name = "is_new_member", nullable = false)
-    private boolean isNewMember; // 신규 여부 (포인트나 이벤트 대상자 선정용)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Grade grade; // 신입/준/정회원
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
