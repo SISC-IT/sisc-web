@@ -34,12 +34,22 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         User user = userRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(request.getPassword());
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(trimmedPassword, user.getPasswordHash())) {
+        String rawPassword = request.getPassword();
+
+        if (rawPassword == null || rawPassword.isBlank()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        if (user.getPasswordHash() == null ||
+            !passwordEncoder.matches(rawPassword.trim(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
+
         String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
+
+        log.info("created accessToken len={}", accessToken == null ? -1 : accessToken.length());
+        log.info("created refreshToken len={}", refreshToken == null ? -1 : refreshToken.length());
 
         // 기존 토큰 삭제 후 새로 저장
         refreshTokenRepository.findByUserId(user.getUserId())
