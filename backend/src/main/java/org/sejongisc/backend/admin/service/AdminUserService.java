@@ -129,7 +129,7 @@ public class AdminUserService {
         if (file == null || file.isEmpty()) throw new CustomException(ErrorCode.EMPTY_FILE);
 
         String fileName = file.getOriginalFilename();
-        if (fileName == null || !fileName.endsWith(".xlsx")) throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+        if (fileName == null || !fileName.toLowerCase(Locale.ROOT).endsWith(".xlsx")) throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
     }
 
     /**
