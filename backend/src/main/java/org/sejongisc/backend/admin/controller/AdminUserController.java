@@ -79,6 +79,14 @@ public class AdminUserController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "선배(SENIOR) 등급 변경", description = "특정 유저를 선배(SENIOR) 등급으로 변경합니다. (회장/관리자용)")
+    @PatchMapping("/{userId}/senior")
+    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+    public ResponseEntity<Void> promoteToSenior(@PathVariable UUID userId) {
+        adminUserService.promoteToSenior(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "회원 강제 탈퇴", description = "시스템에서 유저를 완전히 삭제합니다. (시스템 관리자용)")
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('SYSTEM_ADMIN')")
