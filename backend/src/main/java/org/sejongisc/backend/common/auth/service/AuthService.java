@@ -13,7 +13,6 @@ import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.AuthRequest;
 import org.sejongisc.backend.common.auth.dto.AuthResponse;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -34,14 +33,9 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         User user = userRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        String rawPassword = request.getPassword();
-
-        if (rawPassword == null || rawPassword.isBlank()) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
 
         if (user.getPasswordHash() == null ||
-            !passwordEncoder.matches(rawPassword.trim(), user.getPasswordHash())) {
+            !passwordEncoder.matches(request.getPassword().trim(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
