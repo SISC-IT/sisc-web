@@ -57,7 +57,7 @@ public class AdminUserService {
             if (excelRows.isEmpty()) {
                 throw new CustomException(ErrorCode.EMPTY_FILE);
             }
-
+            log.info("엑셀 파일 파싱 완료: 파일명={}, 총 건수={}", file.getOriginalFilename(), excelRows.size());
         } catch (CustomException e) {
             throw e;
         } catch (Exception e) {

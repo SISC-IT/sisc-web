@@ -71,6 +71,8 @@ public class AdminUserSyncService {
                 updatedCount++;
             }
         }
+
+        log.info("엑셀 사용자 데이터 동기화 완료: 신규 등록={}, 갱신={}", createdCount, updatedCount);
         return new ExcelSyncResponse(createdCount, updatedCount);
     }
 
