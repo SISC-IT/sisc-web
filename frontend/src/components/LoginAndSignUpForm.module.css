@@ -53,8 +53,6 @@
 .inputGroup label {
   display: block;
   margin-bottom: 12px;
-  font-weight: 500;
-  color: #555;
   color: #000;
   font-family: Pretendard;
   font-size: 14px;
@@ -184,9 +182,6 @@
 .radioGroup label {
   display: block;
   margin-bottom: 12px;
-  font-weight: 500;
-  color: #555;
-  color: #000;
   font-family: Pretendard;
   font-size: 14px;
   font-style: normal;

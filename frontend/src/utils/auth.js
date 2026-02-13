@@ -20,13 +20,13 @@ export const signUp = async (
 ) => {
   const payload = {
     studentName: studentName.trim(),
-    studentId: studentId,
+    studentId: studentId.trim(),
     email: email.trim(),
     password: password,
     phoneNumber: phoneNumber.trim(),
-    gender: gender,
-    college: college,
-    department: department,
+    gender: gender.trim(),
+    college: college.trim(),
+    department: department.trim(),
     generation: generation.trim(),
     teamName: teamName.trim(),
     remark: remark,

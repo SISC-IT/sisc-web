@@ -25,11 +25,11 @@ const SignUpForm = () => {
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [gender, setGender] = useState('');
-  const [college, setCollege] = useState(''); //단과대학
-  const [department, setDepartment] = useState(''); //학과
-  const [generation, setGeneration] = useState(''); //기수
-  const [teamName, setTeamName] = useState(''); //소속팀
-  const [remark, setRemark] = useState(''); //비고
+  const [college, setCollege] = useState('');
+  const [department, setDepartment] = useState('');
+  const [generation, setGeneration] = useState('');
+  const [teamName, setTeamName] = useState('');
+  const [remark, setRemark] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordValid, setPasswordValid] = useState(
@@ -37,12 +37,10 @@ const SignUpForm = () => {
   );
 
   const [isSending, setIsSending] = useState(false);
-
   const [isVerificationSent, setVerificationSent] = useState(false);
   const [isVerificationChecked, setVerificationChecked] = useState(false);
 
   const abortRef = useRef(null);
-
   const nav = useNavigate();
 
   const handlePasswordChange = (e) => {
@@ -54,31 +52,26 @@ const SignUpForm = () => {
     setPasswordValid(newPasswordValid);
   };
 
-  // 이메일 유효성 검사
   const isEmailValid = () => {
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
     return emailRegex.test(email);
   };
 
-  // 핸드폰 번호 유효성 검사
   const isPhoneNumberValid = () => {
-    const phoneRegex = /^01(?:0|1|[6-9])-(?:\d{3}|\d{4})-\d{4}$/;
+    const phoneRegex = /^010-\d{4}-\d{4}$/;
     return phoneRegex.test(phoneNumber);
   };
 
-  //학번 유효성 검사
   const isStudentIdValid = () => {
-    const studentIdRegex = /^\d{8}$/; // 8자리 숫자만 허용
+    const studentIdRegex = /^\d{8}$/;
     return studentIdRegex.test(studentId);
   };
 
-  // 기수 유효성검사
   const isGenerationValid = () => {
-    const generationRegex = /^\d+$/; // 숫자만 허용
+    const generationRegex = /^\d+$/;
     return generationRegex.test(generation);
   };
 
-  // 회원가입 제출 유효성 검사
   const areRequiredFieldsFilled =
     studentName.trim() !== '' &&
     studentId.trim() !== '' &&
@@ -91,19 +84,20 @@ const SignUpForm = () => {
     teamName.trim() !== '' &&
     password !== '';
 
+  const isPasswordValid = passwordValid.every(Boolean);
+
   const isFormValid =
     areRequiredFieldsFilled &&
-    isStudentIdValid &&
+    isStudentIdValid() &&
     isEmailValid() &&
     isVerificationSent &&
     isVerificationChecked &&
-    isPhoneNumberValid &&
-    isGenerationValid &&
+    isPhoneNumberValid() &&
+    isGenerationValid() &&
     isPasswordValid &&
     password === confirmPassword;
 
   const handlePhoneChange = (e) => {
-    // 숫자 이외의 문자 제거+하이픈자동추가
     const value = e.target.value.replace(/\D/g, '');
 
     let formattedValue = '';
@@ -112,24 +106,25 @@ const SignUpForm = () => {
     } else if (value.length <= 7) {
       formattedValue = `${value.slice(0, 3)}-${value.slice(3)}`;
     } else {
-      formattedValue = `${value.slice(0, 3)}-${value.slice(3, 7)}-${value.slice(7, 11)}`;
+      formattedValue = `${value.slice(0, 3)}-${value.slice(
+        3,
+        7
+      )}-${value.slice(7, 11)}`;
     }
 
     setPhoneNumber(formattedValue);
   };
+
   const handleSendVerificationNumber = async (e) => {
     e.preventDefault();
 
-    // 도중에 요청 시 전 요청 취소
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
     setIsSending(true);
 
-    // 인증번호 발송 로직 & api 자리
     try {
-      await sendVerificationNumber({ email: email }, abortRef.current.signal);
-
+      await sendVerificationNumber({ email }, abortRef.current.signal);
       setVerificationSent(true);
       toast.success('인증번호가 발송되었습니다.');
     } catch (error) {
@@ -139,18 +134,16 @@ const SignUpForm = () => {
       setIsSending(false);
     }
   };
+
   const handleCheckVerificationNumber = async () => {
-    // 도중에 요청 시 전 요청 취소
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
-    // 인증번호 발송 로직 & api 자리
     try {
       await checkVerificationNumber(
-        { email: email, verificationNumber: verificationNumber },
+        { email, verificationNumber },
         abortRef.current.signal
       );
-
       setVerificationChecked(true);
       toast.success('인증되었습니다.');
     } catch (error) {
@@ -162,7 +155,6 @@ const SignUpForm = () => {
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    // 도중에 요청 시 전 요청 취소
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
