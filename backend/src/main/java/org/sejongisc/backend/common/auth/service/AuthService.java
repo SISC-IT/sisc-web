@@ -34,6 +34,12 @@ public class AuthService {
         User user = userRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // 탈퇴 회원 로그인 차단
+        if (!user.canLogin()) {
+            throw new CustomException(ErrorCode.USER_NOT_ACTIVE);
+        }
+
+        // 비밀번호 일치 확인
         if (user.getPasswordHash() == null ||
             !passwordEncoder.matches(request.getPassword().trim(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
@@ -41,9 +47,6 @@ public class AuthService {
 
         String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
         String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
-
-        log.info("created accessToken len={}", accessToken == null ? -1 : accessToken.length());
-        log.info("created refreshToken len={}", refreshToken == null ? -1 : refreshToken.length());
 
         // 기존 토큰 삭제 후 새로 저장
         refreshTokenRepository.findByUserId(user.getUserId())
