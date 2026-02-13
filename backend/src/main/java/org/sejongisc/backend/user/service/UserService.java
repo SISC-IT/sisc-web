@@ -9,6 +9,8 @@ import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.annotation.OptimisticRetry;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.common.redis.RedisKey;
+import org.sejongisc.backend.common.redis.RedisService;
 import org.sejongisc.backend.point.dto.AccountEntry;
 import org.sejongisc.backend.point.entity.Account;
 import org.sejongisc.backend.point.entity.AccountName;
@@ -21,12 +23,10 @@ import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +39,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final RedisTemplate<Object, Object> redisTemplate;
+    private final RedisService redisService;
     private final RefreshTokenService refreshTokenService;
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
@@ -116,7 +116,12 @@ public class UserService {
         emailService.verifyResetEmail(nEmail, nCode);
 
         String token = UUID.randomUUID().toString();
-        saveResetTokenToRedis(token, nEmail);
+        try {
+            redisService.set(RedisKey.PASSWORD_RESET, token, nEmail);
+        } catch (Exception e) {
+            log.error("Redis 저장 실패 - 비밀번호 재설정 토큰 발급 실패: email={}", nEmail, e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
 
         return token;
     }
@@ -148,19 +153,9 @@ public class UserService {
         return value.trim();
     }
 
-    // TODO : RedisService로 분리 고려
-    private void saveResetTokenToRedis(String token, String email) {
-        try {
-            redisTemplate.opsForValue().set("PASSWORD_RESET:" + token, email, Duration.ofMinutes(10));
-        } catch (Exception e) {
-            log.error("Redis 저장 실패", e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     private String getEmailFromRedis(String token) {
         try {
-            String email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + token);
+            String email = redisService.get(RedisKey.PASSWORD_RESET, token, String.class);
             if (email == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
             return email;
         } catch (Exception e) {
@@ -171,7 +166,7 @@ public class UserService {
 
     private void deleteResetTokenFromRedis(String token) {
         try {
-            redisTemplate.delete("PASSWORD_RESET:" + token);
+            redisService.delete(RedisKey.PASSWORD_RESET, token);
         } catch (Exception e) {
             log.error("Redis 삭제 실패", e);
         }

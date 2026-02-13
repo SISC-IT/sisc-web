@@ -50,7 +50,7 @@ public class AttendanceSessionController {
           - **`title`**: 세션 제목
           - **`description`**: 세션 설명
           - **`allowedMinutes`**: 체크인 허용 시간 (분)
-          - **`status`**: 세션 상태
+          - **`status`**: 세션 상태 (OPEN, CLOSED 등)
           
           ## 반환값 없음
           """

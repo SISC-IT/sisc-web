@@ -55,23 +55,10 @@ public class AttendanceService {
 
     LocalDateTime now = LocalDateTime.now();
 
-    String deviceId = request.deviceId();
-    if (deviceId == null || deviceId.isBlank()) {
-      log.error("Device ID 누락: userId={}", userId);
-      throw new CustomException(ErrorCode.DEVICE_ID_REQUIRED);
-    }
-
-    // 대리 출석 방지
-    if (attendanceRepository.existsByAttendanceRound_RoundIdAndDeviceId(round.getRoundId(), request.deviceId())) {
-      log.error("Device ID 중복 출석 시도: userId={}, deviceId={}", userId, request.deviceId());
-      throw new CustomException(ErrorCode.DEVICE_ALREADY_USED);
-    }
-
     Attendance att = Attendance.builder()
         .user(userRef)
         .attendanceRound(round)
         .attendanceStatus(decideLate(round, now) ? AttendanceStatus.LATE : AttendanceStatus.PRESENT)
-        .deviceId(request.deviceId())
         .checkedAt(now)
         .build();
 
@@ -129,7 +116,6 @@ public class AttendanceService {
           .attendanceRound(round)
           .attendanceStatus(newStatus)
           .note(reason)
-          .deviceId("ADMIN_UPDATE_" + UUID.randomUUID()) // 관리자 수정 출석은 임의의 디바이스 ID 사용
           .checkedAt(LocalDateTime.now())
           .build();
     } else {

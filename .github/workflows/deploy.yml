@@ -153,6 +153,8 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          echo "SBA_ADMIN_NAME=${{ secrets.SBA_ADMIN_NAME }}" >> .env
+          echo "SBA_ADMIN_PASSWORD=${{ secrets.SBA_ADMIN_PASSWORD }}" >> .env
           
           # 필요하다면 풀 사이즈 변수도 추가
           # echo "DB_POOL_MAX=30" >> .env

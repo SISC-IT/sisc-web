@@ -9,7 +9,6 @@ public class SecurityConstants {
             "/api/auth/reissue",
             "/api/user/password/reset/**",
             "/api/email/**",
-            "/actuator/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
@@ -37,4 +36,17 @@ public class SecurityConstants {
         //"/api/attendance/**"
 
     };
+
+  public static final String[] ADMIN_URLS = {
+      "/admin/**", "/actuator/**"
+  };
+
+  public static final String[] ADMIN_PUBLIC_URLS = {
+      "/admin/assets/**",
+      "/admin/login",
+      "/favicon.ico",
+      "/admin/favicon.ico",
+      "/actuator/health",
+      "/actuator/info"
+  };
 }

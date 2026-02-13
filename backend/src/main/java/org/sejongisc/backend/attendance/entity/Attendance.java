@@ -59,9 +59,6 @@ public class Attendance extends BasePostgresEntity {
   @Enumerated(EnumType.STRING)
   private AttendanceStatus attendanceStatus;
 
-  @Column(name = "device_id", nullable = false)
-  private String deviceId;
-
   @CreationTimestamp
   @Column(name = "checked_at")
   private LocalDateTime checkedAt;

@@ -12,7 +12,7 @@ services:
       - .env
     environment:
       - TZ=Asia/Seoul                   # 시간대 설정 : 컨테이너 내부 환경변수
-      - JAVA_OPTS=-Xmx350M -Xms200M     # 자바 힙 메모리를 실행시 200MB, 최대 350MB로 고정 (도커 제한 450MB 보다 작게)
+      - JAVA_OPTS=-Xmx350M -Xms200M     # 자바 힙 메모리를 실행시 200MB, 최대 350MB로 고정 (도커 제한보다 작게)
     volumes:
       - /etc/localtime:/etc/localtime:ro  # 시간대 설정 : 호스트의 시간 설정 파일 공유
       - /etc/timezone:/etc/timezone:ro
@@ -22,7 +22,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 450M     # 도커가 이 컨테이너에 줄 수 있는 최대 메모리
+          memory: 512M     # 도커가 이 컨테이너에 줄 수 있는 최대 메모리
   redis:
     image: redis:alpine  # 가벼운 alpine 버전 사용
     container_name: redis

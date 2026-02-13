@@ -64,6 +64,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .securityMatcher(request -> {
+              String requestUri = request.getRequestURI();
+              boolean isAdminRequest = requestUri.startsWith("/admin");
+              boolean isActuatorRequest = requestUri.startsWith("/actuator");
+              return !isAdminRequest && !isActuatorRequest;
+            })
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
