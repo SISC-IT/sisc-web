@@ -3,15 +3,33 @@ import { api } from './axios.js';
 const DEFAULT_ROLE = 'TEAM_MEMBER';
 
 export const signUp = async (
-  { nickname, email, password, phoneNumber },
+  {
+    studentName,
+    studentId,
+    email,
+    password,
+    phoneNumber,
+    gender,
+    college,
+    department,
+    generation,
+    teamName,
+    remark,
+  },
   signal
 ) => {
   const payload = {
-    name: nickname.trim(),
+    studentName: studentName.trim(),
+    studentId: studentId.trim(),
     email: email.trim(),
     password: password,
-    role: DEFAULT_ROLE,
     phoneNumber: phoneNumber.trim(),
+    gender: gender.trim(),
+    college: college.trim(),
+    department: department.trim(),
+    generation: generation.trim(),
+    teamName: teamName.trim(),
+    remark: remark,
   };
   const res = await api.post('/api/auth/signup', payload, { signal });
   return res.data;

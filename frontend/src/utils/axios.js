@@ -30,8 +30,6 @@ api.interceptors.response.use(
         return api(originRequest);
       } catch (refreshError) {
         console.error('Token refresh failed: ', refreshError);
-        // localStorage에서 토큰 제거 불필요 (쿠키는 백엔드에서 관리)
-        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

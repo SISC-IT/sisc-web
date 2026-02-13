@@ -4,8 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 const ProtectedRoute = () => {
   const { isLoggedIn, loading } = useAuth();
 
-  if (loading) return null; // 또는 로딩 스피너
-
+  if (loading) return <div>로딩 중...</div>;
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
