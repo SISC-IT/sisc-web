@@ -102,9 +102,12 @@ public class User extends BasePostgresEntity{
             this.point = 0;
         }
     }
-    public void updatePoint(int amount) {
-        this.point += amount;
+
+    // 로그인 가능 여부
+    public boolean canLogin() {
+        return this.status != UserStatus.OUT;
     }
+
 
     public static User createUserWithSignupAndPending(SignupRequest request, String encodedPw) {
         return User.builder()
