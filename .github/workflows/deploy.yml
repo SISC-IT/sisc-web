@@ -151,6 +151,8 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
               
           # 3. 기타 Secrets
+          echo "DEV_FRONTEND_URL=${{ secrets.DEV_FRONTEND_URL }}" >> .env
+          echo "PROD_FRONTEND_URL=${{ secrets.PROD_FRONTEND_URL }}" >> .env       
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env

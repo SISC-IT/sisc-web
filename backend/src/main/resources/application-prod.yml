@@ -4,6 +4,10 @@ jwt:
     accessToken: 3600000
     refreshToken: 1209600000
 
+app:
+  dev-frontend-url: ${DEV_FRONTEND_URL}
+  prod-frontend-url: ${PROD_FRONTEND_URL}
+
 email:
   code:
     charset: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
