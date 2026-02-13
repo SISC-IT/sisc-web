@@ -31,9 +31,10 @@ public class AdminUserController {
     @Operation(
         summary = "엑셀 명단 업로드 및 동기화",
         description = """
-        • .xlsx 형식만 업로드 가능합니다.\s
-        • 학번 기준으로 회원을 생성하거나 기존 정보를 갱신합니다.\s
-        • 신규 회원의 초기 비밀번호는 전화번호 숫자만(예: 01012345678)으로 설정됩니다.\s
+        엑셀 파일을 업로드하여 신규 회원을 등록하고, 기존 회원의 기수/직위를 갱신합니다. (회장/관리자용)
+        - .xlsx 형식만 업로드 가능합니다. \s
+        - 학번 기준으로 회원을 생성하거나 기존 정보를 갱신합니다. \s
+        - 신규 회원의 초기 비밀번호는 전화번호 숫자만(예: 01012345678)으로 설정됩니다.
         """
     )
     @PostMapping(value = "/upload-excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -45,9 +46,11 @@ public class AdminUserController {
     @Operation(
         summary = "전체 회원 목록 조회",
         description = """
-        • 키워드, 기수, 권한(Role), 활동 상태(UserStatus) 조건으로 필터 조회합니다.\s
-        • 키워드는 이름, 학번, 이메일 기준으로 검색됩니다.\s
-        • 조건 미입력 시 전체 조회됩니다.
+        모든 회원의 정보를 조회합니다. (시스템 관리자용)
+        - 키워드, 기수, 권한(Role), 활동 상태(UserStatus) 조건으로 필터 조회합니다. \s
+        - 키워드는 이름, 학번, 이메일 기준으로 검색됩니다. \s
+        - 조건 미입력 시 전체 조회됩니다. \s
+        - 정렬 기준: 기수 최신순 → 이름 오름차순
         """
     )
     @GetMapping
@@ -57,7 +60,7 @@ public class AdminUserController {
         return ResponseEntity.ok(adminUserService.findAllUsers(request));
     }
 
-    @Operation(summary = "회원 활동 상태 변경", description = "ACTIVE, INACTIVE, GRADUATED 등으로 상태를 변경합니다.")
+    @Operation(summary = "회원 활동 상태 변경", description = "ACTIVE, INACTIVE, GRADUATED 등으로 상태를 변경합니다. (시스템 관리자용)")
     @PatchMapping("/{userId}/status")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'MANAGER')")
     public ResponseEntity<?> updateUserStatus(
