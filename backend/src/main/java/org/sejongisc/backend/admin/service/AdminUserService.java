@@ -13,7 +13,7 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.entity.AccountType;
 import org.sejongisc.backend.user.entity.*;
-import org.sejongisc.backend.user.repository.UserRepository;
+import org.sejongisc.backend.user.service.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,9 +25,9 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class AdminUserService {
-    private final UserRepository userRepository;
     private final AdminUserRepository adminUserRepository;
     private final AdminUserSyncService adminUserSyncService;
+    private final UserService userService;
     private final DataFormatter formatter = new DataFormatter();
 
     /**
@@ -83,8 +83,7 @@ public class AdminUserService {
      */
     @Transactional
     public void updateUserStatus(UUID userId, UserStatus status) {
-        User user = findUser(userId);
-        user.setStatus(status);
+        userService.updateUserStatus(userId, status);
     }
 
     /**
@@ -92,8 +91,7 @@ public class AdminUserService {
      */
     @Transactional
     public void updateUserRole(UUID userId, Role role) {
-        User user = findUser(userId);
-        user.setRole(role);
+        userService.updateUserRole(userId, role);
     }
 
     /**
@@ -101,21 +99,16 @@ public class AdminUserService {
      */
     @Transactional
     public void promoteToSenior(UUID userId) {
-        User user = findUser(userId);
-
-        // grade 및 status 변경
-        user.setGrade(Grade.SENIOR);
-        user.setStatus(UserStatus.GRADUATED);
-
-        log.info("선배 등급 전환 완료: userId={}, 학번={}", userId, user.getStudentId());
+        userService.promoteToSenior(userId);
     }
 
     /**
-     * 사용자 계정 삭제
+     * 사용자 계정 삭제 (soft delete)
      */
     @Transactional
     public void deleteUser(UUID userId) {
-        userRepository.deleteById(userId);
+        userService.deleteUserSoftDelete(userId);
+        log.info("관리자에 의한 강제 탈퇴 완료: userId={}", userId);
     }
 
     /**
@@ -165,13 +158,5 @@ public class AdminUserService {
             .position(getCellValue(row, 9))
             .gender(getCellValue(row, 10))
             .build();
-    }
-
-    /**
-     * userId를 통한 사용자 조회
-     */
-    private User findUser(UUID userId) {
-        return userRepository.findById(userId)
-            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }
