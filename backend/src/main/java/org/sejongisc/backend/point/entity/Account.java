@@ -16,6 +16,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Table(
+    name = "account",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_account_owner_type", columnNames = {"owner_id", "type"})
+    }
+)
 public class Account extends BasePostgresEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
