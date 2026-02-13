@@ -213,7 +213,7 @@ const SignUpForm = () => {
               id="studentName"
               value={studentName}
               onChange={(e) => setStudentName(e.target.value)}
-              placeholder="학번을 입력해주세요"
+              placeholder="이름을 입력해주세요"
             />
           </div>
           <div className={styles.inputGroup}>
