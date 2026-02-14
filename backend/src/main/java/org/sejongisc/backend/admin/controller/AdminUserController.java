@@ -54,7 +54,7 @@ public class AdminUserController {
         """
     )
     @GetMapping
-    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'MANAGER')") // TODO: 현재 MANAGER role은 존재하지 않음. 변경 필요
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN')")
     public ResponseEntity<List<AdminUserResponse>> getAllUsers(@ModelAttribute AdminUserRequest request) {
         // TODO: 페이징 추후 고려
         return ResponseEntity.ok(adminUserService.findAllUsers(request));
@@ -62,7 +62,7 @@ public class AdminUserController {
 
     @Operation(summary = "회원 활동 상태 변경", description = "ACTIVE, INACTIVE, GRADUATED 등으로 상태를 변경합니다. (시스템 관리자용)")
     @PatchMapping("/{userId}/status")
-    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN')")
     public ResponseEntity<?> updateUserStatus(
             @PathVariable UUID userId,
             @RequestParam UserStatus status) {
