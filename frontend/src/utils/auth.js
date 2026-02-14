@@ -31,7 +31,7 @@ export const signUp = async (
     teamName: teamName.trim(),
     remark: remark,
   };
-  const res = await api.post('/api/auth/signup', payload, { signal });
+  const res = await api.post('/api/user/signup', payload, { signal });
   return res.data;
 };
 
