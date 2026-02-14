@@ -312,8 +312,8 @@ const SignUpForm = () => {
                 type="radio"
                 id="male"
                 name="gender"
-                value="male"
-                checked={gender === 'male'}
+                value="MALE" // 소문자 'male' -> 대문자 'MALE'
+                checked={gender === 'MALE'}
                 onChange={(e) => setGender(e.target.value)}
               />
               <label htmlFor="male">남성</label>
@@ -322,8 +322,8 @@ const SignUpForm = () => {
                 type="radio"
                 id="female"
                 name="gender"
-                value="female"
-                checked={gender === 'female'}
+                value="FEMALE" // 소문자 'female' -> 대문자 'FEMALE'
+                checked={gender === 'FEMALE'}
                 onChange={(e) => setGender(e.target.value)}
               />
               <label htmlFor="female">여성</label>
