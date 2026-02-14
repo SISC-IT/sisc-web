@@ -60,7 +60,8 @@ public class EmailService {
   public void sendEmail(@Email String email) {
 
     if (redisService.hasKey(RedisKey.EMAIL_VERIFIED, email)) {
-      throw new CustomException(ErrorCode.EMAIL_ALREADY_VERIFIED);
+      redisService.delete(RedisKey.EMAIL_VERIFIED, email);
+      //throw new CustomException(ErrorCode.EMAIL_ALREADY_VERIFIED);
     }
 
     // 이메일 형식 검증
