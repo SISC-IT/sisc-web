@@ -43,8 +43,12 @@ public interface AdminUserRepository extends JpaRepository<User, UUID> {
         WHERE
             (:keyword IS NULL OR
                 u.name LIKE %:keyword% OR
-                u.studentId LIKE %:keyword% OR
-                u.email LIKE %:keyword%)
+                u.email LIKE %:keyword% OR
+                (:numericKeyword IS NOT NULL AND (
+                    u.studentId LIKE %:numericKeyword% OR
+                    u.phoneNumber LIKE %:numericKeyword%
+                ))
+            )
             AND (:generation IS NULL OR u.generation = :generation)
             AND (:role IS NULL OR u.role = :role)
             AND (:status IS NULL OR u.status = :status)
@@ -52,6 +56,7 @@ public interface AdminUserRepository extends JpaRepository<User, UUID> {
         """)
     List<AdminUserResponse> findAllByAdminFilter(
         @Param("keyword") String keyword,
+        @Param("numericKeyword") String numericKeyword,
         @Param("generation") Integer generation,
         @Param("role") Role role,
         @Param("status") UserStatus status,

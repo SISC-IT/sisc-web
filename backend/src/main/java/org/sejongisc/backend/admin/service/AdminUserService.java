@@ -74,8 +74,16 @@ public class AdminUserService {
      */
     @Transactional(readOnly = true)
     public List<AdminUserResponse> findAllUsers(AdminUserRequest request) {
+        String keyword = request.keyword();
+        String numericKeyword = null;
+        if (keyword != null && !keyword.isEmpty()) {
+            // 학번 및 전화번호 검색을 위해 숫자만 남긴 키워드
+            numericKeyword = keyword.replaceAll("[^0-9]", "");
+            if (numericKeyword.isEmpty()) numericKeyword = null;
+        }
+
         return adminUserRepository.findAllByAdminFilter(
-            request.keyword(), request.generation(), request.role(), request.status(), AccountType.USER
+            keyword, numericKeyword, request.generation(), request.role(), request.status(), AccountType.USER
         );
     }
 
