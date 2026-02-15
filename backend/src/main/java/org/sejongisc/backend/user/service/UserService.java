@@ -18,6 +18,8 @@ import org.sejongisc.backend.point.entity.TransactionReason;
 import org.sejongisc.backend.point.service.AccountService;
 import org.sejongisc.backend.point.service.PointLedgerService;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
+import org.sejongisc.backend.user.entity.Grade;
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
@@ -140,11 +142,42 @@ public class UserService {
         refreshTokenService.deleteByUserId(user.getUserId());
     }
 
+    @Transactional(readOnly = true)
     public List<User> findAllUsersMissingAccount() {
         return userRepository.findAllUsersMissingAccount();
     }
 
+    @Transactional
+    public void updateUserStatus(UUID userId, UserStatus status) {
+        User user = findUser(userId);
+        user.setStatus(status);
+        log.info("사용자 상태 변경 완료: userId={}", userId);
+    }
+
+    @Transactional
+    public void updateUserRole(UUID userId, Role role) {
+        User user = findUser(userId);
+        user.setRole(role);
+        log.info("사용자 권한 변경 완료: userId={}", userId);
+    }
+
+    @Transactional
+    public void promoteToSenior(UUID userId) {
+        User user = findUser(userId);
+
+        // grade 및 status 변경
+        user.setGrade(Grade.SENIOR);
+        user.setStatus(UserStatus.GRADUATED);
+
+        log.info("선배 등급 전환 완료: userId={}, 학번={}", userId, user.getStudentId());
+    }
+
     // --- 내부 헬퍼 메서드 ---
+
+    private User findUser(UUID userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
 
     private String validateNotBlank(String value, String fieldName) {
         if (value == null || value.trim().isEmpty()) {
