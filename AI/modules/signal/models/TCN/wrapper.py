@@ -1,56 +1,66 @@
 # AI/modules/signal/models/TCN/wrapper.py
 import torch
+import torch.nn as nn
 import numpy as np
-import pandas as pd
-from AI.modules.signal.core.base_model import BaseSignalModel
+from typing import Optional, Dict, Any
+from ...core.base_model import BaseSignalModel
+
+# (간단한 TCN 아키텍처 내부 클래스 혹은 별도 파일 import)
+class SimpleTCN(nn.Module):
+    def __init__(self, input_size, output_size, num_channels, kernel_size, dropout):
+        super(SimpleTCN, self).__init__()
+        # 예시: 1D Conv 레이어 스택
+        self.net = nn.Sequential(
+            nn.Conv1d(input_size, num_channels[0], kernel_size, padding=(kernel_size-1)//2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.AdaptiveAvgPool1d(1), # Global Pooling
+            nn.Flatten(),
+            nn.Linear(num_channels[0], output_size)
+        )
+    def forward(self, x):
+        # x: [Batch, Seq, Feat] -> [Batch, Feat, Seq] (Conv1d 입력)
+        x = x.permute(0, 2, 1)
+        return self.net(x)
 
 class TCNWrapper(BaseSignalModel):
     """
-    TCN 모델 Wrapper: 단기 패턴 및 전환점 포착 엔진 [명세서 3번 준수]
+    [TCN 구현체] BaseSignalModel 인터페이스 준수
+    - 용도: 단기 패턴 포착 (Local Pattern)
     """
-    def __init__(self, model_path=None, config=None):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.model_name = "TCN_Local_Pattern"
-        # 명세서에 정의된 핵심 및 보조 입력 키 정의
-        self.feature_cols = [
-            'log_return', 'vol_change', 'rsi_14', 'macd_ratio', 
-            'bollinger_ub', 'bollinger_lb', 'days_to_earnings',
-            'vix_change_rate', 'sector_return_rel'
-        ]
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model = None
 
-    def preprocess(self, df: pd.DataFrame):
-        """
-        TCN 입력을 위한 데이터 추출 및 텐서 변환 [명세서 4번 데이터 검증 준수]
-        """
-        # 1. 명세서 키 기반 피처 추출
-        data = df[self.feature_cols].values
-        
-        # 2. 결측치 처리 (명세서 규칙: 텐서 생성 시점 NaN 제거)
-        data = np.nan_to_num(data, nan=0.0)
-        
-        # 3. 3D 텐서 변환 [Batch, Seq, Features]
-        # TCN은 국소 패턴을 보므로 상대적으로 짧은 Lookback 사용 (예: 30일)
-        seq_len = self.config.get('seq_len', 30)
-        if len(data) < seq_len:
-            return None
-            
-        x = data[-seq_len:].reshape(1, seq_len, len(self.feature_cols))
-        return torch.FloatTensor(x)
+    def build(self, input_shape: tuple):
+        # input_shape: (seq_len, num_features)
+        self.model = SimpleTCN(
+            input_size=input_shape[1], # features
+            output_size=1, # binary classification
+            num_channels=[self.config.get('hidden_dim', 64)],
+            kernel_size=self.config.get('kernel_size', 3),
+            dropout=self.config.get('dropout', 0.2)
+        ).to(self.device)
 
-    def predict(self, df: pd.DataFrame):
-        """
-        TCN 시그널(signal_tcn) 생성
-        """
-        x = self.preprocess(df)
-        if x is None:
-            return 0.0
-            
+    def train(self, X_train: np.ndarray, y_train: np.ndarray, **kwargs):
+        if self.model is None: self.build(X_train.shape[1:])
+        # (PatchTST와 유사한 학습 루프 - 생략 또는 공통화 가능)
+        pass 
+
+    def predict(self, X_input: np.ndarray) -> np.ndarray:
+        if self.model is None: raise Exception("Model not built")
         self.model.eval()
         with torch.no_grad():
-            # 모델 출력은 Trader 표준 스키마인 prob_up으로 어댑팅됨
-            output = self.model(x)
-            signal_tcn = torch.sigmoid(output).item()
-            
-        return signal_tcn
+            tensor_x = torch.FloatTensor(X_input).to(self.device)
+            out = self.model(tensor_x)
+            return torch.sigmoid(out).cpu().numpy()
 
-# 주석: TCN은 시장 전체의 흐름보다 개별 시계열의 기술적 패턴에 집중하여 signal_tcn을 산출합니다.
+    def save(self, filepath: str):
+        torch.save(self.model.state_dict(), filepath)
+
+    def load(self, filepath: str):
+        # 빌드 후 로드
+        if self.model is None:
+             self.build((self.config.get('seq_len', 30), self.config.get('enc_in', 7)))
+        self.model.load_state_dict(torch.load(filepath, map_location=self.device))
