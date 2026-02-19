@@ -21,7 +21,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/users")
-@Tag(name = "관리자 API", description = "운영진 및 개발자용 회원 관리 API")
+@Tag(name = "00. 관리자 회원관리 API", description = "운영진 및 개발자용 회원 관리 API")
 public class AdminUserController {
 
     private final AdminUserService adminUserService;

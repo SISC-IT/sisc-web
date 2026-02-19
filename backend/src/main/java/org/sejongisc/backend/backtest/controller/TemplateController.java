@@ -18,8 +18,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/backtest/templates")
 @Tag(
-    name = "템플릿 API",
-    description = "백테스트 템플릿 관련 API 제공"
+    name = "06. 백테스팅 템플릿 API",
+    description = "백테스트 템플릿(폴더 역할) 관련 API 제공"
 )
 public class TemplateController {
   private final TemplateService templateService;
