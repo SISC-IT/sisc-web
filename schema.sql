@@ -20,6 +20,8 @@ CREATE TABLE "price_data" (
     "open" numeric(38, 2),             -- 당일 시가
     "volume" bigint,                   -- 일일 거래량 (주식 수)
     "ticker" varchar(255),             -- 종목 티커 심볼
+    "per" numeric(18, 6),              -- 주가수익비율 (PER)
+    "pbr" numeric(18, 6),              -- 주가순자산비율 (PBR)
     "amount" numeric(38, 2),           -- 일일 거래대금
     CONSTRAINT "price_data_pkey" PRIMARY KEY("date", "ticker")
 );
@@ -90,8 +92,6 @@ CREATE TABLE "company_fundamentals" (
     "total_liabilities" numeric(30, 6),-- 총부채
     "equity" numeric(30, 6),           -- 자본총계
     "eps" numeric(18, 6),              -- 주당순이익 (EPS)
-    "per" numeric(18, 6),              -- 주가수익비율 (PER)
-    "pbr" numeric(18, 6),              -- 주가순자산비율 (PBR)
     "roe" numeric(18, 6),              -- 자기자본이익률 (ROE)
     "debt_ratio" numeric(18, 6),       -- 부채비율
     "operating_cash_flow" numeric(30, 6), -- 영업활동현금흐름
@@ -201,7 +201,30 @@ CREATE TABLE "portfolio_summary" (
 );
 
 ----------------------------------------------------------------------
--- 10. stock_info / company_names
+-- 10. portfolio_positions
+--    - 특정 run_id(백테스트/실거래 실행 회차) 기준으로
+--      날짜별 종목 포지션 스냅샷을 저장
+--    - portfolio_summary(일자별 총자산)와 함께 일별 상태 재현/검증 가능
+----------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS "portfolio_positions" (
+    "run_id" varchar(64) NOT NULL,          -- 백테스트/실행 회차 ID
+    "date" date NOT NULL,                   -- 스냅샷 기준 날짜
+    "ticker" varchar(255) NOT NULL,         -- 종목 티커
+
+    "position_qty" integer NOT NULL,        -- 보유 수량
+    "avg_price" numeric(38, 6) NOT NULL,    -- 평균 매입가
+    "current_price" numeric(38, 6) NOT NULL,-- 기준일 종가/평가 단가
+
+    "market_value" numeric(20, 6) NOT NULL, -- 평가금액
+    "pnl_unrealized" numeric(20, 6) NOT NULL,-- 미실현 손익
+    "pnl_realized_cum" numeric(20, 6) NOT NULL, -- 누적 실현 손익(해당 종목)
+
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL -- 기록 시각
+);
+
+----------------------------------------------------------------------
+-- 11. stock_info / company_names
 --    - 종목의 기본 정보 및 메타데이터 관리
 ----------------------------------------------------------------------
 CREATE TABLE "company_names" (
@@ -218,7 +241,7 @@ CREATE TABLE "stock_info" (
 );
 
 ----------------------------------------------------------------------
--- 11. event_calendar
+-- 12. event_calendar
 --    - 주요 경제 일정(FOMC, CPI, GDP) 및 기업 실적 발표일 저장
 --    - AI 모델의 'Event' 피처(D-Day 계산 등)를 위한 원천 데이터
 ----------------------------------------------------------------------
@@ -238,7 +261,7 @@ CREATE TABLE IF NOT EXISTS "event_calendar" (
 );
 
 ----------------------------------------------------------------------
--- 12. sector_returns
+-- 13. sector_returns
 --    - stock_info의 'sector'와 매핑되는 ETF의 일별 수익률 저장
 --    - Wide Format이 아닌 Long Format (Date, Sector) 구조
 ----------------------------------------------------------------------
@@ -255,7 +278,7 @@ CREATE TABLE IF NOT EXISTS "sector_returns" (
 );
 
 ----------------------------------------------------------------------
--- 13. neon_auth.users_sync
+-- 14. neon_auth.users_sync
 --    - 인증 서비스(Neon/Clerk 등)와 동기화된 사용자 데이터 정보
 ----------------------------------------------------------------------
 CREATE TABLE "neon_auth"."users_sync" (

@@ -130,9 +130,8 @@ class FundamentalsDataCollector:
         cursor = conn.cursor()
 
         try:
-            # [SQL 수정] interest_coverage 컬럼 추가
             insert_query = """
-                INSERT INTO public.financial_statements (
+                INSERT INTO public.company_fundamentals (
                     ticker, date, revenue, net_income, total_assets, 
                     total_liabilities, equity, shares_issued, eps, roe, debt_ratio, 
                     interest_coverage, operating_cash_flow
@@ -155,7 +154,7 @@ class FundamentalsDataCollector:
             
             execute_values(cursor, insert_query, data)
             conn.commit()
-            print(f"   [{ticker}] {len(data)}건 펀더멘털 데이터(이자보상배율 포함) 저장 완료.")
+            print(f"   [{ticker}] {len(data)}건 펀더멘털 데이터 저장 완료.")
             
         except Exception as e:
             conn.rollback()

@@ -89,7 +89,7 @@ class MarketDataCollector:
                 # 가장 최근 확정 실적 조회
                 query = """
                     SELECT equity, shares_issued, eps 
-                    FROM public.financial_statements 
+                    FROM public.company_fundamentals
                     WHERE ticker = %s 
                     ORDER BY date DESC LIMIT 1
                 """
