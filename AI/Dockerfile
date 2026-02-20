@@ -1,17 +1,16 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# 1. requirements 설치 (컨텍스트 = AI 이므로, AI/requirements.txt 기준)
+# 1. 라이브러리 설치
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 2. AI 디렉토리 내용물을 /app 루트에 그대로 복사
-#    => /app/libs/core/pipeline.py 이런 구조가 됨
+# 2. 소스 코드 복사
 COPY . /app
 
-# 3. 파이썬 모듈 검색 경로에 /app 추가
+# 3. 환경 변수 설정
 ENV PYTHONPATH=/app
 
-# 4. libs.core.pipeline 모듈을 "패키지로" 실행
-CMD ["python", "-m", "libs.core.pipeline"]
+# 4. 실행 명령어 (데이터 수집 -> 분석 루틴 순차 실행)
+CMD ["/bin/sh", "-c", "python modules/data_collector/run.py && python pipelines/daily_routine.py"]

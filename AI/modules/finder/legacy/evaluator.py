@@ -18,7 +18,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.libs.database.fetcher import fetch_price_data
-from AI.modules.signal.core.features import add_technical_indicators
+from AI.modules.features.legacy.technical_features import add_technical_indicators
 
 def evaluate_ticker(ticker: str) -> Dict[str, float]:
     """

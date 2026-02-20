@@ -23,9 +23,10 @@ from AI.modules.signal.models import get_model
 from AI.modules.trader.strategies.rule_based import decide_order
 from AI.modules.trader.strategies.portfolio_logic import calculate_portfolio_allocation
 from AI.modules.analysis.generator import ReportGenerator
-from AI.modules.collector.market_data import update_market_data
 from AI.libs.database.repository import save_executions_to_db, save_reports_to_db, get_current_position
 from AI.modules.signal.core.data_loader import DataLoader 
+
+#현재는 시뮬레이션 코드만 작성되어 있지만, 실제 운영에서는 API 연동 부분을 추가 예정. 이때문에 mode 인자를 받아 시뮬레이션과 라이브 모드를 구분할 수 있도록 설계함. 또한, XAI 리포트 생성 여부도 옵션으로 조정 가능하도록 함.
 
 def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xai: bool = True):
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -68,13 +69,6 @@ def run_daily_pipeline(target_tickers: list, mode: str = "simulation", enable_xa
             xai_generator = ReportGenerator(use_gpu_llm=True)
         except:
             print("⚠️ XAI 초기화 실패. 리포트 생성 건너뜀.")
-
-    # 2. 데이터 수집 및 준비
-    print("1. 시장 데이터 업데이트 중...")
-    try:
-        update_market_data(target_tickers)
-    except Exception as e:
-        print(f"⚠️ 데이터 업데이트 오류 (기존 데이터 사용): {e}")
 
     # 모든 종목의 데이터 로드 (strategy_core에 넘기기 위함)
     loader = DataLoader(sequence_length=60)
