@@ -93,6 +93,13 @@ public enum ErrorCode {
   DUPLICATE_PHONE(HttpStatus.CONFLICT, "이미 사용 중인 전화번호입니다."),
   DUPLICATE_USER(HttpStatus.CONFLICT, "이미 가입된 사용자입니다."),
   INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
+  USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 회원은 로그인할 수 없습니다."),
+
+  // EXCEL
+
+  INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다. .xlsx 파일을 업로드해주세요."),
+  INVALID_EXCEL_STRUCTURE(HttpStatus.UNPROCESSABLE_ENTITY, "엑셀 양식이 일치하지 않습니다. 필수 컬럼을 확인해주세요."),
+  EMPTY_FILE(HttpStatus.BAD_REQUEST, "업로드된 파일이 비어있습니다."),
 
 
 

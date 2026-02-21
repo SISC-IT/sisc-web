@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 백엔드 (Spring Boot)
+  api:
+    image: ghcr.io/sisc-it/sisc-web-back:${TAG:-latest} # TAG 변수가 없으면 latest 사용
+    container_name: api
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Seoul                   # 시간대 설정 : 컨테이너 내부 환경변수
+      - JAVA_OPTS=-Xmx350M -Xms200M     # 자바 힙 메모리를 실행시 200MB, 최대 350MB로 고정 (도커 제한보다 작게)
+    volumes:
+      - /etc/localtime:/etc/localtime:ro  # 시간대 설정 : 호스트의 시간 설정 파일 공유
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - sisc-net
+    # 1GB 램 서버 생존을 위한 메모리 제한 (Docker 레벨)
+    deploy:
+      resources:
+        limits:
+          memory: 512M     # 도커가 이 컨테이너에 줄 수 있는 최대 메모리
+  redis:
+    image: redis:alpine  # 가벼운 alpine 버전 사용
+    container_name: redis
+    restart: always
+    networks:
+      - sisc-net
+    deploy:
+      resources:
+        limits:
+          memory: 100M   # 100MB면 토큰 저장용으로 충분
+
+  # 프론트엔드 (React + Nginx)
+  web:
+    image: ghcr.io/sisc-it/sisc-web-front:${TAG:-latest}
+    container_name: web
+    restart: always
+    ports:
+      - "80:80"     # HTTP
+      # - "443:443" # HTTPS (인증서 설정 필요 시 주석 해제)
+    networks:
+      - sisc-net
+
+  # 3. AI (deploy.yml 설정으로 개발서버에는 실행 안됨)
+  ai:
+    image: ghcr.io/sisc-it/sisc-web-ai:${TAG:-latest}
+    container_name: ai
+    restart: always
+    ports:
+      - "5000:5000"
+    networks:
+      - sisc-net
+    deploy:
+      resources:
+        limits:
+          memory: 450M     # 도커가 이 컨테이너에 줄 수 있는 최대 메모리
+networks:
+  sisc-net:
+    driver: bridge

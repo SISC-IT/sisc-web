@@ -25,7 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @RequestMapping("/api/user")
 @Slf4j
-@Tag(name = "사용자 API", description = "회원 정보 조회 및 수정 관련 API")
+@Tag(name = "03. 사용자 API", description = "회원 정보 조회 및 수정 관련 API")
 public class UserController {
 
   private final UserService userService;

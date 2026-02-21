@@ -21,7 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/backtest")
 @Tag(
-    name = "백테스팅 API",
+    name = "05. 백테스팅 API",
     description = "백테스팅 관련 API 제공"
 )
 @RequiredArgsConstructor

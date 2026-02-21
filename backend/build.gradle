@@ -95,6 +95,9 @@ dependencies {
 
 	// Thymleaf
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    // Apache POI (Excel)
+    implementation 'org.apache.poi:poi-ooxml:5.5.1'
 }
 
 jacoco {

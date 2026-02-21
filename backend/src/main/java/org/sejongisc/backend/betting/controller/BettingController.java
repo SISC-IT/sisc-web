@@ -26,7 +26,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Validated
 @RequestMapping("/api")
-@Tag(name = "Betting API", description = "베팅 관련 기능을 제공합니다.")
+@Tag(name = "04. Betting API", description = "베팅 관련 기능을 제공합니다.")
 public class BettingController {
 
     private final BettingService bettingService;

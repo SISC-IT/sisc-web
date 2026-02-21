@@ -1,0 +1,94 @@
+jwt:
+  secret: ${JWT_SECRET}
+  expireDate:
+    accessToken: 3600000
+    refreshToken: 1209600000
+
+app:
+  dev-frontend-url: ${DEV_FRONTEND_URL}
+  prod-frontend-url: ${PROD_FRONTEND_URL}
+
+email:
+  code:
+    charset: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    length: 6
+  key-prefix:
+    verify: "EMAIL_VERIFY:"
+    reset: "PASSWORD_RESET:"
+  code-expire: 180
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  application:
+    name: Sejong-ISC-Backend
+
+
+  # 메인 DB (Postgres) - 도커가 주입해주는 환경변수 사용
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}           # .env의 DB_URL 값
+    username: ${DB_USERNAME} # .env의 DB_USERNAME 값
+    password: ${DB_PASSWORD} # .env의 DB_PASSWORD 값
+    hikari:
+      pool-name: HikariPool
+      maximum-pool-size: ${DB_POOL_MAX:4} # t2.micro니까 커넥션 풀 작게 유지
+      minimum-idle: 2
+
+
+  stock:
+    datasource:
+      driver-class-name: org.postgresql.Driver
+      url: ${DB_URL}           # .env의 DB_URL 값
+      username: ${DB_USERNAME} # .env의 DB_USERNAME 값
+      password: ${DB_PASSWORD} # .env의 DB_PASSWORD 값
+      default_schema: public
+      hikari:
+        pool-name: StockHikariPool
+        maximum-pool-size: ${STOCK_POOL_MAX:2}   # 커넥션 풀 작게 유지
+        minimum-idle: 1
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+  security:
+    user:
+      name: ${SBA_ADMIN_NAME}
+      password: ${SBA_ADMIN_PASSWORD}
+
+  boot:
+    admin:
+      context-path: /admin
+      client:
+        url: "http://localhost:8080/admin"
+        username: ${SBA_ADMIN_NAME}
+        password: ${SBA_ADMIN_PASSWORD}
+
+        instance:
+          name: sisc-backend
+          service-base-url: "http://localhost:8080"
+          management-base-url: "http://localhost:8080"
+          metadata:
+            user:
+              name: ${SBA_ADMIN_NAME}
+              password: ${SBA_ADMIN_PASSWORD}

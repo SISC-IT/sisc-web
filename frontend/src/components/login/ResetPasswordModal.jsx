@@ -1,62 +1,73 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import styles from '../VerificationModal.module.css';
 import { toast } from 'react-toastify';
+import { resetPassword } from '../../utils/auth';
 
 const ResetPasswordModal = ({ onClose }) => {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      toast.error('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    if (password.length < 8) {
-      toast.error('비밀번호는 8자 이상이어야 합니다.');
-      return;
-    }
-    console.log('비밀번호 재설정 API 호출');
-    toast.success('비밀번호가 변경되었습니다.');
-    onClose(); // 부모에게 성공 알림
+  // 이메일 형식 검증 함수
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
-  const isPasswordValid = password == confirmPassword && password.length >= 8;
+  const abortRef = useRef(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    if (!isValidEmail(email)) {
+      toast.error('이메일 형식이 올바르지 않습니다.');
+      return;
+    }
+    try {
+      await resetPassword({ email }, abortRef.current.signal);
+      toast.success('비밀번호 재설정 메일을 전송했습니다.');
+      onClose();
+    } catch (err) {
+      console.dir(err);
+      toast.error(
+        '비밀번호 재설정 메일 전송에 실패했습니다. 다시 시도해주세요.'
+      );
+    }
+  };
 
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
-        <h1>비밀번호 재설정</h1>
+        <div className={styles.modalHeader}>
+          <h1>비밀번호 초기화</h1>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+          >
+            &times;
+          </button>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
-            <label htmlFor="new-password">새 비밀번호</label>
+            <label htmlFor="email-address">
+              등록하신 이메일 주소를 입력해주세요
+            </label>
             <input
-              type="password"
-              id="new-password"
-              className={`${styles.codeInput} ${styles.newPassword}`}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="8자 이상 입력"
-            />
-          </div>
-          <div className={styles.inputGroup}>
-            <label htmlFor="confirm-password">새 비밀번호 확인</label>
-            <input
-              type="password"
-              id="confirm-password"
-              className={`${styles.codeInput} ${styles.newPassword}`}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="비밀번호를 다시 입력하세요"
+              type="email"
+              id="email-address"
+              className={`${styles.codeInput}`}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className={styles.buttonGroup}>
             <button
               type="submit"
               className={`${styles.button} ${styles.resetPasswordButton}`}
-              disabled={!isPasswordValid}
+              disabled={!isValidEmail(email)}
             >
-              비밀번호 재설정
+              제출
             </button>
           </div>
         </form>
