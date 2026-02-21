@@ -120,8 +120,8 @@ public class UserController {
         - 성공 메시지 (`비밀번호가 변경되었습니다.`)
         """)
   @PostMapping("/password/reset/confirm")
-  public ResponseEntity<?> confirmReset(@RequestParam String code, @RequestParam String newPassword ,@RequestBody @Valid PasswordResetSendRequest req){
-    userService.resetPasswordByCode(code, newPassword,req);
+  public ResponseEntity<?> confirmReset(@RequestBody @Valid PasswordResetConfirmRequest req){
+    userService.resetPasswordByCode(req);
     return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
   }
 }

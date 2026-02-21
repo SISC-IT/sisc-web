@@ -133,6 +133,9 @@ public class EmailService {
 
     String code = generateCode();
     String key = emailProperties.getKeyPrefix().getReset() + email;
+    if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+      redisTemplate.delete(key);
+    }
     redisTemplate.opsForValue().set(key, code, emailProperties.getCodeExpire());
 
 

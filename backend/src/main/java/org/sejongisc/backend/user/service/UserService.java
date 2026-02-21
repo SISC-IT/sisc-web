@@ -16,6 +16,7 @@ import org.sejongisc.backend.point.entity.AccountName;
 import org.sejongisc.backend.point.entity.TransactionReason;
 import org.sejongisc.backend.point.service.AccountService;
 import org.sejongisc.backend.point.service.PointLedgerService;
+import org.sejongisc.backend.user.dto.PasswordResetConfirmRequest;
 import org.sejongisc.backend.user.dto.PasswordResetSendRequest;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.User;
@@ -113,11 +114,11 @@ public class UserService {
     }
 
     @Transactional
-    public void resetPasswordByCode(String resetCode, String newPassword, PasswordResetSendRequest req) {
+    public void resetPasswordByCode(PasswordResetConfirmRequest req) {
 
         String email = validateNotBlank(req.email(), "이메일").trim();
         String studentId = validateNotBlank(req.studentId(), "학번").trim();
-        String inputCode = validateNotBlank(resetCode, "인증코드").trim();
+        String inputCode = validateNotBlank(req.code(), "인증코드").trim();
 
         // 사용자 조회 (이메일+학번 같이 확인하는 게 안전)
         User user = userRepository.findByEmailAndStudentId(email, studentId)
@@ -128,11 +129,7 @@ public class UserService {
         // Redis에서 인증코드 조회
         String redisKey = emailProperties.getKeyPrefix().getReset() + email;
 
-        Long ttl = redisTemplate.getExpire(redisKey, java.util.concurrent.TimeUnit.SECONDS);
         String savedCode = redisTemplate.opsForValue().get(redisKey);
-
-        log.info("RESET CODE CHECK key={}, inputCode={}, savedCode={}, ttlSec={}",
-            redisKey, inputCode, savedCode, ttl);
 
 
 
@@ -140,14 +137,12 @@ public class UserService {
             throw new CustomException(ErrorCode.RESET_CODE_EXPIRED);
         }
 
-
-
         if (!savedCode.equals(inputCode)) {
             throw new CustomException(ErrorCode.INVALID_RESET_CODE);
         }
 
         // 새 비밀번호 검증 + 암호화 저장
-        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(newPassword);
+        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(req.newPassword());
         user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
 
         // 인증코드 1회성 처리 (삭제)
