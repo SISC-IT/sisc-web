@@ -34,6 +34,7 @@ public class EmailService {
   private final RedisService redisService;
   private final SpringTemplateEngine templateEngine;
   private final UserRepository userRepository;
+  private final RedisTemplate<String, String> redisTemplate;
   private final EmailProperties emailProperties;
 
   // 메일 발신자
