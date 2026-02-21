@@ -81,12 +81,11 @@ export const AttendanceProvider = ({ children }) => {
   const [roundAttendanceVersion, setRoundAttendanceVersion] = useState(0);
 
   // 최초, setSessions가 호출될때마다 모든 세션 불러오기
-
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const sessionData = await getAttendanceSessions();
-        setSessions(sessionData);
+        const res = await getAttendanceSessions();
+        setSessions(res || []);
       } catch (error) {
         console.error('모든 세션 데이터를 가져오는 데 실패했습니다: ', error);
         setSessions([]);

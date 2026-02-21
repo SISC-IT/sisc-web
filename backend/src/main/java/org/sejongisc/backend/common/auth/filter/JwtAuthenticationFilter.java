@@ -58,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (token != null && jwtParser.validationToken(token) ) {
                 UsernamePasswordAuthenticationToken authentication = jwtParser.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.info("SecurityContext에 인증 저장됨: {}", authentication.getName());
+                log.debug("SecurityContext에 인증 저장됨: {}", authentication.getName());
             } else {
                 log.warn("토큰이 없거나 유효하지 않음");
             }
@@ -75,11 +75,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
 
-        // 1) /actuator 전체 무조건 스킵
-        if ("/actuator".equals(path) || path.startsWith("/actuator/")) {
-            log.info("JwtFilter skip actuator: {}", path);
-            return true;
-        }
+      boolean isAdminZone = Arrays.stream(SecurityConstants.ADMIN_URLS)
+          .anyMatch(pattern -> pathMatcher.match(pattern, path));
+
+      if (isAdminZone) {
+        return true;
+      }
 
         boolean excluded = Arrays.stream(SecurityConstants.WHITELIST_URLS)
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
@@ -110,7 +111,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         for (Cookie cookie : request.getCookies()) {
             if ("access".equals(cookie.getName())) {
-                log.info("쿠키에서 access token 추출됨");
+                log.debug("쿠키에서 access token 추출됨");
                 return cookie.getValue();
             }
         }

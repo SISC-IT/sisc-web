@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/board")
 @Tag(
-    name = "게시판 및 게시물 API",
+    name = "07. 게시판 및 게시물 API",
     description = "게시판 및 게시물 작성, 수정, 삭제 관련 API 제공"
 )
 public class BoardController {

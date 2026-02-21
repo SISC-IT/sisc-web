@@ -56,18 +56,12 @@ public class BettingService {
      */
     @Transactional(readOnly = true)
     public PriceResponse getPriceData() {
-        List<PriceData> allData = priceDataRepository.findAll();
-        if (allData.isEmpty()) {
-            log.error("시세 데이터 조회 실패: DB에 저장된 시세 데이터가 없습니다.");
-            throw new CustomException(ErrorCode.STOCK_NOT_FOUND);
-        }
-
-        List<String> tickers = allData.stream()
-                .map(PriceData::getTicker)
-                .distinct()
-                .toList();
-
-        String randomTicker = tickers.get(random.nextInt(tickers.size()));
+        // [변경점] 전체 조회가 아닌 랜덤 티커 하나만 DB에서 직접 가져옴
+        String randomTicker = priceDataRepository.findRandomTicker()
+            .orElseThrow(() -> {
+                log.error("시세 데이터 조회 실패: DB에 저장된 시세 데이터가 없습니다.");
+                return new CustomException(ErrorCode.STOCK_NOT_FOUND);
+            });
 
         PriceData latest = priceDataRepository.findTopByTickerOrderByDateDesc(randomTicker)
                 .orElseThrow(() -> new CustomException(ErrorCode.STOCK_NOT_FOUND));

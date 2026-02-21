@@ -1,7 +1,6 @@
 package org.sejongisc.backend.common.config.security;
 
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.common.auth.service.oauth2.GithubServiceImpl;
 import org.sejongisc.backend.common.exception.controller.JwtAccessDeniedHandler;
 import org.sejongisc.backend.common.exception.controller.JwtAuthenticationEntryPoint;
 import org.sejongisc.backend.common.auth.filter.JwtAuthenticationFilter;
@@ -39,9 +38,9 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
-    private final GithubServiceImpl.CustomOAuth2UserService customOAuth2UserService;
-    private final GithubServiceImpl.CustomOidcUserService customOidcUserService;
-    private final GithubServiceImpl.OAuth2SuccessHandler oAuth2SuccessHandler;
+//    private final GithubServiceImpl.CustomOAuth2UserService customOAuth2UserService;
+//    private final GithubServiceImpl.CustomOidcUserService customOidcUserService;
+//    private final GithubServiceImpl.OAuth2SuccessHandler oAuth2SuccessHandler;
 
     private final Environment env;
 
@@ -65,6 +64,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .securityMatcher(request -> {
+              String requestUri = request.getRequestURI();
+              boolean isAdminRequest = requestUri.startsWith("/admin");
+              boolean isActuatorRequest = requestUri.startsWith("/actuator");
+              return !isAdminRequest && !isActuatorRequest;
+            })
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -73,27 +78,27 @@ public class SecurityConfig {
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint) // 인증 실패 시 JSON 응답
                         .accessDeniedHandler(jwtAccessDeniedHandler)           // 인가 실패 시 JSON 응답
                 )
-                .oauth2Login(oauth -> oauth
-                        .authorizationEndpoint(a ->
-                                a.authorizationRequestRepository(authorizationRequestRepository())
-                        )
-                        .userInfoEndpoint(u -> {
-                                    u.userService(customOAuth2UserService);  // kakao, github
-                                    u.oidcUserService(customOidcUserService);  //google
-                                }
-                        )
-                        .successHandler(oAuth2SuccessHandler)
-                        .failureHandler((req, res, ex) -> {
-                            if (isProd()) {
-                                res.sendRedirect("https://sjusisc.com/oauth/fail");
-                            }else if(isDev()){
-                                res.sendRedirect("https://sisc-web.duckdns.org/oauth/fail");
-                            }
-                            else {
-                                res.sendRedirect("http://localhost:5173/oauth/fail");
-                            }
-                        })
-                )
+//                .oauth2Login(oauth -> oauth
+//                        .authorizationEndpoint(a ->
+//                                a.authorizationRequestRepository(authorizationRequestRepository())
+//                        )
+//                        .userInfoEndpoint(u -> {
+//                                    u.userService(customOAuth2UserService);  // kakao, github
+//                                    u.oidcUserService(customOidcUserService);  //google
+//                                }
+//                        )
+//                        .successHandler(oAuth2SuccessHandler)
+//                        .failureHandler((req, res, ex) -> {
+//                            if (isProd()) {
+//                                res.sendRedirect("https://sjusisc.com/oauth/fail");
+//                            }else if(isDev()){
+//                                res.sendRedirect("https://sisc-web.duckdns.org/oauth/fail");
+//                            }
+//                            else {
+//                                res.sendRedirect("http://localhost:5173/oauth/fail");
+//                            }
+//                        })
+//                )
 
                 .authorizeHttpRequests(auth -> {
                     // 모두 접근 가능한 API
@@ -125,8 +130,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                "https://sisc-web.duckdns.org",
-                "https://sjusisc.com"
+                env.getProperty("app.dev-frontend-url"),
+                env.getProperty("app.prod-frontend-url")    // 환경변수에 해당하는 값 가져옴
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

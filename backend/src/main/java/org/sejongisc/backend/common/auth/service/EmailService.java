@@ -12,6 +12,8 @@ import org.apache.commons.validator.routines.EmailValidator;
 import org.sejongisc.backend.common.config.EmailProperties;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.common.redis.RedisKey;
+import org.sejongisc.backend.common.redis.RedisService;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -29,7 +31,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 @Validated
 public class EmailService {
   private final JavaMailSender mailSender;
-  private final RedisTemplate<String, String> redisTemplate;
+  private final RedisService redisService;
   private final SpringTemplateEngine templateEngine;
   private final UserRepository userRepository;
   private final EmailProperties emailProperties;
@@ -59,10 +61,9 @@ public class EmailService {
   // 메일 발송
   public void sendEmail(@Email String email) {
 
-    // 이미 24시간 내 인증된 이메일인지 확인
-    String verifiedKey = emailProperties.getKeyPrefix().getVerified() + email;
-    if (Boolean.TRUE.equals(redisTemplate.hasKey(verifiedKey))) {
-      throw new CustomException(ErrorCode.EMAIL_ALREADY_VERIFIED);
+    if (redisService.hasKey(RedisKey.EMAIL_VERIFIED, email)) {
+      redisService.delete(RedisKey.EMAIL_VERIFIED, email);
+      //throw new CustomException(ErrorCode.EMAIL_ALREADY_VERIFIED);
     }
 
     // 이메일 형식 검증
@@ -76,10 +77,10 @@ public class EmailService {
     }
 
     // 인증코드 생성
-      String code = generateCode();
+    String code = generateCode();
 
     // Redis에 인증 코드 저장 (유효시간: 3분)
-    redisTemplate.opsForValue().set(emailProperties.getKeyPrefix().getVerify() + email, code, emailProperties.getCodeExpire());
+    redisService.set(RedisKey.EMAIL_VERIFY, email, code);
 
     // 메일 발송
     try {
@@ -94,22 +95,17 @@ public class EmailService {
 
   // 코드확인
   public void verifyEmail(String email, String code) {
-    String key = emailProperties.getKeyPrefix().getVerify()+ email;
+    String storedCode = redisService.get(RedisKey.EMAIL_VERIFY, email, String.class);
 
-    String storedCode = redisTemplate.opsForValue().get(key);
     if (storedCode == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
     if (!storedCode.equals(code)) throw new CustomException(ErrorCode.EMAIL_CODE_MISMATCH);
 
 
-    // 인증 성공 시 Redis에서 코드 삭제
-    redisTemplate.delete(key);
+    // 인증 성공 시 Redis에서 인증 코드 삭제
+    redisService.delete(RedisKey.EMAIL_VERIFY, email);
 
-    // 인증 완료 상태 저장 (24시간 유효)
-    redisTemplate.opsForValue().set(
-        emailProperties.getKeyPrefix().getVerified() + email,
-        "true",
-        emailProperties.getVerifiedExpire()
-    );
+    // 인증 완료 상태(true값) 저장 (24시간 유효)
+    redisService.set(RedisKey.EMAIL_VERIFIED, email, "true");
 
 
   }
@@ -134,7 +130,6 @@ public class EmailService {
     String code = generateCode();
     String key = emailProperties.getKeyPrefix().getReset() + email;
     redisTemplate.opsForValue().set(key, code, emailProperties.getCodeExpire());
-
 
     try {
       MimeMessage message = createResetMessage(email, code);

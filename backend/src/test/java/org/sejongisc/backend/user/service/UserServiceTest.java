@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +20,10 @@ import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.auth.repository.UserOauthAccountRepository;
+import org.sejongisc.backend.common.redis.RedisKey;
+import org.sejongisc.backend.common.redis.RedisService;
+import org.sejongisc.backend.point.entity.Account;
+import org.sejongisc.backend.point.service.*;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
@@ -28,9 +31,6 @@ import org.sejongisc.backend.common.auth.entity.AuthProvider;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.common.auth.entity.UserOauthAccount;
-import org.sejongisc.backend.common.auth.dto.oauth.OauthUserInfo;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,13 +49,16 @@ class UserServiceTest {
     private EmailService emailService;
 
     @Mock
-    private RedisTemplate<Object, Object> redisTemplate;
+    private RedisService redisService;
 
     @Mock
     private RefreshTokenService refreshTokenService;
 
     @Mock
-    private org.sejongisc.backend.common.auth.jwt.TokenEncryptor tokenEncryptor;
+    private AccountService accountService;
+
+    @Mock
+    private PointLedgerService pointLedgerService;
 
     @InjectMocks private UserService userService;
 
@@ -67,11 +70,14 @@ class UserServiceTest {
                 .name("홍길동")
                 .email("hong@example.com")
                 .password("Password123!")
-                //.role(Role.TEAM_MEMBER)
                 .phoneNumber("01012345678")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
+        when(userRepository.existsByEmailOrStudentId(req.getEmail(), req.getStudentId())).thenReturn(false);
+
+        when(accountService.createUserAccount(any())).thenReturn(Account.builder().build());
+        when(accountService.getAccountByName(any())).thenReturn(Account.builder().build());
+
         when(passwordEncoder.encode(req.getPassword())).thenReturn("ENCODED_PW");
 
         UUID generatedId = UUID.randomUUID();
@@ -102,7 +108,7 @@ class UserServiceTest {
                 () -> assertThat(res.getUpdatedAt()).isEqualTo(now)
         );
 
-        verify(userRepository, times(1)).existsByEmail("hong@example.com");
+        verify(userRepository, times(1)).existsByEmailOrStudentId(req.getEmail(), req.getStudentId());
         verify(userRepository, times(1)).save(any(User.class));
         verify(passwordEncoder, times(1)).encode("Password123!");
     }
@@ -119,7 +125,8 @@ class UserServiceTest {
                 .phoneNumber("01012345678")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(true);
+        when(userRepository.existsByEmailOrStudentId(req.getEmail(), req.getStudentId())).thenReturn(true);
+        when(userRepository.existsByStudentId(req.getStudentId())).thenReturn(false);
 
         // when
         CustomException ex = assertThrows(CustomException.class, () -> userService.signup(req));
@@ -132,40 +139,45 @@ class UserServiceTest {
         verifyNoInteractions(passwordEncoder);
     }
 
-//    @Test
-//    @DisplayName("회원가입: Role이 null이면 기본값 MEMBER로 저장")
-//    void signup_nullRole_defaultsToMember() {
-//        // given
-//        SignupRequest req = SignupRequest.builder()
-//                .name("이몽룡")
-//                .email("lee@example.com")
-//                .password("Secret!234")
-//                .role(null) // null 전달
-//                .phoneNumber("01099998888")
-//                .build();
-//
-//        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
-//        when(passwordEncoder.encode(req.getPassword())).thenReturn("ENC_PW");
-//
-//        UUID id = UUID.randomUUID();
-//        LocalDateTime now = LocalDateTime.now();
-//
-//        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
-//            User u = inv.getArgument(0, User.class);
-//            u.setUserId(id);
-//            u.setCreatedDate(now);
-//            u.setUpdatedDate(now);
-//            // 서비스에서 기본값을 TEAM_MEMBER로 세팅한다고 가정
-//            assertThat(u.getRole()).isEqualTo(Role.TEAM_MEMBER);
-//            return u;
-//        });
-//
-//        // when
-//        SignupResponse res = userService.signup(req);
-//
-//        // then
-//        assertThat(res.getRole()).isEqualTo(Role.TEAM_MEMBER);
-//    }
+
+    @Test
+    @DisplayName("회원가입: Role이 null이면 기본값 MEMBER로 저장")
+    void signup_nullRole_defaultsToMember() {
+        // given
+        SignupRequest req = SignupRequest.builder()
+                .name("이몽룡")
+                .email("lee@example.com")
+                .password("Secret!234")
+                .phoneNumber("01099998888")
+                .build();
+
+        when(userRepository.existsByEmailOrStudentId(any(), any())).thenReturn(false);
+
+        when(accountService.createUserAccount(any())).thenReturn(Account.builder().build());
+        when(accountService.getAccountByName(any())).thenReturn(Account.builder().build());
+
+        when(passwordEncoder.encode(req.getPassword())).thenReturn("ENC_PW");
+
+        UUID id = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0, User.class);
+            u.setUserId(id);
+            u.setCreatedDate(now);
+            u.setUpdatedDate(now);
+            // 서비스에서 기본값을 TEAM_MEMBER로 세팅한다고 가정
+            assertThat(u.getRole()).isEqualTo(Role.TEAM_MEMBER);
+            return u;
+        });
+
+        // when
+        SignupResponse res = userService.signup(req);
+
+        // then
+        assertThat(res.getRole()).isEqualTo(Role.TEAM_MEMBER);
+    }
+
 
     @Test
     @DisplayName("회원가입 실패: 전화번호 중복이면 CustomException(DUPLICATE_PHONE)")
@@ -179,8 +191,8 @@ class UserServiceTest {
                 .phoneNumber("01011112222")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
-        when(userRepository.existsByPhoneNumber(req.getPhoneNumber())).thenReturn(true);
+        when(userRepository.existsByEmailOrStudentId(any(), any())).thenReturn(true);
+        when(userRepository.existsByStudentId(any())).thenReturn(false); // studentId 중복 아님 -> phone 중복으로 간주
 
         // when
         CustomException ex = assertThrows(CustomException.class, () -> userService.signup(req));
@@ -206,7 +218,7 @@ class UserServiceTest {
                 .phoneNumber("01077778888")
                 .build();
 
-        when(userRepository.existsByEmail(req.getEmail())).thenReturn(false);
+        when(userRepository.existsByEmailOrStudentId(any(), any())).thenReturn(false);
         when(userRepository.existsByPhoneNumber(req.getPhoneNumber())).thenReturn(false);
         when(passwordEncoder.encode(req.getPassword())).thenReturn("ENCODED_PW");
 
@@ -288,6 +300,8 @@ class UserServiceTest {
 //        verify(oauthAccountRepository).save(any(UserOauthAccount.class));
 //    }
 
+     */
+
 
 
     @Test
@@ -335,7 +349,6 @@ class UserServiceTest {
         verify(userRepository).save(existingUser);
         verifyNoInteractions(passwordEncoder); // 비밀번호 인코더 안 씀
     }
-
 
 
 

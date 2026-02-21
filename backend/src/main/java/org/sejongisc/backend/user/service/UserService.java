@@ -10,6 +10,8 @@ import org.sejongisc.backend.common.annotation.OptimisticRetry;
 import org.sejongisc.backend.common.config.EmailProperties;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.common.redis.RedisKey;
+import org.sejongisc.backend.common.redis.RedisService;
 import org.sejongisc.backend.point.dto.AccountEntry;
 import org.sejongisc.backend.point.entity.Account;
 import org.sejongisc.backend.point.entity.AccountName;
@@ -18,17 +20,17 @@ import org.sejongisc.backend.point.service.AccountService;
 import org.sejongisc.backend.point.service.PointLedgerService;
 import org.sejongisc.backend.user.dto.PasswordResetSendRequest;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
+import org.sejongisc.backend.user.entity.Grade;
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,6 +44,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final RedisService redisService;
     private final RefreshTokenService refreshTokenService;
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
@@ -158,12 +161,42 @@ public class UserService {
     }
 
 
-
+    @Transactional(readOnly = true)
     public List<User> findAllUsersMissingAccount() {
         return userRepository.findAllUsersMissingAccount();
     }
 
+    @Transactional
+    public void updateUserStatus(UUID userId, UserStatus status) {
+        User user = findUser(userId);
+        user.setStatus(status);
+        log.info("사용자 상태 변경 완료: userId={}", userId);
+    }
+
+    @Transactional
+    public void updateUserRole(UUID userId, Role role) {
+        User user = findUser(userId);
+        user.setRole(role);
+        log.info("사용자 권한 변경 완료: userId={}", userId);
+    }
+
+    @Transactional
+    public void promoteToSenior(UUID userId) {
+        User user = findUser(userId);
+
+        // grade 및 status 변경
+        user.setGrade(Grade.SENIOR);
+        user.setStatus(UserStatus.GRADUATED);
+
+        log.info("선배 등급 전환 완료: userId={}, 학번={}", userId, user.getStudentId());
+    }
+
     // --- 내부 헬퍼 메서드 ---
+
+    private User findUser(UUID userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
 
     private String validateNotBlank(String value, String fieldName) {
         if (value == null || value.trim().isEmpty()) {
@@ -173,19 +206,9 @@ public class UserService {
         return value.trim();
     }
 
-    // TODO : RedisService로 분리 고려
-    private void saveResetTokenToRedis(String token, String email) {
-        try {
-            redisTemplate.opsForValue().set("PASSWORD_RESET:" + token, email, Duration.ofMinutes(10));
-        } catch (Exception e) {
-            log.error("Redis 저장 실패", e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     private String getEmailFromRedis(String token) {
         try {
-            String email = (String) redisTemplate.opsForValue().get("PASSWORD_RESET:" + token);
+            String email = redisService.get(RedisKey.PASSWORD_RESET, token, String.class);
             if (email == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
             return email;
         } catch (Exception e) {
@@ -196,7 +219,7 @@ public class UserService {
 
     private void deleteResetTokenFromRedis(String token) {
         try {
-            redisTemplate.delete("PASSWORD_RESET:" + token);
+            redisService.delete(RedisKey.PASSWORD_RESET, token);
         } catch (Exception e) {
             log.error("Redis 삭제 실패", e);
         }

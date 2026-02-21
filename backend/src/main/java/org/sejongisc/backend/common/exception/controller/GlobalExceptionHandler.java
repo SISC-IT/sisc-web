@@ -21,12 +21,9 @@ public class GlobalExceptionHandler {
     log.error("CustomException 발생: {}", e.getMessage(), e);
 
     ErrorCode errorCode = e.getErrorCode();
-    ErrorResponse response = ErrorResponse.builder()
-        .errorCode(errorCode)
-        .errorMessage(e.getMessage())
-        .build();
-
-    return ResponseEntity.status(errorCode.getStatus()).body(response);
+    return ResponseEntity
+        .status(errorCode.getStatus())
+        .body(ErrorResponse.of(errorCode));
   }
 
   /**

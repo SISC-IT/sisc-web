@@ -21,7 +21,7 @@ import java.util.Map;
 
 @Configuration
 @EnableTransactionManagement
-@Profile("dev")
+@Profile("prod")
 @EnableJpaRepositories(
         basePackages = "org.sejongisc.backend",
         entityManagerFactoryRef = "primaryEntityManagerFactory",
@@ -74,7 +74,7 @@ public class PrimaryDataSourceConfig {
         Map<String, Object> jpaProps = new HashMap<>();
         jpaProps.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
 
-        jpaProps.put("hibernate.hbm2ddl.auto", "create");
+        jpaProps.put("hibernate.hbm2ddl.auto", "update");
 
         return builder
                 .dataSource(dataSource)
@@ -86,9 +86,6 @@ public class PrimaryDataSourceConfig {
                         "org.sejongisc.backend.board.entity",
                         "org.sejongisc.backend.common.entity.postgres",
                         "org.sejongisc.backend.point.entity",
-                        "org.sejongisc.backend.stock.entity",
-                        "org.sejongisc.backend.template.entity",
-                        "org.sejongisc.backend.betting.entity",
                         "org.sejongisc.backend.user.entity"
                 )
                 .persistenceUnit("primary")

@@ -9,18 +9,19 @@ public class SecurityConstants {
             "/api/auth/reissue",
             "/api/user/password/reset/**",
             "/api/email/**",
-            "/actuator/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/swagger-resources/**",
             "/webjars/**",
             "/login/**",
-            "/oauth2/**",
+            //"/oauth2/**",
             "/favicon.ico",
-            "/error",
             "/api/user/password/reset/confirm",
             "/api/user/password/reset/send"
+            "/actuator",
+            "/actuator/**",
+            "/error"
     };
 
     public static final String[] ADMIN_ONLY_URLS = {
@@ -37,4 +38,17 @@ public class SecurityConstants {
         //"/api/attendance/**"
 
     };
+
+  public static final String[] ADMIN_URLS = {
+      "/admin/**", "/actuator/**"
+  };
+
+  public static final String[] ADMIN_PUBLIC_URLS = {
+      "/admin/assets/**",
+      "/admin/login",
+      "/favicon.ico",
+      "/admin/favicon.ico",
+      "/actuator/health",
+      "/actuator/info"
+  };
 }
