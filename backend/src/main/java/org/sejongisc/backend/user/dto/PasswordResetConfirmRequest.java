@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record PasswordResetVerifyRequest(
+public record PasswordResetConfirmRequest(
 
         @Schema(
                 example = "testuser@example.com",
@@ -21,5 +21,16 @@ public record PasswordResetVerifyRequest(
         )
         @NotBlank(message = "인증코드는 필수입니다.")
         @Size(min = 6, max = 6, message = "인증코드는 6자리여야 합니다.")
-        String code
+        String code,
+
+        @NotBlank(message = "학번은 필수입니다.")
+        String studentId,
+
+        @NotBlank(message = "새 비밀번호는 필수입니다.")
+        String newPassword
+
+
+
+
+
 ) {}

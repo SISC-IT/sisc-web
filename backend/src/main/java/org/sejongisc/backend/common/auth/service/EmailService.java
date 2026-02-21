@@ -15,6 +15,7 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -129,28 +130,21 @@ public class EmailService {
 
   // 비밀번호 인증 관련 메서드
   public void sendResetEmail(String email) {
-    if(!userRepository.existsByEmail(email)){
-      log.debug("Password reset requested for non-existent email {}", email);
-      return;
-    }
 
     String code = generateCode();
-    redisTemplate.opsForValue().set("PASSWORD_RESET_EMAIL:" + email, code, emailProperties.getCodeExpire());
+    String key = emailProperties.getKeyPrefix().getReset() + email;
+    redisTemplate.opsForValue().set(key, code, emailProperties.getCodeExpire());
+
 
     try {
       MimeMessage message = createResetMessage(email, code);
       mailSender.send(message);
-    } catch (MessagingException e) {
+    } catch (MessagingException | MailException e) {
+      redisTemplate.delete(key);
       throw new MailSendException("failed to send mail", e);
     }
   }
 
-  public void verifyResetEmail(String email, String code) {
-    String stored = redisTemplate.opsForValue().get("PASSWORD_RESET_EMAIL:" + email);
-    if (stored == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
-    if(!stored.equals(code)) throw new CustomException(ErrorCode.EMAIL_CODE_MISMATCH);
-    redisTemplate.delete("PASSWORD_RESET_EMAIL:" + email);
-  }
 
   private MimeMessage createResetMessage(String email, String code) throws MessagingException {
     MimeMessage message = mailSender.createMimeMessage();

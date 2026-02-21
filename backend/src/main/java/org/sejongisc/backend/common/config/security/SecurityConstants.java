@@ -18,7 +18,9 @@ public class SecurityConstants {
             "/login/**",
             "/oauth2/**",
             "/favicon.ico",
-            "/error"
+            "/error",
+            "/api/user/password/reset/confirm",
+            "/api/user/password/reset/send"
     };
 
     public static final String[] ADMIN_ONLY_URLS = {
