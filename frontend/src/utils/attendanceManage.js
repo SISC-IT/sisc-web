@@ -19,7 +19,6 @@ export const getAttendanceSessions = async () => {
   try {
     const res = await api.get('/api/attendance/sessions');
     // console.log('API BASE URL:', import.meta.env.VITE_API_URL);
-    console.log(res.data);
     return res.data;
   } catch (err) {
     console.error('출석 세션 불러오기 중 오류 발생: ', err);
@@ -62,17 +61,18 @@ export const getRounds = async (sessionId) => {
 
 // 회차 추가
 export const addRound = async (sessionId, newRound) => {
-  const paylaod = {
-    sessionId,
+  const payload = {
     roundDate: newRound.roundDate,
-    startTime: newRound.startTime,
-    allowedMinutes: newRound.availableMinutes,
+    startAt: newRound.startAt,
+    closeAt: newRound.closeAt,
+    roundName: newRound.roundName,
+    locationName: newRound.locationName,
   };
 
   try {
     const res = await api.post(
       `/api/attendance/sessions/${sessionId}/rounds`,
-      paylaod
+      payload
     );
     return res.data;
   } catch (err) {
@@ -172,7 +172,7 @@ export const getSessionAttendance = async (sessionId) => {
 export const changeUserAttendance = async (roundId, userId, statusDetails) => {
   try {
     const res = await api.put(
-      `/api/attendance/rounds/${roundId}/attendances/${userId}`,
+      `/api/attendance/rounds/${roundId}/users/${userId}`,
       statusDetails
     );
     return res.data;
@@ -185,7 +185,7 @@ export const changeUserAttendance = async (roundId, userId, statusDetails) => {
 // 라운드 별 출석 조회
 export const getRoundUserAttendance = async (roundId) => {
   try {
-    const res = await api.get(`/api/attendance/rounds/${roundId}/attendances`);
+    const res = await api.get(`/api/attendance/rounds/${roundId}/records`);
     return res.data;
   } catch (err) {
     console.error('라운드별 출석 조회 중 오류 발생', err);
