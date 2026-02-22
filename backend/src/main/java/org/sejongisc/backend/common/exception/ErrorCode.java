@@ -77,6 +77,10 @@ public enum ErrorCode {
 
   EMAIL_ALREADY_VERIFIED(HttpStatus.BAD_REQUEST, "24시간 이내에 이미 인증된 이메일입니다."),
 
+  RESET_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "비밀번호 재설정 코드가 만료되었습니다."),
+
+  INVALID_RESET_CODE(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 재설정 코드입니다."),
+
   // QUANTBOT
   EXECUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 퀀트봇 실행 내역이 존재하지 않습니다."),
 
@@ -96,6 +100,8 @@ public enum ErrorCode {
   INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다. .xlsx 파일을 업로드해주세요."),
   INVALID_EXCEL_STRUCTURE(HttpStatus.UNPROCESSABLE_ENTITY, "엑셀 양식이 일치하지 않습니다. 필수 컬럼을 확인해주세요."),
   EMPTY_FILE(HttpStatus.BAD_REQUEST, "업로드된 파일이 비어있습니다."),
+
+
 
   // BETTING
 

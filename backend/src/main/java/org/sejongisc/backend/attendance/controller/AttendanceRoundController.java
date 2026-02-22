@@ -43,7 +43,31 @@ public class AttendanceRoundController {
   /**
    * 라운드 생성 (관리자/OWNER) POST /api/attendance/sessions/{sessionId}/rounds
    */
-  @Operation(summary = "라운드 생성", description = "세션에 새로운 출석 라운드를 생성합니다. (관리자/OWNER)")
+  @Operation(summary = "라운드 생성",
+      description = """
+        
+        ## 인증(JWT): **필요**
+        
+        
+        ## 권한
+        - **세션 관리자 / OWNER**
+        
+        ## 경로 파라미터
+        - **`sessionId`**: 라운드를 생성할 출석 세션 ID (`UUID`)
+        
+        ## 요청 바디 ( `AttendanceRoundRequest` )
+        - **`roundDate`**: 라운드 날짜 (`yyyy-MM-dd`)
+        - **`startAt`**: 출석 시작 시간 (`yyyy-MM-dd'T'HH:mm:ss`)
+        - **`closeAt`**: 출석 마감 시간 (`yyyy-MM-dd'T'HH:mm:ss`)
+          - 선택값 (null 가능)
+          - null이면 서버에서 자동 계산하도록 구현할 수 있습니다.
+        - **`roundName`**: 라운드 이름 (예: 1주차, OT 출석)
+        - **`locationName`**: 출석 위치명 (예: 공학관 301호)
+        
+        ## 동작 설명
+        - 지정한 세션에 새로운 출석 라운드를 생성합니다.
+        - 요청한 사용자가 해당 세션의 관리자/OWNER인지 검증합니다.
+        """)
   @PostMapping("/sessions/{sessionId}/rounds")
   public ResponseEntity<AttendanceRoundResponse> createRound(
       @PathVariable UUID sessionId,
