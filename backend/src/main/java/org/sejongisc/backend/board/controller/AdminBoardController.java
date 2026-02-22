@@ -1,6 +1,7 @@
 package org.sejongisc.backend.board.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/board/admin")
+@Tag(
+    name = "게시판 관리 API",
+    description = "게시판 생성 및 삭제 관련 API 제공"
+)
 public class AdminBoardController {
 
   private final AdminBoardService adminBoardService;
