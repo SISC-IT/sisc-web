@@ -10,12 +10,12 @@ import lombok.Getter;
 public class ErrorResponse {
 
   private ErrorCode errorCode;
-  private String errorMessage;
+  private String message;
 
   public static ErrorResponse of(ErrorCode errorCode) {
     return ErrorResponse.builder()
             .errorCode(errorCode)
-            .errorMessage(errorCode.getMessage())
+            .message(errorCode.getMessage())
             .build();
   }
 }

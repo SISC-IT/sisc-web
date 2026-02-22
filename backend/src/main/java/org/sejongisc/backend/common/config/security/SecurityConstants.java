@@ -17,6 +17,8 @@ public class SecurityConstants {
             "/login/**",
             //"/oauth2/**",
             "/favicon.ico",
+            "/api/user/password/reset/confirm",
+            "/api/user/password/reset/send",
             "/actuator",
             "/actuator/**",
             "/error"

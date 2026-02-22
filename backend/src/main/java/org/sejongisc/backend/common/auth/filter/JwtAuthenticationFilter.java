@@ -86,7 +86,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
 
         // 어떤 요청이 필터 예외로 분류됐는지 콘솔에 표시
-        log.debug("JwtFilter check path: {} → excluded={}", path, excluded);
+        log.info("JwtFilter check path: {} → excluded={}", path, excluded);
 
         return excluded;
     }

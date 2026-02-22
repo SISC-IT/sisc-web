@@ -93,6 +93,7 @@ jobs:
     needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
     #if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    environment: production # production 이라는 environment에 있는 secrets 들을 쓰기 위함 (DEV_API_URL)
     permissions: { contents: read, packages: write }
     #defaults:    # context: ./frontend
      # run:
@@ -150,6 +151,8 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
               
           # 3. 기타 Secrets
+          echo "DEV_FRONTEND_URL=${{ secrets.DEV_FRONTEND_URL }}" >> .env
+          echo "PROD_FRONTEND_URL=${{ secrets.PROD_FRONTEND_URL }}" >> .env       
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(
-    name = "메일 API",
+    name = "02. 메일 API",
     description = "메일 관련 API 제공"
 )
 @RestController

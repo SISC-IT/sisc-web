@@ -13,7 +13,6 @@ ENV VITE_API_URL=${VITE_API_URL}
 COPY . .
 RUN npm run build
 
-
 # --- 2. Nginx Stage ---
 FROM nginx:1.27-alpine
 

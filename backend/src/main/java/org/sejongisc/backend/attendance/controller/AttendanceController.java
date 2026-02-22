@@ -58,7 +58,35 @@ public class AttendanceController {
    *  라운드 내 특정 유저 출석 상태 수정(관리자/OWNER)
    * PUT /api/attendance/rounds/{roundId}/users/{userId}
    */
-  @Operation(summary = "출석 상태 수정", description = "특정 라운드에서 특정 유저의 출석 상태를 수정합니다. (관리자/OWNER)")
+  @Operation(
+      summary = "출석 상태 수정",
+      description = """
+        
+        ## 인증(JWT): **필요**
+        
+        
+        ## 권한
+        - **세션 관리자 / OWNER**
+        
+        ## 경로 파라미터
+        - **`roundId`**: 출석 상태를 수정할 라운드 ID (`UUID`)
+        - **`userId`**: 출석 상태를 수정할 대상 사용자 ID (`UUID`)
+        
+        ## 요청 바디 ( `AttendanceStatusUpdateRequest` )
+        - **`status`**: 출석 상태 (필수)
+          - 허용값 예시: `PRESENT`, `LATE`, `ABSENT`, `EXCUSED`
+        - **`reason`**: 상태 수정 사유 (선택)
+          - 예: 지각 사유, 공결 사유 등
+        
+        ## 동작 설명
+        - 특정 라운드에서 특정 사용자의 출석 상태를 수정합니다.
+        - 요청한 사용자가 해당 세션의 관리자/OWNER인지 검증합니다.
+        - `status` 값과 `reason` 값을 기반으로 출석 상태를 반영합니다.
+        
+        ## 응답
+        - **200 OK**
+        - 수정된 출석 정보 (`AttendanceResponse`)
+        """)
   @PutMapping("/rounds/{roundId}/users/{userId}")
   public ResponseEntity<AttendanceResponse> updateAttendanceStatus(
       @PathVariable UUID roundId,

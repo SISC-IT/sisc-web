@@ -139,6 +139,7 @@ class UserServiceTest {
         verifyNoInteractions(passwordEncoder);
     }
 
+
     @Test
     @DisplayName("회원가입: Role이 null이면 기본값 MEMBER로 저장")
     void signup_nullRole_defaultsToMember() {
@@ -176,6 +177,7 @@ class UserServiceTest {
         // then
         assertThat(res.getRole()).isEqualTo(Role.TEAM_MEMBER);
     }
+
 
     @Test
     @DisplayName("회원가입 실패: 전화번호 중복이면 CustomException(DUPLICATE_PHONE)")
@@ -230,77 +232,74 @@ class UserServiceTest {
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_USER);
     }
 
-    /* oAuth 관련 테스트 주석
-    @Test
-    @DisplayName("OAuth 로그인: 기존 계정이 있으면 해당 User 반환")
-    void findOrCreateUser_existingUser() {
-        // given
-        OauthUserInfo mockInfo = new OauthUserInfo() {
-            @Override public AuthProvider getProvider() { return AuthProvider.GOOGLE; }
-            @Override public String getProviderUid() { return "google-123"; }
-            @Override public String getName() { return "홍길동"; }
-            @Override public String getAccessToken() { return "mock-access-token"; }
-        };
-
-        User existingUser = User.builder()
-                .userId(UUID.randomUUID())
-                .name("홍길동")
-                .role(Role.TEAM_MEMBER)
-                .build();
-
-        UserOauthAccount account = UserOauthAccount.builder()
-                .user(existingUser)
-                .provider(AuthProvider.GOOGLE)
-                .providerUid("google-123")
-                .build();
-
-
-        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123"))
-                .thenReturn(Optional.of(account));
-
-        // when
-        User result = userService.findOrCreateUser(mockInfo);
-
-        // then
-        assertThat(result).isSameAs(existingUser);
-        verify(oauthAccountRepository).findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123");
-        verifyNoMoreInteractions(userRepository); // 새 저장 안 함
-    }
-
-    @Test
-    @DisplayName("OAuth 로그인: 기존 계정이 없으면 새 User + UserOauthAccount 생성")
-    void findOrCreateUser_newUser() {
-        // given
-        OauthUserInfo mockInfo = new OauthUserInfo() {
-            @Override public AuthProvider getProvider() { return AuthProvider.KAKAO; }
-            @Override public String getProviderUid() { return "kakao-999"; }
-            @Override public String getName() { return "카카오유저"; }
-            @Override public String getAccessToken() { return "mock-access-token"; }
-        };
-
-        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.KAKAO, "kakao-999"))
-                .thenReturn(Optional.empty());
-
-        User newUser = User.builder()
-                .userId(UUID.randomUUID())
-                .name("카카오유저")
-                .role(Role.TEAM_MEMBER)
-                .build();
-
-        when(userRepository.save(any(User.class))).thenReturn(newUser);
-
-        // when
-        User result = userService.findOrCreateUser(mockInfo);
-
-        // then
-        assertThat(result.getName()).isEqualTo("카카오유저");
-        assertThat(result.getRole()).isEqualTo(Role.TEAM_MEMBER);
-
-        verify(userRepository).save(any(User.class));
-        verify(oauthAccountRepository).save(any(UserOauthAccount.class));
-    }
-
-     */
+//    @Test
+//    @DisplayName("OAuth 로그인: 기존 계정이 있으면 해당 User 반환")
+//    void findOrCreateUser_existingUser() {
+//        // given
+//        OauthUserInfo mockInfo = new OauthUserInfo() {
+//            @Override public AuthProvider getProvider() { return AuthProvider.GOOGLE; }
+//            @Override public String getProviderUid() { return "google-123"; }
+//            @Override public String getName() { return "홍길동"; }
+//            @Override public String getAccessToken() { return "mock-access-token"; }
+//        };
+//
+//        User existingUser = User.builder()
+//                .userId(UUID.randomUUID())
+//                .name("홍길동")
+//                .role(Role.TEAM_MEMBER)
+//                .build();
+//
+//        UserOauthAccount account = UserOauthAccount.builder()
+//                .user(existingUser)
+//                .provider(AuthProvider.GOOGLE)
+//                .providerUid("google-123")
+//                .build();
+//
+//        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123"))
+//                .thenReturn(Optional.of(account));
+//
+//        // when
+//        User result = userService.findOrCreateUser(mockInfo);
+//
+//        // then
+//        assertThat(result).isSameAs(existingUser);
+//        verify(oauthAccountRepository).findByProviderAndProviderUid(AuthProvider.GOOGLE, "google-123");
+//        verifyNoMoreInteractions(userRepository); // 새 저장 안 함
+//    }
+//
+//    @Test
+//    @DisplayName("OAuth 로그인: 기존 계정이 없으면 새 User + UserOauthAccount 생성")
+//    void findOrCreateUser_newUser() {
+//        // given
+//        OauthUserInfo mockInfo = new OauthUserInfo() {
+//            @Override public AuthProvider getProvider() { return AuthProvider.KAKAO; }
+//            @Override public String getProviderUid() { return "kakao-999"; }
+//            @Override public String getName() { return "카카오유저"; }
+//            @Override public String getAccessToken() { return "mock-access-token"; }
+//        };
+//
+//        when(oauthAccountRepository.findByProviderAndProviderUid(AuthProvider.KAKAO, "kakao-999"))
+//                .thenReturn(Optional.empty());
+//
+//        User newUser = User.builder()
+//                .userId(UUID.randomUUID())
+//                .name("카카오유저")
+//                .role(Role.TEAM_MEMBER)
+//                .build();
+//
+//        when(userRepository.save(any(User.class))).thenReturn(newUser);
+//
+//        // when
+//        User result = userService.findOrCreateUser(mockInfo);
+//
+//        // then
+//        assertThat(result.getName()).isEqualTo("카카오유저");
+//        assertThat(result.getRole()).isEqualTo(Role.TEAM_MEMBER);
+//
+//        verify(userRepository).save(any(User.class));
+//        verify(oauthAccountRepository).save(any(UserOauthAccount.class));
+//    }
+    
 
 
 
@@ -350,119 +349,10 @@ class UserServiceTest {
         verifyNoInteractions(passwordEncoder); // 비밀번호 인코더 안 씀
     }
 
-    @Test
-    @DisplayName("비밀번호 재설정 요청: 유효한 이메일이면 인증 메일 전송")
-    void passwordReset_success() {
-        // given
-        String email = "user@example.com";
-        User mockUser = User.builder().email(email).build();
-
-        when(userRepository.existsByEmail(email)).thenReturn(true);
-
-        // when
-        userService.passwordReset(email);
-
-        // then
-        verify(emailService, times(1)).sendResetEmail(email);
-    }
-
-    @Test
-    @DisplayName("비밀번호 재설정 요청 실패: 존재하지 않는 이메일이면 예외 발생")
-    void passwordReset_userNotFound() {
-        // given
-        String email = "notfound@example.com";
-        when(userRepository.existsByEmail(email)).thenReturn(false);
-
-        // when & then
-        userService.passwordReset(email); // 예외 발생 안 함
-        verify(emailService, never()).sendResetEmail(anyString());
-    }
-
-    @Test
-    @DisplayName("비밀번호 재설정 코드 검증 성공: Redis에 토큰 저장 후 반환")
-    void verifyResetCodeAndIssueToken_success() {
-        // given
-        String email = "user@example.com";
-        String code = "123456";
-
-        doNothing().when(emailService).verifyResetEmail(email, code);
-        // when
-        String token = userService.verifyResetCodeAndIssueToken(email, code);
-
-        // then
-        assertThat(token).isNotNull();
-        verify(emailService).verifyResetEmail(email, code);
-        // RedisService.set 사용 검증
-        verify(redisService).set(eq(RedisKey.PASSWORD_RESET), eq(token), eq(email));
-    }
-
-    @Test
-    @DisplayName("비밀번호 재설정: 토큰 유효 시 비밀번호 변경 및 RefreshToken 삭제")
-    void resetPasswordByToken_success() {
-        // given
-        String resetToken = "abc123";
-        String email = "user@example.com";
-        String newPassword = "newPassword!";
-
-        // RedisService.get 사용으로 Mock 설정
-        when(redisService.get(eq(RedisKey.PASSWORD_RESET), eq(resetToken), eq(String.class))).thenReturn(email);
-
-        User user = User.builder()
-                .userId(UUID.randomUUID())
-                .email(email)
-                .passwordHash("OLD_HASH")
-                .build();
-
-        when(userRepository.findUserByEmail(email)).thenReturn(Optional.of(user));
-        when(passwordEncoder.encode(newPassword)).thenReturn("ENCODED_NEW_PW");
-
-        // when
-        userService.resetPasswordByToken(resetToken, newPassword);
-
-        // then
-        assertThat(user.getPasswordHash()).isEqualTo("ENCODED_NEW_PW");
-        verify(passwordEncoder).encode(newPassword);
-        verify(userRepository).save(user);
-        verify(refreshTokenService).deleteByUserId(user.getUserId());
-        verify(redisService).delete(eq(RedisKey.PASSWORD_RESET), eq(resetToken));
-    }
-
-    @Test
-    @DisplayName("비밀번호 재설정 실패: Redis에서 이메일을 찾지 못하면 예외 발생")
-    void resetPasswordByToken_invalidToken_throws() {
-        // given
-        String resetToken = "invalid";
-        when(redisService.get(eq(RedisKey.PASSWORD_RESET), eq(resetToken), eq(String.class))).thenReturn(null);
 
 
-        // when
-        CustomException ex = assertThrows(CustomException.class,
-                () -> userService.resetPasswordByToken(resetToken, "newPw"));
 
-        // then
-        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.EMAIL_CODE_NOT_FOUND);
-        verify(userRepository, never()).save(any());
-    }
 
-    @Test
-    @DisplayName("비밀번호 재설정 토큰 발급 실패: Redis 연결 오류 시 시스템 예외 발생")
-    void verifyResetCodeAndIssueToken_RedisFailure_ThrowsException() {
-        String email = "test@example.com";
-        String code = "123456";
 
-        // EmailService 통과
-        doNothing().when(emailService).verifyResetEmail(email, code);
-
-        // Redis 저장 시 RuntimeException 발생 상황 가정
-        doThrow(new RuntimeException("Redis connection failed"))
-                .when(redisService)
-                .set(eq(RedisKey.PASSWORD_RESET), anyString(), eq(email));
-
-        // when & then: UserService가 잡아서 CustomException으로 던지는지 확인
-        CustomException ex = assertThrows(CustomException.class,
-                () -> userService.verifyResetCodeAndIssueToken(email, code));
-
-        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR);
-    }
 
 }

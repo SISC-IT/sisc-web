@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkLogin = async () => {
@@ -24,11 +24,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = async ({ studentId, password }, signal) => {
     const paylaod = { studentId, password };
-
     const res = await api.post('/api/auth/login', paylaod, { signal });
-    // 토큰은 자동으로 쿠키에 저장됨 (백엔드가 Set-Cookie 헤더로 전송)
-    // res.data에는 유저 정보만 있음 (accessToken, refreshToken 제거됨)
 
+    // 로그인 성공을 Context에 알림
+    setIsLoggedIn(true);
     return res.data;
   };
 
@@ -38,6 +37,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       // 로그아웃 API 실패해도 무시 (토큰이 없을 수 있음)
       console.log('로그아웃 API 호출 실패:', error.message);
+      setIsLoggedIn(false);
     } finally {
       // localStorage 유저 정보 삭제
       localStorage.removeItem('user');
