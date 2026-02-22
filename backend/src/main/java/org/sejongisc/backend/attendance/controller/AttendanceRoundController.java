@@ -126,6 +126,7 @@ public class AttendanceRoundController {
     AttendanceRoundQrTokenResponse response = attendanceRoundService.issueQrToken(roundId, userId);
     return ResponseEntity.ok(response);
   }
+
   /**
    * QR 토큰 SSE 스트림 (관리자/OWNER) - 폴링 없이 3분마다 PUSH
    * GET /api/attendance/rounds/{roundId}/qr-stream

@@ -16,7 +16,7 @@ import org.springframework.scheduling.quartz.SpringBeanJobFactory;
 @Configuration
 public class AttendanceQuartzConfig {
 
-  public static final String ROUND_STATE_CRON = "0 0,30 * * * ?";
+  public static final String ROUND_STATE_CRON = "0 * * * * ?";
 
   @Bean
   public JobDetail attendanceRoundStateJobDetail() {
