@@ -1,4 +1,4 @@
-package org.sejongisc.backend.board.service;
+package org.sejongisc.backend.admin.service;
 
 import java.util.List;
 import java.util.UUID;
@@ -9,6 +9,7 @@ import org.sejongisc.backend.board.dto.BoardRequest;
 import org.sejongisc.backend.board.entity.Board;
 import org.sejongisc.backend.board.repository.BoardRepository;
 import org.sejongisc.backend.board.repository.PostRepository;
+import org.sejongisc.backend.board.service.PostService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.entity.Role;
@@ -70,6 +71,9 @@ public class AdminBoardService {
     if (!user.getRole().equals(Role.PRESIDENT)) {
       throw new CustomException(ErrorCode.BOARD_ACCESS_DENIED);
     }
+
+    boardRepository.findById(boardId)
+        .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
 
     // 상위 게시판이면 하위 게시판 목록을 조회
     List<UUID> targetBoardIds = Stream.concat(
