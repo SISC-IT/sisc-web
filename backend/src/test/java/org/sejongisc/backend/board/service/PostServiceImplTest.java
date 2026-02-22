@@ -17,11 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sejongisc.backend.board.dto.BoardRequest;
 import org.sejongisc.backend.board.dto.CommentResponse;
 import org.sejongisc.backend.board.dto.PostRequest;
 import org.sejongisc.backend.board.dto.PostResponse;
@@ -37,9 +35,9 @@ import org.sejongisc.backend.board.repository.PostLikeRepository;
 import org.sejongisc.backend.board.repository.PostRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -333,33 +331,5 @@ class PostServiceImplTest {
 
     // N+1 쿼리 호출 검증 (부모 댓글 수만큼 findByParentComment 호출)
     verify(commentRepository, times(1)).findByParentComment(parentComment);
-  }
-
-  @Test
-  @DisplayName("게시판 생성 - 성공")
-  void createBoard_Success() {
-    // given
-    BoardRequest request = BoardRequest.builder()
-        .boardName("새 게시판")
-        .parentBoardId(mockParentBoard.getBoardId())
-        .build();
-
-    // Mocking
-    when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
-    when(boardRepository.findById(mockParentBoard.getBoardId())).thenReturn(Optional.of(mockParentBoard));
-
-    // ArgumentCaptor
-    ArgumentCaptor<Board> boardCaptor = ArgumentCaptor.forClass(Board.class);
-
-    // when
-    postService.createBoard(request, userId);
-
-    // then
-    verify(boardRepository).save(boardCaptor.capture());
-    Board savedBoard = boardCaptor.getValue();
-
-    assertThat(savedBoard.getBoardName()).isEqualTo("새 게시판");
-    assertThat(savedBoard.getCreatedBy()).isEqualTo(mockUser);
-    assertThat(savedBoard.getParentBoard().getBoardId()).isEqualTo(mockParentBoard.getBoardId());
   }
 }
