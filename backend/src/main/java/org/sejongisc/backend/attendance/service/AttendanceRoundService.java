@@ -188,7 +188,7 @@ public class AttendanceRoundService {
 
   /**
    * Quartz Job에서 호출: UPCOMING -> ACTIVE / ACTIVE -> CLOSED 자동 전환
-   * (cron: 0분, 30분마다 실행)
+   * (cron: 1분마다 실행)
    */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void runRoundStatusMaintenance() {
