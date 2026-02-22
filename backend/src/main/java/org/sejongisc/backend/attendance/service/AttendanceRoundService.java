@@ -31,6 +31,7 @@ public class AttendanceRoundService {
   private final AttendanceRoundRepository attendanceRoundRepository;
   private final AttendanceSessionRepository attendanceSessionRepository;
   private final AttendanceAuthorizationService authorizationService;
+  private final QrTokenStreamService qrTokenStreamService;
 
   /**
    * 라운드 생성(예약) - 세션 주인(OWNER)만 가능
@@ -104,8 +105,10 @@ public class AttendanceRoundService {
       throw new CustomException(ErrorCode.ROUND_NOT_ACTIVE);
     }
 
-    RollingQrTokenUtil.IssuedToken issued = RollingQrTokenUtil.issue(round.getRoundId(), round.getQrSecret());
-    return new AttendanceRoundQrTokenResponse(round.getRoundId(), issued.token(), issued.expiresAtEpochSec());
+    RollingQrTokenUtil.IssuedToken issued = RollingQrTokenUtil.issue(roundId, round.getQrSecret());
+    String qrUrl = qrTokenStreamService.createQrUrl(roundId, issued.token());
+
+    return new AttendanceRoundQrTokenResponse(round.getRoundId(), qrUrl, issued.expiresAtEpochSec());
   }
 
   /**
