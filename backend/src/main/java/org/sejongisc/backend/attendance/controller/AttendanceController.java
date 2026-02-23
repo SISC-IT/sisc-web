@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "출석 API", description = "체크인, 출석명단 조회, 출석상태 수정 등 출석 관련 API")
+@Tag(name = "06. 출석 API", description = "체크인, 출석명단 조회, 출석상태 수정 등 출석 관련 API")
 public class AttendanceController {
 
   private final AttendanceService attendanceService;

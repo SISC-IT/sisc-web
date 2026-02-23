@@ -32,7 +32,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(
-    name = "출석 라운드 API",
+    name = "06. 출석 라운드 API",
     description = "출석 라운드(주차별 회차) 생성, 조회, 수정, 삭제 및 출석 체크인 관련 API"
 )
 public class AttendanceRoundController {

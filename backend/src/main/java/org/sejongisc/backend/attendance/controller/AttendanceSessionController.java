@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/attendance/sessions")
 @Slf4j
 @Tag(
-    name = "출석 세션 API",
+    name = "06. 출석 세션 API",
     description = "출석 세션 생성, 조회, 수정, 삭제 및 상태 관리 관련 API"
 )
 public class AttendanceSessionController {
