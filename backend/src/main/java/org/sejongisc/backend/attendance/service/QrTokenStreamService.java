@@ -111,13 +111,13 @@ public class QrTokenStreamService {
   public String createQrUrl(UUID roundId, String token) {
     String baseUrl = devFrontendUrl;
 
-    // 활성화된 프로필 중 prod가 있으면 운영 서버 주소 사용
+    /* TODO : 배포서버 설치, application-dev.yml 생성, devFrontendUrl 이관 후 주석 해제
     for (String profile : environment.getActiveProfiles()) {
       if ("prod".equalsIgnoreCase(profile)) {
         baseUrl = prodFrontendUrl;
         break;
       }
-    }
+    }*/
 
     return String.format("%s%s?roundId=%s&token=%s", baseUrl, ATTENDANCE_PATH, roundId, token);
   }
