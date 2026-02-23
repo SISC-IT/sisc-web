@@ -20,9 +20,11 @@ import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.util.RollingQrTokenUtil;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.core.env.Environment;
 
 /**
  * QR 토큰을 폴링 없이 서버가 PUSH 해주는 SSE 스트림 서비스.
@@ -37,6 +39,16 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 @Slf4j
 public class QrTokenStreamService {
+
+  @Value("${app.prod-frontend-url}")
+  private String prodFrontendUrl;
+
+  @Value("${app.dev-frontend-url}")
+  private String devFrontendUrl;
+
+  private final Environment environment;
+
+  private static final String ATTENDANCE_PATH = "/attendance";
 
   private static final long WINDOW_SECONDS = RollingQrTokenUtil.DEFAULT_WINDOW_SECONDS;
   private static final long PING_SECONDS = 15;
@@ -77,8 +89,10 @@ public class QrTokenStreamService {
     // 즉시 현재 토큰 push
     try {
       RollingQrTokenUtil.IssuedToken issued = RollingQrTokenUtil.issue(roundId, round.getQrSecret());
+      String qrUrl = createQrUrl(roundId, issued.token());
+
       AttendanceRoundQrTokenResponse payload =
-          new AttendanceRoundQrTokenResponse(roundId, issued.token(), issued.expiresAtEpochSec());
+          new AttendanceRoundQrTokenResponse(roundId, qrUrl, issued.expiresAtEpochSec());
 
       emitter.send(SseEmitter.event()
           .name("qrToken")
@@ -92,6 +106,20 @@ public class QrTokenStreamService {
     startRoundTasksIfAbsent(roundId);
 
     return emitter;
+  }
+
+  public String createQrUrl(UUID roundId, String token) {
+    String baseUrl = devFrontendUrl;
+
+    // 활성화된 프로필 중 prod가 있으면 운영 서버 주소 사용
+    for (String profile : environment.getActiveProfiles()) {
+      if ("prod".equalsIgnoreCase(profile)) {
+        baseUrl = prodFrontendUrl;
+        break;
+      }
+    }
+
+    return String.format("%s%s?roundId=%s&token=%s", baseUrl, ATTENDANCE_PATH, roundId, token);
   }
 
   private void startRoundTasksIfAbsent(UUID roundId) {
@@ -156,8 +184,10 @@ public class QrTokenStreamService {
     }
 
     RollingQrTokenUtil.IssuedToken issued = RollingQrTokenUtil.issue(roundId, round.getQrSecret());
+    String qrUrl = createQrUrl(roundId, issued.token());
+
     AttendanceRoundQrTokenResponse payload =
-        new AttendanceRoundQrTokenResponse(roundId, issued.token(), issued.expiresAtEpochSec());
+        new AttendanceRoundQrTokenResponse(roundId, qrUrl, issued.expiresAtEpochSec());
 
     for (SseEmitter emitter : emitters) {
       try {
