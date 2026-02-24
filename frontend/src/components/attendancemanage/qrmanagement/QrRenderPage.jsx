@@ -1,32 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import styles from '../SessionManagementCard.module.css';
 import { connectRoundQrStream } from '../../../utils/qrManage';
 
 const QrRenderPage = () => {
   const [searchParams] = useSearchParams();
   const roundId = searchParams.get('roundId');
-  const [qrToken, setQrToken] = useState(null);
+  const [qrData, setQrData] = useState(null);
 
   useEffect(() => {
-    const eventSource = connectRoundQrStream(
-      roundId,
-      (token) => setQrToken(token),
-      () => console.log('SSE error')
-    );
+    if (!roundId) return;
 
-    return () => eventSource.close();
+    const es = connectRoundQrStream(roundId, (data) => {
+      setQrData(data);
+    });
+
+    return () => es.close();
   }, [roundId]);
 
-  const qrUrl = qrToken
-    ? `${window.location.origin}/attendance/check-in?token=${qrToken}`
-    : '';
-
   return (
-    <div className={styles.container}>
+    <div style={{ textAlign: 'center', marginTop: '80px' }}>
       <h1>QR 코드</h1>
-      {qrToken ? <QRCodeSVG value={qrUrl} size={400} /> : <p>QR 생성 중...</p>}
+
+      {qrData ? (
+        <QRCodeSVG value={qrData.qrToken} size={400} />
+      ) : (
+        <p>QR 생성 중...</p>
+      )}
     </div>
   );
 };

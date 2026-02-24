@@ -2,26 +2,31 @@ import { api } from './axios.js';
 
 // 라운드 QR SSE 연결
 export const connectRoundQrStream = (roundId, onMessage, onError) => {
-  const eventSource = new EventSource(
-    `/api/attendance/rounds/${roundId}/qr-stream`,
-    { withCredentials: true } // 쿠키 인증 사용하는 경우
-  );
+  const baseURL = api.defaults.baseURL;
 
-  eventSource.onmessage = (event) => {
-    if (onMessage) {
-      onMessage(event.data); // qrToken
-    }
+  const url = `${baseURL}/api/attendance/rounds/${roundId}/qr-stream`;
+
+  const eventSource = new EventSource(url, {
+    withCredentials: true,
+  });
+
+  eventSource.onopen = () => {
+    console.log('SSE 연결 성공');
   };
+
+  // 중요
+  eventSource.addEventListener('qrToken', (event) => {
+    const parsed = JSON.parse(event.data);
+    onMessage?.(parsed);
+  });
 
   eventSource.onerror = (err) => {
     console.error('QR SSE 연결 오류', err);
-    if (onError) {
-      onError(err);
-    }
+    onError?.(err);
     eventSource.close();
   };
 
-  return eventSource; // 필요 시 외부에서 close 가능
+  return eventSource;
 };
 
 // QR 체크인 요청
