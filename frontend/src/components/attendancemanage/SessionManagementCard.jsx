@@ -118,6 +118,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               <th>시간</th>
               <th>가능(분)</th>
               <th>회차</th>
+              <th>QR 코드</th>
             </tr>
           </thead>
           <tbody>
