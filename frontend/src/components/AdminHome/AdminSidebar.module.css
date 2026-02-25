@@ -1,0 +1,150 @@
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+  border-right: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.logoSection {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #111827;
+}
+
+.logoMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoMarkText {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.logoText {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tabSection {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tabWrap {
+  display: flex;
+  gap: 4px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.tabButton {
+  flex: 1;
+  text-align: center;
+  padding: 6px 0;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tabActive {
+  background: #111827;
+  color: #ffffff;
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.sectionTitleWrap {
+  padding: 0 16px;
+  margin-bottom: 8px;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.menuList {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+}
+
+.menuLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  text-decoration: none;
+  color: #6b7280;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.menuLink:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.menuLinkActive {
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 600;
+}
+
+.footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 12px;
+}
+
+.settingsLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #6b7280;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.settingsLink:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    display: none;
+  }
+}
