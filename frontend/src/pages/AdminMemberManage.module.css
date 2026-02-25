@@ -1,0 +1,33 @@
+.layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.mainArea {
+  flex: 1;
+  min-width: 0;
+}
+
+.contentArea {
+  padding: 20px;
+}
+
+@media (min-width: 768px) {
+  .contentArea {
+    padding: 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .contentArea {
+    padding: 48px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    display: block;
+  }
+}
