@@ -1,37 +1,29 @@
-export const attendanceList = [
-  {
-    date: '25-09-01',
-    startTime: '18:00:00',
-    available: 30,
-    round: 1,
-    name: '김성원',
-  },
-  {
-    date: '25-09-08',
-    startTime: '18:00:00',
-    available: 10,
-    round: 2,
-    name: '김성원',
-  },
-  {
-    date: '25-09-15',
-    startTime: '18:00:00',
-    available: 20,
-    round: 3,
-    name: '김성원',
-  },
-  {
-    date: '25-09-22',
-    startTime: '18:00:00',
-    available: 30,
-    round: 4,
-    name: '김성원',
-  },
-  {
-    date: '25-09-29',
-    startTime: '18:00:00',
-    available: 30,
-    round: 5,
-    name: '김성원',
-  },
-];
+import { api } from './axios.js';
+
+export const attendanceList = async () => {
+  try {
+    const res = await api.get('/api/attendance/me');
+    // console.log('API BASE URL:', import.meta.env.VITE_API_URL);
+    return res.data;
+  } catch (err) {
+    console.error('출석 세션 불러오기 중 오류 발생: ', err);
+    throw err;
+  }
+};
+
+
+// [
+//   {
+//     "attendanceId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+//     "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+//     "userName": "string",
+//     "roundId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+//     "attendanceStatus": "string",
+//     "checkedAt": "2026-02-24T14:33:43.581Z",
+//     "note": "string",
+//     "checkInLatitude": 0.1,
+//     "checkInLongitude": 0.1,
+//     "createdAt": "2026-02-24T14:33:43.581Z",
+//     "updatedAt": "2026-02-24T14:33:43.581Z"
+//   }
+// ]
