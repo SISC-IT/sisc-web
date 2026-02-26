@@ -1,0 +1,185 @@
+.layout {
+	display: flex;
+	width: 100%;
+	min-height: 100vh;
+	background: #f9fafb;
+}
+
+.mainArea {
+	flex: 1;
+	min-width: 0;
+}
+
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	width: 100%;
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+.title {
+	font-size: 28px;
+	font-weight: 700;
+}
+
+.statsGrid {
+	display: grid;
+	grid-template-columns: repeat(1, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.gridTwoColumns {
+	display: grid;
+	grid-template-columns: repeat(1, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.card,
+.panel {
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	padding: 16px;
+	background: #ffffff;
+}
+
+.cardTitle {
+	font-size: 14px;
+	margin: 0;
+}
+
+.cardValue {
+	font-size: 28px;
+	font-weight: 700;
+	margin: 8px 0 4px;
+}
+
+.cardDescription {
+	font-size: 13px;
+	margin: 0;
+}
+
+.panelHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.panelTitle {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.linkButton {
+	font-size: 13px;
+	text-decoration: none;
+}
+
+.list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.listItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	border: 1px solid #f3f4f6;
+	border-radius: 10px;
+	padding: 12px;
+}
+
+.listItemColumn {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	border: 1px solid #f3f4f6;
+	border-radius: 10px;
+	padding: 12px;
+}
+
+.memberName {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.memberMeta {
+	margin: 0;
+	font-size: 12px;
+}
+
+.memberActions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.badge {
+	border: 1px solid #d1d5db;
+	border-radius: 999px;
+	padding: 4px 8px;
+	font-size: 12px;
+}
+
+.actionPrimary,
+.actionSecondary,
+.quickActionButton {
+	border: 1px solid #d1d5db;
+	border-radius: 8px;
+	padding: 6px 10px;
+	font-size: 13px;
+	background: #ffffff;
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.quickActionWrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.activityMessage {
+	margin: 0;
+	font-size: 14px;
+}
+
+@media (min-width: 768px) {
+	.container {
+		padding: 40px;
+	}
+
+	.statsGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 1024px) {
+	.container {
+		padding: 60px;
+	}
+
+	.statsGrid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.gridTwoColumns {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 1023px) {
+	.layout {
+		display: block;
+	}
+}

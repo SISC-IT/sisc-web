@@ -1,14 +1,42 @@
+import { useEffect, useState } from 'react';
 import styles from './SessionManage.module.css';
 import { ClipboardCheck } from 'lucide-react';
 import { attendanceList } from '../../utils/attendanceList';
 
 const SessionManage = () => {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const data = await attendanceList();
+        const normalizedSessions = Array.isArray(data)
+          ? data.filter((item) => item && typeof item === 'object')
+          : [];
+        setSessions(normalizedSessions);
+      } catch (err) {
+        setError('데이터를 불러오는 중 오류가 발생했습니다.');
+        setSessions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAttendance();
+  }, []);
+
+  if (loading) return <div>로딩 중...</div>;
+  if (error) return <div>{error}</div>;
+
   return (
     <div className={styles.card}>
       <div className={styles.title}>
         <ClipboardCheck />
         세션 관리
       </div>
+
       <table className={styles.table} role="grid">
         <thead>
           <tr>
@@ -22,13 +50,13 @@ const SessionManage = () => {
         </thead>
 
         <tbody>
-          {attendanceList.map((s) => (
-            <tr key={s.date}>
-              <td>{s.date}</td>
-              <td>{s.startTime}</td>
-              <td>{s.available}분</td>
-              <td>{s.round}회차</td>
-              <td>{s.name}</td>
+          {(Array.isArray(sessions) ? sessions : []).map((s) => (
+            <tr key={s.attendanceId}>
+              <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+              <td>{new Date(s.checkedAt).toLocaleTimeString()}</td>
+              <td>30분</td> 
+              <td>{s.roundId}</td>
+              <td>{s.userName}</td>
               <td>
                 <button className={styles.button}>출석</button>
               </td>
