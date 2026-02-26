@@ -36,8 +36,16 @@ const AdminMemberApprovalList = () => {
     try {
       const data = await getAdminMemberManageData({ keyword });
       setPendingMembers(data.pendingMembers || []);
-      setMonthlyApprovedCount(data.monthlyApprovedCount || 0);
-      setMonthlyRejectedCount(data.monthlyRejectedCount || 0);
+      setMonthlyApprovedCount((prev) =>
+        data.monthlyApprovedCount != null
+          ? Math.max(prev, data.monthlyApprovedCount)
+          : prev
+      );
+      setMonthlyRejectedCount((prev) =>
+        data.monthlyRejectedCount != null
+          ? Math.max(prev, data.monthlyRejectedCount)
+          : prev
+      );
     } catch (error) {
       window.alert(error?.message || '가입 승인 대기 회원을 불러오지 못했습니다.');
       setPendingMembers([]);

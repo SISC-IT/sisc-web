@@ -12,10 +12,13 @@ const SessionManage = () => {
     const fetchAttendance = async () => {
       try {
         const data = await attendanceList();
-        setSessions(data);
-        console.log(data);
+        const normalizedSessions = Array.isArray(data)
+          ? data.filter((item) => item && typeof item === 'object')
+          : [];
+        setSessions(normalizedSessions);
       } catch (err) {
         setError('데이터를 불러오는 중 오류가 발생했습니다.');
+        setSessions([]);
       } finally {
         setLoading(false);
       }
@@ -47,7 +50,7 @@ const SessionManage = () => {
         </thead>
 
         <tbody>
-          {sessions.map((s) => (
+          {(Array.isArray(sessions) ? sessions : []).map((s) => (
             <tr key={s.attendanceId}>
               <td>{new Date(s.createdAt).toLocaleDateString()}</td>
               <td>{new Date(s.checkedAt).toLocaleTimeString()}</td>

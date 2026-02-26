@@ -10,7 +10,7 @@ const Attendance = () => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>출석조회</h1>
+      <h1 className={styles.title}>출석하기</h1>
       <div className={styles.attendanceSection}>
         <SessionSelectBox />
         {/* <ExcusedTime /> */}

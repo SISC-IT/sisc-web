@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Star } from 'lucide-react';
 import styles from './AdminMemberManage.module.css';
 import {
@@ -57,20 +57,31 @@ const AdminMemberManage = () => {
   const [members, setMembers] = useState([]);
   const [isPromotingById, setIsPromotingById] = useState({});
   const [isDeletingById, setIsDeletingById] = useState({});
+  const [isChangingById, setIsChangingById] = useState({});
   const [changeDialog, setChangeDialog] = useState({
     open: false,
     type: 'role',
     member: null,
     value: '',
   });
+  const latestRequestIdRef = useRef(0);
 
   // 회원 목록 조회 (필요한 필터만 백엔드로 전달)
-  const loadMembers = async ({ keyword, role, status } = {}) => {
+  const loadMembers = async ({ keyword, role, status, requestId } = {}) => {
     try {
       const data = await getAdminMembersData({ keyword, role, status });
+
+      if (requestId != null && requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
       const nextMembers = data.members || [];
       setMembers(nextMembers);
     } catch (error) {
+      if (requestId != null && requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
       window.alert(error?.message || '회원 목록을 불러오지 못했습니다.');
       setMembers([]);
     }
@@ -78,13 +89,21 @@ const AdminMemberManage = () => {
 
   // 필터/검색 조건 변경 시 목록 재조회
   useEffect(() => {
+    const requestId = ++latestRequestIdRef.current;
     const backendRole = roleFilter === 'all' ? undefined : roleFilter;
     const backendStatus = statusFilter === 'all' ? undefined : statusFilter;
     loadMembers({
       keyword: searchQuery.trim() || undefined,
       role: backendRole,
       status: backendStatus,
+      requestId,
     });
+
+    return () => {
+      if (latestRequestIdRef.current === requestId) {
+        latestRequestIdRef.current += 1;
+      }
+    };
   }, [roleFilter, searchQuery, statusFilter]);
 
   const filteredMembers = useMemo(() => {
@@ -121,6 +140,15 @@ const AdminMemberManage = () => {
     const { type, member, value } = changeDialog;
     if (!member) return;
 
+    if (isChangingById[member.id]) {
+      return;
+    }
+
+    setIsChangingById((prev) => ({
+      ...prev,
+      [member.id]: true,
+    }));
+
     try {
       if (type === 'role') {
         if (!ROLE_OPTIONS.includes(value)) {
@@ -147,6 +175,11 @@ const AdminMemberManage = () => {
         error?.message ||
           (type === 'role' ? '권한 변경에 실패했습니다.' : '상태 변경에 실패했습니다.')
       );
+    } finally {
+      setIsChangingById((prev) => ({
+        ...prev,
+        [member.id]: false,
+      }));
     }
   };
 
@@ -395,8 +428,9 @@ const AdminMemberManage = () => {
                 type="button"
                 className={styles.actionButton}
                 onClick={confirmChangeDialog}
+                disabled={Boolean(isChangingById[changeDialog.member.id])}
               >
-                변경
+                {isChangingById[changeDialog.member.id] ? '처리 중...' : '변경'}
               </button>
             </div>
           </div>
