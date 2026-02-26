@@ -14,7 +14,7 @@ import SignUp from './pages/SignUp';
 import QuantTradingDashboard from './pages/QuantTradingDashboard';
 import BacktestResult from './pages/BacktestResult.jsx';
 
-import CheckInPage from './components/attendancemanage/qrmanagement/CheckInPage.jsx';
+// import CheckInPage from './components/attendancemanage/qrmanagement/CheckInPage.jsx';
 import QrRenderPage from './components/attendancemanage/qrmanagement/QrRenderPage.jsx';
 
 import OAuthSuccess from './pages/OAuthSuccess.jsx';
@@ -66,7 +66,7 @@ function App() {
             <Route path="/backtest/result" element={<BacktestResult />} />
             <Route path="/mypage" element={<Mypage />} />
             <Route path="/attendance/admin/qr" element={<QrRenderPage />} />
-            <Route path="/attendance/check-in" element={<CheckInPage />} />
+            {/* <Route path="/attendance/check-in" element={<CheckInPage />} /> */}
           </Route>
         </Route>
       </Routes>
