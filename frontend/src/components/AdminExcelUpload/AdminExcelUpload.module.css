@@ -126,6 +126,8 @@
 }
 
 .fileName {
+  min-width: 0;
+  flex: 1;
   font-size: 13px;
   color: #111827;
   overflow: hidden;

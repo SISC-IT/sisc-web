@@ -97,51 +97,43 @@ const AdminMemberApprovalList = () => {
   };
 
   // 승인 확정 처리 (단건/일괄)
-  const confirmApprove = () => {
-    const approveAction = async () => {
-      try {
-        if (actionTarget === 'single' && targetMember) {
-          await approvePendingMember({ userId: targetMember.id });
-          setMonthlyApprovedCount((prev) => prev + 1);
-        } else {
-          await approvePendingMembersBulk({ userIds: selectedIds });
-          setMonthlyApprovedCount((prev) => prev + selectedIds.length);
-        }
-
-        setApproveDialogOpen(false);
-        setSelectedIds([]);
-        setTargetMember(null);
-        await loadPendingMembers({ keyword: searchQuery.trim() || undefined });
-      } catch (error) {
-        window.alert(error?.message || '가입 승인 처리에 실패했습니다.');
+  const confirmApprove = async () => {
+    try {
+      if (actionTarget === 'single' && targetMember) {
+        await approvePendingMember({ userId: targetMember.id });
+        setMonthlyApprovedCount((prev) => prev + 1);
+      } else {
+        await approvePendingMembersBulk({ userIds: selectedIds });
+        setMonthlyApprovedCount((prev) => prev + selectedIds.length);
       }
-    };
 
-    approveAction();
+      setApproveDialogOpen(false);
+      setSelectedIds([]);
+      setTargetMember(null);
+      await loadPendingMembers({ keyword: searchQuery.trim() || undefined });
+    } catch (error) {
+      window.alert(error?.message || '가입 승인 처리에 실패했습니다.');
+    }
   };
 
   // 거절 확정 처리 (단건/일괄)
-  const confirmReject = () => {
-    const rejectAction = async () => {
-      try {
-        if (actionTarget === 'single' && targetMember) {
-          await rejectPendingMember({ userId: targetMember.id });
-          setMonthlyRejectedCount((prev) => prev + 1);
-        } else {
-          await rejectPendingMembersBulk({ userIds: selectedIds });
-          setMonthlyRejectedCount((prev) => prev + selectedIds.length);
-        }
-
-        setRejectDialogOpen(false);
-        setSelectedIds([]);
-        setTargetMember(null);
-        await loadPendingMembers({ keyword: searchQuery.trim() || undefined });
-      } catch (error) {
-        window.alert(error?.message || '가입 거절 처리에 실패했습니다.');
+  const confirmReject = async () => {
+    try {
+      if (actionTarget === 'single' && targetMember) {
+        await rejectPendingMember({ userId: targetMember.id });
+        setMonthlyRejectedCount((prev) => prev + 1);
+      } else {
+        await rejectPendingMembersBulk({ userIds: selectedIds });
+        setMonthlyRejectedCount((prev) => prev + selectedIds.length);
       }
-    };
 
-    rejectAction();
+      setRejectDialogOpen(false);
+      setSelectedIds([]);
+      setTargetMember(null);
+      await loadPendingMembers({ keyword: searchQuery.trim() || undefined });
+    } catch (error) {
+      window.alert(error?.message || '가입 거절 처리에 실패했습니다.');
+    }
   };
 
   return (
@@ -245,7 +237,7 @@ const AdminMemberApprovalList = () => {
                 </td>
                 <td>
                   <div className={styles.memberInfo}>
-                    <div className={styles.avatar}>{member.name[0]}</div>
+                    <div className={styles.avatar}>{member.name?.[0] || '?'}</div>
                     <div>
                       <p className={styles.memberName}>{member.name}</p>
                       <p className={styles.memberEmail}>{member.email}</p>

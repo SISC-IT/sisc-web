@@ -34,6 +34,7 @@ const AdminExcelUpload = () => {
   const handleInputChange = (event) => {
     const file = event.target.files?.[0];
     handleSelectFile(file);
+    event.target.value = '';
   };
 
   const handleDragOver = (event) => {
