@@ -68,6 +68,7 @@ const AdminMemberManage = () => {
       const data = await getAdminMembersData({ keyword, role, status });
       const nextMembers = data.members || [];
       setMembers(nextMembers);
+      console.log('회원 목록 로드 성공:', nextMembers);
     } catch (error) {
       window.alert(error?.message || '회원 목록을 불러오지 못했습니다.');
       setMembers([]);
