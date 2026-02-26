@@ -16,6 +16,7 @@ import BacktestResult from './pages/BacktestResult.jsx';
 import AdminHome from './pages/AdminHome.jsx';
 import AdminMemberApproval from './pages/AdminMemberApproval.jsx';
 import AdminMemberManage from './pages/AdminMemberManage.jsx';
+import AdminExcelUpload from './pages/AdminExcelUpload.jsx';
 
 // import CheckInPage from './components/attendancemanage/qrmanagement/CheckInPage.jsx';
 import QrRenderPage from './components/attendancemanage/qrmanagement/QrRenderPage.jsx';
@@ -78,6 +79,7 @@ function App() {
               <Route
                 path="/admin/members/approval" element={<AdminMemberApproval />}
               />
+              <Route path="/admin/members/upload" element={<AdminExcelUpload />} />
             </Route>
         </Route>
       </Routes>
