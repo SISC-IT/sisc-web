@@ -34,10 +34,6 @@ import org.sejongisc.backend.user.entity.User;
         @UniqueConstraint(
             name = "uk_attendance_round_user",
             columnNames = {"round_id", "user_id"}
-        ),
-        @UniqueConstraint(
-            name = "uk_attendance_round_device",
-            columnNames = {"round_id", "device_id"}
         )
     }
 )

@@ -6,7 +6,6 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.board.dto.BoardRequest;
 import org.sejongisc.backend.board.dto.BoardResponse;
 import org.sejongisc.backend.board.dto.CommentRequest;
 import org.sejongisc.backend.board.dto.PostRequest;
@@ -140,21 +139,6 @@ public class BoardController {
     return ResponseEntity.ok(response);
   }
 
-  // 게시판 생성
-  @Operation(
-      summary = "게시판 생성",
-      description = "게시판 이름과 상위 게시판 ID를 포함한 새로운 게시판을 생성합니다."
-                    + "상위 게시판의 ID가 null 이면 최상위 게시판으로 생성됩니다."
-  )
-  @PostMapping
-  public ResponseEntity<Void> createBoard(
-      @RequestBody @Valid BoardRequest request,
-      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    UUID userId = customUserDetails.getUserId();
-    postService.createBoard(request, userId);
-    return ResponseEntity.ok().build();
-  }
-
   // 최상위 게시판 목록 조회
   @Operation(
       summary = "부모 게시판 목록 조회",
@@ -176,22 +160,6 @@ public class BoardController {
   public ResponseEntity<List<BoardResponse>> getChildBoards(
           @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(postService.getChildBoards());
-  }
-
-  // 게시판 삭제
-  @Operation(
-          summary = "게시판 삭제",
-          description = "게시판 ID를 통해 게시판을 삭제합니다."
-                  + "회장만 삭제할 수 있습니다."
-                  + "관련 첨부파일 및 댓글 등도 함께 삭제됩니다."
-  )
-  @DeleteMapping("/{boardId}")
-  public ResponseEntity<?> deleteBoard(
-          @PathVariable UUID boardId,
-          @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    UUID userId = customUserDetails.getUserId();
-    postService.deleteBoard(boardId, userId);
-    return ResponseEntity.ok("게시판 삭제가 완료되었습니다.");
   }
 
   // 좋아요 토글
