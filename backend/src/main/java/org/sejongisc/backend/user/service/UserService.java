@@ -2,6 +2,8 @@ package org.sejongisc.backend.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.activity.entity.ActivityType;
+import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
 import org.sejongisc.backend.common.auth.service.EmailService;
@@ -27,6 +29,7 @@ import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,6 +54,7 @@ public class UserService {
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
     private final EmailProperties emailProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     // --- 핵심 회원 서비스 ---
 
@@ -78,6 +82,12 @@ public class UserService {
                 AccountEntry.debit(userAccount, 100L)
             );
             log.info("포인트 계정 생성 및 초기 포인트 지급 완료: {}", user.getEmail());
+            eventPublisher.publishEvent(new ActivityEvent(
+                    user.getUserId(),
+                    user.getName(),
+                    ActivityType.ATTENDANCE,
+                    user.getName() + "님이 일반 회원가입을 신청했습니다.",
+                    null, null));
             return SignupResponse.from(saved);
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.DUPLICATE_USER);
