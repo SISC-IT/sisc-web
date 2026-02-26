@@ -1,5 +1,6 @@
 import { api } from './axios';
 
+// 관리자 사용자 목록 조회
 export const getAdminUsers = async ({ keyword, generation, role, status } = {}) => {
   const params = {};
 
@@ -12,26 +13,31 @@ export const getAdminUsers = async ({ keyword, generation, role, status } = {}) 
   return response.data;
 };
 
+// 사용자 권한 변경
 export const updateAdminUserRole = async ({ userId, role }) => {
   await api.patch(`/api/admin/users/${userId}/role`, null, {
     params: { role },
   });
 };
 
+// 사용자 상태 변경
 export const updateAdminUserStatus = async ({ userId, status }) => {
   await api.patch(`/api/admin/users/${userId}/status`, null, {
     params: { status },
   });
 };
 
+// 사용자를 선배(SENIOR)로 전환
 export const promoteAdminUserSenior = async ({ userId }) => {
   await api.patch(`/api/admin/users/${userId}/senior`);
 };
 
+// 사용자 삭제
 export const deleteAdminUser = async ({ userId }) => {
   await api.delete(`/api/admin/users/${userId}`);
 };
 
+// 관리자용 엑셀 업로드 API
 export const uploadAdminUsersExcel = async ({ file }) => {
   const formData = new FormData();
   formData.append('file', file);

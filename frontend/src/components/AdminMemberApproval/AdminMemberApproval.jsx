@@ -18,16 +18,20 @@ import {
 } from '../../utils/adminMemberManageData';
 
 const AdminMemberApprovalList = () => {
+  // 검색/선택/모달 제어 상태
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [actionTarget, setActionTarget] = useState('single');
   const [targetMember, setTargetMember] = useState(null);
+
+  // 데이터 상태
   const [pendingMembers, setPendingMembers] = useState([]);
   const [monthlyApprovedCount, setMonthlyApprovedCount] = useState(0);
   const [monthlyRejectedCount, setMonthlyRejectedCount] = useState(0);
 
+  // 가입 승인 대기 목록/통계 조회
   const loadPendingMembers = async ({ keyword } = {}) => {
     try {
       const data = await getAdminMemberManageData({ keyword });
@@ -44,6 +48,7 @@ const AdminMemberApprovalList = () => {
     loadPendingMembers();
   }, []);
 
+  // 검색어 기준 클라이언트 필터링
   const filteredMembers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     if (!normalizedQuery) return pendingMembers;
@@ -62,6 +67,7 @@ const AdminMemberApprovalList = () => {
     );
   };
 
+  // 현재 필터된 목록 전체 선택/해제
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredMembers.length) {
       setSelectedIds([]);
@@ -90,6 +96,7 @@ const AdminMemberApprovalList = () => {
     setRejectDialogOpen(true);
   };
 
+  // 승인 확정 처리 (단건/일괄)
   const confirmApprove = () => {
     const approveAction = async () => {
       try {
@@ -113,6 +120,7 @@ const AdminMemberApprovalList = () => {
     approveAction();
   };
 
+  // 거절 확정 처리 (단건/일괄)
   const confirmReject = () => {
     const rejectAction = async () => {
       try {
