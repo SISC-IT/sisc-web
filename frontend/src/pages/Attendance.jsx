@@ -4,9 +4,11 @@ import ExcusedTime from '../components/attendance/ExcusedTime';
 import SessionManage from '../components/attendance/SessionManage';
 
 import { useAuthGuard } from '../hooks/useAuthGuard';
+import { useCheckIn } from '../hooks/useCheckIn';
 
 const Attendance = () => {
   useAuthGuard();
+  useCheckIn();
 
   return (
     <div className={styles.container}>

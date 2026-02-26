@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useNavigate, NavLink, useSearchParams } from 'react-router-dom';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 
@@ -13,6 +13,8 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const LoginForm = () => {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
 
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
@@ -41,8 +43,11 @@ const LoginForm = () => {
         },
         abortRef.current.signal
       );
-
-      nav('/');
+      if (returnUrl && returnUrl.startsWith('/')) {
+        nav(returnUrl, { replace: true });
+      } else {
+        nav('/', { replace: true });
+      }
     } catch (err) {
       console.dir(err);
       toast.error('로그인에 실패하였습니다. 학번과 비밀번호를 확인해주세요.');
