@@ -10,7 +10,6 @@ import {
 } from '../../utils/adminMembersData';
 
 const ROLE_LABELS = {
-  SYSTEM_ADMIN: '시스템관리자',
   PRESIDENT: '회장',
   VICE_PRESIDENT: '부회장',
   TEAM_LEADER: '팀장',
@@ -18,18 +17,25 @@ const ROLE_LABELS = {
   PENDING_MEMBER: '대기회원',
 };
 
+const ROLE_OPTIONS = [
+  'PRESIDENT',
+  'VICE_PRESIDENT',
+  'TEAM_LEADER',
+  'TEAM_MEMBER',
+  'PENDING_MEMBER',
+];
+
 const STATUS_LABELS = {
   ACTIVE: '활성',
   INACTIVE: '비활성',
   GRADUATED: '졸업',
-  OUT: '탈퇴',
 };
+
+const STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'GRADUATED'];
 
 const getRoleClassName = (role) => {
   if (role === '회장') return styles.rolePresident;
-  if (role === '시스템관리자') return styles.rolePresident;
   if (role === '부회장') return styles.roleManager;
-  if (role === '운영부') return styles.roleManager;
   if (role === '팀장') return styles.roleLeader;
   if (role === '대기회원') return styles.roleLeader;
   return styles.roleNormal;
@@ -37,20 +43,31 @@ const getRoleClassName = (role) => {
 
 const getStatusClassName = (status) => {
   if (status === '활성') return styles.statusActive;
-  if (status === '비활성' || status === '졸업' || status === '탈퇴') return styles.statusInactive;
+  if (status === '비활성' || status === '졸업') return styles.statusInactive;
   return styles.statusPending;
 };
 
 const AdminMemberManage = () => {
+  // 필터/검색 상태
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [members, setMembers] = useState([]);
 
+  // 회원 목록 데이터 상태
+  const [members, setMembers] = useState([]);
+  const [changeDialog, setChangeDialog] = useState({
+    open: false,
+    type: 'role',
+    member: null,
+    value: '',
+  });
+
+  // 회원 목록 조회 (필요한 필터만 백엔드로 전달)
   const loadMembers = async ({ keyword, role, status } = {}) => {
     try {
       const data = await getAdminMembersData({ keyword, role, status });
-      setMembers(data.members || []);
+      const nextMembers = data.members || [];
+      setMembers(nextMembers);
     } catch (error) {
       window.alert(error?.message || '회원 목록을 불러오지 못했습니다.');
       setMembers([]);
@@ -61,6 +78,7 @@ const AdminMemberManage = () => {
     loadMembers();
   }, []);
 
+  // 필터/검색 조건 변경 시 목록 재조회
   useEffect(() => {
     const backendRole = roleFilter === 'all' ? undefined : roleFilter;
     const backendStatus = statusFilter === 'all' ? undefined : statusFilter;
@@ -79,46 +97,62 @@ const AdminMemberManage = () => {
     }));
   }, [members]);
 
-  const handleRoleChange = async (member) => {
-    const roleInput = window.prompt(
-      '변경할 권한을 입력하세요.\n예: TEAM_MEMBER, TEAM_LEADER, VICE_PRESIDENT, PRESIDENT, SYSTEM_ADMIN, PENDING_MEMBER',
-      member.role
-    );
+  const openRoleDialog = (member) => {
+    setChangeDialog({
+      open: true,
+      type: 'role',
+      member,
+      value: member.role,
+    });
+  };
 
-    if (!roleInput) return;
+  const openStatusDialog = (member) => {
+    setChangeDialog({
+      open: true,
+      type: 'status',
+      member,
+      value: member.status,
+    });
+  };
+
+  const closeChangeDialog = () => {
+    setChangeDialog({ open: false, type: 'role', member: null, value: '' });
+  };
+
+  const confirmChangeDialog = async () => {
+    const { type, member, value } = changeDialog;
+    if (!member) return;
 
     try {
-      await changeAdminMemberRole({ userId: member.id, role: roleInput });
+      if (type === 'role') {
+        if (!ROLE_OPTIONS.includes(value)) {
+          window.alert('유효하지 않은 권한입니다.');
+          return;
+        }
+        await changeAdminMemberRole({ userId: member.id, role: value });
+      } else {
+        if (!STATUS_OPTIONS.includes(value)) {
+          window.alert('유효하지 않은 상태입니다.');
+          return;
+        }
+        await changeAdminMemberStatus({ userId: member.id, status: value });
+      }
+
+      closeChangeDialog();
       await loadMembers({
         keyword: searchQuery.trim() || undefined,
         role: roleFilter === 'all' ? undefined : roleFilter,
         status: statusFilter === 'all' ? undefined : statusFilter,
       });
     } catch (error) {
-      window.alert(error?.message || '권한 변경에 실패했습니다.');
+      window.alert(
+        error?.message ||
+          (type === 'role' ? '권한 변경에 실패했습니다.' : '상태 변경에 실패했습니다.')
+      );
     }
   };
 
-  const handleStatusChange = async (member) => {
-    const statusInput = window.prompt(
-      '변경할 상태를 입력하세요.\n예: ACTIVE, INACTIVE, GRADUATED, OUT',
-      member.status
-    );
-
-    if (!statusInput) return;
-
-    try {
-      await changeAdminMemberStatus({ userId: member.id, status: statusInput });
-      await loadMembers({
-        keyword: searchQuery.trim() || undefined,
-        role: roleFilter === 'all' ? undefined : roleFilter,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-      });
-    } catch (error) {
-      window.alert(error?.message || '상태 변경에 실패했습니다.');
-    }
-  };
-
+  // 단일 회원 선배 전환
   const handlePromoteSenior = async (member) => {
     if (!window.confirm(`${member.name}님을 선배(SENIOR)로 전환하시겠습니까?`)) {
       return;
@@ -136,6 +170,7 @@ const AdminMemberManage = () => {
     }
   };
 
+  // 단일 회원 삭제
   const handleDelete = async (member) => {
     if (!window.confirm(`${member.name}님을 강제 탈퇴 처리하시겠습니까?`)) {
       return;
@@ -188,7 +223,6 @@ const AdminMemberManage = () => {
           <option value="ACTIVE">활성</option>
           <option value="INACTIVE">비활성</option>
           <option value="GRADUATED">졸업</option>
-          <option value="OUT">탈퇴</option>
         </select>
       </div>
 
@@ -246,14 +280,14 @@ const AdminMemberManage = () => {
                     <button
                       type="button"
                       className={styles.actionButton}
-                      onClick={() => handleRoleChange(member)}
+                      onClick={() => openRoleDialog(member)}
                     >
                       권한 변경
                     </button>
                     <button
                       type="button"
                       className={styles.actionButton}
-                      onClick={() => handleStatusChange(member)}
+                      onClick={() => openStatusDialog(member)}
                     >
                       상태 변경
                     </button>
@@ -290,6 +324,56 @@ const AdminMemberManage = () => {
           </button>
         </div>
       </div>
+
+      {changeDialog.open && changeDialog.member && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <h3>
+              {changeDialog.type === 'role' ? '권한 변경' : '상태 변경'}
+            </h3>
+            <p>
+              {changeDialog.member.name}님의
+              {changeDialog.type === 'role' ? ' 권한' : ' 상태'}을 선택하세요.
+            </p>
+            <select
+              className={styles.filterSelect}
+              value={changeDialog.value}
+              onChange={(event) =>
+                setChangeDialog((prev) => ({
+                  ...prev,
+                  value: event.target.value,
+                }))
+              }
+            >
+              {(changeDialog.type === 'role' ? ROLE_OPTIONS : STATUS_OPTIONS).map(
+                (option) => (
+                  <option key={option} value={option}>
+                    {(changeDialog.type === 'role'
+                      ? ROLE_LABELS[option]
+                      : STATUS_LABELS[option]) || option}
+                  </option>
+                )
+              )}
+            </select>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={closeChangeDialog}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={confirmChangeDialog}
+              >
+                변경
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -19,13 +19,13 @@ const AdminHome = () => {
   });
 
   useEffect(() => {
-    const loadAdminHomeData = async () => {
-      const adminHomeData = await getAdminHomeData();
-      setData(adminHomeData);
-    };
-
     loadAdminHomeData();
   }, []);
+
+  const loadAdminHomeData = async () => {
+    const adminHomeData = await getAdminHomeData();
+    setData(adminHomeData);
+  };
 
   return (
     <div className={styles.layout}>
@@ -37,7 +37,11 @@ const AdminHome = () => {
           <DashboardStats stats={data.dashboardStats} styles={styles} />
 
           <div className={styles.gridTwoColumns}>
-            <PendingApprovalsPanel members={data.pendingApprovals} styles={styles} />
+            <PendingApprovalsPanel
+              members={data.pendingApprovals}
+              styles={styles}
+              onChanged={loadAdminHomeData}
+            />
             <RecentActivitiesPanel activities={data.recentActivities} styles={styles} />
           </div>
 

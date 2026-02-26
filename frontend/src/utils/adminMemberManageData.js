@@ -1,5 +1,6 @@
 import { api } from './axios';
 
+// 가입 승인 대기 회원 목록 조회
 export const getAdminMemberManageData = async ({ keyword } = {}) => {
   const params = {
     role: 'PENDING_MEMBER',
@@ -16,18 +17,21 @@ export const getAdminMemberManageData = async ({ keyword } = {}) => {
   };
 };
 
+// 단일 회원 가입 승인 (대기 -> 일반 회원)
 export const approvePendingMember = async ({ userId }) => {
   await api.patch(`/api/admin/users/${userId}/role`, null, {
     params: { role: 'TEAM_MEMBER' },
   });
 };
 
+// 단일 회원 가입 거절 (상태 -> OUT)
 export const rejectPendingMember = async ({ userId }) => {
   await api.patch(`/api/admin/users/${userId}/status`, null, {
     params: { status: 'OUT' },
   });
 };
 
+// 다중 회원 일괄 가입 승인
 export const approvePendingMembersBulk = async ({ userIds }) => {
   await Promise.all(
     userIds.map((userId) =>
@@ -38,6 +42,7 @@ export const approvePendingMembersBulk = async ({ userIds }) => {
   );
 };
 
+// 다중 회원 일괄 가입 거절
 export const rejectPendingMembersBulk = async ({ userIds }) => {
   await Promise.all(
     userIds.map((userId) =>
