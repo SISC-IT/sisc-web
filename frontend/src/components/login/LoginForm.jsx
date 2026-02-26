@@ -43,8 +43,7 @@ const LoginForm = () => {
         },
         abortRef.current.signal
       );
-      if (returnUrl) {
-        console.log(returnUrl);
+      if (returnUrl && returnUrl.startsWith('/')) {
         nav(returnUrl, { replace: true });
       } else {
         nav('/', { replace: true });
