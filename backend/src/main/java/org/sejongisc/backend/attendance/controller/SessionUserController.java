@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RequestMapping("/api/attendance/sessions/users")
 @Tag(
-    name = "세션 유저 API",
+    name = "06. 세션 유저 API",
     description = "세션 사용자 관련 API"
 )
 public class SessionUserController {
