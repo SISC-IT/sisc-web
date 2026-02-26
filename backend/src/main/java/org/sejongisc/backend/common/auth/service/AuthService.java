@@ -9,6 +9,7 @@ import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.AuthRequest;
 import org.sejongisc.backend.common.auth.dto.AuthResponse;
@@ -43,6 +44,10 @@ public class AuthService {
         if (user.getPasswordHash() == null ||
             !passwordEncoder.matches(request.getPassword().trim(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (user.getRole().equals(Role.PENDING_MEMBER)) {
+            throw new CustomException(ErrorCode.NEED_PENDING_APPROVAL);
         }
 
         String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
