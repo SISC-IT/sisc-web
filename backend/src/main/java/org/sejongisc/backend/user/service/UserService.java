@@ -57,8 +57,11 @@ public class UserService {
     @Transactional
     @OptimisticRetry
     public SignupResponse signup(SignupRequest request) {
-        if (userRepository.existsByEmailOrStudentId(request.getEmail(), request.getStudentId())) {
-            if (userRepository.existsByStudentId(request.getStudentId())) throw new CustomException(ErrorCode.DUPLICATE_USER);
+        if (userRepository.existsByStudentId(request.getStudentId())) {
+            throw new CustomException(ErrorCode.DUPLICATE_USER);
+        }
+
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new CustomException(ErrorCode.DUPLICATE_PHONE);
         }
         String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(request.getPassword());
