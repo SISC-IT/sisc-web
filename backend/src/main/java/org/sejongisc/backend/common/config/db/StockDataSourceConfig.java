@@ -36,7 +36,7 @@ public class StockDataSourceConfig {
         return new DataSourceProperties();
     }
 
-    // ✅ HikariConfig에 먼저 바인딩
+    // HikariConfig에 먼저 바인딩
     @Bean(name = "stockHikariConfig")
     @ConfigurationProperties("spring.stock.datasource.hikari")
     public com.zaxxer.hikari.HikariConfig stockHikariConfig() {
@@ -65,7 +65,7 @@ public class StockDataSourceConfig {
         Map<String, Object> jpaProps = new HashMap<>();
         jpaProps.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         jpaProps.put("hibernate.default_schema", "public");
-        // ddl-auto는 yml로 관리 권장
+        // stock 관련 데이터 삭제 방지를 위해, yml의 ddl-auto가 아닌 여기서 none으로 관리
         jpaProps.put("hibernate.hbm2ddl.auto", "none");
 
         return builder
