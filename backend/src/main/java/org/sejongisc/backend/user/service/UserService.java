@@ -51,48 +51,11 @@ public class UserService {
     private final RedisTemplate<String, String> redisTemplate;
     private final RedisService redisService;
     private final RefreshTokenService refreshTokenService;
-    private final AccountService accountService;
-    private final PointLedgerService pointLedgerService;
     private final EmailProperties emailProperties;
-    private final ApplicationEventPublisher eventPublisher;
 
     // --- 핵심 회원 서비스 ---
 
-    @Transactional
-    @OptimisticRetry
-    public SignupResponse signup(SignupRequest request) {
-        if (userRepository.existsByStudentId(request.getStudentId())) {
-            throw new CustomException(ErrorCode.DUPLICATE_USER);
-        }
-
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new CustomException(ErrorCode.DUPLICATE_PHONE);
-        }
-        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(request.getPassword());
-        String encodedPw = passwordEncoder.encode(trimmedPassword);
-        User user = User.createUserWithSignupAndPending(request, encodedPw);
-
-        try {
-            User saved = userRepository.save(user);
-            Account userAccount = accountService.createUserAccount(user.getUserId());
-            pointLedgerService.processTransaction(
-                TransactionReason.SIGNUP_REWARD,
-                user.getUserId(),
-                AccountEntry.credit(accountService.getAccountByName(AccountName.SYSTEM_ISSUANCE), 100L),
-                AccountEntry.debit(userAccount, 100L)
-            );
-            log.info("포인트 계정 생성 및 초기 포인트 지급 완료: {}", user.getEmail());
-            eventPublisher.publishEvent(new ActivityEvent(
-                    user.getUserId(),
-                    user.getName(),
-                    ActivityType.SIGNUP,
-                    "일반 회원가입을 신청했습니다.",
-                    null, null));
-            return SignupResponse.from(saved);
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(ErrorCode.DUPLICATE_USER);
-        }
-    }
+    
 
     @Transactional
     public void updateUser(UUID userId, UserUpdateRequest request) {
@@ -141,14 +104,9 @@ public class UserService {
         User user = userRepository.findByEmailAndStudentId(email, studentId)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-
-
         // Redis에서 인증코드 조회
         String redisKey = emailProperties.getKeyPrefix().getReset() + email;
-
         String savedCode = redisTemplate.opsForValue().get(redisKey);
-
-
 
         if (savedCode == null) {
             throw new CustomException(ErrorCode.RESET_CODE_EXPIRED);
@@ -174,6 +132,8 @@ public class UserService {
     public List<User> findAllUsersMissingAccount() {
         return userRepository.findAllUsersMissingAccount();
     }
+
+    // --- Admin Only 메서드 ---
 
     @Transactional
     public void updateUserStatus(UUID userId, UserStatus status) {

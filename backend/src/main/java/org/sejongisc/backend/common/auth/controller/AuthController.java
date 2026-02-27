@@ -1,12 +1,15 @@
 package org.sejongisc.backend.common.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.auth.dto.AuthRequest;
 import org.sejongisc.backend.common.auth.dto.AuthResponse;
+import org.sejongisc.backend.common.auth.dto.SignupRequest;
+import org.sejongisc.backend.common.auth.dto.SignupResponse;
 import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.springframework.http.HttpHeaders;
@@ -26,7 +29,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
-    private final AuthCookieHelper cookieHelper; // 주입
+    private final AuthCookieHelper cookieHelper;
+
+    @Operation(summary = "회원 가입", description = "회장이 승인하기 전까지 PENDING 상태가 유지되며, 웹사이트를 사용할 수 없습니다.")
+    @ApiResponse(responseCode = "201", description = "회원가입 성공")
+    @PostMapping("/signup")
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.signup(request));
+    }
 
     @Operation(summary = "일반 로그인 API", description = "")
     @PostMapping("/login")

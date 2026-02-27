@@ -15,19 +15,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.EmailService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.auth.repository.UserOauthAccountRepository;
-import org.sejongisc.backend.common.redis.RedisKey;
 import org.sejongisc.backend.common.redis.RedisService;
 import org.sejongisc.backend.point.entity.Account;
 import org.sejongisc.backend.point.service.*;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
-import org.sejongisc.backend.common.auth.entity.AuthProvider;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
@@ -61,6 +60,7 @@ class UserServiceTest {
     private PointLedgerService pointLedgerService;
 
     @InjectMocks private UserService userService;
+    @InjectMocks private AuthService authService;
 
     @Test
     @DisplayName("회원가입 성공: 비밀번호 인코딩, 저장, DTO 매핑 확인")
@@ -95,7 +95,7 @@ class UserServiceTest {
         });
 
         // when
-        SignupResponse res = userService.signup(req);
+        SignupResponse res = authService.signup(req);
 
         // then
         assertAll(
@@ -129,7 +129,7 @@ class UserServiceTest {
         when(userRepository.existsByStudentId(req.getStudentId())).thenReturn(false);
 
         // when
-        CustomException ex = assertThrows(CustomException.class, () -> userService.signup(req));
+        CustomException ex = assertThrows(CustomException.class, () -> authService.signup(req));
 
         // then
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_EMAIL);
@@ -172,7 +172,7 @@ class UserServiceTest {
         });
 
         // when
-        SignupResponse res = userService.signup(req);
+        SignupResponse res = authService.signup(req);
 
         // then
         assertThat(res.getRole()).isEqualTo(Role.TEAM_MEMBER);
@@ -195,7 +195,7 @@ class UserServiceTest {
         when(userRepository.existsByStudentId(any())).thenReturn(false); // studentId 중복 아님 -> phone 중복으로 간주
 
         // when
-        CustomException ex = assertThrows(CustomException.class, () -> userService.signup(req));
+        CustomException ex = assertThrows(CustomException.class, () -> authService.signup(req));
 
         // then
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_PHONE);
@@ -226,7 +226,7 @@ class UserServiceTest {
                 .thenThrow(new org.springframework.dao.DataIntegrityViolationException("constraint"));
 
         // when
-        CustomException ex = assertThrows(CustomException.class, () -> userService.signup(req));
+        CustomException ex = assertThrows(CustomException.class, () -> authService.signup(req));
 
         // then
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.DUPLICATE_USER);

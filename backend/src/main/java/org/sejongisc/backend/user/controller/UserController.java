@@ -10,6 +10,7 @@ import org.sejongisc.backend.common.auth.controller.AuthCookieHelper;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
+import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.user.dto.*;
 import org.sejongisc.backend.user.service.UserService;
@@ -30,13 +31,6 @@ public class UserController {
 
   private final UserService userService;
   private final AuthCookieHelper authCookieHelper;
-
-  @Operation(summary = "회원 가입", description = "회장이 승인하기 전까지 PENDING 상태가 유지되며, 웹사이트를 사용할 수 없습니다.")
-  @ApiResponse(responseCode = "201", description = "회원가입 성공")
-  @PostMapping("/signup")
-  public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(userService.signup(request));
-  }
 
   @Operation(summary = "회원 탈퇴", description = "UserStatus.OUT 으로 변경하여 softDelete 처리 후, 리프레시 토큰을 삭제합니다.")
   @DeleteMapping("/withdraw")
