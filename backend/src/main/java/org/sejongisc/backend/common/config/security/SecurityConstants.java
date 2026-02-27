@@ -2,23 +2,18 @@ package org.sejongisc.backend.common.config.security;
 
 public class SecurityConstants {
     public static final String[] WHITELIST_URLS = {
-            "/api/user/signup",
+            "/api/auth/signup",
             "/api/auth/login",
-            "/api/auth/login/**",
-            "/api/auth/logout",
             "/api/auth/reissue",
-            "/api/user/password/reset/**",
             "/api/email/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/swagger-resources/**",
             "/webjars/**",
-            "/login/**",
-            //"/oauth2/**",
             "/favicon.ico",
-            "/api/user/password/reset/confirm",
-            "/api/user/password/reset/send",
+            "/api/auth/password/reset/confirm",
+            "/api/auth/password/reset/send",
             "/actuator",
             "/actuator/**",
             "/error"

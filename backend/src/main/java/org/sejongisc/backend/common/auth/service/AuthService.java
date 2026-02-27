@@ -12,14 +12,19 @@ import org.sejongisc.backend.common.auth.entity.RefreshToken;
 import org.sejongisc.backend.common.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.common.auth.jwt.JwtParser;
 import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.config.EmailProperties;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.common.redis.RedisKey;
+import org.sejongisc.backend.common.redis.RedisService;
 import org.sejongisc.backend.point.dto.AccountEntry;
 import org.sejongisc.backend.point.entity.Account;
 import org.sejongisc.backend.point.entity.AccountName;
 import org.sejongisc.backend.point.entity.TransactionReason;
 import org.sejongisc.backend.point.service.AccountService;
 import org.sejongisc.backend.point.service.PointLedgerService;
+import org.sejongisc.backend.user.dto.PasswordResetConfirmRequest;
+import org.sejongisc.backend.user.dto.PasswordResetSendRequest;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.AuthRequest;
@@ -28,6 +33,7 @@ import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -46,6 +52,12 @@ public class AuthService {
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
     private final ApplicationEventPublisher eventPublisher;
+
+    private final EmailService emailService;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final EmailProperties emailProperties;
+    private final RedisService redisService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     @OptimisticRetry
@@ -141,5 +153,79 @@ public class AuthService {
         UUID userId = jwtParser.getUserIdFromToken(accessToken);
         refreshTokenRepository.deleteByUserId(userId);
         log.info("로그아웃 완료: userId={}", userId);
+    }
+
+
+    public void passwordResetSendCode(PasswordResetSendRequest req) {
+        String nEmail = validateNotBlank(req.email(), "이메일").trim();
+        String nStudentId = validateNotBlank(req.studentId(), "학번").trim();
+
+        if (!userRepository.existsByEmailAndStudentId(nEmail, nStudentId)) {
+            log.debug("이메일과 학번 불일치: email={}, studentId={}", nEmail, nStudentId);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+        emailService.sendResetEmail(nEmail);
+    }
+
+    @Transactional
+    public void resetPasswordByCode(PasswordResetConfirmRequest req) {
+
+        String email = validateNotBlank(req.email(), "이메일").trim();
+        String studentId = validateNotBlank(req.studentId(), "학번").trim();
+        String inputCode = validateNotBlank(req.code(), "인증코드").trim();
+
+        // 사용자 조회 (이메일+학번 같이 확인하는 게 안전)
+        User user = userRepository.findByEmailAndStudentId(email, studentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // Redis에서 인증코드 조회
+        String redisKey = emailProperties.getKeyPrefix().getReset() + email;
+        String savedCode = redisTemplate.opsForValue().get(redisKey);
+
+        if (savedCode == null) {
+            throw new CustomException(ErrorCode.RESET_CODE_EXPIRED);
+        }
+
+        if (!savedCode.equals(inputCode)) {
+            throw new CustomException(ErrorCode.INVALID_RESET_CODE);
+        }
+
+        // 새 비밀번호 검증 + 암호화 저장
+        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(req.newPassword());
+        user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
+
+        // 인증코드 1회성 처리 (삭제)
+        redisTemplate.delete(redisKey);
+
+        // 기존 로그인 토큰 무효화
+        refreshTokenService.deleteByUserId(user.getUserId());
+    }
+
+
+    private String validateNotBlank(String value, String fieldName) {
+        if (value == null || value.trim().isEmpty()) {
+            log.debug(fieldName);
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        return value.trim();
+    }
+
+    private String getEmailFromRedis(String token) {
+        try {
+            String email = redisService.get(RedisKey.PASSWORD_RESET, token, String.class);
+            if (email == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
+            return email;
+        } catch (Exception e) {
+            log.error("Redis 조회 실패", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void deleteResetTokenFromRedis(String token) {
+        try {
+            redisService.delete(RedisKey.PASSWORD_RESET, token);
+        } catch (Exception e) {
+            log.error("Redis 삭제 실패", e);
+        }
     }
 }

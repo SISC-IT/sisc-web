@@ -31,7 +31,7 @@ export const signUp = async (
     teamName: teamName.trim(),
     remark: remark,
   };
-  const res = await api.post('/api/user/signup', payload, { signal });
+  const res = await api.post('/api/auth/signup', payload, { signal });
   return res.data;
 };
 
@@ -65,7 +65,7 @@ export const checkVerificationNumber = async (
   return res.data;
 };
 export const resetPassword = async ({ email }, signal) => {
-  const res = await api.post('/api/user/password/reset/send', null, {
+  const res = await api.post('/api/auth/password/reset/send', null, {
     params: { email },
     signal,
   });
