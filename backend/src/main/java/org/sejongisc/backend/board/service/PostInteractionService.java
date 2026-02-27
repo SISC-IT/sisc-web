@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.sejongisc.backend.activity.entity.ActivityType;
+import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.board.dto.CommentRequest;
 import org.sejongisc.backend.board.entity.Comment;
 import org.sejongisc.backend.board.entity.Post;
@@ -19,6 +21,7 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -35,6 +38,7 @@ public class PostInteractionService {
   private final CommentRepository commentRepository;
   private final PostLikeRepository postLikeRepository;
   private final PostBookmarkRepository postBookmarkRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   // 댓글 작성
   @Transactional
@@ -45,7 +49,7 @@ public class PostInteractionService {
   )
   public void createComment(CommentRequest request, UUID userId) {
     // 게시글 조회
-    Post post = postRepository.findById(request.getPostId())
+    Post post = postRepository.findByIdWithBoard(request.getPostId())
         .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
     // 작성자 조회
@@ -80,6 +84,14 @@ public class PostInteractionService {
 
     // 게시글의 댓글 수 1 증가
     post.setCommentCount(post.getCommentCount() + 1);
+
+    eventPublisher.publishEvent(new ActivityEvent(
+            user.getUserId(),
+            user.getName(),
+            ActivityType.BOARD_COMMENT,
+            user.getName() + "님이 댓글을 달았습니다.",
+            post.getPostId(),
+            post.getBoard().getBoardName()));
   }
 
   // 댓글 수정
@@ -153,7 +165,7 @@ public class PostInteractionService {
   )
   public void toggleLike(UUID postId, UUID userId) {
     // 게시물 조회
-    Post post = postRepository.findById(postId)
+    Post post = postRepository.findByIdWithBoard(postId)
         .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
     // 유저 조회
@@ -175,6 +187,13 @@ public class PostInteractionService {
           .build();
       postLikeRepository.save(newLike);
       post.setLikeCount(post.getLikeCount() + 1); // Post 엔티티 카운트 증가
+      eventPublisher.publishEvent(new ActivityEvent(
+              user.getUserId(),
+              user.getName(),
+              ActivityType.BOARD_LIKE,
+              user.getName() + "님이 좋아요를 눌렀습니다.",
+              post.getPostId(),
+              post.getBoard().getBoardName()));
     }
   }
 
