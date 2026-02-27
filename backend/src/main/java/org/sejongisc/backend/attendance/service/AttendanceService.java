@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenRequest;
+import org.sejongisc.backend.attendance.dto.AttendanceStatusUpdateRequest;
 import org.sejongisc.backend.attendance.entity.Attendance;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
 import org.sejongisc.backend.attendance.entity.AttendanceStatus;
@@ -93,9 +94,11 @@ public class AttendanceService {
       UUID adminUserId,
       UUID roundId,
       UUID targetUserId,
-      String status,
-      String reason
+      AttendanceStatusUpdateRequest request
   ) {
+    String status = String.valueOf(request.getStatus());
+    String reason = request.getReason();
+
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
         .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 

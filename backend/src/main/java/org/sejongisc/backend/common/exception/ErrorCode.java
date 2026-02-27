@@ -139,7 +139,7 @@ public enum ErrorCode {
 
   SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 세션이 존재하지 않습니다."),
 
-  ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 라운드가 존재하지 않습니다."),
+  ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "`해당 출석 라운드가 존재하지 않습니다.`"),
 
   ROUND_NOT_ACTIVE(HttpStatus.FORBIDDEN, "출석 라운드가 진행 중이 아닙니다."),
 
@@ -169,7 +169,14 @@ public enum ErrorCode {
 
   TARGET_NOT_SESSION_MEMBER(HttpStatus.BAD_REQUEST, "대상 사용자가 출석 세션의 멤버가 아닙니다."),
 
-  CANNOT_DEMOTE_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 강등할 수 없습니다.");
+  CANNOT_DEMOTE_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 강등할 수 없습니다."),
+
+  UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
+
+  NOT_SESSION_ADMIN(HttpStatus.FORBIDDEN, "세션 관리자 권한이 없습니다."),
+
+  NOT_SESSION_OWNER(HttpStatus.FORBIDDEN, "세션 소유자 권한이 없습니다.");
+
   private final HttpStatus status;
   private final String message;
 
