@@ -86,7 +86,7 @@ public class UserService {
                     user.getUserId(),
                     user.getName(),
                     ActivityType.SIGNUP,
-                    user.getName() + "님이 일반 회원가입을 신청했습니다.",
+                    "일반 회원가입을 신청했습니다.",
                     null, null));
             return SignupResponse.from(saved);
         } catch (DataIntegrityViolationException e) {

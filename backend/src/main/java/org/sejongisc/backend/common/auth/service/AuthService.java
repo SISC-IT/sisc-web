@@ -73,7 +73,7 @@ public class AuthService {
                 user.getUserId(),
                 user.getName(),
                 ActivityType.AUTH_LOGIN,
-                user.getName() + "님이 로그인하셨습니다.",
+                "로그인 했습니다.",
                 null, null
         ));
         return AuthResponse.builder()
