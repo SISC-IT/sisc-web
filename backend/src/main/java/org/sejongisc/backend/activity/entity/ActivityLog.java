@@ -32,17 +32,17 @@ public class ActivityLog {
     @Column(nullable = false)
     private ActivityType type; // ATTENDANCE, BOARD, BETTING 등
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private String message; // "자유게시판에 글을 게시했어요"
 
-    private String targetId; // 관련 게시글 ID 등 (상세보기용)
+    private UUID targetId; // 관련 게시글 ID 등 (상세보기용)
     
     private String boardName; // 관리자 게시판별 통계용
 
     private LocalDateTime createdAt;
 
     @Builder
-    public ActivityLog(UUID userId, String username, ActivityType type, String message, String targetId, String boardName) {
+    public ActivityLog(UUID userId, String username, ActivityType type, String message, UUID targetId, String boardName) {
         this.userId = userId;
         this.username = username;
         this.type = type;

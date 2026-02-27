@@ -76,7 +76,7 @@ public class AttendanceService {
             username,
             ActivityType.ATTENDANCE,
             username + "님이 " + round.getAttendanceSession().getTitle() + " 세션에 출석했습니다.",
-            att.getAttendanceId().toString(),
+            att.getAttendanceId(),
             null
     ));
   }

@@ -9,6 +9,6 @@ public record ActivityEvent(
     String username,
     ActivityType type,
     String message,
-    String targetId,
+    UUID targetId,
     String boardName
 ) {}

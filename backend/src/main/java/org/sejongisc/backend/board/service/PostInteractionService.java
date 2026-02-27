@@ -90,7 +90,7 @@ public class PostInteractionService {
             user.getName(),
             ActivityType.BOARD_COMMENT,
             user.getName() + "님이 댓글을 달았습니다.",
-            post.getPostId().toString(),
+            post.getPostId(),
             post.getBoard().getBoardName()));
   }
 
@@ -192,7 +192,7 @@ public class PostInteractionService {
               user.getName(),
               ActivityType.BOARD_LIKE,
               user.getName() + "님이 좋아요를 눌렀습니다.",
-              post.getPostId().toString(),
+              post.getPostId(),
               post.getBoard().getBoardName()));
     }
   }

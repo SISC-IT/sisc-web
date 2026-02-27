@@ -85,7 +85,7 @@ public class UserService {
             eventPublisher.publishEvent(new ActivityEvent(
                     user.getUserId(),
                     user.getName(),
-                    ActivityType.ATTENDANCE,
+                    ActivityType.SIGNUP,
                     user.getName() + "님이 일반 회원가입을 신청했습니다.",
                     null, null));
             return SignupResponse.from(saved);
