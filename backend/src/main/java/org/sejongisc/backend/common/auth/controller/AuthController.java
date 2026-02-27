@@ -117,13 +117,11 @@ public class AuthController {
         
         ## 인증(JWT): **불필요**
         
-        ## 요청 파라미터
-        - **`code`**: 이메일로 받은 인증코드
-        - **`newPassword`**: 새 비밀번호
-        
         ## 요청 바디 ( `PasswordResetSendRequest` )
         - **`email`**: 가입된 이메일
         - **`studentId`**: 가입된 학번
+        - **`code`**: 이메일로 받은 인증코드
+        - **`newPassword`**: 새 비밀번호
         
         ## 동작 설명
         - 이메일 + 학번으로 사용자를 다시 확인합니다.
