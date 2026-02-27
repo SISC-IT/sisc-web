@@ -2,8 +2,10 @@ package org.sejongisc.backend.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.activity.entity.ActivityLog;
 import org.sejongisc.backend.activity.entity.ActivityType;
 import org.sejongisc.backend.activity.event.ActivityEvent;
+import org.sejongisc.backend.activity.repository.ActivityLogRepository;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
 import org.sejongisc.backend.common.auth.service.EmailService;
@@ -31,6 +33,7 @@ import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -48,6 +51,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final ActivityLogRepository activityLogRepository;
 
     // --- 핵심 회원 서비스 ---
 
@@ -77,11 +81,25 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public List<User> findAllUsersMissingAccount() {
-        return userRepository.findAllUsersMissingAccount();
+    public List<ActivityLog> getAttendanceActivityLog(UUID userId) {
+        return activityLogRepository.findByUserIdAndActivityTypesOrderByCreatedAtDesc(userId,
+                List.of(ActivityType.ATTENDANCE));
     }
 
+    @Transactional(readOnly = true)
+    public List<ActivityLog> getBoardActivityLog(UUID userId) {
+        return activityLogRepository.findByUserIdAndActivityTypesOrderByCreatedAtDesc(userId,
+                List.of(ActivityType.BOARD_LIKE, ActivityType.BOARD_POST, ActivityType.BOARD_COMMENT));
+    }
 
+    @Transactional
+    public void deleteUserSoftDelete(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.setStatus(UserStatus.OUT);
+        refreshTokenService.deleteByUserId(userId);
+        log.info("회원 softdelete 처리 완료: userId={}", userId);
+    }
 
     // --- Admin Only 메서드 ---
 
@@ -115,13 +133,9 @@ public class UserService {
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
-    @Transactional
-    public void deleteUserSoftDelete(UUID userId) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        user.setStatus(UserStatus.OUT);
-        refreshTokenService.deleteByUserId(userId);
-        log.info("회원 softdelete 처리 완료: userId={}", userId);
+    @Transactional(readOnly = true)
+    public List<User> findAllUsersMissingAccount() {
+        return userRepository.findAllUsersMissingAccount();
     }
 
     // ------------------------ (비활성화) OAuth2 관련 로직 ------------------------

@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.activity.entity.ActivityLog;
 import org.sejongisc.backend.common.auth.controller.AuthCookieHelper;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
@@ -14,12 +15,14 @@ import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.user.dto.*;
 import org.sejongisc.backend.user.service.UserService;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -53,5 +56,17 @@ public class UserController {
                                       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     userService.updateUser(customUserDetails.getUserId(), request);
     return ResponseEntity.ok().build();
+  }
+
+  @Operation(summary = "내 출석 로그 조회")
+  @PatchMapping("/logs/attendance")
+  public ResponseEntity<List<ActivityLog>> getAttendanceLogs(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    return ResponseEntity.ok(userService.getAttendanceActivityLog(customUserDetails.getUserId()));
+  }
+
+  @Operation(summary = "내 활동 로그 조회")
+  @PatchMapping("/logs/Board")
+  public ResponseEntity<List<ActivityLog>> getBoardLogs(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    return ResponseEntity.ok(userService.getBoardActivityLog(customUserDetails.getUserId()));
   }
 }

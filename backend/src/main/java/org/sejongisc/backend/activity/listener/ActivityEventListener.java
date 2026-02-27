@@ -24,7 +24,7 @@ public class ActivityEventListener {
         ActivityLog log = activityLogRepository.save(ActivityLog.builder()
                 .userId(event.userId())
                 .username(event.username())
-                .type(event.type())
+                .activityType(event.activityType())
                 .message(event.message())
                 .targetId(event.targetId())
                 .boardName(event.boardName())
