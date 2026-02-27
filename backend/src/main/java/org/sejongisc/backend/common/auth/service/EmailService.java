@@ -16,7 +16,6 @@ import org.sejongisc.backend.common.redis.RedisKey;
 import org.sejongisc.backend.common.redis.RedisService;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -34,7 +33,6 @@ public class EmailService {
   private final RedisService redisService;
   private final SpringTemplateEngine templateEngine;
   private final UserRepository userRepository;
-  private final RedisTemplate<String, String> redisTemplate;
   private final EmailProperties emailProperties;
 
   // 메일 발신자
@@ -101,15 +99,30 @@ public class EmailService {
     if (storedCode == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
     if (!storedCode.equals(code)) throw new CustomException(ErrorCode.EMAIL_CODE_MISMATCH);
 
-
     // 인증 성공 시 Redis에서 인증 코드 삭제
     redisService.delete(RedisKey.EMAIL_VERIFY, email);
 
     // 인증 완료 상태(true값) 저장 (24시간 유효)
     redisService.set(RedisKey.EMAIL_VERIFIED, email, "true");
-
-
   }
+
+  // 비밀번호 인증 관련 메서드
+  public void sendResetEmail(String email) {
+    if (redisService.hasKey(RedisKey.PASSWORD_RESET, email)) {
+      redisService.delete(RedisKey.PASSWORD_RESET, email);
+    }
+    String code = generateCode();
+    redisService.set(RedisKey.PASSWORD_RESET, email, generateCode());
+
+    try {
+      MimeMessage message = createResetMessage(email, code);
+      mailSender.send(message);
+    } catch (MessagingException | MailException e) {
+      redisService.delete(RedisKey.PASSWORD_RESET, email);
+      throw new MailSendException("failed to send mail", e);
+    }
+  }
+
 
   // 이메일 인증 코드 생성
   private String generateCode() {
@@ -125,26 +138,6 @@ public class EmailService {
     return sb.toString();
   }
 
-  // 비밀번호 인증 관련 메서드
-  public void sendResetEmail(String email) {
-
-    String code = generateCode();
-    String key = emailProperties.getKeyPrefix().getReset() + email;
-    if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-      redisTemplate.delete(key);
-    }
-    redisTemplate.opsForValue().set(key, code, emailProperties.getCodeExpire());
-
-    try {
-      MimeMessage message = createResetMessage(email, code);
-      mailSender.send(message);
-    } catch (MessagingException | MailException e) {
-      redisTemplate.delete(key);
-      throw new MailSendException("failed to send mail", e);
-    }
-  }
-
-
   private MimeMessage createResetMessage(String email, String code) throws MessagingException {
     MimeMessage message = mailSender.createMimeMessage();
     message.setFrom(new InternetAddress(from));
@@ -159,7 +152,4 @@ public class EmailService {
     message.setText(body, "UTF-8", "html");
     return message;
   }
-
-
-
 }

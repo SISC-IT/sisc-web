@@ -117,7 +117,7 @@ public class AuthController {
         
         ## 인증(JWT): **불필요**
         
-        ## 요청 바디 ( `PasswordResetSendRequest` )
+        ## 요청 바디 ( `PasswordResetConfirmRequest` )
         - **`email`**: 가입된 이메일
         - **`studentId`**: 가입된 학번
         - **`code`**: 이메일로 받은 인증코드

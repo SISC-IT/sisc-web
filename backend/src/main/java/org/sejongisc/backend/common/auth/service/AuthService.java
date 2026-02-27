@@ -9,10 +9,8 @@ import org.sejongisc.backend.common.annotation.OptimisticRetry;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
 import org.sejongisc.backend.common.auth.entity.RefreshToken;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
 import org.sejongisc.backend.common.auth.repository.RefreshTokenRepository;
-import org.sejongisc.backend.common.auth.jwt.JwtParser;
-import org.sejongisc.backend.common.auth.jwt.JwtProvider;
-import org.sejongisc.backend.common.config.EmailProperties;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.redis.RedisKey;
@@ -33,7 +31,6 @@ import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -48,15 +45,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final RefreshTokenRepository refreshTokenRepository;
-  
-    private final JwtParser jwtParser;
+
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
     private final ApplicationEventPublisher eventPublisher;
 
     private final EmailService emailService;
-    private final RedisTemplate<String, String> redisTemplate;
-    private final EmailProperties emailProperties;
     private final RedisService redisService;
     private final RefreshTokenService refreshTokenService;
 
@@ -180,8 +174,7 @@ public class AuthService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // Redis에서 인증코드 조회
-        String redisKey = emailProperties.getKeyPrefix().getReset() + email;
-        String savedCode = redisTemplate.opsForValue().get(redisKey);
+        String savedCode = redisService.get(RedisKey.PASSWORD_RESET, email, String.class);
 
         if (savedCode == null) {
             throw new CustomException(ErrorCode.RESET_CODE_EXPIRED);
@@ -196,7 +189,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
 
         // 인증코드 1회성 처리 (삭제)
-        redisTemplate.delete(redisKey);
+        redisService.delete(RedisKey.PASSWORD_RESET, email);
 
         // 기존 로그인 토큰 무효화
         refreshTokenService.deleteByUserId(user.getUserId());

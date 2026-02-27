@@ -25,7 +25,6 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.sejongisc.backend.user.service.UserService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -62,7 +61,6 @@ class AuthControllerTest {
 
     @Mock
     AuthService authService;
-    @Mock UserService userService;
     @Mock JwtUtils jwtUtils;
     @Mock OauthStateService oauthStateService;
     @Mock RefreshTokenService refreshTokenService;
@@ -189,8 +187,7 @@ class AuthControllerTest {
         when(googleService.getAccessToken("test-code")).thenReturn(tokenResponse);
         when(googleService.getUserInfo("mock-google-access-token")).thenReturn(userInfo);
         //when(userService.findOrCreateUser(any())).thenReturn(user);
-        when(jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail()))
-                .thenReturn("jwt-token");
+        when(jwtUtils.createToken(user.getUserId(), user.getRole(), user.getEmail())).thenReturn("jwt-token");
         when(jwtUtils.createRefreshToken(user.getUserId())).thenReturn("refresh-token");
 
         mockMvc.perform(post("/api/auth/login/GOOGLE")

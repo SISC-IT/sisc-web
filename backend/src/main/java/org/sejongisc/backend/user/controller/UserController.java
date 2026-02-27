@@ -59,13 +59,13 @@ public class UserController {
   }
 
   @Operation(summary = "내 출석 로그 조회")
-  @PatchMapping("/logs/attendance")
+  @GetMapping("/logs/attendance")
   public ResponseEntity<List<ActivityLog>> getAttendanceLogs(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(userService.getAttendanceActivityLog(customUserDetails.getUserId()));
   }
 
   @Operation(summary = "내 활동 로그 조회")
-  @PatchMapping("/logs/Board")
+  @GetMapping("/logs/board")
   public ResponseEntity<List<ActivityLog>> getBoardLogs(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(userService.getBoardActivityLog(customUserDetails.getUserId()));
   }
