@@ -22,7 +22,6 @@ import java.util.Map;
 
 @Configuration
 @EnableTransactionManagement
-@Profile("prod")
 @EnableJpaRepositories(
         basePackages = "org.sejongisc.backend.stock.repository",
         entityManagerFactoryRef = "stockEntityManagerFactory",
