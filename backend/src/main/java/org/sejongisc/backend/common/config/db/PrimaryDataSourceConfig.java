@@ -79,6 +79,7 @@ public class PrimaryDataSourceConfig {
         return builder
                 .dataSource(dataSource)
                 .packages(
+                    "org.sejongisc.backend.activity.entity",
                         "org.sejongisc.backend.attendance.entity",
                         "org.sejongisc.backend.common.auth.entity",
                         "org.sejongisc.backend.backtest.entity",
