@@ -130,8 +130,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                env.getProperty("app.dev-frontend-url"),
-                env.getProperty("app.prod-frontend-url")    // 환경변수에 해당하는 값 가져옴
+                env.getProperty("app.frontend-url")    // 환경변수에 해당하는 값 가져옴
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

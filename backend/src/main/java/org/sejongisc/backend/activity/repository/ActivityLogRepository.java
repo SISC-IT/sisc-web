@@ -16,7 +16,7 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
     List<ActivityLog> findTop20ByOrderByCreatedAtDesc();
 
     // 이슈 2: 마이페이지 내 활동 조회
-    Slice<ActivityLog> findByMemberIdOrderByCreatedAtDesc(UUID memberId, Pageable pageable);
+    Slice<ActivityLog> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     // 이슈 3-1: 일일 방문자 수 통계
     @Query("SELECT COUNT(DISTINCT a.userId) FROM ActivityLog a " +
