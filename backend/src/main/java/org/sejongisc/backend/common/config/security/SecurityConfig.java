@@ -114,10 +114,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated();
                         //.anyRequest().permitAll();
                 })
-                //꼭 필요할 때만(OAuth 로그인 과정 등) 세션 생성
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
-                // TODO : OAUTH2를 쿠키에 저장 시 OR OAUTH2 를 안쓸 시 STATELESS로 변경 고려
-                //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                // TODO : OAUTH2를 쿠키에 저장 시 OR OAUTH2 쓰면 IF_REQUIRED 변경
+                //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
         if(jwtAuthenticationFilter != null) {
             http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
