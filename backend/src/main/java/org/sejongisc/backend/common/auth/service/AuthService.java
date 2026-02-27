@@ -3,6 +3,8 @@ package org.sejongisc.backend.common.auth.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.activity.entity.ActivityType;
+import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.common.auth.entity.RefreshToken;
 import org.sejongisc.backend.common.auth.repository.RefreshTokenRepository;
 import org.sejongisc.backend.common.auth.jwt.JwtParser;
@@ -14,6 +16,7 @@ import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.common.auth.dto.AuthRequest;
 import org.sejongisc.backend.common.auth.dto.AuthResponse;
 import org.sejongisc.backend.user.entity.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +32,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtParser jwtParser;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public AuthResponse login(AuthRequest request) {
@@ -65,7 +69,13 @@ public class AuthService {
         );
 
         log.info("RefreshToken 저장 완료: userId={}", user.getUserId());
-
+        eventPublisher.publishEvent(new ActivityEvent(
+                user.getUserId(),
+                user.getName(),
+                ActivityType.AUTH_LOGIN,
+                user.getName() + "님이 로그인하셨습니다.",
+                null, null
+        ));
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)

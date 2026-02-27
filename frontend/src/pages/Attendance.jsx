@@ -1,6 +1,6 @@
 import styles from './Attendance.module.css';
 import SessionSelectBox from '../components/attendance/SessionSelectBox';
-import ExcusedTime from '../components/attendance/ExcusedTime';
+// import ExcusedTime from '../components/attendance/ExcusedTime';
 import SessionManage from '../components/attendance/SessionManage';
 
 import { useAuthGuard } from '../hooks/useAuthGuard';
@@ -15,7 +15,7 @@ const Attendance = () => {
       <h1 className={styles.title}>출석하기</h1>
       <div className={styles.attendanceSection}>
         <SessionSelectBox />
-        <ExcusedTime />
+        {/* <ExcusedTime /> */}
       </div>
       <SessionManage />
     </div>
