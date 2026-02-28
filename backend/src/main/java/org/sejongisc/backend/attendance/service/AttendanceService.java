@@ -12,13 +12,14 @@ import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenRequest;
 import org.sejongisc.backend.attendance.entity.Attendance;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
+import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.AttendanceStatus;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -94,7 +95,11 @@ public class AttendanceService {
 
     return attendanceRepository.findByAttendanceRound_RoundId(roundId)
         .stream()
-        .map(AttendanceResponse::from)
+        .map(attendance -> AttendanceResponse.from(
+            attendance,
+            attendance.getAttendanceRound() != null ? attendance.getAttendanceRound().getAttendanceSession() : null,
+            attendance.getAttendanceRound()
+        ))
         .toList();
   }
 
@@ -133,9 +138,10 @@ public class AttendanceService {
     } else {
       attendance.changeStatus(newStatus, reason);
     }
-    return AttendanceResponse.from(attendanceRepository.save(attendance));
-  }
 
+    attendanceRepository.save(attendance);
+    return AttendanceResponse.from(attendance, round.getAttendanceSession(), round);
+  }
 
   @Transactional(readOnly = true)
   public List<AttendanceResponse> getAttendancesByUser(UUID userId) {
@@ -145,7 +151,11 @@ public class AttendanceService {
     List<Attendance> attendances = attendanceRepository.findByUserOrderByCheckedAtDesc(user);
 
     return attendances.stream()
-        .map(AttendanceResponse::from)
+        .map(attendance -> {
+          AttendanceRound round = attendance.getAttendanceRound();
+          AttendanceSession session = (round != null) ? round.getAttendanceSession() : null;
+          return AttendanceResponse.from(attendance, session, round);
+        })
         .collect(Collectors.toList());
   }
 
