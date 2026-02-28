@@ -113,7 +113,7 @@ public class AttendanceService {
       UUID targetUserId,
       AttendanceStatusUpdateRequest request
   ) {
-    String status = String.valueOf(request.getStatus());
+    String status = (request.getStatus() == null) ? null : request.getStatus().toString();
     String reason = request.getReason();
 
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)

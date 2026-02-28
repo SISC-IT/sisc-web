@@ -58,9 +58,9 @@ public class SessionUserService {
         .build();
 
     SessionUser saved = sessionUserRepository.save(sessionUser);
-    log.info("세션 사용자 추가: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
 
     createAbsentForPastRounds(sessionId, user);
+    log.info("세션 사용자 추가: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
 
     return SessionUserResponse.from(saved);
   }
@@ -76,12 +76,11 @@ public class SessionUserService {
 
     // SessionUser 삭제
     sessionUserRepository.deleteByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId);
-    log.info("세션 사용자 제거: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
-
 
     // 해당 세션의 라운드들에서 targetUserId의 출석 레코드 삭제
     attendanceRepository.deleteAllByAttendanceRound_AttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId,
         targetUserId);
+    log.info("세션 사용자 제거: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
   }
 
   /**

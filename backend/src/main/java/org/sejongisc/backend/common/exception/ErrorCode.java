@@ -139,7 +139,7 @@ public enum ErrorCode {
 
   SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 세션이 존재하지 않습니다."),
 
-  ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "`해당 출석 라운드가 존재하지 않습니다.`"),
+  ROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 라운드가 존재하지 않습니다."),
 
   ROUND_NOT_ACTIVE(HttpStatus.FORBIDDEN, "출석 라운드가 진행 중이 아닙니다."),
 
