@@ -19,7 +19,7 @@ import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.oauth2.Oauth2Service;
 import org.sejongisc.backend.common.auth.service.oauth2.OauthStateService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
-import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
@@ -63,7 +63,7 @@ class AuthControllerTest {
     @Mock
     AuthService authService;
     @Mock UserService userService;
-    @Mock JwtProvider jwtProvider;
+    @Mock JwtUtils jwtUtils;
     @Mock OauthStateService oauthStateService;
     @Mock RefreshTokenService refreshTokenService;
     @Mock
@@ -189,9 +189,9 @@ class AuthControllerTest {
         when(googleService.getAccessToken("test-code")).thenReturn(tokenResponse);
         when(googleService.getUserInfo("mock-google-access-token")).thenReturn(userInfo);
         when(userService.findOrCreateUser(any())).thenReturn(user);
-        when(jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail()))
+        when(jwtUtils.createToken(user.getUserId(), user.getRole(), user.getEmail()))
                 .thenReturn("jwt-token");
-        when(jwtProvider.createRefreshToken(user.getUserId())).thenReturn("refresh-token");
+        when(jwtUtils.createRefreshToken(user.getUserId())).thenReturn("refresh-token");
 
         mockMvc.perform(post("/api/auth/login/GOOGLE")
                         .param("code", "test-code")
@@ -352,8 +352,8 @@ class AuthControllerTest {
                 User.builder().userId(UUID.randomUUID()).name("NullInfoUser").role(Role.TEAM_MEMBER).build()
         );
 
-        when(jwtProvider.createToken(any(), any(), any())).thenReturn("access-token");
-        when(jwtProvider.createRefreshToken(any())).thenReturn("refresh-token");
+        when(jwtUtils.createToken(any(), any(), any())).thenReturn("access-token");
+        when(jwtUtils.createRefreshToken(any())).thenReturn("refresh-token");
 
         mockMvc.perform(post("/api/auth/login/KAKAO")
                         .param("code", "dummy-code")
@@ -375,8 +375,8 @@ class AuthControllerTest {
                 User.builder().userId(UUID.randomUUID()).name("GH-NullUser").role(Role.TEAM_MEMBER).build()
         );
 
-        when(jwtProvider.createToken(any(), any(), any())).thenReturn("gh-token");
-        when(jwtProvider.createRefreshToken(any())).thenReturn("gh-refresh");
+        when(jwtUtils.createToken(any(), any(), any())).thenReturn("gh-token");
+        when(jwtUtils.createRefreshToken(any())).thenReturn("gh-refresh");
 
         mockMvc.perform(post("/api/auth/login/GITHUB")
                         .param("code", "dummy-code")

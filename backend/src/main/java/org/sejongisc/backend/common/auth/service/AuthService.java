@@ -7,8 +7,7 @@ import org.sejongisc.backend.activity.entity.ActivityType;
 import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.common.auth.entity.RefreshToken;
 import org.sejongisc.backend.common.auth.repository.RefreshTokenRepository;
-import org.sejongisc.backend.common.auth.jwt.JwtParser;
-import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.entity.Role;
@@ -29,8 +28,9 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtProvider jwtProvider;
+    private final JwtUtils jwtUtils;
     private final RefreshTokenRepository refreshTokenRepository;
+  
     private final JwtParser jwtParser;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -49,13 +49,13 @@ public class AuthService {
             !passwordEncoder.matches(request.getPassword().trim(), user.getPasswordHash())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
+  
+        String accessToken = jwtUtils.createToken(user.getUserId(), user.getRole(), user.getEmail());
+        String refreshToken = jwtUtils.createRefreshToken(user.getUserId());
 
         if (user.getRole().equals(Role.PENDING_MEMBER)) {
             throw new CustomException(ErrorCode.NEED_PENDING_APPROVAL);
         }
-
-        String accessToken = jwtProvider.createToken(user.getUserId(), user.getRole(), user.getEmail());
-        String refreshToken = jwtProvider.createRefreshToken(user.getUserId());
 
         // 기존 토큰 삭제 후 새로 저장
         refreshTokenRepository.findByUserId(user.getUserId())
@@ -89,7 +89,7 @@ public class AuthService {
 
     @Transactional
     public void logout(String accessToken) {
-        UUID userId = jwtParser.getUserIdFromToken(accessToken);
+        UUID userId = jwtUtils.getUserIdFromToken(accessToken);
         refreshTokenRepository.deleteByUserId(userId);
         log.info("로그아웃 완료: userId={}", userId);
     }
