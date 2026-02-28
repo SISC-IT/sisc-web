@@ -11,10 +11,6 @@ email:
   code:
     charset: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     length: 6
-  key-prefix:
-    verify: "EMAIL_VERIFY:"
-    reset: "PASSWORD_RESET:"
-  code-expire: 180
 
 logging:
   level:
