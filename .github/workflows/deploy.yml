@@ -49,6 +49,7 @@ jobs:
   build-back:
     needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
     #if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
+    environment: development
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     #defaults:
