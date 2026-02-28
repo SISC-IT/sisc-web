@@ -112,7 +112,7 @@ public class EmailService {
       redisService.delete(RedisKey.PASSWORD_RESET, email);
     }
     String code = generateCode();
-    redisService.set(RedisKey.PASSWORD_RESET, email, generateCode());
+    redisService.set(RedisKey.PASSWORD_RESET, email, code);
 
     try {
       MimeMessage message = createResetMessage(email, code);
