@@ -2,6 +2,8 @@ package org.sejongisc.backend.betting.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.activity.entity.ActivityType;
+import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.betting.dto.BetRoundResponse;
 import org.sejongisc.backend.betting.dto.PriceResponse;
 import org.sejongisc.backend.betting.dto.UserBetRequest;
@@ -19,6 +21,7 @@ import org.sejongisc.backend.point.service.AccountService;
 import org.sejongisc.backend.point.service.PointLedgerService;
 import org.sejongisc.backend.stock.entity.PriceData;
 import org.sejongisc.backend.stock.repository.PriceDataRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +42,7 @@ public class BettingService {
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
     private final PriceDataRepository priceDataRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final Random random = new Random();
 
@@ -140,7 +144,7 @@ public class BettingService {
      */
     @Transactional
     @OptimisticRetry
-    public UserBetResponse postUserBet(UUID userId, UserBetRequest userBetRequest) {
+    public UserBetResponse postUserBet(UUID userId, String username, UserBetRequest userBetRequest) {
         // 베팅 포인트 검증
         if (!userBetRequest.isFree() && !userBetRequest.isStakePointsValid()) {
             throw new CustomException(ErrorCode.BET_POINT_TOO_LOW);
@@ -202,6 +206,14 @@ public class BettingService {
         try {
             UserBet savedBet = userBetRepository.save(userBet);
             log.info("사용자 베팅 완료: userId={}, roundId={}, stake={}", userId, userBetRequest.getRoundId(), stake);
+            eventPublisher.publishEvent(new ActivityEvent(
+                    userId,
+                    username,
+                    ActivityType.BETTING_JOIN,
+                    "모의 트레이딩 " + betRound.getTitle() + "에 참여했습니다.",
+                    savedBet.getUserBetId(),
+                    null
+            ));
             return UserBetResponse.from(savedBet);
         } catch (DataIntegrityViolationException e) {
             log.error("베팅 등록 실패: 이미 등록된 베팅 정보와 충돌이 발생했습니다. userId={}, roundId={}", userId, userBetRequest.getRoundId());

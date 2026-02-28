@@ -50,16 +50,11 @@ class EmailServiceTest {
     // value 객체 필드 세팅
     ReflectionTestUtils.setField(emailService, "from", "noreply@test.com");
     // EmailProperties 더미 값 세팅
-    var keyPrefix = new EmailProperties.KeyPrefix();
-    keyPrefix.setVerify("verify:");
-    keyPrefix.setVerified("verified:");
     var codeConf = new EmailProperties.Code();
     codeConf.setCharset("0123456789");
     codeConf.setLength(6);
 
-    given(props.getKeyPrefix()).willReturn(keyPrefix);
     given(props.getCode()).willReturn(codeConf);
-    given(props.getCodeExpire()).willReturn(Duration.ofMinutes(3));
 //    given(props.getVerifiedExpire()).willReturn(Duration.ofHours(24));
     given(redisTemplate.opsForValue()).willReturn(valueOps);
   }

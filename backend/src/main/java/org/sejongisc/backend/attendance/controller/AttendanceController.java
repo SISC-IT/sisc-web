@@ -1,5 +1,7 @@
 package org.sejongisc.backend.attendance.controller;
 
+import static org.sejongisc.backend.attendance.util.AuthUserUtil.requireUserId;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -11,11 +13,16 @@ import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceStatusUpdateRequest;
 import org.sejongisc.backend.attendance.service.AttendanceService;
-import org.sejongisc.backend.attendance.util.AuthUserUtil;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/attendance")
@@ -27,7 +34,9 @@ public class AttendanceController {
   private final AttendanceService attendanceService;
 
   /**
-   * ✅ 체크인(세션 멤버) POST /api/attendance/check-in body: { "qrToken": "..." }
+   * ✅ 체크인(세션 멤버)
+   * POST /api/attendance/check-in
+   * body: { "qrToken": "..." }
    */
   @Operation(
       summary = "체크인",
@@ -60,8 +69,8 @@ public class AttendanceController {
       @AuthenticationPrincipal CustomUserDetails userDetails,
       @RequestBody AttendanceRoundQrTokenRequest request
   ) {
-    UUID userId = AuthUserUtil.requireUserId(userDetails);
-    attendanceService.checkIn(userId, request);
+    UUID userId = requireUserId(userDetails);
+    attendanceService.checkIn(userId, userDetails.getUsername(), request);
     return ResponseEntity.ok().build();
   }
 
@@ -75,10 +84,10 @@ public class AttendanceController {
           - **필요**
           
           ## 권한
-          - 세션의 **MANAGER** 또는 **OWNER** 권한이 필요
+          - 세션 **MANAGER** 또는 **OWNER**
           
           ## 동작 설명
-          - 특정 출석 라운드(`roundId`)에 기록된 모든 출석 데이터를 리스트로 반환합니다.
+          - 특정 출석 라운드(`roundId`)에 기록된 모든 출석 데이터를 리스트로 반환
           
           ## 응답 바디 ( `List<AttendanceResponse>` )
           - **유저 정보**: `userId`, `userName`(이름)
@@ -96,7 +105,7 @@ public class AttendanceController {
       @PathVariable UUID roundId,
       @AuthenticationPrincipal CustomUserDetails userDetails
   ) {
-    UUID adminUserId = AuthUserUtil.requireUserId(userDetails);
+    UUID adminUserId = requireUserId(userDetails);
     return ResponseEntity.ok(attendanceService.getAttendancesByRound(roundId, adminUserId));
   }
 
@@ -110,7 +119,7 @@ public class AttendanceController {
           ## 인증(JWT): **필요**
           
           ## 권한
-          - 세션의 **MANAGER** 또는 **OWNER** 권한이 필요
+          - 세션 **MANAGER** 또는 **OWNER** 
           
           ## 경로 파라미터
           - **`roundId`**: 출석 상태를 수정할 라운드 ID (`UUID`)
@@ -138,7 +147,7 @@ public class AttendanceController {
       @AuthenticationPrincipal CustomUserDetails userDetails,
       @Valid @RequestBody AttendanceStatusUpdateRequest request
   ) {
-    UUID adminUserId = AuthUserUtil.requireUserId(userDetails);
+    UUID adminUserId = requireUserId(userDetails);
     AttendanceResponse response =
         attendanceService.updateAttendanceStatusByRound(adminUserId, roundId, userId, request);
 
@@ -170,7 +179,7 @@ public class AttendanceController {
   public ResponseEntity<List<AttendanceResponse>> getMyAttendances(
       @AuthenticationPrincipal CustomUserDetails userDetails
   ) {
-    UUID userId = AuthUserUtil.requireUserId(userDetails);
+    UUID userId = requireUserId(userDetails);
     return ResponseEntity.ok(attendanceService.getAttendancesByUser(userId));
   }
 }

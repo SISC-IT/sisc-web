@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.sejongisc.backend.attendance.service.AttendanceRoundService;
 import org.sejongisc.backend.attendance.service.AttendanceService;
-import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -45,7 +45,7 @@ public class AttendanceRoundControllerTest {
     private AttendanceService attendanceService;
 
     @MockitoBean
-    private JwtProvider jwtProvider;
+    private JwtUtils jwtUtils;
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;

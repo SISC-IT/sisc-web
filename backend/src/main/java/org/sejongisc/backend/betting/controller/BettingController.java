@@ -95,7 +95,7 @@ public class BettingController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UserBetRequest userBetRequest) {
 
-        UserBetResponse userBet = bettingService.postUserBet(principal.getUserId(), userBetRequest);
+        UserBetResponse userBet = bettingService.postUserBet(principal.getUserId(), principal.getName(), userBetRequest);
         return ResponseEntity.ok(userBet);
     }
 

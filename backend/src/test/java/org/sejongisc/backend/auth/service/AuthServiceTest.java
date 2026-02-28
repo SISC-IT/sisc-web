@@ -7,8 +7,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.auth.repository.RefreshTokenRepository;
-import org.sejongisc.backend.common.auth.jwt.JwtParser;
-import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
 import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
@@ -38,10 +37,7 @@ class AuthServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private JwtProvider jwtProvider;
-
-    @Mock
-    private JwtParser jwtParser;
+    private JwtUtils jwtUtils;
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
@@ -74,7 +70,7 @@ class AuthServiceTest {
         given(userRepository.findUserByEmail("test@example.com"))
                 .willReturn(Optional.of(user));
         given(passwordEncoder.matches(rawPassword, encodedPassword)).willReturn(true);
-        given(jwtProvider.createToken(any(UUID.class), any(Role.class), anyString()))
+        given(jwtUtils.createToken(any(UUID.class), any(Role.class), anyString()))
                 .willReturn("mocked-jwt-token");
 
         // when
@@ -174,13 +170,13 @@ class AuthServiceTest {
         UUID userId = UUID.randomUUID();
         String fakeToken = "fake.jwt.token";
 
-        when(jwtParser.getUserIdFromToken(fakeToken)).thenReturn(userId);
+        when(jwtUtils.getUserIdFromToken(fakeToken)).thenReturn(userId);
 
 
         authService.logout(fakeToken);
 
 
-        verify(jwtParser, times(1)).getUserIdFromToken(fakeToken);
+        verify(jwtUtils, times(1)).getUserIdFromToken(fakeToken);
         verify(refreshTokenRepository, times(1)).deleteByUserId(userId);
     }
 

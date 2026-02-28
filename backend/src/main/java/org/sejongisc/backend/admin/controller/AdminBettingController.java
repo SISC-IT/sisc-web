@@ -1,16 +1,20 @@
-package org.sejongisc.backend.betting.controller;
+package org.sejongisc.backend.admin.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.betting.entity.Scope;
 import org.sejongisc.backend.betting.service.BettingService;
-import org.sejongisc.backend.betting.service.BettingScheduler;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/bet-rounds")
-public class BettingAdminController {
+@Tag(
+        name = "00. 관리자 모의 트레이딩 관리 API",
+        description = "모의 트레이딩 관리 관련 API 제공"
+)
+public class AdminBettingController {
 
     private final BettingService bettingService;
 

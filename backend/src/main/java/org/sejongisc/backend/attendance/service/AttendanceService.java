@@ -6,18 +6,22 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.activity.entity.ActivityType;
+import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.attendance.dto.AttendanceResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceStatusUpdateRequest;
 import org.sejongisc.backend.attendance.entity.Attendance;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
+import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.AttendanceStatus;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,11 +38,12 @@ public class AttendanceService {
   private final UserRepository userRepository;
   private final AttendanceAuthorizationService authorizationService;
   private final AttendanceRoundService attendanceRoundService;
+  private final ApplicationEventPublisher eventPublisher;
 
   /**
    * QR 토큰 기반 출석 체크인 처리(세션 멤버용) - qrToken으로 라운드 검증/조회 (HMAC + 만료 + ACTIVE) - 세션 멤버십 및 중복 출석 방지 - 지각 판별 및 출석 상태 결정
    */
-  public void checkIn(UUID userId, AttendanceRoundQrTokenRequest request) {
+  public void checkIn(UUID userId, String username, AttendanceRoundQrTokenRequest request) {
 
     // 토큰 검증 + ACTIVE 라운드 조회
     AttendanceRound round = attendanceRoundService.verifyQrTokenAndGetRound(request.qrToken());
@@ -68,6 +73,14 @@ public class AttendanceService {
     } catch (DataIntegrityViolationException e) {
       throw new CustomException(ErrorCode.ALREADY_CHECKED_IN);
     }
+    eventPublisher.publishEvent(new ActivityEvent(
+            userId,
+            username,
+            ActivityType.ATTENDANCE,
+            round.getAttendanceSession().getTitle() + " 세션에 출석했습니다.",
+            att.getAttendanceId(),
+            null
+    ));
   }
 
   /**
@@ -83,7 +96,11 @@ public class AttendanceService {
 
     return attendanceRepository.findByAttendanceRound_RoundId(roundId)
         .stream()
-        .map(AttendanceResponse::from)
+        .map(attendance -> AttendanceResponse.from(
+            attendance,
+            attendance.getAttendanceRound() != null ? attendance.getAttendanceRound().getAttendanceSession() : null,
+            attendance.getAttendanceRound()
+        ))
         .toList();
   }
 
@@ -124,9 +141,10 @@ public class AttendanceService {
     } else {
       attendance.changeStatus(newStatus, reason);
     }
-    return AttendanceResponse.from(attendanceRepository.save(attendance));
-  }
 
+    attendanceRepository.save(attendance);
+    return AttendanceResponse.from(attendance, round.getAttendanceSession(), round);
+  }
 
   @Transactional(readOnly = true)
   public List<AttendanceResponse> getAttendancesByUser(UUID userId) {
@@ -136,7 +154,11 @@ public class AttendanceService {
     List<Attendance> attendances = attendanceRepository.findByUserOrderByCheckedAtDesc(user);
 
     return attendances.stream()
-        .map(AttendanceResponse::from)
+        .map(attendance -> {
+          AttendanceRound round = attendance.getAttendanceRound();
+          AttendanceSession session = (round != null) ? round.getAttendanceSession() : null;
+          return AttendanceResponse.from(attendance, session, round);
+        })
         .collect(Collectors.toList());
   }
 

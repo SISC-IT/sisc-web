@@ -11,18 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Setter
 @Configuration
 public class EmailProperties {
-  private Duration codeExpire;
-  private Duration verifiedExpire;
-  private KeyPrefix keyPrefix;
   private Code code;
-
-  @Setter
-  @Getter
-  public static class KeyPrefix {
-    private String verify;
-    private String verified;
-    private String reset;
-  }
 
   @Setter
   @Getter
@@ -30,5 +19,4 @@ public class EmailProperties {
     private String charset;   // 문자 세트
     private int length;       // 기본 길이
   }
-
 }
