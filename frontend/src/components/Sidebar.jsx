@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { useState, useEffect } from 'react';
@@ -27,6 +28,26 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     currentBoard?.name || '전체 게시판'
   );
   const { isLoggedIn, logout } = useAuth();
+  const [isPresident, setIsPresident] = useState(false);
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!isLoggedIn) {
+        setIsPresident(false);
+        return;
+      }
+
+      try {
+        const { data } = await api.get('/api/user/details');
+        const normalizedRole = String(data?.role || '').trim().toUpperCase();
+        setIsPresident(normalizedRole === 'PRESIDENT');
+      } catch {
+        setIsPresident(false);
+      }
+    };
+
+    checkAdminRole();
+  }, [isLoggedIn]);
 
   const handleLogout = async () => {
     await logout();
@@ -163,6 +184,20 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                   마이페이지
                 </NavLink>
               </li>
+
+              {isLoggedIn && isPresident && (
+                <li>
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) =>
+                      isActive ? styles['active-link'] : styles['inactive-link']
+                    }
+                    onClick={handleNavLinkClick}
+                  >
+                    관리자
+                  </NavLink>
+                </li>
+              )}
 
               {isLoggedIn ? (
                 <li>

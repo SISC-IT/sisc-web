@@ -1,0 +1,219 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.filterRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.searchInput,
+.filterSelect {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.searchInput {
+  padding-left: 34px;
+}
+
+.tableWrap {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #fff;
+}
+
+.table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #f3f4f6;
+  padding: 12px;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.memberInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.memberName {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.memberEmail {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.badge {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.rolePresident {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.roleManager {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.roleLeader {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.roleNormal {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.statusActive {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusInactive {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.statusPending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.points {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rightAlign {
+  text-align: right !important;
+}
+
+.rowActions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.actionButton {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.paging {
+  display: flex;
+  gap: 8px;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalCard {
+  width: min(92vw, 420px);
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalCard h3,
+.modalCard p {
+  margin: 0;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .filterRow {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .filterSelect {
+    width: 160px;
+  }
+}

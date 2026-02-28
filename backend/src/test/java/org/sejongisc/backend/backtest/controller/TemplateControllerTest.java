@@ -9,7 +9,7 @@ import org.sejongisc.backend.backtest.dto.TemplateResponse;
 import org.sejongisc.backend.backtest.entity.Template;
 import org.sejongisc.backend.backtest.service.TemplateService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
-import org.sejongisc.backend.common.auth.jwt.JwtParser;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
 import org.sejongisc.backend.common.config.security.SecurityConfig;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
@@ -52,7 +52,7 @@ class TemplateControllerTest {
     private TemplateService templateService;
 
     @MockitoBean
-    JwtParser jwtParser;
+    JwtUtils jwtUtils;
 
     @MockitoBean
     JpaMetamodelMappingContext jpaMetamodelMappingContext;
@@ -82,8 +82,8 @@ class TemplateControllerTest {
                 .templates(List.of(t1, t2))
                 .build();
 
-        when(jwtParser.validationToken(TOKEN)).thenReturn(true);
-        when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
+        when(jwtUtils.validationToken(TOKEN)).thenReturn(true);
+        when(jwtUtils.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
         when(templateService.findAllByUserId(uid)).thenReturn(resp);
 
         mockMvc.perform(get("/api/backtest/templates")
@@ -101,8 +101,8 @@ class TemplateControllerTest {
         UUID tid = UUID.randomUUID();
         Template t = Template.of(User.builder().userId(uid).build(), "title", "desc", true);
 
-        when(jwtParser.validationToken(TOKEN)).thenReturn(true);
-        when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
+        when(jwtUtils.validationToken(TOKEN)).thenReturn(true);
+        when(jwtUtils.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
         when(templateService.findById(tid, uid))
                 .thenReturn(TemplateResponse.builder().template(t).build());
 
@@ -118,8 +118,8 @@ class TemplateControllerTest {
     void 생성_인증되어있으면_200과_생성결과를_반환한다() throws Exception {
         UUID uid = UUID.randomUUID();
 
-        when(jwtParser.validationToken(TOKEN)).thenReturn(true);
-        when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
+        when(jwtUtils.validationToken(TOKEN)).thenReturn(true);
+        when(jwtUtils.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
 
         // [변경] Record 생성자 사용 (userId, templateId 제거됨)
         TemplateRequest req = new TemplateRequest("new title", "new desc", true);
@@ -149,8 +149,8 @@ class TemplateControllerTest {
 
         Template edited = Template.of(User.builder().userId(uid).build(), "edited", "edited desc", false);
 
-        when(jwtParser.validationToken(TOKEN)).thenReturn(true);
-        when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
+        when(jwtUtils.validationToken(TOKEN)).thenReturn(true);
+        when(jwtUtils.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
 
         when(templateService.updateTemplate(
                 eq(tid),
@@ -173,8 +173,8 @@ class TemplateControllerTest {
         UUID uid = UUID.randomUUID();
         UUID tid = UUID.randomUUID();
 
-        when(jwtParser.validationToken(TOKEN)).thenReturn(true);
-        when(jwtParser.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
+        when(jwtUtils.validationToken(TOKEN)).thenReturn(true);
+        when(jwtUtils.getAuthentication(TOKEN)).thenReturn(인증토큰(uid));
 
         mockMvc.perform(delete("/api/backtest/templates/{templateId}", tid)
                         .header("Authorization", "Bearer " + TOKEN))
