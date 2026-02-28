@@ -12,7 +12,7 @@ services:
       - .env
     environment:
       - TZ=Asia/Seoul                   # 시간대 설정 : 컨테이너 내부 환경변수
-      - JAVA_OPTS=-Xmx350M -Xms200M     # 자바 힙 메모리를 실행시 200MB, 최대 350MB로 고정 (도커 제한보다 작게)
+      - JAVA_OPTS=-Xmx2560M -Xms1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200     # 자바 힙 메모리를 1GB ~ 2.5GB로 확장 (8GB 서버 기준)
     volumes:
       - /etc/localtime:/etc/localtime:ro  # 시간대 설정 : 호스트의 시간 설정 파일 공유
       - /etc/timezone:/etc/timezone:ro
