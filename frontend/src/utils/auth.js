@@ -4,7 +4,7 @@ const DEFAULT_ROLE = 'TEAM_MEMBER';
 
 export const signUp = async (
   {
-    studentName,
+    name,
     studentId,
     email,
     password,
@@ -19,7 +19,7 @@ export const signUp = async (
   signal
 ) => {
   const payload = {
-    studentName: studentName.trim(),
+    name: name.trim(),
     studentId: studentId.trim(),
     email: email.trim(),
     password: password,

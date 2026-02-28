@@ -2,11 +2,14 @@ package org.sejongisc.backend.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sejongisc.backend.activity.entity.ActivityType;
+import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.common.auth.dto.SignupRequest;
 import org.sejongisc.backend.common.auth.dto.SignupResponse;
 import org.sejongisc.backend.common.auth.service.EmailService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.annotation.OptimisticRetry;
+import org.sejongisc.backend.common.config.EmailProperties;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.redis.RedisKey;
@@ -17,12 +20,18 @@ import org.sejongisc.backend.point.entity.AccountName;
 import org.sejongisc.backend.point.entity.TransactionReason;
 import org.sejongisc.backend.point.service.AccountService;
 import org.sejongisc.backend.point.service.PointLedgerService;
+import org.sejongisc.backend.user.dto.PasswordResetConfirmRequest;
+import org.sejongisc.backend.user.dto.PasswordResetSendRequest;
 import org.sejongisc.backend.user.dto.UserUpdateRequest;
+import org.sejongisc.backend.user.entity.Grade;
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,18 +48,24 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final RedisTemplate<String, String> redisTemplate;
     private final RedisService redisService;
     private final RefreshTokenService refreshTokenService;
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
+    private final EmailProperties emailProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     // --- 핵심 회원 서비스 ---
 
     @Transactional
     @OptimisticRetry
     public SignupResponse signup(SignupRequest request) {
-        if (userRepository.existsByEmailOrStudentId(request.getEmail(), request.getStudentId())) {
-            if (userRepository.existsByStudentId(request.getStudentId())) throw new CustomException(ErrorCode.DUPLICATE_USER);
+        if (userRepository.existsByStudentId(request.getStudentId())) {
+            throw new CustomException(ErrorCode.DUPLICATE_USER);
+        }
+
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new CustomException(ErrorCode.DUPLICATE_PHONE);
         }
         String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(request.getPassword());
@@ -67,6 +82,12 @@ public class UserService {
                 AccountEntry.debit(userAccount, 100L)
             );
             log.info("포인트 계정 생성 및 초기 포인트 지급 완료: {}", user.getEmail());
+            eventPublisher.publishEvent(new ActivityEvent(
+                    user.getUserId(),
+                    user.getName(),
+                    ActivityType.SIGNUP,
+                    user.getName() + "님이 일반 회원가입을 신청했습니다.",
+                    null, null));
             return SignupResponse.from(saved);
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.DUPLICATE_USER);
@@ -98,56 +119,97 @@ public class UserService {
         log.info("회원 정보 수정 완료: userId={}", userId);
     }
 
-    public void passwordReset(String email) {
-        String nEmail = validateNotBlank(email, "이메일");
+    public void passwordResetSendCode(PasswordResetSendRequest req) {
+        String nEmail = validateNotBlank(req.email(), "이메일").trim();
+        String nStudentId = validateNotBlank(req.studentId(), "학번").trim();
 
-        if (!userRepository.existsByEmail(nEmail)) {
-            log.debug("존재하지 않는 이메일로 비밀번호 재설정 요청: {}", nEmail);
-            return;
+        if (!userRepository.existsByEmailAndStudentId(nEmail, nStudentId)) {
+            log.debug("이메일과 학번 불일치: email={}, studentId={}", nEmail, nStudentId);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
-
         emailService.sendResetEmail(nEmail);
     }
 
-    public String verifyResetCodeAndIssueToken(String email, String code) {
-        String nEmail = validateNotBlank(email, "이메일");
-        String nCode = validateNotBlank(code, "인증코드");
-
-        emailService.verifyResetEmail(nEmail, nCode);
-
-        String token = UUID.randomUUID().toString();
-        try {
-            redisService.set(RedisKey.PASSWORD_RESET, token, nEmail);
-        } catch (Exception e) {
-            log.error("Redis 저장 실패 - 비밀번호 재설정 토큰 발급 실패: email={}", nEmail, e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-
-        return token;
-    }
-
     @Transactional
-    public void resetPasswordByToken(String resetToken, String newPassword) {
-        String email = getEmailFromRedis(resetToken);
-        User user = userRepository.findUserByEmail(email)
+    public void resetPasswordByCode(PasswordResetConfirmRequest req) {
+
+        String email = validateNotBlank(req.email(), "이메일").trim();
+        String studentId = validateNotBlank(req.studentId(), "학번").trim();
+        String inputCode = validateNotBlank(req.code(), "인증코드").trim();
+
+        // 사용자 조회 (이메일+학번 같이 확인하는 게 안전)
+        User user = userRepository.findByEmailAndStudentId(email, studentId)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(newPassword);
 
+
+        // Redis에서 인증코드 조회
+        String redisKey = emailProperties.getKeyPrefix().getReset() + email;
+
+        String savedCode = redisTemplate.opsForValue().get(redisKey);
+
+
+
+        if (savedCode == null) {
+            throw new CustomException(ErrorCode.RESET_CODE_EXPIRED);
+        }
+
+        if (!savedCode.equals(inputCode)) {
+            throw new CustomException(ErrorCode.INVALID_RESET_CODE);
+        }
+
+        // 새 비밀번호 검증 + 암호화 저장
+        String trimmedPassword = PasswordPolicyValidator.getValidatedPassword(req.newPassword());
         user.setPasswordHash(passwordEncoder.encode(trimmedPassword));
 
-        deleteResetTokenFromRedis(resetToken);
+        // 인증코드 1회성 처리 (삭제)
+        redisTemplate.delete(redisKey);
+
+        // 기존 로그인 토큰 무효화
         refreshTokenService.deleteByUserId(user.getUserId());
     }
 
+
+    @Transactional(readOnly = true)
     public List<User> findAllUsersMissingAccount() {
         return userRepository.findAllUsersMissingAccount();
     }
 
+    @Transactional
+    public void updateUserStatus(UUID userId, UserStatus status) {
+        User user = findUser(userId);
+        user.setStatus(status);
+        log.info("사용자 상태 변경 완료: userId={}", userId);
+    }
+
+    @Transactional
+    public void updateUserRole(UUID userId, Role role) {
+        User user = findUser(userId);
+        user.setRole(role);
+        log.info("사용자 권한 변경 완료: userId={}", userId);
+    }
+
+    @Transactional
+    public void promoteToSenior(UUID userId) {
+        User user = findUser(userId);
+
+        // grade 및 status 변경
+        user.setGrade(Grade.SENIOR);
+        user.setStatus(UserStatus.GRADUATED);
+
+        log.info("선배 등급 전환 완료: userId={}, 학번={}", userId, user.getStudentId());
+    }
+
     // --- 내부 헬퍼 메서드 ---
+
+    private User findUser(UUID userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
 
     private String validateNotBlank(String value, String fieldName) {
         if (value == null || value.trim().isEmpty()) {
+            log.debug(fieldName);
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
         return value.trim();

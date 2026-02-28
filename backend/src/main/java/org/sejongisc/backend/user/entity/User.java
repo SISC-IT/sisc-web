@@ -49,8 +49,10 @@ public class User extends BasePostgresEntity{
     @Enumerated(EnumType.STRING)
     private Gender gender;       // 성별
 
-    @Column(name = "is_new_member", nullable = false)
-    private boolean isNewMember; // 신규 여부 (포인트나 이벤트 대상자 선정용)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Grade grade = Grade.NEW_MEMBER; // 신입/준/정회원
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -100,13 +102,16 @@ public class User extends BasePostgresEntity{
             this.point = 0;
         }
     }
-    public void updatePoint(int amount) {
-        this.point += amount;
+
+    // 로그인 가능 여부
+    public boolean canLogin() {
+        return this.status != UserStatus.OUT;
     }
+
 
     public static User createUserWithSignupAndPending(SignupRequest request, String encodedPw) {
         return User.builder()
-            .role(Role.TEAM_MEMBER)     // TODO : 운영진 승인 로직 추가 후 PENDING_MEMBER로 변경 필요
+            .role(Role.PENDING_MEMBER)
             .studentId(request.getStudentId())
             .name(request.getName())
             .passwordHash(encodedPw)
@@ -117,9 +122,35 @@ public class User extends BasePostgresEntity{
             .department(request.getDepartment())    // 학과
             .generation(request.getGeneration())    //
             .teamName(request.getTeamName())        // 소속 팀명
-            .isNewMember(true)                      // 신규 가입자
+            .grade(Grade.NEW_MEMBER)                // 신규 가입자
             .point(0)
             .status(UserStatus.ACTIVE)              // 기본 활동 상태
             .build();
     }
+
+    public void applyExcelData(
+        String name,
+        String phone,
+        String teamName,
+        Integer generation,
+        String college,
+        String department,
+        Grade grade,
+        String position,
+        Role role,
+        Gender gender
+    ) {
+        this.name = name;
+        this.phoneNumber = phone;
+        this.teamName = teamName;
+        this.generation = generation;
+        this.college = college;
+        this.department = department;
+        this.status = UserStatus.ACTIVE;
+        this.grade = grade;
+        this.positionName = position;
+        this.role = role;
+        this.gender = gender;
+    }
+
 }

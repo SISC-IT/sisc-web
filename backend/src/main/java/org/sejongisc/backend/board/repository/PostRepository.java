@@ -1,6 +1,7 @@
 package org.sejongisc.backend.board.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.sejongisc.backend.board.entity.Board;
 import org.sejongisc.backend.board.entity.Post;
@@ -12,6 +13,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PostRepository extends JpaRepository<Post, UUID> {
+
+  @Query("SELECT p FROM Post p LEFT JOIN FETCH p.board WHERE p.postId = :postId")
+  Optional<Post> findByIdWithBoard(@Param("postId") UUID postId);
 
   Page<Post> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
       String titleKeyword, String contentKeyword, Pageable pageable);

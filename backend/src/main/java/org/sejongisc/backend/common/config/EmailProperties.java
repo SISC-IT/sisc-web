@@ -21,6 +21,7 @@ public class EmailProperties {
   public static class KeyPrefix {
     private String verify;
     private String verified;
+    private String reset;
   }
 
   @Setter
