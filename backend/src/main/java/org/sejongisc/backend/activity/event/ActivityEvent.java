@@ -7,7 +7,7 @@ import java.util.UUID;
 public record ActivityEvent(
     UUID userId,
     String username,
-    ActivityType type,
+    ActivityType activityType,
     String message,
     UUID targetId,
     String boardName

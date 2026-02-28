@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/board/admin")
+@RequestMapping("/api/admin/board")
 @Tag(
     name = "00. 관리자 게시판 관리 API",
     description = "게시판 생성 및 삭제 관련 API 제공"

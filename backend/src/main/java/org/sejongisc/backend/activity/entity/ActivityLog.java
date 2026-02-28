@@ -30,7 +30,7 @@ public class ActivityLog {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ActivityType type; // ATTENDANCE, BOARD, BETTING 등
+    private ActivityType activityType; // ATTENDANCE, BOARD, BETTING 등
 
     @Column(nullable = false, length = 30)
     private String message; // "자유게시판에 글을 게시했어요"
@@ -42,10 +42,10 @@ public class ActivityLog {
     private LocalDateTime createdAt;
 
     @Builder
-    public ActivityLog(UUID userId, String username, ActivityType type, String message, UUID targetId, String boardName) {
+    public ActivityLog(UUID userId, String username, ActivityType activityType, String message, UUID targetId, String boardName) {
         this.userId = userId;
         this.username = username;
-        this.type = type;
+        this.activityType = activityType;
         this.message = message;
         this.targetId = targetId;
         this.boardName = boardName;

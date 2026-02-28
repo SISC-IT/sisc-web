@@ -78,7 +78,7 @@ public class PostServiceImpl implements PostService {
             userId,
             user.getName(),
             ActivityType.BOARD_POST,
-            user.getName() + "님이 " + "[" + board.getBoardName() + "] 게시판에 새 글을 작성했습니다.",
+            "[" + post.getTitle() + "]글을 게시했습니다.",
             post.getPostId(),
             board.getBoardName()
     ));

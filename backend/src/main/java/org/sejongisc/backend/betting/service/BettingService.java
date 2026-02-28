@@ -210,7 +210,7 @@ public class BettingService {
                     userId,
                     username,
                     ActivityType.BETTING_JOIN,
-                    username + "님이 모의 트레이딩 " + betRound.getTitle() + "에 참여했습니다.",
+                    "모의 트레이딩 " + betRound.getTitle() + "에 참여했습니다.",
                     savedBet.getUserBetId(),
                     null
             ));
