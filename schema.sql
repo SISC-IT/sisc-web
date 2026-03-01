@@ -225,18 +225,14 @@ CREATE TABLE "portfolio_summary" (
 ----------------------------------------------------------------------
 
 CREATE TABLE "portfolio_positions" (
-    "run_id" varchar(64) NOT NULL,          -- 백테스트/실행 회차 ID
     "date" date NOT NULL,                   -- 스냅샷 기준 날짜
     "ticker" varchar(255) NOT NULL,         -- 종목 티커
-
     "position_qty" integer NOT NULL,        -- 보유 수량
     "avg_price" numeric(38, 6) NOT NULL,    -- 평균 매입가
     "current_price" numeric(38, 6) NOT NULL,-- 기준일 종가/평가 단가
-
     "market_value" numeric(20, 6) NOT NULL, -- 평가금액
     "pnl_unrealized" numeric(20, 6) NOT NULL,-- 미실현 손익
     "pnl_realized_cum" numeric(20, 6) NOT NULL, -- 누적 실현 손익(해당 종목)
-
     "created_at" timestamp with time zone DEFAULT now() NOT NULL -- 기록 시각
 );
 
