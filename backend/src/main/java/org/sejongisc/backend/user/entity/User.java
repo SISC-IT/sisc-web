@@ -92,6 +92,7 @@ public class User extends BasePostgresEntity{
             this.positionName.contains("회장");
     }
 
+
     // 기본값 지정
     @PrePersist
     public void prePersist() {
