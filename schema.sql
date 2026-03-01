@@ -7,7 +7,24 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE SCHEMA IF NOT EXISTS "neon_auth";
 
 ----------------------------------------------------------------------
--- 1. price_data
+-- 1. stock_info / company_names
+--    - 종목의 기본 정보 및 메타데이터 관리
+----------------------------------------------------------------------
+CREATE TABLE "company_names" (
+    "company_name" varchar(100) PRIMARY KEY, -- 기업 한글/영문 정식 명칭
+    "ticker" varchar(255) NOT NULL UNIQUE    -- 종목 티커
+);
+
+CREATE TABLE "stock_info" (
+    "ticker" varchar(20) PRIMARY KEY,  -- 종목 티커
+    "sector" varchar(100),             -- 섹터 분류 (예: IT, 금융)
+    "industry" varchar(200),           -- 세부 산업 분류
+    "market_cap" bigint,               -- 시가총액 (필터링/비중 계산용)
+    "updated_at" timestamp DEFAULT now() -- 정보 갱신 일시
+);
+
+----------------------------------------------------------------------
+-- 2. price_data
 --    - 개별 주식 종목의 일별 시세(OHLCV) 및 거래 정보를 저장
 --    - 기술적 분석 및 모델 Feature 엔지니어링의 기본 원천 데이터
 ----------------------------------------------------------------------
@@ -20,12 +37,14 @@ CREATE TABLE "price_data" (
     "open" numeric(38, 2),             -- 당일 시가
     "volume" bigint,                   -- 일일 거래량 (주식 수)
     "ticker" varchar(255),             -- 종목 티커 심볼
+    "per" numeric(18, 6),              -- 주가수익비율 (PER)
+    "pbr" numeric(18, 6),              -- 주가순자산비율 (PBR)
     "amount" numeric(38, 2),           -- 일일 거래대금
     CONSTRAINT "price_data_pkey" PRIMARY KEY("date", "ticker")
 );
 
 ----------------------------------------------------------------------
--- 2. crypto_price_data
+-- 3. crypto_price_data
 --    - 암호화폐(가상자산)의 시계열 가격 및 마켓 데이터를 저장
 --    - 주식 데이터와 분리하여 자산군별 특화 분석 수행
 ----------------------------------------------------------------------
@@ -42,7 +61,7 @@ CREATE TABLE "crypto_price_data" (
 );
 
 ----------------------------------------------------------------------
--- 3. macroeconomic_indicators
+-- 4. macroeconomic_indicators (거시경제 지표)
 --    - 국가별 거시경제 지표 및 시장 위험 지표(VIX 등) 저장
 --    - 시장 국면(Regime) 판단 및 멀티모달 AI 모델의 외부 변수로 활용
 ----------------------------------------------------------------------
@@ -77,7 +96,7 @@ CREATE TABLE "macroeconomic_indicators" (
 );
 
 ----------------------------------------------------------------------
--- 4. company_fundamentals
+-- 5. company_fundamentals (제무제표 데이터)
 --    - 종목별 재무제표 수치 및 주요 투자 보조 지표 저장
 --    - 가치 투자 전략 및 퀀트 팩터 모델의 핵심 소스
 ----------------------------------------------------------------------
@@ -90,17 +109,16 @@ CREATE TABLE "company_fundamentals" (
     "total_liabilities" numeric(30, 6),-- 총부채
     "equity" numeric(30, 6),           -- 자본총계
     "eps" numeric(18, 6),              -- 주당순이익 (EPS)
-    "per" numeric(18, 6),              -- 주가수익비율 (PER)
-    "pbr" numeric(18, 6),              -- 주가순자산비율 (PBR)
     "roe" numeric(18, 6),              -- 자기자본이익률 (ROE)
     "debt_ratio" numeric(18, 6),       -- 부채비율
     "operating_cash_flow" numeric(30, 6), -- 영업활동현금흐름
-    "interest_coverage" numeric(10, 2);,  -- 이자보상배율
+    "interest_coverage" numeric(10, 2),  -- 이자보상배율
+    "shares_issued" numeric(20, 2),      -- 유통 주식 수
     CONSTRAINT "company_fundamentals_pkey" PRIMARY KEY("ticker","date")
 );
 
 ----------------------------------------------------------------------
--- 5. Market Breadth Stats
+-- 6. Market Breadth Stats (마켓 상태 지표)
 --    - 전 종목 대상 통계 데이터 저장
 --    - NH-NL (신고가-신저가), MA200 상회 비율 등
 ----------------------------------------------------------------------
@@ -122,7 +140,7 @@ CREATE TABLE IF NOT EXISTS "market_breadth" (
 CREATE INDEX IF NOT EXISTS "idx_market_breadth_date" ON "market_breadth" ("date");
 
 ----------------------------------------------------------------------
--- 6. news_sentiment
+-- 7. news_sentiment
 --    - 비정형 데이터(뉴스/기사)를 분석한 정량적 감성 점수 저장
 --    - 시장 심리 및 이벤트 드리븐 전략에 활용
 ----------------------------------------------------------------------
@@ -138,7 +156,7 @@ CREATE TABLE "news_sentiment" (
 );
 
 ----------------------------------------------------------------------
--- 7. xai_reports
+-- 8. xai_reports
 --    - AI 모델이 생성한 의사결정 근거(텍스트)와 매매 신호를 저장
 --    - 투자자가 모델의 판단을 이해할 수 있도록 설명 가능성(Explainability) 제공
 ----------------------------------------------------------------------
@@ -156,7 +174,7 @@ CREATE TABLE "xai_reports" (
 );
 
 ----------------------------------------------------------------------
--- 8. executions
+-- 9. executions
 --    - 실제 거래 또는 백테스트 시뮬레이션에서 발생한 개별 체결 이력
 --    - 자산 추적 및 성과 평가를 위한 가장 세밀한 로그 데이터
 ----------------------------------------------------------------------
@@ -184,7 +202,7 @@ CREATE TABLE "executions" (
 );
 
 ----------------------------------------------------------------------
--- 9. portfolio_summary
+-- 10. portfolio_summary
 --    - 전체 자산의 일별 성과 요약 (Equity Curve 생성용)
 ----------------------------------------------------------------------
 CREATE TABLE "portfolio_summary" (
@@ -200,24 +218,26 @@ CREATE TABLE "portfolio_summary" (
 );
 
 ----------------------------------------------------------------------
--- 10. stock_info / company_names
---    - 종목의 기본 정보 및 메타데이터 관리
+-- 11. portfolio_positions
+--    - 특정 run_id(백테스트/실거래 실행 회차) 기준으로
+--      날짜별 종목 포지션 스냅샷을 저장
+--    - portfolio_summary(일자별 총자산)와 함께 일별 상태 재현/검증 가능
 ----------------------------------------------------------------------
-CREATE TABLE "company_names" (
-    "company_name" varchar(100) PRIMARY KEY, -- 기업 한글/영문 정식 명칭
-    "ticker" varchar(255) NOT NULL UNIQUE    -- 종목 티커
+
+CREATE TABLE "portfolio_positions" (
+    "date" date NOT NULL,                   -- 스냅샷 기준 날짜
+    "ticker" varchar(255) NOT NULL,         -- 종목 티커
+    "position_qty" integer NOT NULL,        -- 보유 수량
+    "avg_price" numeric(38, 6) NOT NULL,    -- 평균 매입가
+    "current_price" numeric(38, 6) NOT NULL,-- 기준일 종가/평가 단가
+    "market_value" numeric(20, 6) NOT NULL, -- 평가금액
+    "pnl_unrealized" numeric(20, 6) NOT NULL,-- 미실현 손익
+    "pnl_realized_cum" numeric(20, 6) NOT NULL, -- 누적 실현 손익(해당 종목)
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL -- 기록 시각
 );
 
-CREATE TABLE "stock_info" (
-    "ticker" varchar(20) PRIMARY KEY,  -- 종목 티커
-    "sector" varchar(100),             -- 섹터 분류 (예: IT, 금융)
-    "industry" varchar(200),           -- 세부 산업 분류
-    "market_cap" bigint,               -- 시가총액 (필터링/비중 계산용)
-    "updated_at" timestamp DEFAULT now() -- 정보 갱신 일시
-);
-
 ----------------------------------------------------------------------
--- 11. event_calendar
+-- 12. event_calendar
 --    - 주요 경제 일정(FOMC, CPI, GDP) 및 기업 실적 발표일 저장
 --    - AI 모델의 'Event' 피처(D-Day 계산 등)를 위한 원천 데이터
 ----------------------------------------------------------------------
@@ -237,7 +257,7 @@ CREATE TABLE IF NOT EXISTS "event_calendar" (
 );
 
 ----------------------------------------------------------------------
--- 12. sector_returns
+-- 13. sector_returns
 --    - stock_info의 'sector'와 매핑되는 ETF의 일별 수익률 저장
 --    - Wide Format이 아닌 Long Format (Date, Sector) 구조
 ----------------------------------------------------------------------
@@ -254,7 +274,7 @@ CREATE TABLE IF NOT EXISTS "sector_returns" (
 );
 
 ----------------------------------------------------------------------
--- 13. neon_auth.users_sync
+-- 14. neon_auth.users_sync
 --    - 인증 서비스(Neon/Clerk 등)와 동기화된 사용자 데이터 정보
 ----------------------------------------------------------------------
 CREATE TABLE "neon_auth"."users_sync" (

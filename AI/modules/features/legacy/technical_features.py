@@ -1,5 +1,6 @@
-﻿# AI/modules/signal/core/features.py
+﻿# AI/modules/features/features.py
 """
+레거시 버전입니다.
 [Stationary Multi-Timeframe Features - Fixed]
 - 절대 가격(Price)을 Ratio로 변환합니다.
 - [수정] 주가 데이터를 파괴하던 clip(-10, 10) 로직을 제거했습니다.
@@ -63,9 +64,6 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     # --------------------------------------------------------
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df = df.fillna(0)
-    
-    # [삭제됨] df[numeric_cols].clip(-10, 10) <-- 범인 제거 완료
-
     return df
 
 def add_multi_timeframe_features(df: pd.DataFrame) -> pd.DataFrame:

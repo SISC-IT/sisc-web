@@ -1,113 +1,100 @@
-# AI/modules/signal/models/transformer/wrapper.py
-"""
-[Transformer 모델 래퍼]
-- BaseSignalModel 인터페이스를 구현한 실제 실행 클래스입니다.
-- architecture.py에서 정의한 모델을 빌드하고, 학습/예측/저장 로직을 수행합니다.
-"""
-
-import os
+# AI/modules/signal/models/PatchTST/wrapper.py
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import numpy as np
-import tensorflow as tf
-from typing import Dict, Any, Optional
-from AI.modules.signal.core.base_model import BaseSignalModel
-from .architecture import build_transformer_model 
+import os
+from typing import Optional, Dict, Any
+from ...core.base_model import BaseSignalModel
+from .architecture import PatchTST_Model
 
-class TransformerSignalModel(BaseSignalModel):
+class PatchTSTWrapper(BaseSignalModel):
+    """
+    [PatchTST 구현체] BaseSignalModel 인터페이스 준수
+    - 용도: 중장기 추세 예측 (Trend Specialist)
+    """
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.model_name = "transformer_v1"
-        
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model = None # build() 호출 시 생성됨
+
     def build(self, input_shape: tuple):
-        """설정(config)에 따라 모델 아키텍처 생성"""
-        # 차원 검증
-        if len(input_shape) != 2:
-             # input_shape가 (timesteps, features) 2차원이 아니라면 경고 또는 에러
-             # 일부 환경에서 (None, timesteps, features)로 올 수 있으므로 유연하게 처리
-            if len(input_shape) == 3 and input_shape[0] is None:
-                 input_shape = input_shape[1:]
-            else:
-                raise ValueError(f"입력 차원은 (timesteps, features) 2차원이어야 합니다. 현재: {input_shape}")
-
-        self.model = build_transformer_model(
-            input_shape=input_shape,
-            head_size=self.config.get("head_size", 256),
-            num_heads=self.config.get("num_heads", 4),
-            ff_dim=self.config.get("ff_dim", 4),
-            num_transformer_blocks=self.config.get("num_blocks", 4),
-            mlp_units=self.config.get("mlp_units", [128]),
-            dropout=self.config.get("dropout", 0.4),
-            mlp_dropout=self.config.get("mlp_dropout", 0.25)
-        )
+        """
+        모델 아키텍처 생성
+        Args:
+            input_shape: (seq_len, num_features) 예: (120, 7)
+        """
+        seq_len, num_features = input_shape
         
-        # 컴파일
-        learning_rate = self.config.get("learning_rate", 1e-4)
-        self.model.compile(
-            loss="binary_crossentropy",
-            optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-            metrics=["accuracy", "AUC"]
-        )
+        self.model = PatchTST_Model(
+            seq_len=seq_len,
+            enc_in=num_features,
+            patch_len=self.config.get('patch_len', 16),
+            stride=self.config.get('stride', 8),
+            d_model=self.config.get('d_model', 128),
+            dropout=self.config.get('dropout', 0.1)
+        ).to(self.device)
+        print(f"✅ PatchTST Built: Input {input_shape} -> Output [1] (Prob)")
 
-    def train(
-        self,
-        X_train: np.ndarray,
-        y_train: np.ndarray,
-        X_val: Optional[np.ndarray] = None,
-        y_val: Optional[np.ndarray] = None,
-        **kwargs
-    ):
-        """모델 학습 수행"""
+    def train(self, X_train: np.ndarray, y_train: np.ndarray, 
+              X_val: Optional[np.ndarray] = None, y_val: Optional[np.ndarray] = None, **kwargs):
+        """모델 학습 수행 (BCE Loss)"""
         if self.model is None:
-            raise ValueError("모델이 빌드되지 않았습니다. build()를 먼저 호출하세요.")
+            self.build(X_train.shape[1:]) # (Seq, Feat)
 
-        # ✅ 호출자가 주면 우선, 없으면 config, 없으면 default
-        epochs = int(kwargs.pop("epochs", self.config.get("epochs", 50)))
-        batch_size = int(kwargs.pop("batch_size", self.config.get("batch_size", 32)))
-        verbose = int(kwargs.pop("verbose", 1))
+        criterion = nn.BCEWithLogitsLoss()
+        optimizer = optim.AdamW(self.model.parameters(), lr=self.config.get('lr', 0.0001))
+        epochs = self.config.get('epochs', 50)
+        batch_size = self.config.get('batch_size', 32)
 
-        # callbacks는 pop으로 빼서 중복 전달 방지
-        callbacks = kwargs.pop("callbacks", [])
+        # Tensor 변환
+        X_tensor = torch.FloatTensor(X_train).to(self.device)
+        y_tensor = torch.FloatTensor(y_train).view(-1, 1).to(self.device)
 
-        # validation_data는 (X_val, y_val)이 둘 다 있을 때만
-        validation_data = (X_val, y_val) if (X_val is not None and y_val is not None) else None
+        self.model.train()
+        for epoch in range(epochs):
+            # (간소화를 위해 배치 루프 생략하고 전체 주입 예시 - 실제론 DataLoader 사용 권장)
+            permutation = torch.randperm(X_tensor.size(0))
+            epoch_loss = 0
+            
+            for i in range(0, X_tensor.size(0), batch_size):
+                indices = permutation[i:i+batch_size]
+                batch_x, batch_y = X_tensor[indices], y_tensor[indices]
 
-        history = self.model.fit(
-            X_train, y_train,
-            validation_data=validation_data,
-            epochs=epochs,
-            batch_size=batch_size,
-            callbacks=callbacks,
-            verbose=verbose,
-            **kwargs 
-        )
-        return history
+                optimizer.zero_grad()
+                output = self.model(batch_x)
+                loss = criterion(output, batch_y)
+                loss.backward()
+                optimizer.step()
+                epoch_loss += loss.item()
+            
+            if (epoch + 1) % 10 == 0:
+                print(f"Epoch [{epoch+1}/{epochs}] Loss: {epoch_loss:.4f}")
 
-
-
-
-    def predict(self, X_input: np.ndarray, **kwargs) -> np.ndarray:
-        """추론 수행"""
+    def predict(self, X_input: np.ndarray) -> np.ndarray:
+        """추론 수행: 상승 확률(0~1) 반환"""
         if self.model is None:
-            raise ValueError("모델이 없습니다. load()하거나 build() 하세요.")
+            raise Exception("Model not initialized. Call build() or load() first.")
             
-        # Keras 모델은 (batch, time, feat) 형태를 기대하므로 차원 확인
-        if len(X_input.shape) == 2:
-            X_input = np.expand_dims(X_input, axis=0)
+        self.model.eval()
+        with torch.no_grad():
+            X_tensor = torch.FloatTensor(X_input).to(self.device)
+            logits = self.model(X_tensor)
+            probs = torch.sigmoid(logits).cpu().numpy() # Logit -> Probability
             
-        return self.model.predict(X_input,  **kwargs)
+        return probs
 
     def save(self, filepath: str):
-        """모델 저장"""
-        if self.model is None:
-            print("저장할 모델이 없습니다.")
-            return
-        
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        self.model.save(filepath)
-        print(f"모델 저장 완료: {filepath}")
+        torch.save(self.model.state_dict(), filepath)
+        print(f"💾 PatchTST saved to {filepath}")
 
     def load(self, filepath: str):
-        """모델 로드"""
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f"모델 파일이 없습니다: {filepath}")
+        # 로드 시에는 config에 있는 shape 정보를 기반으로 build를 먼저 해야 함
+        # (혹은 저장 시 shape 정보를 같이 저장하는 방식 사용)
+        if self.model is None:
+             # 임시: config에 저장된 shape 사용 (운영 시 보완 필요)
+            self.build((self.config.get('seq_len', 120), self.config.get('enc_in', 7)))
             
-        self.model = tf.keras.models.load_model(filepath)
+        self.model.load_state_dict(torch.load(filepath, map_location=self.device))
+        self.model.eval()
+        print(f"📂 PatchTST loaded from {filepath}")

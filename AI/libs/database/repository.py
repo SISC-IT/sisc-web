@@ -10,10 +10,6 @@ import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 
-# 변경된 구조에 맞게 import 경로 수정 (connection.py 사용)
-# 만약 connection.py가 아직 없다면 기존 get_db_conn을 임포트하거나,
-# 나중에 파일명이 바뀌면 여기도 같이 수정해야 합니다.
-
 from AI.libs.database.connection import get_db_conn
 
 
@@ -21,10 +17,6 @@ def save_executions_to_db(fills_df: pd.DataFrame, db_name: str = "db") -> None:
     """
     [체결 내역 저장]
     Backtrade 결과(fills_df)를 'public.executions' 테이블에 저장합니다.
-    
-    Args:
-        fills_df (pd.DataFrame): 체결 내역 데이터프레임
-        db_name (str): DB 연결 정보 키 (기본값: "db")
     """
     if fills_df is None or fills_df.empty:
         print("[Repository] 저장할 체결 내역이 없습니다.")
@@ -37,12 +29,17 @@ def save_executions_to_db(fills_df: pd.DataFrame, db_name: str = "db") -> None:
         "commission", "cash_after", "position_qty", "avg_price",
         "pnl_realized", "pnl_unrealized"
     }
+    
     if not required_cols.issubset(fills_df.columns):
         missing = required_cols - set(fills_df.columns)
         print(f"[Repository][Error] 체결 내역 데이터에 필수 컬럼이 누락되었습니다: {missing}")
         return
 
     conn = get_db_conn(db_name)
+    if conn is None:
+        print("[Repository][Error] DB 연결에 실패하여 체결 내역을 저장할 수 없습니다.")
+        return
+        
     cursor = conn.cursor()
 
     try:
@@ -69,10 +66,10 @@ def save_executions_to_db(fills_df: pd.DataFrame, db_name: str = "db") -> None:
                 str(row["run_id"]),
                 xai_id,
                 str(row["ticker"]),
-                row["signal_date"],  # str or date
+                row["signal_date"],  
                 float(row["signal_price"]),
                 str(row["signal"]),
-                row["fill_date"],    # str or date
+                row["fill_date"],    
                 float(row["fill_price"]),
                 int(row["qty"]),
                 str(row["side"]),
@@ -99,126 +96,188 @@ def save_executions_to_db(fills_df: pd.DataFrame, db_name: str = "db") -> None:
         conn.close()
 
 
-def save_reports_to_db(reports: List[Tuple], db_name: str = "db") -> List[int]:
+def save_reports_to_db(reports_tuple_list: list) -> list:
     """
-    [XAI 리포트 저장]
-    생성된 XAI 리포트를 'public.xai_reports' 테이블에 저장하고, 생성된 ID 리스트를 반환합니다.
-    
-    Args:
-        reports (List[Tuple]): (ticker, signal, price, date, report_text) 형태의 튜플 리스트
-        db_name (str): DB 연결 정보 키
-        
-    Returns:
-        List[int]: 저장된 리포트들의 Primary Key (id) 리스트
+    XAI 리포트를 DB에 일괄 저장하고, 생성된 ID 리스트를 반환합니다.
     """
-    if not reports:
-        print("[Repository] 저장할 XAI 리포트가 없습니다.")
+    if not reports_tuple_list:
         return []
 
-    conn = get_db_conn(db_name)
-    cursor = conn.cursor()
-    generated_ids = []
+    conn = get_db_conn()
+    if conn is None:
+        return []
 
     try:
+        cursor = conn.cursor()
+        
         # INSERT 쿼리 (RETURNING id 로 생성된 PK 반환)
         insert_query = """
             INSERT INTO public.xai_reports (
-                ticker, signal, price, date, report_text, created_at
+                ticker, signal, price, date, report
             ) VALUES %s
             RETURNING id
         """
-
-        # 데이터 변환 (Tuple -> List for execute_values)
-        # reports 구조: (ticker, signal, price, date, report_text)
-        data_to_insert = [
-            (
-                r[0],  # ticker
-                r[1],  # signal
-                float(r[2]),  # price
-                r[3],  # date
-                r[4],  # report_text
-                pd.Timestamp.now() # created_at
-            )
-            for r in reports
-        ]
-
-        execute_values(cursor, insert_query, data_to_insert, fetch=True)
         
-        # RETURNING id 결과 가져오기
-        rows = cursor.fetchall()
-        generated_ids = [row[0] for row in rows]
+        # fetch=True 옵션을 주면 execute_values가 RETURNING 된 값들을 리스트로 모아줌
+        result_ids = execute_values(
+            cursor, 
+            insert_query, 
+            reports_tuple_list,
+            fetch=True
+        )
         
         conn.commit()
-        print(f"[Repository] XAI 리포트 {len(data_to_insert)}건 저장 완료 (IDs: {len(generated_ids)}개).")
+        
+        # result_ids는 [(1,), (2,)] 형태의 튜플 리스트이므로 단일 리스트로 언패킹
+        saved_ids = [row[0] for row in result_ids] if result_ids else []
+        
+        print(f"[Repository] XAI 리포트 {len(reports_tuple_list)}건 저장 완료 (IDs: {len(saved_ids)}개).")
+        return saved_ids
 
     except Exception as e:
-        conn.rollback()
+        if conn:
+            conn.rollback()
         print(f"[Repository][Error] XAI 리포트 저장 중 오류 발생: {e}")
-        # 오류 시 빈 리스트 반환 (호출 측에서 처리)
         return []
+    finally:
+        if conn:
+            cursor.close()
+            conn.close()
+
+def get_current_position(ticker: str, target_date: str = None, initial_cash: float = 10000000, db_name: str = "db") -> dict:
+    """
+    [현재 포지션 조회] (업그레이드: 누적 실현손익 추가 & 미래 데이터 차단)
+    특정 날짜(target_date) 이전까지의 체결 내역만 계산하여 정확한 과거 스냅샷을 만듭니다.
+    """
+    conn = get_db_conn(db_name)
+    if conn is None:
+        return {"cash": initial_cash, "qty": 0, "avg_price": 0.0, "pnl_realized_cum": 0.0}
+        
+    cursor = conn.cursor()
+    
+    # target_date가 주어지면 그 날짜 '이하'의 체결내역만 가져옵니다 (미래 데이터 훔쳐보기 방지)
+    query = """
+        SELECT side, qty, fill_price, commission
+        FROM public.executions
+        WHERE ticker = %s 
+    """
+    params = [ticker]
+    
+    if target_date:
+        query += " AND fill_date <= %s "
+        params.append(target_date)
+        
+    query += " ORDER BY fill_date ASC, created_at ASC"
+    
+    try:
+        cursor.execute(query, tuple(params))
+        rows = cursor.fetchall()
+        
+        current_qty = 0
+        current_cash = initial_cash
+        total_cost = 0.0 
+        avg_price = 0.0
+        pnl_realized_cum = 0.0 # 누적 실현 손익 추가
+        
+        for side, qty, price, commission in rows:
+            qty = int(qty)
+            price = float(price)
+            commission = float(commission)
+            trade_amount = price * qty
+            
+            if side == "BUY":
+                cost = trade_amount + commission
+                current_cash -= cost
+                
+                total_cost += trade_amount
+                current_qty += qty
+                if current_qty > 0:
+                    avg_price = total_cost / current_qty
+                    
+            elif side == "SELL":
+                revenue = trade_amount - commission
+                current_cash += revenue
+                
+                # 실현 손익 계산: (매도단가 - 평단가) * 수량 - 수수료
+                realized = ((price - avg_price) * qty) - commission
+                pnl_realized_cum += realized
+                
+                current_qty -= qty
+                if current_qty > 0:
+                    total_cost = avg_price * current_qty
+                else:
+                    avg_price = 0.0
+                    total_cost = 0.0
+
+        return {
+            "cash": current_cash,
+            "qty": current_qty,
+            "avg_price": avg_price,
+            "pnl_realized_cum": pnl_realized_cum # 추가됨
+        }
+        
+    except Exception as e:
+        print(f"[Repository][Error] 포지션 조회 중 오류 발생: {e}")
+        return {"cash": initial_cash, "qty": 0, "avg_price": 0.0, "pnl_realized_cum": 0.0}
     finally:
         cursor.close()
         conn.close()
 
-    return generated_ids
-
-def get_current_position(ticker: str, initial_cash: float = 10000000, db_name: str = "db") -> dict:
+def save_portfolio_summary(date: str, total_asset: float, cash: float, market_value: float, 
+                           pnl_unrealized: float, pnl_realized_cum: float, 
+                           initial_capital: float, return_rate: float, db_name: str = "db"):
     """
-    [현재 포지션 조회]
-    DB의 체결 내역(executions)을 기반으로 특정 종목의 현재 보유 수량, 평단가, 남은 현금을 계산합니다.
+    [일일 마감] 계좌의 총 자산 요약본을 저장합니다. (ON CONFLICT DO UPDATE 로 덮어쓰기 지원)
     """
     conn = get_db_conn(db_name)
-    cursor = conn.cursor()
+    if conn is None: return
     
-    # 해당 종목의 모든 체결 내역 조회 (시간순)
     query = """
-        SELECT side, qty, fill_price, commission
-        FROM public.executions
-        WHERE ticker = %s
-        ORDER BY fill_date ASC, created_at ASC
+        INSERT INTO public.portfolio_summary 
+        (date, total_asset, cash, market_value, pnl_unrealized, pnl_realized_cum, initial_capital, return_rate)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (date) DO UPDATE 
+        SET total_asset = EXCLUDED.total_asset,
+            cash = EXCLUDED.cash,
+            market_value = EXCLUDED.market_value,
+            pnl_unrealized = EXCLUDED.pnl_unrealized,
+            pnl_realized_cum = EXCLUDED.pnl_realized_cum,
+            return_rate = EXCLUDED.return_rate;
     """
-    
-    cursor.execute(query, (ticker,))
-    rows = cursor.fetchall()
-    
-    current_qty = 0
-    current_cash = initial_cash
-    total_cost = 0.0 # 평단가 계산용 총 매수 금액
-    avg_price = 0.0
-    
-    for side, qty, price, commission in rows:
-        qty = int(qty)
-        price = float(price)
-        commission = float(commission)
-        trade_amount = price * qty
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query, (date, total_asset, cash, market_value, pnl_unrealized, pnl_realized_cum, initial_capital, return_rate))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[Repository][Error] 요약 저장 실패: {e}")
+    finally:
+        conn.close()
+def save_portfolio_positions(date: str, data_tuples: list, db_name: str = "db"):
+    """
+    [일일 마감] 현재 보유 중인 주식 스냅샷을 저장합니다.
+    """
+    if not data_tuples: return
         
-        if side == "BUY":
-            cost = trade_amount + commission
-            current_cash -= cost
-            
-            # 평단가 갱신 (이동평균법)
-            total_cost += trade_amount
-            current_qty += qty
-            if current_qty > 0:
-                avg_price = total_cost / current_qty
-                
-        elif side == "SELL":
-            revenue = trade_amount - commission
-            current_cash += revenue
-            
-            # 매도 시 평단가는 변하지 않음, 보유 수량과 총 매수 원금만 감소
-            current_qty -= qty
-            total_cost = avg_price * current_qty
-            
-            if current_qty == 0:
-                avg_price = 0.0
-                total_cost = 0.0
-
-    cursor.close()
-    conn.close()
+    conn = get_db_conn(db_name)
+    if conn is None: return
     
-    return {
-        "cash": current_cash,
-        "qty": current_qty,
-        "avg_price": avg_price
-    }
+    try:
+        cursor = conn.cursor()
+        # 동일한 date의 기존 스냅샷을 지우고 새로 씁니다 (Backfill 중복 방지 멱등성 보장)
+        cursor.execute("DELETE FROM public.portfolio_positions WHERE date = %s", (date,))
+        
+        # run_id (및 자동생성되는 id) 제외하고 실제 필요한 데이터만 INSERT
+        insert_query = """
+            INSERT INTO public.portfolio_positions 
+            (date, ticker, position_qty, avg_price, current_price, market_value, pnl_unrealized, pnl_realized_cum)
+            VALUES %s
+        """
+        execute_values(cursor, insert_query, data_tuples)
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[Repository][Error] 포지션 저장 실패: {e}")
+    finally:
+        cursor.close()
+        conn.close()
