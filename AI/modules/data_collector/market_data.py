@@ -22,7 +22,7 @@ class MarketDataCollector:
     - yfinance를 사용하여 데이터 수집
     - 수리(Repair) 모드 지원 (누락 데이터 복구)
     - 거래대금(Amount) 자동 계산
-    - 일별 PER/PBR 고속 계산 (Vectorized)
+    - [업데이트] Pandas merge_asof를 활용한 과거 시점(Trailing) 기준 PER/PBR 고속 계산
     """
     
     def __init__(self, db_name: str = "db"):
@@ -34,7 +34,6 @@ class MarketDataCollector:
         """
         DB를 조회하여 수집 시작 날짜를 결정합니다.
         """
-        # 복구 모드이거나 강제 업데이트인 경우 고정 시작일 반환
         if repair_mode:
             return self.FIXED_START_DATE
 
@@ -59,17 +58,16 @@ class MarketDataCollector:
     def fetch_ohlcv(self, ticker: str, start_date: str) -> pd.DataFrame:
         """
         yfinance에서 OHLCV 데이터를 다운로드하고 전처리합니다.
-        (중복 호출 제거 및 벡터 연산 적용)
+        (과거 재무 데이터를 매핑하여 정확한 시점의 PER/PBR 계산)
         """
         try:
             # 1. 데이터 다운로드
-            # auto_adjust=False: Adj Close 별도 확보
             df = yf.download(ticker, start=start_date, progress=False, auto_adjust=False, threads=False)
             
             if df.empty:
                 return pd.DataFrame()
 
-            # 2. MultiIndex 컬럼 평탄화 (yfinance 버전 이슈 대응)
+            # 2. MultiIndex 컬럼 평탄화
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
             
@@ -79,54 +77,77 @@ class MarketDataCollector:
             else:
                 df['Amount'] = 0
 
-            # 4. PER/PBR 계산을 위한 재무 데이터 조회 (최근 1건)
-            #    매일 변하는 주가에 고정된 최근 실적(EPS, BPS)을 적용합니다.
+            # 4. 전체 재무 데이터(Fundamentals) 조회
+            #    특정 시점의 주가에 그보다 '가장 최근에 발표된 과거 실적'을 매핑하기 위해 전체를 가져옵니다.
             conn = get_db_conn(self.db_name)
             cursor = conn.cursor()
             
-            equity, shares_issued, eps = None, None, None
+            fund_records = []
             try:
-                # 가장 최근 확정 실적 조회
+                # 해당 종목의 모든 재무 데이터를 과거순으로 조회
                 query = """
-                    SELECT equity, shares_issued, eps 
+                    SELECT date, equity, shares_issued, eps 
                     FROM public.company_fundamentals
                     WHERE ticker = %s 
-                    ORDER BY date DESC LIMIT 1
+                    ORDER BY date ASC
                 """
                 cursor.execute(query, (ticker,))
-                result = cursor.fetchone()
-                
-                if result:
-                    equity, shares_issued, eps = result
-                    
-                    # [수정] Decimal 타입을 float로 변환 (나눗셈 에러 방지)
-                    if equity is not None: equity = float(equity)
-                    if shares_issued is not None: shares_issued = float(shares_issued)
-                    if eps is not None: eps = float(eps)
-                    
+                fund_records = cursor.fetchall()
             except Exception as e:
                 print(f"   [Warning] 재무 데이터 조회 실패 ({ticker}): {e}")
             finally:
                 cursor.close()
                 conn.close()
 
-            # 5. 벡터 연산으로 PER/PBR 일괄 계산 (반복문 제거로 속도 향상)
-            
-            # PER 계산 (EPS가 유효할 때만 계산)
-            if eps and eps != 0:
-                # df['Close']는 전체 열을 의미하므로 한 번에 계산됩니다.
-                df['per'] = df['Close'] / eps
+            # 5. 과거 시점 기준(Trailing) PER/PBR 계산 (Vectorized + As-of Merge)
+            if fund_records:
+                # 재무 데이터를 DataFrame으로 변환
+                fund_df = pd.DataFrame(fund_records, columns=['date', 'equity', 'shares_issued', 'eps'])
+                fund_df['date'] = pd.to_datetime(fund_df['date'])
+                
+                # 계산을 위해 자료형을 float으로 강제 변환 (Decimal 등 처리)
+                for col in ['equity', 'shares_issued', 'eps']:
+                    fund_df[col] = pd.to_numeric(fund_df[col], errors='coerce')
+                
+                fund_df = fund_df.sort_values('date')
+                
+                # 주가 데이터에 기준 날짜 컬럼 추가
+                df_temp = df.copy()
+                df_temp['price_date'] = pd.to_datetime(df_temp.index)
+                
+                # [핵심 로직] merge_asof를 활용해 주가 날짜(price_date) 기준으로 
+                # 같거나 그 이전(direction='backward')의 가장 가까운 재무 데이터(date)를 매핑합니다.
+                merged = pd.merge_asof(
+                    df_temp.sort_values('price_date'),
+                    fund_df,
+                    left_on='price_date',
+                    right_on='date',
+                    direction='backward'
+                )
+                
+                # 인덱스 복구
+                merged.index = df_temp.index
+                
+                # PER 계산 (주가 / EPS)
+                merged['per'] = merged['Close'] / merged['eps']
+                # EPS가 0 이하이거나 결측치면 PER 계산 불가 처리
+                merged.loc[merged['eps'] <= 0, 'per'] = None
+                
+                # PBR 계산 (주가 / (자본/주식수))
+                bps = merged['equity'] / merged['shares_issued']
+                merged['pbr'] = merged['Close'] / bps
+                # 주식수 또는 자본이 0 이하인 경우 PBR 계산 불가 처리
+                merged.loc[(merged['shares_issued'] <= 0) | (bps <= 0), 'pbr'] = None
+                
+                # 원본 df에 결합된 계산값 적용
+                df['per'] = merged['per']
+                df['pbr'] = merged['pbr']
             else:
-                df['per'] = None  # 데이터가 없으면 컬럼을 비워둠
-
-            # PBR 계산 (자본/주식수가 유효할 때만 계산)
-            if equity and shares_issued and shares_issued != 0:
-                bps = equity / shares_issued
-                df['pbr'] = df['Close'] / bps
-            else:
+                # DB에 해당 종목의 재무 데이터가 전혀 없는 경우
+                df['per'] = None
                 df['pbr'] = None
-            
-            # 무한대(inf)나 NaN 값 정리 (DB 저장 에러 방지)
+
+            # 6. 무한대(inf)나 NaN 값 정리 (DB 저장 에러 방지)
             df.replace([np.inf, -np.inf], None, inplace=True)
             df = df.where(pd.notnull(df), None)
 
@@ -134,6 +155,8 @@ class MarketDataCollector:
 
         except Exception as e:
             print(f"   [Error] {ticker} 다운로드 중 에러: {e}")
+            import traceback
+            traceback.print_exc()
             return pd.DataFrame()
 
     def save_to_db(self, ticker: str, df: pd.DataFrame):
@@ -143,7 +166,6 @@ class MarketDataCollector:
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
 
-        # [수정됨] 쿼리 컬럼 개수와 VALUES 매핑 일치
         insert_query = """
             INSERT INTO public.price_data (
                 date, ticker, open, high, low, close, volume, adjusted_close, amount, per, pbr
@@ -164,7 +186,6 @@ class MarketDataCollector:
         try:
             data_to_insert = []
             has_adj = 'Adj Close' in df.columns
-            # DataFrame에 해당 컬럼이 있는지 확인
             has_per = 'per' in df.columns
             has_pbr = 'pbr' in df.columns
 
@@ -174,10 +195,8 @@ class MarketDataCollector:
                 # 안전한 값 추출 헬퍼 함수
                 def get_val(col, default=0):
                     val = row.get(col, default)
-                    # Pandas Series 객체인 경우 처리
                     if hasattr(val, 'iloc'):
                         val = val.iloc[0]
-                    # None 체크
                     if val is None or pd.isna(val):
                         return None
                     return float(val)
@@ -190,11 +209,9 @@ class MarketDataCollector:
                 amount_val = get_val('Amount') or 0
                 adj_close_val = get_val('Adj Close') if has_adj else close_val
                 
-                # [중요] 쿼리에 맞춰 per, pbr 값 추가
                 per_val = get_val('per', None) if has_per else None
                 pbr_val = get_val('pbr', None) if has_pbr else None
 
-                # 튜플 순서: date, ticker, open, high, low, close, volume, adj_close, amount, per, pbr
                 data_to_insert.append((
                     date_val, ticker, open_val, high_val, low_val, close_val, 
                     vol_val, adj_close_val, amount_val, per_val, pbr_val
@@ -224,20 +241,16 @@ class MarketDataCollector:
         today = datetime.now().strftime("%Y-%m-%d")
 
         for ticker in tickers:
-            # 1. 수집 시작 날짜 결정
             start_date = self.get_start_date(ticker, repair_mode)
 
-            # 이미 최신이면 스킵 (Repair 모드가 아닐 때만)
             if not repair_mode and start_date > today:
                 print(f"   [{ticker}] 이미 최신 데이터입니다.")
                 continue
 
             print(f"   [{ticker}] 수집 시작 ({start_date} ~ )...")
             
-            # 2. 데이터 수집
             df = self.fetch_ohlcv(ticker, start_date)
             
-            # 3. DB 저장
             if not df.empty:
                 self.save_to_db(ticker, df)
             else:
@@ -259,7 +272,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     target_tickers = args.tickers
     
-    # --all 옵션 처리
     if args.all:
         try:
             print(">> DB에서 전체 종목 리스트를 조회합니다...")
@@ -268,7 +280,6 @@ if __name__ == "__main__":
             print(f"[Error] 종목 로드 실패: {e}")
             sys.exit(1)
 
-    # 입력이 없을 경우 인터랙티브 모드
     if not target_tickers:
         print("\n========================================================")
         print(" [Manual Mode] 주식 시장 데이터 수집기")

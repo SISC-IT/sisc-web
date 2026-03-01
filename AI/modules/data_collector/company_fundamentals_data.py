@@ -15,6 +15,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.libs.database.connection import get_db_conn
+from AI.libs.database.ticker_loader import load_all_tickers_from_db
 
 class FundamentalsDataCollector:
     """
@@ -196,12 +197,8 @@ if __name__ == "__main__":
     
     if args.all:
         try:
-            cur = conn.cursor()
-            cur.execute("SELECT DISTINCT ticker FROM public.price_data")
-            rows = cur.fetchall()
-            target_tickers = [r[0] for r in rows]
-            cur.close()
-            print(f">> DB에서 {len(target_tickers)}개 종목을 조회했습니다.")
+            target_tickers = load_all_tickers_from_db(verbose=False)
+            print(f">> DB에서 전체 종목 {len(target_tickers)}개를 로드했습니다.")
         except Exception as e:
             print(f"[Error] 종목 로드 실패: {e}")
             sys.exit(1)

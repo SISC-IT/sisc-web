@@ -1,4 +1,4 @@
-#AI/modules/data_collector/run.py
+# AI/modules/data_collector/run.py
 import sys
 import os
 import argparse
@@ -17,8 +17,7 @@ if project_root not in sys.path:
 # -----------------------------------------------------------
 # [모듈 임포트] 
 # -----------------------------------------------------------
-from AI.libs.database.connection import get_db_conn
-
+from AI.libs.database.ticker_loader import load_all_tickers_from_db
 from AI.modules.data_collector.market_data import MarketDataCollector
 from AI.modules.data_collector.stock_info_collector import StockInfoCollector
 from AI.modules.data_collector.company_fundamentals_data import FundamentalsDataCollector
@@ -30,27 +29,24 @@ from AI.modules.data_collector.market_breadth_stats import MarketBreadthStatsCol
 
 def get_stock_tickers(db_name="db"):
     """
-    주식 수집 대상 티커 리스트를 DB에서 조회합니다.
+    [수정됨] 주식 수집 대상 티커 리스트를 마스터 테이블(stock_info)에서 조회합니다.
     """
-    conn = get_db_conn(db_name)
-    cursor = conn.cursor()
+    # 공통 로더를 사용하여 의존성 분리 및 일관성 확보
     try:
-        # price_data 테이블에 있는 종목들 조회
-        cursor.execute("SELECT DISTINCT ticker FROM public.price_data")
-        rows = cursor.fetchall()
-        tickers = [r[0] for r in rows if not r[0].startswith('^') and '-USD' not in r[0]] 
+        tickers = load_all_tickers_from_db(verbose=False)
         
-        if not tickers:
-            print(">> [Init] DB에 주식 종목이 없습니다. 기본 종목(Big Tech)으로 시작합니다.")
+        # 특정 포맷(지수, 코인 등) 필터링
+        filtered_tickers = [t for t in tickers if not t.startswith('^') and '-USD' not in t]
+        
+        if not filtered_tickers:
+            print(">> [Init] DB(stock_info)에 주식 종목이 없습니다. 기본 종목(Big Tech)으로 시작합니다.")
             return ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMD", "INTC"]
             
-        return tickers
+        return filtered_tickers
+        
     except Exception as e:
         print(f"[Error] 티커 목록 조회 실패: {e}")
         return ["AAPL", "TSLA"]
-    finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
 
 def main():
     parser = argparse.ArgumentParser(description="[SISC AI] 통합 데이터 수집 파이프라인")
@@ -101,7 +97,7 @@ def main():
         args.skip_macro = True
         args.skip_crypto = True
         args.skip_breadth = True
-        args.skip_stats = True  # [수정] 통계 계산도 Skip 해야 함
+        args.skip_stats = True  # 통계 계산도 Skip 해야 함
         args.skip_event = False
         print(">> [Mode] Event Data Only 모드로 실행합니다.")
 
@@ -113,7 +109,7 @@ def main():
         args.skip_macro = True
         args.skip_crypto = True
         args.skip_event = True
-        args.skip_stats = True  # [수정] 통계 계산도 Skip 해야 함
+        args.skip_stats = True  # 통계 계산도 Skip 해야 함
         args.skip_breadth = False
         print(">> [Mode] Market Breadth Only 모드로 실행합니다.")
 
@@ -138,7 +134,7 @@ def main():
         print(">> 개별 주식 티커 조회를 건너뜁니다.")
 
     # -------------------------------------------------------
-    # 2. 순차적 데이터 수집 실행
+    # 2. 순차적 데이터 수집 실행 (의존성 순서에 맞게 재배치)
     # -------------------------------------------------------
     
     # (1) 거시경제 지표 (Macro)
@@ -150,42 +146,42 @@ def main():
         except Exception as e:
             print(f"[Error] Macro Data 수집 중단: {e}")
 
-    # (2) 주가 데이터 (Stocks OHLCV)
-    if not args.skip_price and stock_tickers:
+    # (2) 주식 기본 정보 (Stock Info) - 마스터 데이터 최신화
+    if not args.skip_info and stock_tickers:
         try:
-            print("\n>>> [Step 2] 개별 주식 시세(OHLCV) 업데이트")
-            collector = MarketDataCollector(db_name=args.db)
-            collector.update_tickers(stock_tickers, repair_mode=args.repair)
+            print("\n>>> [Step 2] 주식 정보(Stock Info) 업데이트")
+            collector = StockInfoCollector(db_name=args.db)
+            collector.update_tickers(stock_tickers)
         except Exception as e:
-            print(f"[Error] Market Data 수집 중단: {e}")
+            print(f"[Error] Stock Info 수집 중단: {e}")
 
-    # (3) 암호화폐 데이터 (Crypto)
-    if not args.skip_crypto:
-        try:
-            print("\n>>> [Step 3] 암호화폐(Crypto) 업데이트")
-            target_crypto = ["BTC-USD", "ETH-USD"]
-            collector = CryptoDataCollector(db_name=args.db)
-            collector.update_tickers(target_crypto, repair_mode=args.repair)
-        except Exception as e:
-            print(f"[Error] Crypto Data 수집 중단: {e}")
-
-    # (4) 재무제표 (Fundamentals)
+    # (3) 재무제표 (Fundamentals) - 주가 수집 전 최신 EPS, BPS 확보
     if not args.skip_fund and stock_tickers:
         try:
-            print("\n>>> [Step 4] 기업 재무제표(Fundamentals) 업데이트")
+            print("\n>>> [Step 3] 기업 재무제표(Fundamentals) 업데이트")
             collector = FundamentalsDataCollector(db_name=args.db)
             collector.update_tickers(stock_tickers)
         except Exception as e:
             print(f"[Error] Fundamentals 수집 중단: {e}")
 
-    # (5) 주식 기본 정보 (Stock Info)
-    if not args.skip_info and stock_tickers:
+    # (4) 주가 데이터 (Stocks OHLCV) - 재무제표 바탕으로 PER/PBR 계산
+    if not args.skip_price and stock_tickers:
         try:
-            print("\n>>> [Step 5] 주식 정보(Stock Info) 업데이트")
-            collector = StockInfoCollector(db_name=args.db)
-            collector.update_tickers(stock_tickers)
+            print("\n>>> [Step 4] 개별 주식 시세(OHLCV) 업데이트")
+            collector = MarketDataCollector(db_name=args.db)
+            collector.update_tickers(stock_tickers, repair_mode=args.repair)
         except Exception as e:
-            print(f"[Error] Stock Info 수집 중단: {e}")
+            print(f"[Error] Market Data 수집 중단: {e}")
+
+    # (5) 암호화폐 데이터 (Crypto)
+    if not args.skip_crypto:
+        try:
+            print("\n>>> [Step 5] 암호화폐(Crypto) 업데이트")
+            target_crypto = ["BTC-USD", "ETH-USD"]
+            collector = CryptoDataCollector(db_name=args.db)
+            collector.update_tickers(target_crypto, repair_mode=args.repair)
+        except Exception as e:
+            print(f"[Error] Crypto Data 수집 중단: {e}")
 
     # (6) 이벤트 일정 (Earnings, Macro Events)
     if not args.skip_event:

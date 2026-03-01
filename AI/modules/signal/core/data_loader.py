@@ -91,28 +91,46 @@ class DataLoader:
         except Exception as e:
             print(f"[DataLoader] 공통 데이터 로드 중 오류 발생 (무시하고 진행): {e}")
 
-    def load_data_from_db(self, start_date="2018-01-01") -> pd.DataFrame:
+    def load_data_from_db(self, start_date="2018-01-01", end_date: str = None, tickers: List[str] = None) -> pd.DataFrame:
         """
         1. 공통 데이터를 먼저 로드합니다.
-        2. 전체 종목의 주가 데이터(Price Data)를 대량으로 조회합니다.
+        2. tickers가 주어지면 해당 종목만, 없으면 전체 종목의 주가 데이터를 조회합니다.
+        3. end_date가 주어지면 start_date ~ end_date 구간의 데이터만 조회합니다.
         """
         # 1. 공통 데이터 준비
         self._prepare_common_data(start_date)
         
-        # 2. 주가 데이터 Bulk Load
-        print(f"[DataLoader] {start_date} 부터 전체 주가 데이터를 조회합니다...")
         engine = get_engine(self.db_name)
         
-        # 거래대금(amount) 포함
-        query = text("""
+        # 2. 동적 쿼리(Dynamic Query) 조건 조립
+        where_clauses = ["date >= :start_date"]
+        params = {"start_date": start_date}
+        
+        if end_date:
+            where_clauses.append("date <= :end_date")
+            params["end_date"] = end_date
+            
+        if tickers:
+            where_clauses.append("ticker IN :tickers")
+            params["tickers"] = tuple(tickers)
+            
+        # " AND "로 조건들을 깔끔하게 이어붙임
+        where_query = " AND ".join(where_clauses)
+        
+        target_msg = f"{len(tickers)}개 종목" if tickers else "전체 종목"
+        date_msg = f"{start_date} ~ {end_date}" if end_date else f"{start_date} 이후"
+        print(f"[DataLoader] {date_msg} 기간의 {target_msg} 데이터를 조회합니다...")
+
+        query = text(f"""
             SELECT date, ticker, open, high, low, close, volume, adjusted_close, amount
             FROM public.price_data
-            WHERE date >= :start_date
+            WHERE {where_query}
             ORDER BY ticker, date ASC
         """)
-        
+            
+        # 3. 데이터 조회
         with engine.connect() as conn:
-            df_price = pd.read_sql(query, conn, params={"start_date": start_date})
+            df_price = pd.read_sql(query, conn, params=params)
             
         if not df_price.empty:
             df_price['date'] = pd.to_datetime(df_price['date'])
@@ -196,17 +214,19 @@ class DataLoader:
         
         # 사용 가능한 Feature 자동 감지
         potential_features = [
-            # 1. Technical
+            # 1. Technical (지표 생성기에서 확실히 만들어짐)
             'log_return', 'open_ratio', 'high_ratio', 'low_ratio', 'vol_change',
             'ma_5_ratio', 'ma_20_ratio', 'ma_60_ratio', 
             'rsi', 'macd_ratio', 'bb_position',
-            # 2. Macro (New)
+            
+            # 2. Macro (yfinance 등)
             'us10y', 'yield_spread', 'vix_close', 'dxy_close', 'credit_spread_hy',
-            # 3. Breadth (New)
-            'advance_decline_ratio', 'fear_greed_index',
-            # 4. Sentiment (New)
+            
+            # 3. Breadth (DB 스키마와 100% 일치시킴)
+            'nh_nl_index', 'ma200_pct', 
+            
+            # 4. Sentiment & Fundamental (누락될 확률이 높으므로 optional하게 취급)
             'sentiment_score', 'risk_keyword_cnt',
-            # 5. Fundamental (New)
             'per', 'pbr', 'roe'
         ]
         
