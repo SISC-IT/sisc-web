@@ -69,34 +69,4 @@ public class UserController {
   public ResponseEntity<List<ActivityLog>> getBoardLogs(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
     return ResponseEntity.ok(userService.getBoardActivityLog(customUserDetails.getUserId()));
   }
-
-  @Operation(
-      summary = "비밀번호 재설정 : 인증코드와 새 비밀번호를 입력받아, 비밀번호를 변경합니다.",
-      description = """
-        
-        ## 인증(JWT): **불필요**
-        
-        
-        ## 요청 파라미터
-        - **`code`**: 이메일로 받은 인증코드
-        - **`newPassword`**: 새 비밀번호
-        
-        ## 요청 바디 ( `PasswordResetSendRequest` )
-        - **`email`**: 가입된 이메일
-        - **`studentId`**: 가입된 학번
-        
-        ## 동작 설명
-        - 이메일 + 학번으로 사용자를 다시 확인합니다.
-        - Redis에 저장된 인증코드와 입력한 `code`를 비교합니다.
-        - 인증코드가 일치하면 새 비밀번호를 정책 검증 후 암호화하여 저장합니다.
-        - 사용한 인증코드는 Redis에서 삭제합니다. (1회성)
-
-        ## 반환값
-        - 성공 메시지 (`비밀번호가 변경되었습니다.`)
-        """)
-  @PostMapping("/password/reset/confirm")
-  public ResponseEntity<?> confirmReset(@RequestBody @Valid PasswordResetConfirmRequest req){
-    userService.resetPasswordByCode(req);
-    return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
-  }
 }
