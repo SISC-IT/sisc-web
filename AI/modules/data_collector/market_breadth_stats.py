@@ -58,32 +58,42 @@ class MarketBreadthStatsCollector:
         if df.empty:
             return pd.DataFrame()
 
-        # 1. 종목별 보조지표 계산 (Rolling)
-        # 52주 = 약 252 거래일, MA200 = 200 거래일
+        # 데이터 정렬 (중요: 그룹 연산 전 필수)
         df = df.sort_values(['ticker', 'date'])
         
-        # GroupBy 객체 생성
-        grouped = df.groupby('ticker')['close']
+        # [수정 1] transform과 rolling을 결합하여 인덱스 꼬임 방지
+        # groupby 이후 transform 안에서 rolling을 호출합니다.
         
-        # (1) 52주 고가/저가 (현재가 포함)
-        df['high_52w'] = grouped.rolling(window=252, min_periods=200).max().reset_index(0, drop=True)
-        df['low_52w'] = grouped.rolling(window=252, min_periods=200).min().reset_index(0, drop=True)
+        # (1) 52주 고가/저가
+        # - 오늘의 종가를 제외하고 어제까지의 252일 최고/최저가를 구하려면
+        #   rolling 계산 후 shift(1)을 해주는 것이 논리적으로 가장 정확합니다.
+        #   (하지만 현재 코드를 최대한 존중하여 단순 rolling.max/min을 사용하되, transform으로 안전하게 매핑합니다)
+        df['high_52w'] = df.groupby('ticker')['close'].transform(
+            lambda x: x.rolling(window=252, min_periods=200).max()
+        )
+        df['low_52w'] = df.groupby('ticker')['close'].transform(
+            lambda x: x.rolling(window=252, min_periods=200).min()
+        )
         
         # (2) 200일 이동평균
-        df['ma_200'] = grouped.rolling(window=200, min_periods=150).mean().reset_index(0, drop=True)
+        df['ma_200'] = df.groupby('ticker')['close'].transform(
+            lambda x: x.rolling(window=200, min_periods=150).mean()
+        )
         
+        # 계산 안 된 앞부분 결측치 제거
+        df = df.dropna(subset=['high_52w', 'low_52w', 'ma_200'])
+
+        if df.empty:
+            print("[Stats] 계산 후 유효한 데이터가 모두 사라졌습니다. 데이터 길이를 확인하세요.")
+            return pd.DataFrame()
+
         # 2. 상태 판별 (Boolean)
-        # 신고가: 현재가가 52주 최고가와 같음 (또는 근접 99% 등 조정 가능하나 여기선 엄격하게 적용)
-        # 신저가: 현재가가 52주 최저가와 같음
-        # 데이터 정밀도 문제로 약간의 오차 허용 (np.isclose) 또는 단순 비교
-        
-        # 단순 비교 (Close >= High_52w)
-        # 주의: 당일 종가가 갱신되면 당일 High_52w도 당일 종가로 변함. 따라서 == 비교가 맞음.
+        # 소수점 오차 방지를 위해 엄격한 부등호가 아닌 아주 미세한 여유를 두거나, 크거나 같다로 판별
         df['is_nh'] = df['close'] >= df['high_52w']
         df['is_nl'] = df['close'] <= df['low_52w']
         df['is_above_ma200'] = df['close'] > df['ma_200']
         
-        # 3. 날짜별 집계 (Cross-sectional Aggregation)
+        # 3. 날짜별 집계
         stats = df.groupby('date').agg(
             total_count=('ticker', 'count'),
             nh_count=('is_nh', 'sum'),
@@ -95,10 +105,8 @@ class MarketBreadthStatsCollector:
         stats['nh_nl_index'] = stats['nh_count'] - stats['nl_count']
         stats['ma200_pct'] = (stats['above_ma200_count'] / stats['total_count']) * 100
         
-        # NaN 처리 (종목 수가 너무 적거나 초기 데이터 구간)
+        # NaN 처리 및 최소 종목 수(예: 50종목) 필터링
         stats = stats.dropna()
-        
-        # 유효한 통계만 필터링 (최소 50종목 이상 거래된 날만)
         stats = stats[stats['total_count'] > 50]
         
         return stats[['date', 'nh_nl_index', 'ma200_pct']]
