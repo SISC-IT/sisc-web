@@ -114,10 +114,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated();
                         //.anyRequest().permitAll();
                 })
-                //꼭 필요할 때만(OAuth 로그인 과정 등) 세션 생성
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
-                // TODO : OAUTH2를 쿠키에 저장 시 OR OAUTH2 를 안쓸 시 STATELESS로 변경 고려
-                //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                // TODO : OAUTH2를 쿠키에 저장 시 OR OAUTH2 쓰면 IF_REQUIRED 변경
+                //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
         if(jwtAuthenticationFilter != null) {
             http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -130,8 +129,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                env.getProperty("app.dev-frontend-url"),
-                env.getProperty("app.prod-frontend-url")    // 환경변수에 해당하는 값 가져옴
+                env.getProperty("app.frontend-url")    // 환경변수에 해당하는 값 가져옴
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

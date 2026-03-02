@@ -1,4 +1,4 @@
-# AI/modules/finder/selector.py
+# AI/libs/database/ticker_loader.py
 """
 [종목 선정 모듈]
 - DB에서 분석 대상 종목(Ticker) 리스트를 조회하고 필터링합니다.
@@ -74,7 +74,7 @@ def load_all_tickers_from_db(verbose: bool = True) -> List[str]:
         cursor = conn.cursor()
         
         # DB에 있는 모든 고유 티커 조회 (LIMIT 없음)
-        query = "SELECT DISTINCT ticker FROM public.price_data ORDER BY ticker"
+        query = "SELECT DISTINCT ticker FROM public.stock_info ORDER BY ticker"
         
         cursor.execute(query)
         rows = cursor.fetchall()

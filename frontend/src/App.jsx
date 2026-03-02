@@ -13,6 +13,13 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import QuantTradingDashboard from './pages/QuantTradingDashboard';
 import BacktestResult from './pages/BacktestResult.jsx';
+import AdminHome from './pages/AdminHome.jsx';
+import AdminMemberApproval from './pages/AdminMemberApproval.jsx';
+import AdminMemberManage from './pages/AdminMemberManage.jsx';
+import AdminExcelUpload from './pages/AdminExcelUpload.jsx';
+
+// import CheckInPage from './components/attendancemanage/qrmanagement/CheckInPage.jsx';
+import QrRenderPage from './components/attendancemanage/qrmanagement/QrRenderPage.jsx';
 
 import OAuthSuccess from './pages/OAuthSuccess.jsx';
 
@@ -27,6 +34,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import ProtectedRoute from './components/protectedRoute.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
 
 function App() {
   return (
@@ -62,7 +70,17 @@ function App() {
             <Route path="/backtest" element={<BackTest />} />
             <Route path="/backtest/result" element={<BacktestResult />} />
             <Route path="/mypage" element={<Mypage />} />
+            <Route path="/attendance/admin/qr" element={<QrRenderPage />} />
+            {/* <Route path="/attendance/check-in" element={<CheckInPage />} /> */}
           </Route>
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminHome />} />
+              <Route path="/admin/members" element={<AdminMemberManage />} />
+              <Route
+                path="/admin/members/approval" element={<AdminMemberApproval />}
+              />
+              <Route path="/admin/members/upload" element={<AdminExcelUpload />} />
+            </Route>
         </Route>
       </Routes>
 

@@ -19,7 +19,7 @@ import {
   getRounds,
 } from '../utils/attendanceManage';
 
-const AttendanceContext = createContext(null);
+export const AttendanceContext = createContext(null);
 
 // 세션 목 데이터
 const sessionData = [
@@ -81,18 +81,19 @@ export const AttendanceProvider = ({ children }) => {
   const [roundAttendanceVersion, setRoundAttendanceVersion] = useState(0);
 
   // 최초, setSessions가 호출될때마다 모든 세션 불러오기
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const res = await getAttendanceSessions();
-        setSessions(res || []);
-      } catch (error) {
-        console.error('모든 세션 데이터를 가져오는 데 실패했습니다: ', error);
-        setSessions([]);
-      }
-    };
-    fetchSessions();
+  const fetchSessions = useCallback(async () => {
+    try {
+      const res = await getAttendanceSessions();
+      setSessions(res || []);
+    } catch (error) {
+      console.error('모든 세션 데이터를 가져오는 데 실패했습니다: ', error);
+      setSessions([]);
+    }
   }, [setSessions]);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   const handleAttendanceChange = async (memberId, newAttendance) => {
     // setSessions((draft) => {
@@ -179,44 +180,15 @@ export const AttendanceProvider = ({ children }) => {
   const openAddRoundsModal = () => setAddRoundsModalOpen(true);
   const closeAddRoundsModal = () => setAddRoundsModalOpen(false);
 
-  const handleAddSession = async (sessionTitle, sessionDetails) => {
-    const newSession = {
-      // id: `session-${uuid()}`,
-      title: sessionTitle,
-      defaultStartTime: `${sessionDetails.hh}:${sessionDetails.mm}:${sessionDetails.ss}`,
-      // defaultAvailableMinutes: parseInt(roundDetails.availableTimeMm, 10),
-      allowedMinutes: sessionDetails.availableTimeMm, // 최소 5분 이상이여야 함
-      rewardPoints: 100,
-      // 위도, 경도, 범위 미터는 임시로 지정
-      latitude: 1,
-      longitude: 2,
-      radiusMeters: 3,
-      // isVisible: true,
-      // rounds: [
-      //   {
-      //     id: `round-${uuid()}`,
-      //     date: new Date().toISOString().slice(0, 10),
-      //     startTime: `${roundDetails.hh}:${roundDetails.mm}:${roundDetails.ss}`,
-      //     availableMinutes: parseInt(roundDetails.availableTimeMm, 10),
-      //     status: 'opened',
-      //     participants: [],
-      //   },
-      // ],
-    };
-    // setSessions((draft) => {
-    //   draft.push(newSession);
-    // });
-
+  const handleAddSession = async (sessionData) => {
     try {
-      await createAttendanceSession(newSession);
-
-      const updatedSessions = await getAttendanceSessions();
-      setSessions(updatedSessions || []);
+      await createAttendanceSession(sessionData);
+      await fetchSessions();
     } catch (error) {
-      console.error('세션 추가에 실패했습니다. ', error);
+      console.error('세션 생성에 실패했습니다.', error);
+      throw error;
     }
   };
-
   const handleAddRounds = async (sessionId, newRounds) => {
     // setSessions((draft) => {
     //   const session = draft.find((session) => session.id === sessionId);

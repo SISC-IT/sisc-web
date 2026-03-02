@@ -36,3 +36,7 @@ management:
 logging:
   file:
     name: ./logs/application.log
+
+springdoc:
+  swagger-ui:
+    tags-sorter: alpha  # 컨트롤러(Tag)를 알파벳/숫자 순으로 정렬

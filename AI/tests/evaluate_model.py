@@ -1,8 +1,8 @@
 # AI/tests/evaluate_model.py
 """
-[시장 전체 시그널 탐지 및 통합 모델 성능 평가]
-- S&P500 전체 데이터 등으로 학습된 '단일 글로벌 모델'을 로드합니다.
-- 대상 종목들의 데이터를 순차적으로 로드하여, 해당 모델로 예측을 수행합니다.
+[시장 전체 시그널 탐지 및 통합 모델 성능 평가 - 최적화 버전]
+- 단 한 번의 DB 조회(Bulk Load)로 모든 평가 대상 데이터를 가져와 속도를 극대화합니다.
+- 기술적 지표를 동적으로 추가하여 모델의 예측 정확도를 높입니다.
 - 시장 전체에서 모델이 포착한 기회(Signal)들의 성과를 종합적으로 평가합니다.
 """
 
@@ -11,8 +11,6 @@ import sys
 import joblib
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import warnings
 from tqdm import tqdm
 
@@ -31,6 +29,8 @@ if project_root not in sys.path:
 from AI.modules.signal.models import get_model
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.libs.database.ticker_loader import load_all_tickers_from_db
+# [필수 추가] 기술적 지표 생성 모듈
+from AI.modules.features.legacy.technical_features import add_technical_indicators
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  평가 설정 (CONFIG)
@@ -44,7 +44,7 @@ CONFIG = {
     "hold_thr": 0.003, # 0.3% 이상 상승 기대 시 매수
     
     # 단일 글로벌 모델 및 스케일러 경로
-    "weights_path": os.path.join(DATA_DIR, "weights", "transformer", "universal_transformer.keras"), # 파일명 확인 필요
+    "weights_path": os.path.join(DATA_DIR, "weights", "transformer", "universal_transformer.keras"), 
     "scaler_path": os.path.join(DATA_DIR, "weights", "transformer", "universal_scaler.pkl"),
     
     # 평가 기간
@@ -60,7 +60,7 @@ CONFIG = {
 # ─────────────────────────────────────────────────────────────────────────────
 #  Helper Functions
 # ─────────────────────────────────────────────────────────────────────────────
-def _label_by_future_return(close_prices: pd.Series, horizon: int, threshold: float) -> pd.Series:
+def _label_by_future_return(close_prices: pd.Series, horizon: int, threshold: float) -> tuple[pd.Series, pd.Series]:
     """미래 수익률 기반 라벨링 (1: 상승/BUY, 0: 하락/보합)"""
     future_ret = (close_prices.shift(-horizon) / close_prices) - 1.0
     labels = np.where(future_ret > threshold, 1, 0)
@@ -90,25 +90,20 @@ def evaluate_market_signals():
         print(f"[ERR] ❌ 필수 모델 파일이 없습니다.")
         print(f"      Weights: {CONFIG['weights_path']}")
         print(f"      Scaler : {CONFIG['scaler_path']}")
-        print("      -> 전체 데이터를 학습시킨 글로벌 모델이 필요합니다.")
         return
 
     # 2. 글로벌 자원 로드 (모델 & 스케일러)
     print("[EVAL] 모델 및 스케일러 로드 중...")
     try:
-        # 스케일러 로드
         global_scaler = joblib.load(CONFIG['scaler_path'])
         
-        # 모델 로드 (Config는 로드 시 파일에서 복원되므로 빈 dict)
-        # 단, input_shape 등 구조 생성을 위해 기본값은 넣어줌
         model_wrapper = get_model(MODEL_TYPE, {
-            "head_size": 256, "num_heads": 4, "ff_dim": 4, # 기본값 (필요시 수정)
+            "head_size": 256, "num_heads": 4, "ff_dim": 4,
             "num_blocks": 4, "mlp_units": [128],
             "dropout": 0.1
         })
         model_wrapper.load(CONFIG['weights_path'])
         print("      ✅ 로드 완료")
-        
     except Exception as e:
         print(f"[ERR] 로드 실패: {e}")
         return
@@ -126,68 +121,73 @@ def evaluate_market_signals():
     fetch_start = pd.to_datetime(CONFIG['eval_start_date']) - pd.Timedelta(days=150)
     fetch_start_str = fetch_start.strftime("%Y-%m-%d")
 
-    # 종합 결과 누적용
-    global_y_true = []
-    global_y_pred = []
-    global_returns = []
-    
+    global_y_true, global_y_pred, global_returns = [], [], []
     processed_count = 0
 
-    # 5. 종목별 데이터 로드 및 예측 (Loop)
+    # -------------------------------------------------------------------------
+    # [핵심 최적화 1] DataLoader 초기화 및 DB 조회를 for문 밖으로 분리!
+    # -------------------------------------------------------------------------
+    print(f"[EVAL] DB에서 {len(tickers)}개 종목 데이터를 한 번에 가져옵니다 (Bulk Load)...")
+    
+    # 파라미터명 수정 (sequence_length -> lookback)
+    loader = DataLoader(lookback=CONFIG['seq_len'])
+    loader.scaler = global_scaler
+    
+    # 한 번의 쿼리로 평가 대상 전체 데이터 Bulk Load
+    bulk_df = loader.load_data_from_db(
+        start_date=fetch_start_str, 
+        end_date=CONFIG['eval_end_date'], 
+        tickers=tickers
+    )
+
+    if bulk_df is None or bulk_df.empty:
+        print("[ERR] 데이터를 불러오지 못했습니다.")
+        return
+
+    # 5. 종목별 데이터 처리 및 예측 (Loop)
     for ticker in tqdm(tickers, desc="시그널 스캔 중"):
         try:
-            # (1) 데이터 로드 (DB) 
-            loader = DataLoader(sequence_length=CONFIG['seq_len'])
-            loader.scaler = global_scaler # ★ 글로벌 스케일러 주입
-            
-            df = loader.load_data(ticker, fetch_start_str, CONFIG['eval_end_date'])
+            # -----------------------------------------------------------------
+            # [핵심 최적화 2] Bulk 데이터에서 해당 종목만 추출 (초고속 필터링)
+            # -----------------------------------------------------------------
+            df = bulk_df[bulk_df['ticker'] == ticker].copy()
             
             if df.empty or len(df) < CONFIG['seq_len']:
                 continue
 
-            # ✅ [수정된 부분] 날짜 컬럼을 인덱스로 설정 (안전장치)
-            # ------------------------------------------------------------------
+            # 날짜 컬럼을 인덱스로 설정
             if 'date' in df.columns:
-                df['date'] = pd.to_datetime(df['date'])  # datetime 변환 보장
-                df.set_index('date', inplace=True)       # 인덱스로 설정
+                df['date'] = pd.to_datetime(df['date'])
+                df.set_index('date', inplace=True)
             elif not isinstance(df.index, pd.DatetimeIndex):
-                # date 컬럼도 없고 인덱스도 날짜가 아니면 처리 불가
-                print(f"[Skip] {ticker}: 날짜 정보를 찾을 수 없습니다.")
                 continue
-            # ------------------------------------------------------------------
+                
+            # -----------------------------------------------------------------
+            # [핵심 추가] 모델 평가를 위한 기술적 지표 생성
+            # -----------------------------------------------------------------
+            df = add_technical_indicators(df)
 
-            # (2) 전처리 및 시퀀스 생성
-            # feature_cols 생성 시 인덱스(날짜)는 자동으로 제외됨 (np.number만 포함하므로)
+            # 전처리 및 시퀀스 생성
             feature_cols = df.select_dtypes(include=[np.number]).columns.tolist()
             
-            # 라벨 및 미래 수익률 계산
             labels, future_ret = _label_by_future_return(df["close"], CONFIG['pred_h'], CONFIG['hold_thr'])
             
-            # 유효 데이터 마스킹
             valid_mask = df[feature_cols].notna().all(axis=1) & (labels != -1) & future_ret.notna()
             df_valid = df[valid_mask]
             
-            # 평가 기간 필터링
-            # ✅ 이제 df_valid.index가 DatetimeIndex이므로 정상 작동함
             dates_seq = pd.to_datetime(df_valid.index[CONFIG['seq_len']-1:])
-            
-            # Timezone 정보가 있다면 제거 (비교를 위해)
             if dates_seq.tz is not None: 
                 dates_seq = dates_seq.tz_localize(None)
             
             target_start = pd.to_datetime(CONFIG['eval_start_date'])
             target_end = pd.to_datetime(CONFIG['eval_end_date'])
-            
             eval_mask = (dates_seq >= target_start) & (dates_seq <= target_end)
             
             if eval_mask.sum() == 0:
                 continue
 
-            # 데이터 변환 (transform only)
-            # ★ 학습 때와 동일한 Global Scaler를 사용하여 transform 해야 함
+            # 스케일링 (글로벌 스케일러 사용)
             scaled_vals = loader.scaler.transform(df_valid[feature_cols])
-            
-            # DataFrame 재구성 (인덱스 유지)
             df_scaled = pd.DataFrame(scaled_vals, columns=feature_cols, index=df_valid.index)
             
             X_seq = _build_sequences(df_scaled, feature_cols, CONFIG['seq_len'])
@@ -200,12 +200,11 @@ def evaluate_market_signals():
             
             if len(X_test) == 0: continue
 
-            # (3) 모델 추론 (Loaded Model 사용)
-            # verbose=0 으로 설정하여 루프 내 로그 최소화
-            y_probs = model_wrapper.predict(X_test) # (N, 1)
+            # 모델 추론
+            y_probs = model_wrapper.predict(X_test)
             y_pred_class = (y_probs > 0.5).astype(int).flatten()
             
-            # (4) 결과 누적
+            # 결과 누적
             global_y_true.extend(y_test)
             global_y_pred.extend(y_pred_class)
             global_returns.extend(r_test)
@@ -213,9 +212,7 @@ def evaluate_market_signals():
             processed_count += 1
             
         except Exception as e:
-            # 데이터 불량 등으로 인한 개별 종목 에러는 무시하고 진행
-            print(f"[Skip] {ticker}: {e}")
-            pass
+            pass # 에러 난 종목은 건너뜀
 
     # ─────────────────────────────────────────────────────────────────────────────
     #  종합 결과 리포트
@@ -230,12 +227,12 @@ def evaluate_market_signals():
         print("\n[ERR] 유효한 평가 데이터가 없습니다. 기간이나 데이터를 확인하세요.")
         return
 
-    # Numpy 변환
     y_true = np.array(global_y_true)
     y_pred = np.array(global_y_pred)
     returns = np.array(global_returns)
 
-    # 1. 분류 성능
+    # Scikit-Learn을 이용한 분석 결과 출력
+    from sklearn.metrics import classification_report, accuracy_score
     acc = accuracy_score(y_true, y_pred)
     print(f"\n1️⃣  예측 정확도 (Accuracy): {acc*100:.2f}%")
     print(classification_report(y_true, y_pred, target_names=["관망(0)", "매수(1)"]))
@@ -249,13 +246,10 @@ def evaluate_market_signals():
     print(f"    - 매수 시그널 발생   : {n_buys}회 (발생률 {n_buys/len(y_true)*100:.1f}%)")
     
     if n_buys > 0:
-        # 매수 시그널 발생 시 실제 수익률 분포
         buy_returns = returns[buy_mask]
-        
         avg_return = np.mean(buy_returns)
         win_rate = np.mean(buy_returns > 0)
         
-        # 손익비 계산
         wins = buy_returns[buy_returns > 0]
         losses = buy_returns[buy_returns < 0]
         avg_win = np.mean(wins) if len(wins) > 0 else 0
@@ -268,7 +262,6 @@ def evaluate_market_signals():
         print(f"    ★ 손익비 (Profit Factor)   : {profit_factor:.2f}")
         print(f"    --------------------------------------------------")
         
-        # 벤치마크 비교
         market_avg = np.mean(returns)
         print(f"    (시장 평균 수익률: {market_avg*100:.3f}%)")
         

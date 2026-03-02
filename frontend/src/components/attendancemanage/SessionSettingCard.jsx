@@ -6,58 +6,43 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
   const { handleAddSession } = useAttendance();
 
   const [sessionTitle, setSessionTitle] = useState('');
-  const [hh, setHh] = useState('');
-  const [mm, setMm] = useState('');
-  const [ss, setSs] = useState('');
-  const [availableTimeMm, setAvailableTimeMm] = useState('');
+  const [description, setDescription] = useState('');
+  const [allowedMinutes, setAllowedMinutes] = useState('');
+  const [status, setStatus] = useState('OPEN');
 
-  const isFormValid = (title, hour, minute, second, availableMinute) => {
-    if (!title) {
+  const handleCreateClick = async () => {
+    const parsedMinutes = parseInt(allowedMinutes, 10);
+
+    if (!sessionTitle.trim()) {
       alert('세션 이름을 입력해주세요.');
-      return false;
+      return;
     }
-    if (isNaN(hour) || hour < 0 || hour > 23) {
-      alert('출석 시작 시간(시)은 0-23 사이의 숫자로 입력해주세요.');
-      return false;
-    }
-    if (isNaN(minute) || minute < 0 || minute > 59) {
-      alert('출석 시작 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
-      return false;
-    }
-    if (isNaN(second) || second < 0 || second > 59) {
-      alert('출석 시작 시간(초)은 0-59 사이의 숫자로 입력해주세요.');
-      return false;
-    }
-    if (isNaN(availableMinute) || availableMinute < 0 || availableMinute > 59) {
-      alert('출석 가능 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
-      return false;
-    }
-    return true;
-  };
 
-  const handleCreateClick = () => {
-    const title = sessionTitle.trim();
-    const hour = parseInt(hh, 10);
-    const minute = parseInt(mm, 10);
-    const second = parseInt(ss, 10);
-    const availableMinute = parseInt(availableTimeMm, 10);
+    if (isNaN(parsedMinutes) || parsedMinutes <= 0) {
+      alert('출석 가능 시간을 올바르게 입력해주세요.');
+      return;
+    }
 
-    // 유효성 검사
-    if (!isFormValid(title, hour, minute, second, availableMinute)) return;
+    const requestBody = {
+      title: sessionTitle.trim(),
+      description: description.trim(),
+      allowedMinutes: parsedMinutes,
+      status: status,
+    };
 
-    handleAddSession(sessionTitle, {
-      hh: hh.padStart(2, '0'),
-      mm: mm.padStart(2, '0'),
-      ss: ss.padStart(2, '0'),
-      availableTimeMm: availableMinute,
-    });
+    try {
+      await handleAddSession(requestBody);
 
-    // 입력 창 초기화
-    setSessionTitle('');
-    setHh('');
-    setMm('');
-    setSs('');
-    setAvailableTimeMm('');
+      // 초기화
+      setSessionTitle('');
+      setDescription('');
+      setAllowedMinutes('');
+      setStatus('OPEN');
+
+      alert('세션이 생성되었습니다.');
+    } catch (err) {
+      alert('세션 생성 실패');
+    }
   };
 
   return (
@@ -65,7 +50,9 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
       <header className={commonStyles.header}>
         <h1>세션 설정</h1>
       </header>
+
       <div className={styles.form}>
+        {/* 세션 이름 */}
         <div className={commonStyles.inputGroup}>
           <label htmlFor="sessionTitle" className={commonStyles.label}>
             세션 이름
@@ -78,50 +65,55 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
             placeholder="세션 이름을 입력해주세요. (ex. 금융 IT팀)"
           />
         </div>
+
+        {/* 세션 설명 */}
         <div className={commonStyles.inputGroup}>
-          <label htmlFor="sessionStartTime" className={commonStyles.label}>
-            출석 시작 시간
+          <label htmlFor="sessionDescription" className={commonStyles.label}>
+            세션 설명
           </label>
-          <div className={styles.timeInputGroup}>
-            <input
-              type="text"
-              id="sessionStartTime"
-              value={hh}
-              maxLength="2"
-              onChange={(e) => setHh(e.target.value)}
-              placeholder="시(HH)"
-            />
-            <input
-              type="text"
-              value={mm}
-              maxLength="2"
-              onChange={(e) => setMm(e.target.value)}
-              placeholder="분(MM)"
-            />
-            <input
-              type="text"
-              value={ss}
-              maxLength="2"
-              onChange={(e) => setSs(e.target.value)}
-              placeholder="초(SS)"
-            />
-          </div>
+          <input
+            type="text"
+            id="sessionDescription"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="세션 설명을 입력해주세요."
+          />
         </div>
+
+        {/* 출석 가능 시간 */}
         <div className={commonStyles.inputGroup}>
           <label htmlFor="sessionAvailableTime" className={commonStyles.label}>
-            출석 가능 시간
+            출석 가능 시간 (분)
           </label>
           <div className={styles.availableTimeInputGroup}>
             <input
-              type="text"
+              type="number"
               id="sessionAvailableTime"
-              value={availableTimeMm}
-              maxLength="2"
-              onChange={(e) => setAvailableTimeMm(e.target.value)}
+              value={allowedMinutes}
+              maxLength="3"
+              onChange={(e) => setAllowedMinutes(e.target.value)}
               placeholder="분(MM)"
             />
-            <button onClick={handleCreateClick}>생성</button>
           </div>
+        </div>
+
+        {/* 세션 상태 */}
+        <div className={commonStyles.inputGroup}>
+          <label htmlFor="sessionStatus" className={commonStyles.label}>
+            세션 상태
+          </label>
+          <select
+            id="sessionStatus"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="OPEN">OPEN</option>
+            <option value="CLOSED">CLOSED</option>
+          </select>
+        </div>
+
+        <div className={commonStyles.buttonGroup}>
+          <button onClick={handleCreateClick}>생성</button>
         </div>
       </div>
     </div>
