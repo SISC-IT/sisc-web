@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import static org.sejongisc.backend.admin.service.AdminDashboardService.ADMIN_CHANNEL;
+
 @Component
 @RequiredArgsConstructor
 public class ActivityEventListener {
@@ -31,6 +33,6 @@ public class ActivityEventListener {
                 .build());
 
         // 관리자 채널에 실시간 SSE 전송 (메인 대시보드 피드용)
-        sseService.send("ADMIN_DASHBOARD", "newLog", log);
+        sseService.send(ADMIN_CHANNEL, "newLog", log);
     }
 }

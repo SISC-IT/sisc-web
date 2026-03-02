@@ -64,14 +64,7 @@ public class AdminBoardService {
 
   // 게시판 삭제
   @Transactional
-  public void deleteBoard(UUID boardId, UUID boardUserId) {
-    User user = userRepository.findById(boardUserId).orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-    // 회장만 게시판 삭제 가능
-    if (!user.getRole().equals(Role.PRESIDENT)) {
-      throw new CustomException(ErrorCode.BOARD_ACCESS_DENIED);
-    }
-
+  public void deleteBoard(UUID boardId) {
     boardRepository.findById(boardId)
         .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
 
