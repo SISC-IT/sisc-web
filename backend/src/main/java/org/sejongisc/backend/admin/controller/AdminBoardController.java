@@ -52,11 +52,8 @@ public class AdminBoardController {
                     + "관련 첨부파일 및 댓글 등도 함께 삭제됩니다."
   )
   @DeleteMapping("/{boardId}")
-  public ResponseEntity<?> deleteBoard(
-      @PathVariable UUID boardId,
-      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    UUID userId = customUserDetails.getUserId();
-    adminBoardService.deleteBoard(boardId, userId);
+  public ResponseEntity<?> deleteBoard(@PathVariable UUID boardId) {
+    adminBoardService.deleteBoard(boardId);
     return ResponseEntity.ok("게시판 삭제가 완료되었습니다.");
   }
 }
