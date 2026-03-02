@@ -1,5 +1,6 @@
 package org.sejongisc.backend.attendance.repository;
 
+import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.SessionUser;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public interface SessionUserRepository extends JpaRepository<SessionUser, UUID> {
     Optional<SessionUser> findByAttendanceSession_AttendanceSessionIdAndUser_UserId(UUID sessionId, UUID userId);
 
+    boolean existsByAttendanceSessionAndUser(AttendanceSession session, User user);
 
     boolean existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(UUID sessionId, UUID userId);
 
