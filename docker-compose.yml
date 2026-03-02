@@ -16,7 +16,8 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro  # 시간대 설정 : 호스트의 시간 설정 파일 공유
       - /etc/timezone:/etc/timezone:ro
-      - ./logs:/app/logs
+      - /mnt/storage/logs:/app/logs
+      - /mnt/storage/uploads:/app/uploadss
     networks:
       - sisc-net
     # 1GB 램 서버 생존을 위한 메모리 제한 (Docker 레벨)

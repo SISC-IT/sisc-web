@@ -203,23 +203,4 @@ public class AuthService {
         }
         return value.trim();
     }
-
-    private String getEmailFromRedis(String token) {
-        try {
-            String email = redisService.get(RedisKey.PASSWORD_RESET, token, String.class);
-            if (email == null) throw new CustomException(ErrorCode.EMAIL_CODE_NOT_FOUND);
-            return email;
-        } catch (Exception e) {
-            log.error("Redis 조회 실패", e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    private void deleteResetTokenFromRedis(String token) {
-        try {
-            redisService.delete(RedisKey.PASSWORD_RESET, token);
-        } catch (Exception e) {
-            log.error("Redis 삭제 실패", e);
-        }
-    }
 }
