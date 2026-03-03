@@ -50,6 +50,12 @@ public class AdminUserService {
                 String studentId = getCellValue(row, 4, formatter);
                 if (studentId.isEmpty()) continue;
 
+                // 학번이 숫자로 이루어져 있는지 검증
+                if (!studentId.matches("\\d+")) {
+                    log.warn("잘못된 학번 형식: 행 번호={}, 값={}", i + 1, studentId);
+                    continue;
+                }
+
                 // 필수값 검증 및 UserExcelRow 리스트에 추가
                 excelRows.add(buildExcelRow(row, studentId, i, formatter));
             }
