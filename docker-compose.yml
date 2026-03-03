@@ -44,8 +44,8 @@ services:
     image: ghcr.io/sisc-it/sisc-web-front:${TAG:-latest}
     container_name: web
     restart: always
-    ports:
-      - "80:80"     # HTTP
+    #ports: # NGINX로 인해 주석 처리
+      # - "80:80"     # HTTP
       # - "443:443" # HTTPS (인증서 설정 필요 시 주석 해제)
     networks:
       - sisc-net
@@ -54,7 +54,7 @@ services:
         limits:
           memory: 512M
 
-  # 3. AI (deploy.yml 설정으로 개발서버에는 실행 안됨)
+  # 3. AI
   ai:
     image: ghcr.io/sisc-it/sisc-web-ai:${TAG:-latest}
     container_name: ai
@@ -69,7 +69,24 @@ services:
           memory: 2G                 # AI 모델 로드 시 필요한 메모리 확보
         reservations:
           memory: 512M
-
+  npm:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: npm
+    restart: unless-stopped
+    ports:
+      # 외부망(공유기)에서 들어오는 80, 443 요청을 NPM이 모두 받음
+      - '80:80'
+      - '443:443'
+      - '81:81' # NPM 관리자 페이지 (접속: http://서버IP:81)
+    volumes:
+      - ./data/npm:/data               # NPM 설정 데이터 유지
+      - ./data/letsencrypt:/etc/letsencrypt # SSL 인증서 데이터 유지
+    networks:
+      - sisc-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 networks:
   sisc-net:
     driver: bridge

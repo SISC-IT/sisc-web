@@ -1,13 +1,9 @@
-name: Build & Deploy (prod via SSM, tag-based)
+name: Build & Deploy Prod (SSH & Tag-based)
 
 on:
   push:
     tags:
       - "v*"            # ⬅ v1.0.0 이런 태그 push 시에만 빌드+배포
-
-permissions:
-  id-token: write
-  contents: read
   
 concurrency:
   group: deploy-prod
@@ -15,27 +11,20 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  REPO: sisc-it/sisc-web
   IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
-  AWS_REGION: ap-northeast-2
-  TARGET_DIR: /home/ubuntu/apps/sisc-web   # EC2에서 docker-compose 있는 경로
-  EC2_TAG_KEY: App
-  EC2_TAG_VALUE: sisc-web-prod             # ⬅ 배포 대상 EC2 태그 값
-  S3_BUCKET_FRONTEND: sisc-web-frontend-prod        # ⬅ 프론트 S3 버킷 이름 (수정)
-  # CLOUDFRONT_DISTRIBUTION_ID는 보안상 env 대신 secrets로 둘게
+  IMAGE_FRONT: ghcr.io/sisc-it/sisc-web-front   # 프론트 이미지 추가
 
 jobs:
   # -----------------------------
-  # 1) 백엔드 Docker 빌드 + GHCR 푸시
+  # 1) 백엔드 Docker 빌드 + GHCR 푸시 (S3 대신 Docker 이미지로 빌드)
   # -----------------------------
   build-back:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    defaults:
-      run:
-        working-directory: backend
+    environment: production
+    permissions: { contents: read, packages: write }
+    #defaults:        # 직접 셸 명령어를 칠 때 기본 경로를 잡아주는 역할
+      #run:
+        #working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,127 +35,121 @@ jobs:
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Meta (tags/labels) - backend
-        id: meta-back
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_BACK }}
-          tags: |
-            type=ref,event=tag   # ⬅ git 태그 이름으로만 이미지 태깅 (latest 제거)
 
       - name: Build & Push (backend)
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
-          platforms: linux/amd64
-          tags: ${{ steps.meta-back.outputs.tags }}
-          labels: ${{ steps.meta-back.outputs.labels }}
+          tags: |
+            ${{ env.IMAGE_FRONT }}:${{ github.ref_name }}
+            ${{ env.IMAGE_FRONT }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # -----------------------------
-  # 2) 프론트: React 빌드 → S3 업로드 → CloudFront 캐시 무효화
+  # 2) 프론트
   # -----------------------------
   build-front:
+    tags: |
+      ${{ env.IMAGE_FRONT }}:${{ github.ref_name }}
+      ${{ env.IMAGE_FRONT }}:latest
     runs-on: ubuntu-latest
     environment: production
-    permissions:
-      contents: read
-      id-token: write          # AWS OIDC용
-    defaults:
-      run:
-        working-directory: frontend
+    permissions: { contents: read, packages: write }
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: docker/login-action@v3
         with:
-          node-version: "20"   # 프로젝트 Node 버전에 맞게 조정
-      - name: Create .env.production
-        run: |
-          echo "VITE_API_URL=https://api.sjusisc.com" > .env.production
-    
-      - name: Install dependencies
-        run: |
-          npm ci || npm install
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build frontend
-        run: |
-          npm run build        # dist/ 또는 build/ 생성 (Vite면 dist)
+      - uses: docker/setup-buildx-action@v3
 
-      - name: DEBUG - Check AWS_ROLE_ARN presence
-        run: |
-          if [ -z "${AWS_ROLE_ARN}" ]; then
-            echo "AWS_ROLE_ARN is EMPTY (from secrets -> env 안 넘어옴)"
-          else
-            echo "AWS_ROLE_ARN is SET (길이: ${#AWS_ROLE_ARN})"
-          fi
-        env:
-          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-          
-      - name: Configure AWS credentials (for S3/CloudFront)
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Build & Push (frontend)
+        uses: docker/build-push-action@v6
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Upload build artifacts to S3
-        run: |
-          # Vite 기준: dist 폴더. CRA면 build 폴더로 변경
-          aws s3 sync ./dist "s3://${{ env.S3_BUCKET_FRONTEND }}" \
-            --only-show-errors
-          # --delete를 일부러 안 씀: 기존 다른 파일은 놔두고, 동일 경로만 덮어씀
-
-      - name: Invalidate CloudFront cache
-        env:
-          CF_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "$CF_DISTRIBUTION_ID" \
-            --paths "/*"
-          # CloudFront 캐시는 지우지만, S3 파일 자체는 삭제하지 않음
+          context: ./frontend
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGE_FRONT }}:${{ github.ref_name }}
+            ${{ env.IMAGE_FRONT }}:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.SPRING_API_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # -----------------------------
-  # 3) 배포: 백엔드만 EC2에 반영 (SSM)
+  # 3) 배포: 백엔드, 프론트
   # -----------------------------
   deploy:
     needs: [build-back, build-front]
     runs-on: ubuntu-latest
     environment: production
-    permissions:
-      id-token: write
-      contents: read
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+      - uses: actions/checkout@v4
 
-      - name: Deploy backend via SSM (tag-based)
-        env:
-          TARGET_DIR: ${{ env.TARGET_DIR }}
-          GHCR_READ_USER: ${{ secrets.GHCR_READ_USER }}
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-          IMAGE_TAG: ${{ github.ref_name }}   # 예: v1.2.3
+      - name: Make .env file for Prod
         run: |
-          aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy sisc-web backend (tag: ${{ github.ref_name }})" \
-            --targets "Key=tag:${{ env.EC2_TAG_KEY }},Values=${{ env.EC2_TAG_VALUE }}" \
-            --parameters "commands=[
-              \"cd ${TARGET_DIR}\",
-              \"echo 'BACK_IMAGE_TAG=${IMAGE_TAG}' > .env\",
-              \"echo '${GHCR_READ_TOKEN}' | docker login ghcr.io -u '${GHCR_READ_USER}' --password-stdin\",
-              \"docker compose pull api\",
-              \"docker compose up -d --remove-orphans api\"
-            ]" \
-            --output text
+          echo "SPRING_PROFILES_ACTIVE=prod" > .env
+          echo "IMAGE_TAG=${{ github.ref_name }}" >> .env  # ⬅ docker-compose에서 사용할 태그 버전
+
+          # DB & 기타 시크릿 (production 환경에 등록된 값을 자동으로 불러옴)
+          echo "DB_URL=${{ secrets.DB_URL }}" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> .env       
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+          echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          echo "SBA_ADMIN_NAME=${{ secrets.SBA_ADMIN_NAME }}" >> .env
+          echo "SBA_ADMIN_PASSWORD=${{ secrets.SBA_ADMIN_PASSWORD }}" >> .env
+
+      - name: SCP Transfer (docker-compose.yml & .env)
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "docker-compose.yml, .env"
+          target: "/home/${{ secrets.SSH_USER }}/app/sisc-web/"
+
+      - name: SSH Deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd ~/app/sisc-web
+
+            # GHCR 로그인
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
+
+            # 컨테이너 기동
+            docker compose pull api web redis ai npm
+            docker compose up -d --remove-orphans api web redis ai npm
+            docker image prune -f
+
+            # 서버 헬스체크
+            if docker ps --format '{{.Names}}' | grep -q "^api$"; then
+              echo "Waiting for api to be healthy..."
+              for i in {1..30}; do
+                status=$(docker inspect --format='{{json .State.Health.Status}}' api 2>/dev/null || echo '"none"')
+                if echo "$status" | grep -q healthy; then
+                  echo "=== 운영 서버 정상 작동 확인 ==="; break
+                fi
+                sleep 2
+              done
+            fi
