@@ -2,17 +2,24 @@ package org.sejongisc.backend.attendance.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundQrTokenResponse;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundRequest;
 import org.sejongisc.backend.attendance.dto.AttendanceRoundResponse;
+import org.sejongisc.backend.attendance.entity.Attendance;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
 import org.sejongisc.backend.attendance.entity.AttendanceSession;
+import org.sejongisc.backend.attendance.entity.AttendanceStatus;
 import org.sejongisc.backend.attendance.entity.RoundStatus;
+import org.sejongisc.backend.attendance.entity.SessionUser;
+import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
+import org.sejongisc.backend.attendance.repository.SessionUserRepository;
 import org.sejongisc.backend.attendance.util.QrTokenUtil;
 import org.sejongisc.backend.attendance.util.RollingQrTokenUtil;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -31,6 +38,8 @@ public class AttendanceRoundService {
 
   private final AttendanceRoundRepository attendanceRoundRepository;
   private final AttendanceSessionRepository attendanceSessionRepository;
+  private final AttendanceRepository attendanceRepository;
+  private final SessionUserRepository sessionUserRepository;
   private final AttendanceAuthorizationService authorizationService;
   private final QrTokenStreamService qrTokenStreamService;
 
@@ -193,11 +202,22 @@ public class AttendanceRoundService {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void runRoundStatusMaintenance() {
     LocalDateTime now = LocalDateTime.now();
-    int closed = attendanceRoundRepository.closeDueRounds(now);
+
+    List<AttendanceRound> roundsToClose = attendanceRoundRepository
+        .findByRoundStatusAndCloseAtBefore(RoundStatus.ACTIVE, now);
+
+    for (AttendanceRound round : roundsToClose) {
+      // 상태를 CLOSED로 변경
+      round.changeStatus(RoundStatus.CLOSED);
+
+      // 결석 처리 로직 실행
+      processAbsentees(round);
+    }
+
     int activated = attendanceRoundRepository.activateDueRounds(now);
 
-    if (activated > 0 || closed > 0) {
-      log.info("[Quartz] activated={}, closed={}", activated, closed);
+    if (activated > 0 || !roundsToClose.isEmpty()) {
+      log.info("[Quartz] activated={}, closed={}", activated, roundsToClose.size());
     }
   }
 
@@ -207,6 +227,40 @@ public class AttendanceRoundService {
     if (req.roundName() == null || req.roundName().isBlank()) throw new CustomException(ErrorCode.ROUND_NAME_REQUIRED);
     if (req.closeAt() != null && !req.closeAt().isAfter(req.startAt())) {
       throw new CustomException(ErrorCode.END_AT_MUST_BE_AFTER_START_AT);
+    }
+  }
+
+  /**
+   * 결석자 일괄 처리
+   * **/
+  private void processAbsentees(AttendanceRound round) {
+    UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
+
+    // 해당 세션에 등록된 모든 유저 목록 조회
+    List<SessionUser> allSessionUsers = sessionUserRepository.findByAttendanceSession_AttendanceSessionId(sessionId);
+
+    // 현재 라운드에 이미 출석 기록(PRESENT, LATE 등)이 있는 SessionUser의 ID 추출
+    Set<UUID> attendedUserIds = attendanceRepository.findAllByAttendanceRound(round)
+        .stream()
+        .map(a -> a.getUser().getUserId())
+        .collect(Collectors.toSet());
+
+    // 출석 기록이 없는 SessionUser만 필터링하여 'ABSENT' 레코드 생성
+    List<Attendance> absentRecords = allSessionUsers.stream()
+        .map(SessionUser::getUser)
+        .filter(user -> !attendedUserIds.contains(user.getUserId()))
+        .map(user -> Attendance.builder()
+            .attendanceRound(round)
+            .user(user)
+            .attendanceStatus(AttendanceStatus.ABSENT)
+            .note("시스템 자동 결석 처리")
+            .build())
+        .toList();
+
+    // 결석 데이터 일괄 저장
+    if (!absentRecords.isEmpty()) {
+      attendanceRepository.saveAll(absentRecords);
+      log.debug("[Round-{}] {}명의 SessionUser 결석 처리 완료", round.getRoundId(), absentRecords.size());
     }
   }
 }
