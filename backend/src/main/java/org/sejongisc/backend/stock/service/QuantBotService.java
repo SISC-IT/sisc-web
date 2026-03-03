@@ -31,12 +31,11 @@ public class QuantBotService {
     return executionRepository.findAllByOrderByFillDateDesc();
   }
 
-  // 종목별 보유 현황
+  /*// 종목별 보유 현황
   public List<HoldingDto> getHoldings() {
-
     return executionRepository.findCurrentHoldings();
   }
-
+*/
   // execution에 따른 리포트 조회
   @Transactional(readOnly = true)
   public XaiReportResponse getXaiReportByExecutionId(Long executionId) {
