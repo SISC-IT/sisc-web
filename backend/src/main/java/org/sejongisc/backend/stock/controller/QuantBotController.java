@@ -49,7 +49,7 @@ public class QuantBotController {
     return quantBotService.getTradeLogs();
   }
 
-  // 전체 종목별 보유 현황
+  /*// 전체 종목별 보유 현황
   @GetMapping("/holdings")
   @Operation(
       summary = "전체 보유 종목 현황 조회",
@@ -72,7 +72,7 @@ public class QuantBotController {
   public List<HoldingDto> getHoldings()
   {
     return quantBotService.getHoldings();
-  }
+  }*/
 
   // 리포트 조회
   @Operation(

@@ -1,6 +1,7 @@
 package org.sejongisc.backend.admin.repository;
 
 import org.sejongisc.backend.admin.dto.AdminUserResponse;
+import org.sejongisc.backend.admin.dto.dashboard.RoleCount;
 import org.sejongisc.backend.point.entity.AccountType;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
@@ -74,4 +75,11 @@ public interface AdminUserRepository extends JpaRepository<User, UUID> {
     void deactivateActiveUsers(@Param("activeStatus") UserStatus activeStatus,
                                @Param("inactiveStatus") UserStatus inactiveStatus,
                                @Param("excludedRole") Role excludedRole);
+    @Query(
+        "SELECT u.role AS role, COUNT(u) AS count " +
+        "FROM User u " +
+        "WHERE u.status = :status " +
+        "GROUP BY u.role"
+    )
+    List<RoleCount> countUsersByRole(@Param("status") UserStatus status);
 }
