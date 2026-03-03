@@ -49,8 +49,8 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta-xai.outputs.tags }}
           labels: ${{ steps.meta-xai.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
 
   deploy-xai:
     needs: [build-xai]

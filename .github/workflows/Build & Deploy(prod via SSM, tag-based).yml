@@ -47,8 +47,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_BACK }}:${{ github.ref_name }}
             ${{ env.IMAGE_BACK }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
 
   # -----------------------------
   # 2) 프론트

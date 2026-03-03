@@ -82,8 +82,8 @@ jobs:
           tags: ${{ env.IMAGE_BACK }}:latest
           #tags: ${{ steps.meta-back.outputs.tags }}
           #labels: ${{ steps.meta-back.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
 
   build-front:
     needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
@@ -123,8 +123,8 @@ jobs:
           #labels: ${{ steps.meta-front.outputs.labels }}
           build-args: |
             VITE_API_URL=${{ secrets.SPRING_API_URL }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
 
   deploy:
     #if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
