@@ -138,8 +138,8 @@ jobs:
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
 
             # 컨테이너 기동
-            docker compose pull api web redis ai npm
-            docker compose up -d --remove-orphans api web redis ai npm
+            docker compose pull api web redis npm
+            docker compose up -d --remove-orphans api web redis npm
             docker image prune -f
 
             # 서버 헬스체크
