@@ -114,7 +114,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                   }
                   onClick={handleNavLinkClick}
                 >
-                  출석하기
+                  출석조회
                 </NavLink>
               </li>
               <li>

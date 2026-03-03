@@ -6,14 +6,7 @@ export const attendanceList = async () => {
     // console.log('API BASE URL:', import.meta.env.VITE_API_URL);
     return res.data;
   } catch (err) {
-    const safeMessage = err?.message || '알 수 없는 오류';
-    console.error('출석 세션 불러오기 중 오류 발생:', safeMessage);
-    if (import.meta.env.DEV) {
-      console.debug('attendanceList error (dev only):', {
-        name: err?.name,
-        message: safeMessage,
-      });
-    }
+    console.error('출석 세션 불러오기 중 오류 발생: ', err);
     throw err;
   }
 };
