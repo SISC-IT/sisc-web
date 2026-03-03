@@ -5,10 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.activity.entity.ActivityLog;
 import org.sejongisc.backend.activity.entity.ActivityType;
 import org.sejongisc.backend.activity.repository.ActivityLogRepository;
-import org.sejongisc.backend.admin.dto.dashboard.BoardActivityResponse;
-import org.sejongisc.backend.admin.dto.dashboard.SummaryResponse;
-import org.sejongisc.backend.admin.dto.dashboard.VisitorTrendResponse;
+import org.sejongisc.backend.admin.dto.dashboard.*;
+import org.sejongisc.backend.admin.repository.AdminUserRepository;
 import org.sejongisc.backend.common.sse.SseService;
+import org.sejongisc.backend.user.entity.Role;
+import org.sejongisc.backend.user.entity.UserStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,11 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -30,6 +34,7 @@ public class AdminDashboardService {
 
   private final ActivityLogRepository activityLogRepository;
   private final SseService sseService;
+  private final AdminUserRepository adminUserRepository;
 
   public static final String ADMIN_CHANNEL = "ADMIN_DASHBOARD";
   // 공통 시간 계산용 Record
@@ -121,5 +126,23 @@ public class AdminDashboardService {
     if (previous == 0) return current > 0 ? 100.0 : 0.0;
     double percentage = ((double) (current - previous) / previous) * 100;
     return Math.round(percentage * 100.0) / 100.0;
+  }
+
+  /**
+   * 회원 권한 분포 통계 조회
+   */
+  @Transactional(readOnly = true)
+  public List<RoleDistributionResponse> getRoleDistributionStats() {
+    // ACTIVE 상태인 사용자 대상으로 Role별 카운트 조회 후 Map 변환
+    Map<Role, Long> countMap = adminUserRepository.countUsersByRole(UserStatus.ACTIVE).stream()
+      .collect(Collectors.toMap(RoleCount::getRole, RoleCount::getCount));
+
+    // 모든 Role에 대해 리스트 반환 (0명인 Role도 포함)
+    return Arrays.stream(Role.values())
+      .map(role -> new RoleDistributionResponse(
+        role.getDisplayName(),
+        countMap.getOrDefault(role, 0L)
+      ))
+      .toList();
   }
 }

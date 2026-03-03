@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.activity.entity.ActivityLog;
 import org.sejongisc.backend.admin.dto.dashboard.BoardActivityResponse;
+import org.sejongisc.backend.admin.dto.dashboard.RoleDistributionResponse;
 import org.sejongisc.backend.admin.dto.dashboard.SummaryResponse;
 import org.sejongisc.backend.admin.dto.dashboard.VisitorTrendResponse;
 import org.sejongisc.backend.admin.service.AdminDashboardService;
@@ -59,6 +60,13 @@ public class AdminDashboardController {
   @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
   public ResponseEntity<List<BoardActivityResponse>> getBoardActivityStats(@RequestParam(defaultValue = "7") int days) {
     return ResponseEntity.ok(adminDashboardService.getBoardActivityStats(days));
+  }
+
+  @Operation(summary = "회원 권한 분포", description = "현재 기준 활성 사용자들의 회원 권한 분포 데이터를 반환합니다.")
+  @GetMapping("/stats/users/distribution")
+  @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+  public ResponseEntity<List<RoleDistributionResponse>> getRoleDistributionStats() {
+    return ResponseEntity.ok(adminDashboardService.getRoleDistributionStats());
   }
 
   // --- [활동 로그 섹션] ---
