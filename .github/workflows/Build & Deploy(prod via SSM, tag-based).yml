@@ -45,8 +45,8 @@ jobs:
           context: ./backend
           push: true
           tags: |
-            ${{ env.IMAGE_FRONT }}:${{ github.ref_name }}
-            ${{ env.IMAGE_FRONT }}:latest
+            ${{ env.IMAGE_BACK }}:${{ github.ref_name }}
+            ${{ env.IMAGE_BACK }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -54,9 +54,6 @@ jobs:
   # 2) 프론트
   # -----------------------------
   build-front:
-    tags: |
-      ${{ env.IMAGE_FRONT }}:${{ github.ref_name }}
-      ${{ env.IMAGE_FRONT }}:latest
     runs-on: ubuntu-latest
     environment: production
     permissions: { contents: read, packages: write }
