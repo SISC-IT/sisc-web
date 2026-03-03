@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.admin.dto.ExcelSyncResponse;
 import org.sejongisc.backend.admin.dto.UserExcelRow;
+import org.sejongisc.backend.admin.repository.AdminUserRepository;
 import org.sejongisc.backend.common.annotation.OptimisticRetry;
 import org.sejongisc.backend.point.dto.AccountEntry;
 import org.sejongisc.backend.point.entity.Account;
@@ -28,6 +29,7 @@ public class AdminUserSyncService {
     private final PasswordEncoder passwordEncoder;
     private final AccountService accountService;
     private final PointLedgerService pointLedgerService;
+    private final AdminUserRepository adminUserRepository;
 
     /**
      * 엑셀로부터 추출된 사용자 데이터를 DB와 동기화
@@ -39,10 +41,7 @@ public class AdminUserSyncService {
         int updatedCount = 0;
 
         // 기존 활동 인원 일괄 비활성화 (SYSTEM_ADMIN 제외)
-        userRepository.findAllByStatus(UserStatus.ACTIVE)
-            .stream()
-            .filter(user -> user.getRole() != Role.SYSTEM_ADMIN)
-            .forEach(user -> user.setStatus(UserStatus.INACTIVE));
+        adminUserRepository.deactivateAllActiveUsersExceptAdmin(UserStatus.INACTIVE);
 
         for (UserExcelRow rowData : excelRows) {
             Optional<User> existingUser = userRepository.findByStudentId(rowData.studentId());
@@ -60,7 +59,7 @@ public class AdminUserSyncService {
 
             if (isNew) {
                 createdCount++;
-                // 계정 생성 및 가입 보상 포인트 지급
+                // 계정 생성 및 가입 포인트 지급
                 Account userAccount = accountService.createUserAccount(savedUser.getUserId());
                 pointLedgerService.processTransaction(
                     TransactionReason.SIGNUP_REWARD,
