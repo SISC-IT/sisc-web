@@ -65,9 +65,13 @@ public interface AdminUserRepository extends JpaRepository<User, UUID> {
     );
 
     @Modifying(clearAutomatically = true)
-    @Query(
-        "UPDATE User u SET u.status = :status " +
-        "WHERE u.status = 'ACTIVE' AND u.role != 'SYSTEM_ADMIN'"
-    )
-    void deactivateAllActiveUsersExceptAdmin(@Param("status") UserStatus status);
+    @Query("""
+        UPDATE User u
+           SET u.status = :inactiveStatus
+         WHERE u.status = :activeStatus
+           AND u.role <> :excludedRole
+    """)
+    void deactivateActiveUsers(@Param("activeStatus") UserStatus activeStatus,
+                               @Param("inactiveStatus") UserStatus inactiveStatus,
+                               @Param("excludedRole") Role excludedRole);
 }

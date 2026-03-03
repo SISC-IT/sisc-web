@@ -41,7 +41,8 @@ public class AdminUserSyncService {
         int updatedCount = 0;
 
         // 기존 활동 인원 일괄 비활성화 (SYSTEM_ADMIN 제외)
-        adminUserRepository.deactivateAllActiveUsersExceptAdmin(UserStatus.INACTIVE);
+        adminUserRepository.deactivateActiveUsers(
+            UserStatus.INACTIVE, UserStatus.INACTIVE, Role.SYSTEM_ADMIN);
 
         for (UserExcelRow rowData : excelRows) {
             Optional<User> existingUser = userRepository.findByStudentId(rowData.studentId());
