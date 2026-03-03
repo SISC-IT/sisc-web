@@ -8,7 +8,8 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.auth.entity.RefreshToken;
 import org.sejongisc.backend.common.auth.repository.RefreshTokenRepository;
-import org.sejongisc.backend.common.auth.jwt.JwtProvider;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
+import org.sejongisc.backend.common.auth.jwt.TokenEncryptor;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
@@ -32,7 +33,10 @@ class RefreshTokenServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private JwtProvider jwtProvider;
+    private JwtUtils jwtUtils;
+
+    @Mock
+    private TokenEncryptor tokenEncryptor;
 
     @InjectMocks
     private RefreshTokenService refreshTokenService;
@@ -63,14 +67,15 @@ class RefreshTokenServiceTest {
     @DisplayName("정상 토큰 재발급 (RefreshToken 만료 여유 충분)")
     void reissueTokens_Success_NoRefreshRenewal() {
         // given
-        when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(userId.toString());
+        when(tokenEncryptor.decrypt(refreshToken)).thenReturn(refreshToken);
+        when(jwtUtils.getUserIdFromToken(refreshToken)).thenReturn(userId);
         when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.of(savedToken));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(jwtProvider.createToken(any(), any(), any())).thenReturn("new-access-token");
+        when(jwtUtils.createToken(any(), any(), any())).thenReturn("new-access-token");
 
         // 만료 10일 남은 refresh token
         Date expiration = new Date(System.currentTimeMillis() + (10L * 24 * 60 * 60 * 1000));
-        when(jwtProvider.getExpiration(refreshToken)).thenReturn(expiration);
+        when(jwtUtils.getExpiration(refreshToken)).thenReturn(expiration);
 
         // when
         Map<String, String> result = refreshTokenService.reissueTokens(refreshToken);
@@ -85,15 +90,16 @@ class RefreshTokenServiceTest {
     @DisplayName("RefreshToken 남은 기간 3일 미만 → 새 RefreshToken도 재발급")
     void reissueTokens_Success_WithRefreshRenewal() {
         // given
-        when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(userId.toString());
+        when(tokenEncryptor.decrypt(refreshToken)).thenReturn(refreshToken);
+        when(jwtUtils.getUserIdFromToken(refreshToken)).thenReturn(userId);
         when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.of(savedToken));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(jwtProvider.createToken(any(), any(), any())).thenReturn("new-access-token");
-        when(jwtProvider.createRefreshToken(userId)).thenReturn("new-refresh-token");
+        when(jwtUtils.createToken(any(), any(), any())).thenReturn("new-access-token");
+        when(jwtUtils.createRefreshToken(userId)).thenReturn("new-refresh-token");
 
         // 만료 1일 남음
         Date expiration = new Date(System.currentTimeMillis() + (1L * 24 * 60 * 60 * 1000));
-        when(jwtProvider.getExpiration(refreshToken)).thenReturn(expiration);
+        when(jwtUtils.getExpiration(refreshToken)).thenReturn(expiration);
 
         // when
         Map<String, String> result = refreshTokenService.reissueTokens(refreshToken);
@@ -113,7 +119,9 @@ class RefreshTokenServiceTest {
                 .token("different-token")
                 .build();
 
-        when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(userId.toString());
+        when(tokenEncryptor.decrypt(refreshToken)).thenReturn(refreshToken);
+        when(tokenEncryptor.decrypt("different-token")).thenReturn("different-token");
+        when(jwtUtils.getUserIdFromToken(refreshToken)).thenReturn(userId);
         when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.of(wrongToken));
 
         // when & then
@@ -126,7 +134,8 @@ class RefreshTokenServiceTest {
     @DisplayName("UserRepository에 사용자 없음 → USER_NOT_FOUND 예외 발생")
     void reissueTokens_UserNotFound() {
         // given
-        when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(userId.toString());
+        when(tokenEncryptor.decrypt(refreshToken)).thenReturn(refreshToken);
+        when(jwtUtils.getUserIdFromToken(refreshToken)).thenReturn(userId);
         when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.of(savedToken));
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
@@ -140,7 +149,8 @@ class RefreshTokenServiceTest {
     @DisplayName("DB에 RefreshToken 없음 → UNAUTHORIZED 예외 발생")
     void reissueTokens_RefreshNotFound() {
         // given
-        when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(userId.toString());
+        when(tokenEncryptor.decrypt(refreshToken)).thenReturn(refreshToken);
+        when(jwtUtils.getUserIdFromToken(refreshToken)).thenReturn(userId);
         when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         // when & then
@@ -150,9 +160,10 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    @DisplayName("JwtProvider 내부 예외 → CustomException(UNAUTHORIZED) 반환")
+    @DisplayName("JwtUtils 내부 예외 → CustomException(UNAUTHORIZED) 반환")
     void reissueTokens_JwtException() {
-        when(jwtProvider.getUserIdFromToken(refreshToken))
+        when(tokenEncryptor.decrypt(refreshToken)).thenReturn(refreshToken);
+        when(jwtUtils.getUserIdFromToken(refreshToken))
                 .thenThrow(new RuntimeException("토큰 파싱 오류"));
 
         CustomException ex = assertThrows(CustomException.class,

@@ -4,7 +4,7 @@ const DEFAULT_ROLE = 'TEAM_MEMBER';
 
 export const signUp = async (
   {
-    studentName,
+    name,
     studentId,
     email,
     password,
@@ -19,7 +19,7 @@ export const signUp = async (
   signal
 ) => {
   const payload = {
-    studentName: studentName.trim(),
+    name: name.trim(),
     studentId: studentId.trim(),
     email: email.trim(),
     password: password,
@@ -31,7 +31,7 @@ export const signUp = async (
     teamName: teamName.trim(),
     remark: remark,
   };
-  const res = await api.post('/api/user/signup', payload, { signal });
+  const res = await api.post('/api/auth/signup', payload, { signal });
   return res.data;
 };
 
@@ -64,9 +64,32 @@ export const checkVerificationNumber = async (
 
   return res.data;
 };
-export const resetPassword = async ({ email }, signal) => {
-  const res = await api.post('/api/user/password/reset/send', null, {
-    params: { email },
+
+export const sendPasswordResetCode = async ({ email, studentId }, signal) => {
+  const payload = {
+    email: email.trim(),
+    studentId: studentId.trim(),
+  };
+
+  const res = await api.post('/api/auth/password/reset/send', payload, {
+    signal,
+  });
+
+  return res.data;
+};
+
+export const confirmPasswordReset = async (
+  { email, studentId, code, newPassword },
+  signal
+) => {
+  const payload = {
+    email: email.trim(),
+    studentId: studentId.trim(),
+    code: code.trim(),
+    newPassword,
+  };
+
+  const res = await api.post('/api/auth/password/reset/confirm', payload, {
     signal,
   });
 

@@ -12,6 +12,7 @@ import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.sejongisc.backend.attendance.repository.SessionUserRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
@@ -106,7 +107,6 @@ public class AttendanceSessionService {
    * 세션 정보 수정(세션 관리자용)
    */
   public void updateSession(UUID sessionId, AttendanceSessionRequest request, UUID userId) {
-    log.info("출석 세션 수정 시작: 세션ID={}", sessionId);
     // 권한 확인
     attendanceAuthorizationService.ensureAdmin(sessionId, userId);
 
@@ -120,7 +120,6 @@ public class AttendanceSessionService {
         .build();
 
     attendanceSessionRepository.save(session);
-
     log.info("출석 세션 수정 완료: 세션ID={}", sessionId);
   }
 
@@ -128,7 +127,6 @@ public class AttendanceSessionService {
    * 세션 완전 삭제(관리자 용) - CASCADE 관련 출석 기록도 함께 삭제 - 주의: 복구 불가능
    */
   public void deleteSession(UUID sessionId, UUID userId) {
-    log.info("출석 세션 삭제 시작: 세션ID={}", sessionId);
     // 권한 확인
     attendanceAuthorizationService.ensureAdmin(sessionId, userId);
 
@@ -136,7 +134,6 @@ public class AttendanceSessionService {
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
     attendanceSessionRepository.delete(session);
-
     log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
   }
 
@@ -145,7 +142,6 @@ public class AttendanceSessionService {
    */
   public void closeSession(UUID sessionId, UUID userId) {
     attendanceAuthorizationService.ensureAdmin(sessionId, userId);
-    log.info("출석 세션 종료 시작: 세션ID={}", sessionId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
@@ -155,7 +151,33 @@ public class AttendanceSessionService {
         .build();
 
     attendanceSessionRepository.save(session);
-
     log.info("출석 세션 종료 완료: 세션ID={}", sessionId);
+  }
+
+  public void addAllUsers(UUID sessionId, UUID userId) {
+    // 권한 확인
+    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
+    log.info("세션에 모든 사용자 추가 시작: 세션ID={}", sessionId);
+
+    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+    // UserStatus.ACTIVE인 사용자만 추가하도록 수정
+    List<User> allUsers = userRepository.findAllByStatus(UserStatus.ACTIVE);
+
+    for (User user : allUsers) {
+      boolean alreadyAdded = sessionUserRepository.existsByAttendanceSessionAndUser(session, user);
+      if (!alreadyAdded) {
+        SessionUser su = SessionUser.builder()
+            .attendanceSession(session)
+            .user(user)
+            .sessionRole(SessionRole.PARTICIPANT)
+            .build();
+        sessionUserRepository.save(su);
+        log.info("사용자 {} 세션에 추가됨", user.getUserId());
+      }
+    }
+
+    log.info("세션에 모든 사용자 추가 완료: 세션ID={}", sessionId);
   }
 }

@@ -15,6 +15,7 @@ const AdminHeader = ({ title }) => {
             <input
               type="search"
               placeholder="검색..."
+              aria-label="관리자 검색"
               className={styles.searchInput}
             />
           </div>

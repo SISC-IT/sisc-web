@@ -27,16 +27,16 @@ const presidentMenuItems = [
   {
     category: '콘텐츠',
     items: [
-      { label: '게시물 관리', href: '/admin/posts', icon: FileText },
-      { label: '출석 관리', href: '/admin/attendance', icon: Calendar },
-      { label: '포인트 관리', href: '/admin/points', icon: Star },
+      { label: '게시물 관리', href: '/admin/posts', icon: FileText, disabled: true },
+      { label: '출석 관리', href: '/admin/attendance', icon: Calendar, disabled: true },
+      { label: '포인트 관리', href: '/admin/points', icon: Star, disabled: true },
     ],
   },
   {
     category: '시스템',
     items: [
-      { label: '게임/툴 관리', href: '/admin/tools', icon: Gamepad2 },
-      { label: '통계 대시보드', href: '/admin/dashboard', icon: BarChart3 },
+      { label: '게임/툴 관리', href: '/admin/tools', icon: Gamepad2, disabled: true },
+      { label: '통계 대시보드', href: '/admin/dashboard', icon: BarChart3, disabled: true },
     ],
   },
 ];
@@ -56,6 +56,12 @@ const devMenuItems = [
 const AdminSidebar = () => {
   const { pathname } = useLocation();
   const isDevSection = pathname.startsWith('/admin/dev');
+  const currentSections = (isDevSection ? devMenuItems : presidentMenuItems)
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.disabled),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <aside className={styles.sidebar}>
@@ -86,7 +92,7 @@ const AdminSidebar = () => {
       </div>
 
       <nav className={styles.nav}>
-        {(isDevSection ? devMenuItems : presidentMenuItems).map((section) => (
+        {currentSections.map((section) => (
           <div key={section.category} className={styles.section}>
             <div className={styles.sectionTitleWrap}>
               <span className={styles.sectionTitle}>

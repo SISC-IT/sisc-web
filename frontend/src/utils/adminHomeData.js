@@ -16,7 +16,13 @@ const quickActions = [
 
 export const getAdminHomeData = async () => {
   const response = await api.get('/api/admin/users');
-  const users = response.data || [];
+  const users = Array.isArray(response.data)
+    ? response.data
+    : Array.isArray(response.data?.users)
+      ? response.data.users
+      : Array.isArray(response.data?.payload)
+        ? response.data.payload
+        : [];
 
   const pendingApprovals = users.filter((user) => user.role === 'PENDING_MEMBER');
   const members = users.filter((user) => user.role !== 'PENDING_MEMBER');

@@ -16,7 +16,7 @@ import org.springframework.data.jpa.repository.Query;
 public interface ExecutionRepository extends JpaRepository<Execution, Long> {
   // 전체 매매로그 (최신 체결 순)
   List<TradeLogDto> findAllByOrderByFillDateDesc();
-
+/*
   // 전체 종목별 보유 주식
   @Query("""
         SELECT new org.sejongisc.backend.stock.dto.HoldingDto(
@@ -35,7 +35,7 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
         ORDER BY e.fillDate DESC
     """)
   List<HoldingDto> findCurrentHoldings();
-
+*/
 
   @Query("""
         select e
@@ -61,8 +61,9 @@ public interface ExecutionRepository extends JpaRepository<Execution, Long> {
             position_qty AS positionQty,
             avg_price AS avgPrice,
             current_price AS currentPrice,
-            market_value AS marketPrice
-        FROM portfolio_positions
+            market_value AS marketPrice 
+        FROM portfolio_positions 
+            WHERE date = (SELECT MAX(date) FROM portfolio_positions) AND position_qty > 0 
         ORDER BY ticker
     """, nativeQuery = true)
   List<PositionProjection> findAllPositions();

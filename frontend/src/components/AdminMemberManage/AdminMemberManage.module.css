@@ -41,12 +41,14 @@
 .tableWrap {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: #fff;
 }
 
 .table {
   width: 100%;
+  min-width: 1080px;
   border-collapse: collapse;
 }
 

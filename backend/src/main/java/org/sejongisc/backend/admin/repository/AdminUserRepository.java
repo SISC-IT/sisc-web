@@ -1,11 +1,13 @@
 package org.sejongisc.backend.admin.repository;
 
 import org.sejongisc.backend.admin.dto.AdminUserResponse;
+import org.sejongisc.backend.admin.dto.dashboard.RoleCount;
 import org.sejongisc.backend.point.entity.AccountType;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -62,4 +64,22 @@ public interface AdminUserRepository extends JpaRepository<User, UUID> {
         @Param("status") UserStatus status,
         @Param("accountType") AccountType accountType
     );
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE User u
+           SET u.status = :inactiveStatus
+         WHERE u.status = :activeStatus
+           AND u.role <> :excludedRole
+    """)
+    void deactivateActiveUsers(@Param("activeStatus") UserStatus activeStatus,
+                               @Param("inactiveStatus") UserStatus inactiveStatus,
+                               @Param("excludedRole") Role excludedRole);
+    @Query(
+        "SELECT u.role AS role, COUNT(u) AS count " +
+        "FROM User u " +
+        "WHERE u.status = :status " +
+        "GROUP BY u.role"
+    )
+    List<RoleCount> countUsersByRole(@Param("status") UserStatus status);
 }

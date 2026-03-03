@@ -58,22 +58,17 @@ def fetch_macro_indicators(
         
     return df
 
-def fetch_market_breadth(
-    start_date: str,
-    db_name: str = "db"
-) -> pd.DataFrame:
-    """
-    [공통] 시장 건전성 지표 (Market Breadth)
-    """
+def fetch_market_breadth(start_date: str, db_name: str = "db"):
     engine = get_engine(db_name)
     query = text("""
         SELECT date, 
-               advance_decline_ratio, fear_greed_index, 
-               new_highs, new_lows, above_ma200_pct
+               nh_nl_index, -- 긴 이름 대신 실제 DB 컬럼명 사용
+               ma200_pct 
         FROM public.market_breadth
         WHERE date >= :start_date
-        ORDER BY date ASC;
+        ORDER BY date ASC
     """)
+    # ... 이하 로직 동일
 
     with engine.connect() as conn:
         df = pd.read_sql(query, conn, params={"start_date": start_date})

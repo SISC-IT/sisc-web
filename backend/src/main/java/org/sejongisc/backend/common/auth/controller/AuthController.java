@@ -1,14 +1,19 @@
 package org.sejongisc.backend.common.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.auth.dto.AuthRequest;
 import org.sejongisc.backend.common.auth.dto.AuthResponse;
+import org.sejongisc.backend.common.auth.dto.SignupRequest;
+import org.sejongisc.backend.common.auth.dto.SignupResponse;
 import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
+import org.sejongisc.backend.user.dto.PasswordResetConfirmRequest;
+import org.sejongisc.backend.user.dto.PasswordResetSendRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -26,7 +31,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
-    private final AuthCookieHelper cookieHelper; // 주입
+    private final AuthCookieHelper cookieHelper;
+
+    @Operation(summary = "회원 가입", description = "회장이 승인하기 전까지 PENDING 상태가 유지되며, 웹사이트를 사용할 수 없습니다.")
+    @ApiResponse(responseCode = "201", description = "회원가입 성공")
+    @PostMapping("/signup")
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.signup(request));
+    }
 
     @Operation(summary = "일반 로그인 API", description = "")
     @PostMapping("/login")
@@ -72,5 +84,57 @@ public class AuthController {
             .header(HttpHeaders.SET_COOKIE, cookieHelper.deleteCookie("access").toString())
             .header(HttpHeaders.SET_COOKIE, cookieHelper.deleteCookie("refresh").toString())
             .body(Map.of("message", "로그아웃 성공"));
+    }
+
+    @Operation(
+            summary = "비밀번호 재설정 : 이메일로 인증코드를 전송합니다.",
+            description = """
+        
+        ## 인증(JWT): **불필요**
+
+        ## 요청 바디 ( `PasswordResetSendRequest` )
+        - **`email`**: 가입된 이메일
+        - **`studentId`**: 가입된 학번
+        
+        ## 동작 설명
+        - 입력한 이메일 + 학번으로 사용자를 확인합니다.
+        - 일치하는 사용자가 있으면 인증코드를 생성합니다.
+        - 인증코드를 Redis에 일정 시간 저장합니다. (TTL 적용)
+        - 해당 이메일로 인증코드를 전송합니다.
+        
+        ## 반환값
+        - 성공 메시지 (`인증코드를 전송했습니다.`)
+        """)
+    @PostMapping("/password/reset/send")
+    public ResponseEntity<?> sendReset(@RequestBody @Valid PasswordResetSendRequest req){
+        authService.passwordResetSendCode(req);
+        return ResponseEntity.ok(Map.of("message", "인증코드를 전송했습니다."));
+    }
+
+    @Operation(
+            summary = "비밀번호 재설정 : 인증코드와 새 비밀번호를 입력받아, 비밀번호를 변경합니다.",
+            description = """
+        
+        ## 인증(JWT): **불필요**
+        
+        ## 요청 바디 ( `PasswordResetConfirmRequest` )
+        - **`email`**: 가입된 이메일
+        - **`studentId`**: 가입된 학번
+        - **`code`**: 이메일로 받은 인증코드
+        - **`newPassword`**: 새 비밀번호
+        
+        ## 동작 설명
+        - 이메일 + 학번으로 사용자를 다시 확인합니다.
+        - Redis에 저장된 인증코드와 입력한 `code`를 비교합니다.
+        - 인증코드가 일치하면 새 비밀번호를 정책 검증 후 암호화하여 저장합니다.
+        - 사용한 인증코드는 Redis에서 삭제합니다. (1회성)
+
+        ## 반환값
+        - 성공 메시지 (`비밀번호가 변경되었습니다.`)
+        """)
+    @PostMapping("/password/reset/confirm")
+    public ResponseEntity<?> confirmReset(@RequestBody @Valid PasswordResetConfirmRequest req){
+        authService.resetPasswordByCode(req);
+        return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
     }
 }

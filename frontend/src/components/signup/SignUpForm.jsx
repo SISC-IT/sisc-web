@@ -19,7 +19,7 @@ const passwordPolicy = [
 ];
 
 const SignUpForm = () => {
-  const [studentName, setStudentName] = useState('');
+  const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [verificationNumber, setVerificationNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -73,7 +73,7 @@ const SignUpForm = () => {
   };
 
   const areRequiredFieldsFilled =
-    studentName.trim() !== '' &&
+    name.trim() !== '' &&
     studentId.trim() !== '' &&
     email.trim() !== '' &&
     phoneNumber.trim() !== '' &&
@@ -161,7 +161,7 @@ const SignUpForm = () => {
     try {
       await signUp(
         {
-          studentName,
+          name,
           studentId,
           email,
           password,
@@ -199,12 +199,12 @@ const SignUpForm = () => {
           </div>
 
           <div className={styles.inputGroup}>
-            <label htmlFor="studentName">이름</label>
+            <label htmlFor="name">이름</label>
             <input
               type="text"
-              id="studentName"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="이름을 입력해주세요"
             />
           </div>

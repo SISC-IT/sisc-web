@@ -54,7 +54,7 @@ public class AdminUserController {
         """
     )
     @GetMapping
-    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
     public ResponseEntity<List<AdminUserResponse>> getAllUsers(@ModelAttribute AdminUserRequest request) {
         // TODO: 페이징 추후 고려
         return ResponseEntity.ok(adminUserService.findAllUsers(request));

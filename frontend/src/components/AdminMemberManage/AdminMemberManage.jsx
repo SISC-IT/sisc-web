@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Star } from 'lucide-react';
 import styles from './AdminMemberManage.module.css';
 import {
@@ -55,39 +55,55 @@ const AdminMemberManage = () => {
 
   // 회원 목록 데이터 상태
   const [members, setMembers] = useState([]);
+  const [isPromotingById, setIsPromotingById] = useState({});
+  const [isDeletingById, setIsDeletingById] = useState({});
+  const [isChangingById, setIsChangingById] = useState({});
   const [changeDialog, setChangeDialog] = useState({
     open: false,
     type: 'role',
     member: null,
     value: '',
   });
+  const latestRequestIdRef = useRef(0);
 
   // 회원 목록 조회 (필요한 필터만 백엔드로 전달)
-  const loadMembers = async ({ keyword, role, status } = {}) => {
+  const loadMembers = async ({ keyword, role, status, requestId } = {}) => {
     try {
       const data = await getAdminMembersData({ keyword, role, status });
+
+      if (requestId != null && requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
       const nextMembers = data.members || [];
       setMembers(nextMembers);
-      console.log('회원 목록 로드 성공:', nextMembers);
     } catch (error) {
+      if (requestId != null && requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
       window.alert(error?.message || '회원 목록을 불러오지 못했습니다.');
       setMembers([]);
     }
   };
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
-
   // 필터/검색 조건 변경 시 목록 재조회
   useEffect(() => {
+    const requestId = ++latestRequestIdRef.current;
     const backendRole = roleFilter === 'all' ? undefined : roleFilter;
     const backendStatus = statusFilter === 'all' ? undefined : statusFilter;
     loadMembers({
       keyword: searchQuery.trim() || undefined,
       role: backendRole,
       status: backendStatus,
+      requestId,
     });
+
+    return () => {
+      if (latestRequestIdRef.current === requestId) {
+        latestRequestIdRef.current += 1;
+      }
+    };
   }, [roleFilter, searchQuery, statusFilter]);
 
   const filteredMembers = useMemo(() => {
@@ -124,6 +140,15 @@ const AdminMemberManage = () => {
     const { type, member, value } = changeDialog;
     if (!member) return;
 
+    if (isChangingById[member.id]) {
+      return;
+    }
+
+    setIsChangingById((prev) => ({
+      ...prev,
+      [member.id]: true,
+    }));
+
     try {
       if (type === 'role') {
         if (!ROLE_OPTIONS.includes(value)) {
@@ -150,14 +175,28 @@ const AdminMemberManage = () => {
         error?.message ||
           (type === 'role' ? '권한 변경에 실패했습니다.' : '상태 변경에 실패했습니다.')
       );
+    } finally {
+      setIsChangingById((prev) => ({
+        ...prev,
+        [member.id]: false,
+      }));
     }
   };
 
   // 단일 회원 선배 전환
   const handlePromoteSenior = async (member) => {
+    if (isPromotingById[member.id]) {
+      return;
+    }
+
     if (!window.confirm(`${member.name}님을 선배(SENIOR)로 전환하시겠습니까?`)) {
       return;
     }
+
+    setIsPromotingById((prev) => ({
+      ...prev,
+      [member.id]: true,
+    }));
 
     try {
       await promoteAdminMemberSenior({ userId: member.id });
@@ -168,14 +207,28 @@ const AdminMemberManage = () => {
       });
     } catch (error) {
       window.alert(error?.message || '선배 전환에 실패했습니다.');
+    } finally {
+      setIsPromotingById((prev) => ({
+        ...prev,
+        [member.id]: false,
+      }));
     }
   };
 
   // 단일 회원 삭제
   const handleDelete = async (member) => {
+    if (isDeletingById[member.id]) {
+      return;
+    }
+
     if (!window.confirm(`${member.name}님을 강제 탈퇴 처리하시겠습니까?`)) {
       return;
     }
+
+    setIsDeletingById((prev) => ({
+      ...prev,
+      [member.id]: true,
+    }));
 
     try {
       await deleteAdminMember({ userId: member.id });
@@ -186,6 +239,11 @@ const AdminMemberManage = () => {
       });
     } catch (error) {
       window.alert(error?.message || '회원 삭제에 실패했습니다.');
+    } finally {
+      setIsDeletingById((prev) => ({
+        ...prev,
+        [member.id]: false,
+      }));
     }
   };
 
@@ -237,7 +295,7 @@ const AdminMemberManage = () => {
               <th>권한</th>
               <th>포인트</th>
               <th>상태</th>
-              <th>가입일</th>
+              <th>기수</th>
               <th className={styles.rightAlign}>작업</th>
             </tr>
           </thead>
@@ -246,7 +304,7 @@ const AdminMemberManage = () => {
               <tr key={member.id}>
                 <td>
                   <div className={styles.memberInfo}>
-                    <div className={styles.avatar}>{member.name[0]}</div>
+                    <div className={styles.avatar}>{member.name?.[0] ?? '?'}</div>
                     <div>
                       <p className={styles.memberName}>{member.name}</p>
                       <p className={styles.memberEmail}>{member.email}</p>
@@ -296,15 +354,17 @@ const AdminMemberManage = () => {
                       type="button"
                       className={styles.actionButton}
                       onClick={() => handlePromoteSenior(member)}
+                      disabled={Boolean(isPromotingById[member.id])}
                     >
-                      선배 전환
+                      {isPromotingById[member.id] ? '처리 중...' : '선배 전환'}
                     </button>
                     <button
                       type="button"
                       className={styles.actionButton}
                       onClick={() => handleDelete(member)}
+                      disabled={Boolean(isDeletingById[member.id])}
                     >
-                      회원 삭제
+                      {isDeletingById[member.id] ? '처리 중...' : '회원 삭제'}
                     </button>
                   </div>
                 </td>
@@ -368,8 +428,9 @@ const AdminMemberManage = () => {
                 type="button"
                 className={styles.actionButton}
                 onClick={confirmChangeDialog}
+                disabled={Boolean(isChangingById[changeDialog.member.id])}
               >
-                변경
+                {isChangingById[changeDialog.member.id] ? '처리 중...' : '변경'}
               </button>
             </div>
           </div>
