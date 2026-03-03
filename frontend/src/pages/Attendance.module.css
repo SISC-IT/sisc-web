@@ -3,8 +3,8 @@
   flex-direction: column;
   padding: 20px;
   gap: 20px;
-  justify-content: center;
-  align-items: flex-start;
+  justify-content: flex-start;
+  align-items: center;
   width: 100%;
   box-sizing: border-box;
 }
@@ -15,14 +15,17 @@
   line-height: 100%;
   letter-spacing: 0%;
   color: #171717;
+  width: 100%;
+  max-width: 955px;
 }
 
 .attendanceSection {
   margin-top: 25px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   width: 100%;
+  max-width: 955px;
 }
 
 /* 태블릿 이상 */
@@ -36,8 +39,7 @@
   }
 
   .attendanceSection {
-    flex-direction: row;
-    justify-content: flex-start;
+    justify-content: center;
   }
 }
 
@@ -52,6 +54,6 @@
   }
 
   .attendanceSection {
-    justify-content: center;
+    margin-top: 16px;
   }
 }

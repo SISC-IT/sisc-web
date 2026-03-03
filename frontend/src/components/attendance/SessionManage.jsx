@@ -1,37 +1,96 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import styles from './SessionManage.module.css';
 import { ClipboardCheck } from 'lucide-react';
-import { attendanceList } from '../../utils/attendanceList';
 
-const SessionManage = () => {
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const getRoundKey = (session) => session.roundId || `${session.roundDate || ''}-${session.roundStartAt || ''}`;
 
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        const data = await attendanceList();
-        setSessions(data);
-        console.log(data);
-      } catch (err) {
-        setError('데이터를 불러오는 중 오류가 발생했습니다.');
-      } finally {
-        setLoading(false);
+const getTimestamp = (session) => {
+  const dateSource = session.roundStartAt || session.roundDate || session.createdAt || session.checkedAt;
+  const timestamp = Date.parse(dateSource);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+const formatDate = (dateValue) => {
+  if (!dateValue) return '-';
+  const date = new Date(dateValue);
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+};
+
+const formatTime = (dateValue) => {
+  if (!dateValue) return '-';
+  const date = new Date(dateValue);
+  return Number.isNaN(date.getTime())
+    ? '-'
+    : date.toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+};
+
+const formatAttendanceStatus = (attendanceStatus) => {
+  const status = (attendanceStatus || '').toUpperCase();
+
+  if (status === 'PRESENT' || status === 'ATTENDED') return '출석';
+  if (status === 'LATE') return '지각';
+  if (status === 'ABSENT') return '결석';
+  if (status === 'EXCUSED') return '공결';
+  if (status === 'PENDING') return '대기';
+
+  return attendanceStatus || '-';
+};
+
+const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) => {
+  const roundIndexMapBySession = useMemo(() => {
+    const roundMapBySession = new Map();
+    sessions.forEach((session) => {
+      const sessionTitle = session.sessionTitle || '기타';
+      if (!roundMapBySession.has(sessionTitle)) {
+        roundMapBySession.set(sessionTitle, new Map());
       }
-    };
 
-    fetchAttendance();
-  }, []);
+      const roundMap = roundMapBySession.get(sessionTitle);
+      const roundKey = getRoundKey(session);
+      if (!roundMap.has(roundKey)) {
+        roundMap.set(roundKey, getTimestamp(session));
+      }
+    });
 
-  if (loading) return <div>로딩 중...</div>;
+    const indexedMapBySession = new Map();
+
+    roundMapBySession.forEach((roundMap, sessionTitle) => {
+      const sortedRoundKeys = Array.from(roundMap.entries())
+        .sort((a, b) => a[1] - b[1])
+        .map(([roundKey]) => roundKey);
+
+      const indexedRoundMap = new Map();
+      sortedRoundKeys.forEach((roundKey, index) => {
+        indexedRoundMap.set(roundKey, index + 1);
+      });
+
+      indexedMapBySession.set(sessionTitle, indexedRoundMap);
+    });
+
+    return indexedMapBySession;
+  }, [sessions]);
+
+  const visibleSessions = useMemo(() => {
+    const filtered = selectedSession
+      ? sessions.filter((session) => session.sessionTitle === selectedSession)
+      : sessions;
+
+    return [...filtered].sort((a, b) => getTimestamp(a) - getTimestamp(b));
+  }, [sessions, selectedSession]);
+
   if (error) return <div>{error}</div>;
+
+  const rows = loading ? [] : visibleSessions;
 
   return (
     <div className={styles.card}>
       <div className={styles.title}>
         <ClipboardCheck />
-        세션 관리
+        출석 목록
       </div>
 
       <table className={styles.table} role="grid">
@@ -39,26 +98,28 @@ const SessionManage = () => {
           <tr>
             <th>일자</th>
             <th>출석시작시간</th>
-            <th>출석가능시간</th>
             <th>회차</th>
             <th>이름</th>
-            <th></th>
+            <th>출석 상태</th>
           </tr>
         </thead>
 
         <tbody>
-          {sessions.map((s) => (
+          {rows.map((s) => {
+            const sessionTitle = s.sessionTitle || '기타';
+            const roundKey = getRoundKey(s);
+            const roundIndex = roundIndexMapBySession.get(sessionTitle)?.get(roundKey) ?? '-';
+
+            return (
             <tr key={s.attendanceId}>
-              <td>{new Date(s.createdAt).toLocaleDateString()}</td>
-              <td>{new Date(s.checkedAt).toLocaleTimeString()}</td>
-              <td>30분</td> 
-              <td>{s.roundId}</td>
+              <td>{formatDate(s.roundDate)}</td>
+              <td>{formatTime(s.roundStartAt)}</td>
+              <td>{roundIndex}</td>
               <td>{s.userName}</td>
-              <td>
-                <button className={styles.button}>출석</button>
-              </td>
+              <td>{formatAttendanceStatus(s.attendanceStatus)}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
