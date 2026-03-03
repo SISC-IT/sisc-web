@@ -6,6 +6,7 @@ import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -62,4 +63,11 @@ public interface AdminUserRepository extends JpaRepository<User, UUID> {
         @Param("status") UserStatus status,
         @Param("accountType") AccountType accountType
     );
+
+    @Modifying(clearAutomatically = true)
+    @Query(
+        "UPDATE User u SET u.status = :status " +
+        "WHERE u.status = 'ACTIVE' AND u.role != 'SYSTEM_ADMIN'"
+    )
+    void deactivateAllActiveUsersExceptAdmin(@Param("status") UserStatus status);
 }
