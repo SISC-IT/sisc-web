@@ -6,6 +6,7 @@ jwt:
 
 app:
   frontend-url: ${FRONTEND_URL}    # environment
+  spring-api-url: ${SPRING_API_URL}
 
 email:
   code:

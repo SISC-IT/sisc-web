@@ -102,6 +102,8 @@ jobs:
           echo "DB_URL=${{ secrets.DB_URL }}" >> .env
           echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          
+          echo "SPRING_API_URL=${{ secrets.SPRING_API_URL }}" >> .env  
           echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> .env       
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env

@@ -131,7 +131,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                env.getProperty("app.frontend-url")    // 환경변수에 해당하는 값 가져옴
+                env.getProperty("app.spring-api-url"),  // 스웨거 요청 막으려면 주석화 or 삭제
+                env.getProperty("app.frontend-url")     // 환경변수에 해당하는 값 가져옴
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
