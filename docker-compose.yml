@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 백엔드 (Spring Boot)
   api:
@@ -56,7 +54,7 @@ services:
 
   # 3. AI
   ai:
-    image: ghcr.io/sisc-it/sisc-web-ai:${TAG:-latest}
+    image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
     container_name: ai
     restart: always
     ports:
