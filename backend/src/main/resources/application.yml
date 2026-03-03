@@ -35,7 +35,7 @@ management:
 
 logging:
   file:
-    name: ./logs/application.log
+    name: /app/logs/application.log
 
 springdoc:
   swagger-ui:

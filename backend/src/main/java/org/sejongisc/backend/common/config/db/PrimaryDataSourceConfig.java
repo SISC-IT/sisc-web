@@ -21,7 +21,6 @@ import java.util.Map;
 
 @Configuration
 @EnableTransactionManagement
-@Profile("prod")
 @EnableJpaRepositories(
         basePackages = "org.sejongisc.backend",
         entityManagerFactoryRef = "primaryEntityManagerFactory",
@@ -40,7 +39,7 @@ public class PrimaryDataSourceConfig {
         return new DataSourceProperties();
     }
 
-    // ✅ HikariConfig에 먼저 바인딩 (풀 아직 시작 안 됨)
+    // HikariConfig에 먼저 바인딩 (풀 아직 시작 안 됨)
     @Primary
     @Bean(name = "primaryHikariConfig")
     @ConfigurationProperties("spring.datasource.hikari")
@@ -48,7 +47,7 @@ public class PrimaryDataSourceConfig {
         return new com.zaxxer.hikari.HikariConfig();
     }
 
-    // ✅ HikariConfig로 HikariDataSource "생성 시" 설정을 반영
+    // HikariConfig로 HikariDataSource "생성 시" 설정을 반영
     @Primary
     @Bean(name = "primaryDataSource")
     public DataSource primaryDataSource(
@@ -73,12 +72,13 @@ public class PrimaryDataSourceConfig {
 
         Map<String, Object> jpaProps = new HashMap<>();
         jpaProps.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-
+        // stockDataSource와 같이 yml로 관리하지 않고 여기서 관리
         jpaProps.put("hibernate.hbm2ddl.auto", "update");
 
         return builder
                 .dataSource(dataSource)
                 .packages(
+                    "org.sejongisc.backend.activity.entity",
                         "org.sejongisc.backend.attendance.entity",
                         "org.sejongisc.backend.common.auth.entity",
                         "org.sejongisc.backend.backtest.entity",

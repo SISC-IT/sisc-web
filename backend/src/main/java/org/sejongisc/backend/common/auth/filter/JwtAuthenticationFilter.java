@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.common.auth.jwt.JwtParser;
+import org.sejongisc.backend.common.auth.jwt.JwtUtils;
 import org.sejongisc.backend.common.config.security.SecurityConstants;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.ErrorResponse;
@@ -31,7 +31,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtParser jwtParser;
+    private final JwtUtils jwtUtils;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final ObjectMapper objectMapper;
 
@@ -55,8 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 token = resolveTokenFromCookie(request);
             }
 
-            if (token != null && jwtParser.validationToken(token) ) {
-                UsernamePasswordAuthenticationToken authentication = jwtParser.getAuthentication(token);
+            if (token != null && jwtUtils.validationToken(token) ) {
+                UsernamePasswordAuthenticationToken authentication = jwtUtils.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 log.debug("SecurityContext에 인증 저장됨: {}", authentication.getName());
             } else {

@@ -40,16 +40,34 @@ public class SessionUserController {
   @Operation(
       summary = "세션에 사용자 추가",
       description = """
-          ## 인증(JWT): **필요**
-          
-          """
-  )
+      ## 인증(JWT)
+      - **필요**
+      
+      ## 권한
+      - **세션 OWNER**
+      
+      ## 경로 파라미터
+      - **`sessionId`**: 사용자를 추가할 세션 ID (`UUID`)
+      
+      ## 쿼리 파라미터
+      - **`userId`**: 추가할 대상 사용자의 ID (`UUID`)
+      
+      ## 동작 설명
+      - 특정 사용자를 세션의 참여자(`PARTICIPANT`)로 추가
+      - 세션 중간 참여 시, 오늘 이전의 모든 라운드에 대해 자동으로 **결석** 처리 및 사유("세션 중간 참여 - 이전 라운드는 자동 결석 처리") 등록
+      
+      ## 에러 코드
+      - **`SESSION_NOT_FOUND`**: 해당 출석 세션이 존재하지 않습니다.
+      - **`USER_NOT_FOUND`**: 유저를 찾을 수 없습니다.
+      - **`ALREADY_JOINED`**: 이미 출석 세션에 참여 중입니다.
+      - **`NOT_SESSION_OWNER`**: 세션 소유자 권한이 없습니다.
+      
+      """)
   @PostMapping("/{sessionId}/users")
   public ResponseEntity<SessionUserResponse> addUserToSession(
       @PathVariable UUID sessionId,
       @RequestParam UUID userId,
       @AuthenticationPrincipal CustomUserDetails userDetails) {
-
     UUID adminUserId = requireUserId(userDetails);
     SessionUserResponse response = sessionUserService.addUserToSession(sessionId, userId, adminUserId);
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -61,10 +79,25 @@ public class SessionUserController {
   @Operation(
       summary = "세션에서 사용자 제거",
       description = """
-          ## 인증(JWT): **필요**
-          
-          """
-  )
+      ## 인증(JWT)
+      - **필요**
+      
+      ## 권한
+      - **세션 OWNER**
+      
+      ## 경로 파라미터
+      - **`sessionId`**: 사용자를 제거할 세션 ID (`UUID`)
+      - **`userId`**: 제거할 대상 사용자의 ID (`UUID`)
+      
+      ## 동작 설명
+      - 세션에서 특정 사용자를 제거
+      - 해당 사용자가 이 세션에서 가졌던 모든 출석 기록(`Attendance`)을 함께 삭제
+      
+      ## 에러 코드
+      - **`SESSION_NOT_FOUND`**: 해당 출석 세션이 존재하지 않습니다.
+      - **`NOT_SESSION_OWNER`**: 세션 소유자 권한이 없습니다.
+      
+      """)
   @DeleteMapping("/{sessionId}/users/{userId}")
   public ResponseEntity<Void> removeUserFromSession(
       @PathVariable UUID sessionId,
@@ -81,17 +114,29 @@ public class SessionUserController {
   @Operation(
       summary = "세션 참여자 조회",
       description = """
-          ## 인증(JWT): **필요**
-          
-          """
-  )
+      ## 인증(JWT)
+      - **필요**
+      
+      ## 권한
+      - **세션 MEMBER** (OWNER, MANAGER, PARTICIPANT 모두 가능)
+      
+      ## 경로 파라미터
+      - **`sessionId`**: 참여자 목록을 조회할 세션 ID (`UUID`)
+      
+      ## 동작 설명
+      - 세션에 참여 중인 모든 사용자 목록을 조회
+      - 해당 세션의 멤버가 아닌 경우 조회 불가
+      
+      ## 에러 코드
+      - **`NOT_SESSION_MEMBER`**: 출석 세션의 멤버가 아닙니다.
+      
+      """)
   @GetMapping("/{sessionId}/users")
-  public ResponseEntity<List<SessionUserResponse>> getSessionUsers(@PathVariable UUID sessionId,
+  public ResponseEntity<List<SessionUserResponse>> getSessionUsers(
+      @PathVariable UUID sessionId,
       @AuthenticationPrincipal CustomUserDetails userDetails) {
     UUID adminUserId = requireUserId(userDetails);
     List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId, adminUserId);
     return ResponseEntity.ok(users);
   }
-
-
 }

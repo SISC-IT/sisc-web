@@ -36,8 +36,6 @@ public class SessionUserService {
    * 세션에 사용자 추가 (OWNER 전용 추천)
    */
   public SessionUserResponse addUserToSession(UUID sessionId, UUID targetUserId, UUID actorUserId) {
-    log.info("세션 사용자 추가: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
-
     authorizationService.ensureOwner(sessionId, actorUserId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
@@ -62,6 +60,7 @@ public class SessionUserService {
     SessionUser saved = sessionUserRepository.save(sessionUser);
 
     createAbsentForPastRounds(sessionId, user);
+    log.info("세션 사용자 추가: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
 
     return SessionUserResponse.from(saved);
   }
@@ -70,8 +69,6 @@ public class SessionUserService {
    * 세션에서 사용자 제거 (OWNER 전용 추천) - SessionUser 삭제 - 해당 유저의 이 세션 관련 Attendance 삭제
    */
   public void removeUserFromSession(UUID sessionId, UUID targetUserId, UUID actorUserId) {
-    log.info("세션 사용자 제거: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
-
     authorizationService.ensureOwner(sessionId, actorUserId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
@@ -83,6 +80,7 @@ public class SessionUserService {
     // 해당 세션의 라운드들에서 targetUserId의 출석 레코드 삭제
     attendanceRepository.deleteAllByAttendanceRound_AttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId,
         targetUserId);
+    log.info("세션 사용자 제거: sessionId={}, targetUserId={}, actorUserId={}", sessionId, targetUserId, actorUserId);
   }
 
   /**

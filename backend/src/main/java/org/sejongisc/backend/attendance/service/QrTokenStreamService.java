@@ -40,13 +40,8 @@ import org.springframework.core.env.Environment;
 @Slf4j
 public class QrTokenStreamService {
 
-  @Value("${app.prod-frontend-url}")
-  private String prodFrontendUrl;
-
-  @Value("${app.dev-frontend-url}")
-  private String devFrontendUrl;
-
-  private final Environment environment;
+  @Value("${app.frontend-url}")
+  private String frontendUrl;
 
   private static final String ATTENDANCE_PATH = "/attendance";
 
@@ -109,16 +104,7 @@ public class QrTokenStreamService {
   }
 
   public String createQrUrl(UUID roundId, String token) {
-    String baseUrl = devFrontendUrl;
-
-    /* TODO : 배포서버 설치, application-dev.yml 생성, devFrontendUrl 이관 후 주석 해제
-    for (String profile : environment.getActiveProfiles()) {
-      if ("prod".equalsIgnoreCase(profile)) {
-        baseUrl = prodFrontendUrl;
-        break;
-      }
-    }*/
-
+    String baseUrl = frontendUrl;
     return String.format("%s%s?roundId=%s&token=%s", baseUrl, ATTENDANCE_PATH, roundId, token);
   }
 

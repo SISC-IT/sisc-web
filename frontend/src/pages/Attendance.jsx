@@ -6,9 +6,11 @@ import SessionManage from '../components/attendance/SessionManage';
 import { attendanceList } from '../utils/attendanceList';
 
 import { useAuthGuard } from '../hooks/useAuthGuard';
+import { useCheckIn } from '../hooks/useCheckIn';
 
 const Attendance = () => {
   useAuthGuard();
+  useCheckIn();
 
   const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState('');

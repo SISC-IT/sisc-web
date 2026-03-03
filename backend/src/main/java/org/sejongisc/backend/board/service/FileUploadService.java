@@ -16,8 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class FileUploadService {
 
-//  @Value("${file.upload-dir}")
-  private final static String UPLOAD_DIRS = "C:/uploads/";
+  private final static String UPLOAD_DIRS = "/app/uploads/";
 
   private Path rootLocation;
 
