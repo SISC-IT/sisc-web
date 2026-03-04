@@ -1,24 +1,22 @@
 package org.sejongisc.backend.attendance.repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
+import org.sejongisc.backend.attendance.entity.RoundStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
 @Repository
 public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound, UUID> {
 
     List<AttendanceRound> findByAttendanceSession_AttendanceSessionIdAndRoundDateBefore(UUID sessionId, LocalDate date);
-
-
 
     // UPCOMING -> ACTIVE
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -40,8 +38,7 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
 """)
     int closeDueRounds(LocalDateTime now);
 
-
-
+  List<AttendanceRound> findByRoundStatusAndCloseAtBefore(RoundStatus status, LocalDateTime dateTime);
 
     Optional<AttendanceRound> findByQrSecret(String qrCode);
     List<AttendanceRound> findByAttendanceSession_AttendanceSessionId(UUID sessionId);
