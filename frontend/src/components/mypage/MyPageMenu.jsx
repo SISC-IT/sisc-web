@@ -1,19 +1,11 @@
 import { useState } from 'react';
 import styles from './MyPageMenu.module.css';
-import AttendanceIcon from '../../assets/s-coin-blue.svg';
 import ActivityIcon from '../../assets/s-coin-purple.svg';
 import PointPocketIcon from '../../assets/point-pocket.svg';
 import { getMockByKey } from '../../utils/myPageMenuMock';
 import ActivityModal from './ActivityModal';
 
 const MENU_ITEMS = [
-  {
-    key: 'attendance',
-    title: '출석관리',
-    description: '세션별 출석을 확인할 수 있어요.',
-    icon: AttendanceIcon,
-    ariaLabel: '출석관리 열기',
-  },
   {
     key: 'activity',
     title: '내 활동',
