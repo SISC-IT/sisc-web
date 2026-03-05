@@ -45,7 +45,7 @@ from AI.libs.database.repository import save_executions_to_db, save_reports_to_d
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.features.legacy.technical_features import add_technical_indicators, add_multi_timeframe_features
 from AI.libs.database.repository import save_portfolio_summary, save_portfolio_positions
-from AI.pipelines.screener import DynamicScreener
+from AI.modules.finder.screener import DynamicScreener
 # 현재는 시뮬레이션 코드만 작성되어 있지만, 실제 운영에서는 API 연동 부분을 추가 예정. 
 # 이때문에 mode 인자를 받아 시뮬레이션과 라이브 모드를 구분할 수 있도록 설계함. 
 # 또한, XAI 리포트 생성 여부도 옵션으로 조정 가능하도록 함.

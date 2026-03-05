@@ -1,4 +1,4 @@
-#AI/pipelines/screener.py
+#AI/modules/finder/screener.py
 
 import os
 import sys

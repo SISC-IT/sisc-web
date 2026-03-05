@@ -15,7 +15,7 @@ class TFTRiskManager:
 
     def predict_crash_probability(self, feature_df: pd.DataFrame):
         """
-        입력된 파생 피처를 바탕으로 급락 확률 산출 [명세서 3번 준수]
+        입력된 파생 피처를 바탕으로 급락 확률 산출
         """
         # 1. 핵심 입력 데이터 추출 (Primary)
         primary_keys = [

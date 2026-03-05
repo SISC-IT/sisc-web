@@ -10,11 +10,11 @@ from .architecture import PatchTST_Model
 # 설정값
 CONFIG = {
     'seq_len': 120,
-    'input_features': 7, # log_return, ma_trend_score 등 피처 개수와 일치시켜야 함
+    'input_features': 7,
     'batch_size': 32,
     'learning_rate': 0.0001,
     'epochs': 100,
-    'patience': 10, # Early Stopping
+    'patience': 10,
     'model_save_path': 'AI/data/weights/PatchTST_best.pt'
 }
 
