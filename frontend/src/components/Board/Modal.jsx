@@ -8,6 +8,9 @@ const Modal = ({
   setTitle,
   content,
   setContent,
+  boardOptions,
+  selectedBoardId,
+  onBoardChange,
   selectedFiles,
   onFileChange,
   onRemoveFile,
@@ -104,8 +107,17 @@ const Modal = ({
           <div className={styles.accessField}>
             <label className={styles.accessLabel}>접근 권한</label>
             <div className={styles.selectWrapper}>
-              <select className={styles.select} defaultValue="세션선택">
-                <option value="세션선택">세션선택</option>
+              <select
+                className={styles.select}
+                value={selectedBoardId}
+                onChange={(e) => onBoardChange?.(e.target.value)}
+              >
+                <option value="">하위 게시판 선택</option>
+                {(boardOptions || []).map((board) => (
+                  <option key={board.id} value={board.id}>
+                    {board.name}
+                  </option>
+                ))}
               </select>
               <div className={styles.selectIcon}>
                 <img src={DropdownArrowIcon} alt="드롭다운 화살표" />

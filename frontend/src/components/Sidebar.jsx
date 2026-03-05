@@ -5,30 +5,59 @@ import { useState, useEffect } from 'react';
 import { api } from '../utils/axios';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { getParentBoards } from '../utils/boardApi';
+import { isAllBoardName, toBoardPath } from '../utils/boardRoute';
 
 const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const nav = useNavigate();
   const location = useLocation();
-
-  const boardList = [
-    { name: '전체 게시판', path: '/board' },
-    { name: '증권1팀 게시판', path: '/board/securities-1' },
-    { name: '증권2팀 게시판', path: '/board/securities-2' },
-    { name: '증권3팀 게시판', path: '/board/securities-3' },
-    { name: '자산운용팀 게시판', path: '/board/asset-management' },
-    { name: '금융IT팀 게시판', path: '/board/finance-it' },
-    { name: '매크로팀 게시판', path: '/board/macro' },
-    { name: '트레이딩팀 게시판', path: '/board/trading' },
-  ];
-
-  const currentBoard = boardList.find(
-    (item) => item.path === location.pathname
-  );
-  const [selectedBoard, setSelectedBoard] = useState(
-    currentBoard?.name || '전체 게시판'
-  );
+  const [boardList, setBoardList] = useState([]);
+  const [selectedBoard, setSelectedBoard] = useState('');
+  const [isBoardMenuOpen, setIsBoardMenuOpen] = useState(false);
   const { isLoggedIn, logout } = useAuth();
   const [isPresident, setIsPresident] = useState(false);
+
+  useEffect(() => {
+    const loadParentBoards = async () => {
+      try {
+        const boards = await getParentBoards();
+        const mappedBoards = (Array.isArray(boards) ? boards : []).map((board) => ({
+          name: isAllBoardName(board.boardName)
+            ? '전체 게시판'
+            : String(board.boardName || '').includes('게시판')
+              ? board.boardName
+              : `${board.boardName} 게시판`,
+          path: toBoardPath(board.boardName),
+        }));
+
+        const uniqueBoards = mappedBoards.filter(
+          (item, index, array) =>
+            item.path && array.findIndex((candidate) => candidate.path === item.path) === index
+        );
+
+        uniqueBoards.sort((a, b) => {
+          if (a.path === '/board') return -1;
+          if (b.path === '/board') return 1;
+          return 0;
+        });
+
+        setBoardList(uniqueBoards);
+      } catch {
+        setBoardList([{ name: '전체 게시판', path: '/board' }]);
+      }
+    };
+
+    loadParentBoards();
+  }, []);
+
+  useEffect(() => {
+    if (!boardList.length) return;
+    const currentPath = decodeURIComponent(location.pathname);
+    const currentBoard = boardList.find(
+      (item) => decodeURIComponent(item.path) === currentPath
+    );
+    setSelectedBoard(currentBoard?.name || boardList[0].name);
+  }, [boardList, location.pathname]);
 
   useEffect(() => {
     const checkAdminRole = async () => {
@@ -62,6 +91,27 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     }
   };
 
+  const handleBoardSelect = (board) => {
+    if (!board?.path) return;
+
+    setSelectedBoard(board.name);
+    setIsBoardMenuOpen(false);
+
+    const currentPath = decodeURIComponent(location.pathname);
+    const targetPath = decodeURIComponent(board.path);
+
+    if (currentPath === targetPath) {
+      nav(board.path, {
+        replace: false,
+        state: { boardSwitchAt: Date.now() },
+      });
+    } else {
+      nav(board.path);
+    }
+
+    handleNavLinkClick();
+  };
+
   return (
     <>
       {/* 모바일 오버레이 */}
@@ -80,27 +130,43 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
           <div className={styles['menu-section']}>
             <span className={styles['menu-title']}>게시판</span>
 
-            <select
-              className={styles.boardSelect}
-              value={selectedBoard}
-              onChange={(e) => {
-                const newBoard = e.target.value;
-                const selected = boardList.find(
-                  (item) => item.name === newBoard
-                );
-                if (selected) {
-                  setSelectedBoard(newBoard);
-                  nav(selected.path);
-                  handleNavLinkClick();
-                }
-              }}
+            <div
+              className={styles.boardMenu}
+              onMouseEnter={() => setIsBoardMenuOpen(true)}
+              onMouseLeave={() => setIsBoardMenuOpen(false)}
             >
-              {boardList.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+              <button
+                type="button"
+                className={styles.boardMenuTrigger}
+                onClick={() => setIsBoardMenuOpen((prev) => !prev)}
+              >
+                {selectedBoard || '게시판 선택'}
+              </button>
+
+              {isBoardMenuOpen && (
+                <ul className={styles.boardMenuList}>
+                  {boardList.length > 0 ? (
+                    boardList.map((item) => (
+                      <li key={item.path}>
+                        <button
+                          type="button"
+                          className={`${styles.boardMenuItem} ${
+                            selectedBoard === item.name
+                              ? styles.boardMenuItemActive
+                              : ''
+                          }`}
+                          onClick={() => handleBoardSelect(item)}
+                        >
+                          {item.name}
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li className={styles.boardMenuLoading}>게시판 로딩 중...</li>
+                  )}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className={styles['menu-section']}>

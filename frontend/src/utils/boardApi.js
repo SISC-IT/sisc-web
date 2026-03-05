@@ -32,20 +32,33 @@ export const getSubBoards = async (parentBoardId = null) => {
 };
 
 /*
- * 게시판 생성
- * POST /api/board
+ * 하위 게시판 생성 (회장 권한)
+ * POST /api/admin/board
  * @param {string} boardName - 게시판 이름
  * @param {string|null} parentBoardId - 부모 게시판 ID (최상위는 null)
  */
-export const createBoard = async (boardName, parentBoardId = null) => {
-  const requestBody = { boardName };
+export const createSubBoard = async (boardName, parentBoardId = null) => {
+  const normalizedBoardName = String(boardName || '').trim();
 
-  if (parentBoardId) {
-    requestBody.parentBoardId = parentBoardId;
+  if (!normalizedBoardName) {
+    throw new Error('boardName is required');
   }
 
-  const response = await api.post('/api/board', requestBody);
+  const requestBody = {
+    boardName: normalizedBoardName,
+    parentBoardId: parentBoardId ?? null,
+  };
+
+  const response = await api.post('/api/admin/board', requestBody);
   return response.data;
+};
+
+/*
+ * 게시판 생성 (하위 호환용)
+ * createSubBoard와 동일한 엔드포인트를 사용합니다.
+ */
+export const createBoard = async (boardName, parentBoardId = null) => {
+  return createSubBoard(boardName, parentBoardId);
 };
 
 // ==================== 게시글 API ====================

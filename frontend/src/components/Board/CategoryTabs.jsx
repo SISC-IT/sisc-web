@@ -17,7 +17,7 @@ const CategoryTabs = ({ activeTab, onTabChange, tabs, onCreateSubBoard }) => {
       </div>
 
       <button className={styles.subBoardButton} onClick={onCreateSubBoard}>
-        하위 게시판 추가 +
+        하위 게시판 생성
       </button>
     </div>
   );

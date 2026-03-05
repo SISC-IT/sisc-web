@@ -159,21 +159,63 @@
   height: 19px;
 }
 
-.boardSelect {
+.boardMenu {
+  position: relative;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.boardMenuTrigger {
   width: 100%;
   background: transparent;
   color: #ffffff;
-  border: none;
+  border: 1px solid #2f3442;
   padding: 8px 3px;
   border-radius: 6px;
-  margin-top: 6px;
+  text-align: left;
   text-decoration: none;
   font-weight: 500;
-  font-size: 16px;
+  font-size: 15px;
   cursor: pointer;
 }
 
-.boardSelect option {
-  color: black;
-  background: white;
+.boardMenuList {
+  list-style: none;
+  margin: 8px 0 0 0;
+  padding: 6px;
+  border: 1px solid #2f3442;
+  border-radius: 8px;
+  background: #0d111c;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.boardMenuItem {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 6px;
+  text-align: left;
+  color: #9da7bd;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.boardMenuItem:hover {
+  background: #1a2235;
+  color: #c9d3ea;
+}
+
+.boardMenuItemActive {
+  color: #ffffff;
+  background: #1a2235;
+}
+
+.boardMenuLoading {
+  color: #8a94a8;
+  font-size: 13px;
+  padding: 8px 6px;
 }
