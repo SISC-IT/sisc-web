@@ -25,6 +25,8 @@ spring:
   application:
     name: Sejong-ISC-Backend
 
+  jpa:
+    open-in-view: false   # 커넥션을 쿼리 실행 직후 즉시 반납하게 함
 
   # 메인 DB (Postgres) - 도커가 주입해주는 환경변수 사용
   datasource:
@@ -34,8 +36,8 @@ spring:
     password: ${DB_PASSWORD} # .env의 DB_PASSWORD 값
     hikari:
       pool-name: HikariPool
-      maximum-pool-size: ${DB_POOL_MAX:4} # t2.micro니까 커넥션 풀 작게 유지
-      minimum-idle: 2
+      maximum-pool-size: ${DB_POOL_MAX:30} # t2.micro니까 커넥션 풀 작게 유지
+      minimum-idle: 10
 
 
   stock:
@@ -47,8 +49,8 @@ spring:
       default_schema: public
       hikari:
         pool-name: StockHikariPool
-        maximum-pool-size: ${STOCK_POOL_MAX:2}   # 커넥션 풀 작게 유지
-        minimum-idle: 1
+        maximum-pool-size: ${STOCK_POOL_MAX:5}   # 커넥션 풀 작게 유지
+        minimum-idle: 2
   data:
     redis:
       host: redis
