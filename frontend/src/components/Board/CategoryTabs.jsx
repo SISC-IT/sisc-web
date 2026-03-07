@@ -1,7 +1,13 @@
 import React from 'react';
 import styles from './CategoryTabs.module.css';
 
-const CategoryTabs = ({ activeTab, onTabChange, tabs, onCreateSubBoard }) => {
+const CategoryTabs = ({
+  activeTab,
+  onTabChange,
+  tabs,
+  onCreateSubBoard,
+  canCreateSubBoard = false,
+}) => {
   return (
     <div className={styles.categoryTabsRow}>
       <div className={styles.tabsLeft}>
@@ -16,9 +22,14 @@ const CategoryTabs = ({ activeTab, onTabChange, tabs, onCreateSubBoard }) => {
         ))}
       </div>
 
-      <button className={styles.subBoardButton} onClick={onCreateSubBoard}>
-        하위 게시판 생성
-      </button>
+      {canCreateSubBoard && (
+        <button
+          className={styles.subBoardButton}
+          onClick={onCreateSubBoard}
+        >
+          하위 게시판 생성
+        </button>
+      )}
     </div>
   );
 };

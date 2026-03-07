@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { getParentBoards } from '../utils/boardApi';
 import { isAllBoardName, toBoardPath } from '../utils/boardRoute';
+import DropdownArrowIcon from '../assets/boardSelectArrow.svg';
 
 const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const nav = useNavigate();
@@ -56,7 +57,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     const currentBoard = boardList.find(
       (item) => decodeURIComponent(item.path) === currentPath
     );
-    setSelectedBoard(currentBoard?.name || boardList[0].name);
+    setSelectedBoard(currentBoard?.name || '');
   }, [boardList, location.pathname]);
 
   useEffect(() => {
@@ -128,45 +129,48 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
       >
         <nav aria-label="사이드바">
           <div className={styles['menu-section']}>
-            <span className={styles['menu-title']}>게시판</span>
+            <span className={styles['menu-title']}>Main</span>
 
-            <div
-              className={styles.boardMenu}
-              onMouseEnter={() => setIsBoardMenuOpen(true)}
-              onMouseLeave={() => setIsBoardMenuOpen(false)}
+            <button
+              type="button"
+              className={styles.menuTitleToggle}
+              onClick={() => setIsBoardMenuOpen((prev) => !prev)}
+              aria-expanded={isBoardMenuOpen}
+              aria-controls="sidebar-board-list"
             >
-              <button
-                type="button"
-                className={styles.boardMenuTrigger}
-                onClick={() => setIsBoardMenuOpen((prev) => !prev)}
+              게시판
+              <span
+                className={`${styles.menuTitleToggleIcon} ${
+                  isBoardMenuOpen ? styles.menuTitleToggleIconOpen : ''
+                }`}
               >
-                {selectedBoard || '게시판 선택'}
-              </button>
+                <img src={DropdownArrowIcon} alt="토글" />
+              </span>
+            </button>
 
-              {isBoardMenuOpen && (
-                <ul className={styles.boardMenuList}>
-                  {boardList.length > 0 ? (
-                    boardList.map((item) => (
-                      <li key={item.path}>
-                        <button
-                          type="button"
-                          className={`${styles.boardMenuItem} ${
-                            selectedBoard === item.name
-                              ? styles.boardMenuItemActive
-                              : ''
-                          }`}
-                          onClick={() => handleBoardSelect(item)}
-                        >
-                          {item.name}
-                        </button>
-                      </li>
-                    ))
-                  ) : (
-                    <li className={styles.boardMenuLoading}>게시판 로딩 중...</li>
-                  )}
-                </ul>
-              )}
-            </div>
+            {isBoardMenuOpen && (
+              <ul id="sidebar-board-list" className={styles.boardMenuList}>
+                {boardList.length > 0 ? (
+                  boardList.map((item) => (
+                    <li key={item.path}>
+                      <button
+                        type="button"
+                        className={`${styles.boardMenuItem} ${
+                          selectedBoard === item.name
+                            ? styles.boardMenuItemActive
+                            : ''
+                        }`}
+                        onClick={() => handleBoardSelect(item)}
+                      >
+                        {item.name}
+                      </button>
+                    </li>
+                  ))
+                ) : (
+                  <li className={styles.boardMenuLoading}>게시판 로딩 중...</li>
+                )}
+              </ul>
+            )}
           </div>
 
           <div className={styles['menu-section']}>

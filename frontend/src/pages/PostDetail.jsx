@@ -1,8 +1,10 @@
 // components/Board/PostDetail.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import * as boardApi from '../utils/boardApi';
 import styles from './PostDetail.module.css';
+import { toBoardRouteSegment } from '../utils/boardRoute';
+import { api } from '../utils/axios';
 
 import PostView from '../components/Board/PostDetail/PostView';
 import PostEditForm from '../components/Board/PostDetail/PostEditForm';
@@ -60,6 +62,7 @@ const findCommentInTree = (nodes, targetId) => {
 const PostDetail = () => {
   const { postId, team } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 상태 관리
   const [post, setPost] = useState(null);
@@ -76,6 +79,10 @@ const PostDetail = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [showCommentMenu, setShowCommentMenu] = useState(null);
   const [replyTargetId, setReplyTargetId] = useState(null);
+
+  const boardName =
+    post?.boardName || post?.board?.boardName || post?.board?.name || '';
+  const boardId = post?.boardId || post?.board?.boardId || '';
 
   // 데이터 로드 로직
   const refreshPostAndComments = async () => {
@@ -155,15 +162,46 @@ const PostDetail = () => {
     }
   };
 
-  const handleAttachmentDownload = (file) => {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${baseUrl}${file.filePath}`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.originalFilename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  const handleAttachmentDownload = async (file) => {
+    try {
+      const rawPath = file?.filePath || file?.path || file?.url;
+      if (!rawPath) {
+        alert('다운로드할 파일 경로를 찾을 수 없습니다.');
+        return;
+      }
+
+      const normalizedPath = rawPath.startsWith('http')
+        ? rawPath
+        : rawPath.startsWith('/')
+          ? rawPath
+          : `/${rawPath}`;
+
+      const response = await api.get(normalizedPath, {
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type'] || 'application/octet-stream',
+      });
+      const objectUrl = window.URL.createObjectURL(blob);
+
+      const fileName =
+        file?.originalFilename ||
+        file?.name ||
+        decodeURIComponent(String(rawPath).split('/').pop() || 'download');
+
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('첨부파일 다운로드 실패:', error);
+      alert('첨부파일 다운로드에 실패했습니다.');
+    }
   };
 
   // --- 수정 모드 핸들러 ---
@@ -217,6 +255,28 @@ const PostDetail = () => {
       console.error('게시글 삭제 실패:', error);
       alert('게시글 삭제에 실패했습니다.');
     }
+  };
+
+  const handleMoveToBoard = () => {
+    const targetTeamSegment =
+      location.state?.originTeam || team || toBoardRouteSegment(boardName);
+    const targetBoardId = location.state?.originBoardId || boardId;
+
+    if (!targetTeamSegment) {
+      navigate('/board');
+      return;
+    }
+
+    const query = targetBoardId
+      ? `?subBoardId=${encodeURIComponent(targetBoardId)}`
+      : '';
+
+    if (targetTeamSegment === 'root') {
+      navigate(`/board${query}`);
+      return;
+    }
+
+    navigate(`/board/${encodeURIComponent(targetTeamSegment)}${query}`);
   };
 
   // --- 댓글 핸들러 ---
@@ -318,11 +378,13 @@ const PostDetail = () => {
         ) : (
           <PostView
             post={post}
+            boardName={boardName}
             showMenu={showMenu}
             setShowMenu={setShowMenu}
             onEdit={handleEditStart}
             onDelete={handleDelete}
             onDownload={handleAttachmentDownload}
+            onMoveToBoard={handleMoveToBoard}
           />
         )}
 

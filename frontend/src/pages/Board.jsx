@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import PostItem from '../components/Board/PostItem';
 import Modal from '../components/Board/Modal';
 import SearchBar from '../components/Board/SearchBar';
@@ -9,8 +9,10 @@ import CreateSubBoardModal from '../components/Board/CreateSubBoardModal';
 import styles from './Board.module.css';
 import * as boardApi from '../utils/boardApi';
 import { isAllBoardName, toBoardRouteSegment } from '../utils/boardRoute';
+import { api } from '../utils/axios';
 
 const ALL_TAB_ID = 'all';
+const SUB_BOARD_ADMIN_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT', 'VICE_PRESIDENT'];
 
 const getPostId = (post) => post?.postId || post?.id;
 
@@ -32,6 +34,7 @@ const mergePosts = (responses = []) => {
 
 const Board = () => {
   const { team } = useParams();
+  const location = useLocation();
 
   const [boardIdMap, setBoardIdMap] = useState({});
   const [boardNameMap, setBoardNameMap] = useState({});
@@ -49,11 +52,17 @@ const Board = () => {
   const [subBoardName, setSubBoardName] = useState('');
   const [subBoardTabs, setSubBoardTabs] = useState([{ id: ALL_TAB_ID, name: '전체 게시판' }]);
   const [writeBoardId, setWriteBoardId] = useState('');
+  const [canCreateSubBoard, setCanCreateSubBoard] = useState(false);
+  const [isSavingPost, setIsSavingPost] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
   const prevPostsRef = useRef(posts);
+  const requestedSubBoardId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('subBoardId') || '';
+  }, [location.search]);
 
   const currentSegment = team ? decodeURIComponent(team) : 'root';
   const currentBoardId = boardIdMap[currentSegment];
@@ -101,6 +110,20 @@ const Board = () => {
   useEffect(() => {
     loadBoardList();
   }, [loadBoardList]);
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const { data } = await api.get('/api/user/details');
+        const normalizedRole = String(data?.role || '').trim().toUpperCase();
+        setCanCreateSubBoard(SUB_BOARD_ADMIN_ROLES.includes(normalizedRole));
+      } catch {
+        setCanCreateSubBoard(false);
+      }
+    };
+
+    fetchRole();
+  }, []);
 
   const fetchPostsByBoardIds = useCallback(async (boardIds, keyword = '') => {
     const uniqueBoardIds = Array.from(new Set((boardIds || []).filter(Boolean)));
@@ -167,10 +190,19 @@ const Board = () => {
         }
 
         setSubBoardTabs(tabs);
-        setActiveSubBoard(ALL_TAB_ID);
 
-        const allBoardIds = [currentBoardId, ...tabs.filter((tab) => tab.id !== ALL_TAB_ID).map((tab) => tab.id)];
-        await fetchPostsByBoardIds(allBoardIds);
+        const isRequestedSubBoardValid =
+          requestedSubBoardId && tabs.some((tab) => tab.id === requestedSubBoardId);
+        const nextTabId = isRequestedSubBoardValid ? requestedSubBoardId : ALL_TAB_ID;
+
+        setActiveSubBoard(nextTabId);
+
+        const targetBoardIds =
+          nextTabId === ALL_TAB_ID
+            ? [currentBoardId, ...tabs.filter((tab) => tab.id !== ALL_TAB_ID).map((tab) => tab.id)]
+            : [nextTabId];
+
+        await fetchPostsByBoardIds(targetBoardIds);
       } catch (error) {
         console.error('하위 게시판 조회 실패:', error);
         setSubBoardTabs([{ id: ALL_TAB_ID, name: '전체 게시판' }]);
@@ -180,7 +212,7 @@ const Board = () => {
     };
 
     loadSubBoardsAndPosts();
-  }, [boardsLoaded, currentBoardId, fetchPostsByBoardIds]);
+  }, [boardsLoaded, currentBoardId, fetchPostsByBoardIds, requestedSubBoardId]);
 
   const handleTabChange = useCallback(
     async (tabId) => {
@@ -200,12 +232,7 @@ const Board = () => {
   );
 
   const handleOpenModal = () => {
-    if (activeSubBoard && activeSubBoard !== ALL_TAB_ID) {
-      setWriteBoardId(activeSubBoard);
-    } else {
-      const firstSubBoardId = subBoardTabs.find((tab) => tab.id !== ALL_TAB_ID)?.id;
-      setWriteBoardId(firstSubBoardId || currentBoardId || '');
-    }
+    setWriteBoardId('');
     setShowModal(true);
   };
 
@@ -215,9 +242,15 @@ const Board = () => {
     setContent('');
     setSelectedFiles([]);
     setWriteBoardId('');
+    setIsSavingPost(false);
   };
 
   const handleOpenSubBoardModal = () => {
+    if (!canCreateSubBoard) {
+      alert('하위 게시판 생성 권한이 없습니다.');
+      return;
+    }
+
     setShowSubBoardModal(true);
   };
 
@@ -280,8 +313,7 @@ const Board = () => {
   };
 
   const handleSave = async () => {
-    if (!currentBoardId) {
-      alert('게시판 정보를 찾을 수 없습니다.');
+    if (isSavingPost) {
       return;
     }
 
@@ -295,22 +327,21 @@ const Board = () => {
       return;
     }
 
-    const targetBoardId = writeBoardId ||
-      (activeSubBoard === ALL_TAB_ID ? currentBoardId : activeSubBoard);
-
-    if (!targetBoardId || targetBoardId === ALL_TAB_ID) {
-      alert('작성할 하위 게시판을 선택해주세요.');
+    if (!writeBoardId) {
+      alert('세션을 선택해야 합니다.');
       return;
     }
 
     try {
+      setIsSavingPost(true);
+
       const postData = {
         title: title.trim(),
         content: content.trim(),
         files: selectedFiles,
       };
 
-      await boardApi.createPost(targetBoardId, postData);
+      await boardApi.createPost(writeBoardId, postData);
 
       handleCloseModal();
       setSelectedFiles([]);
@@ -322,6 +353,10 @@ const Board = () => {
     } catch (error) {
       console.error('게시글 작성 실패:', error);
       alert(`게시글 작성에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+    } finally {
+      window.setTimeout(() => {
+        setIsSavingPost(false);
+      }, 800);
     }
   };
 
@@ -443,12 +478,14 @@ const Board = () => {
         onTabChange={handleTabChange}
         tabs={subBoardTabs}
         onCreateSubBoard={handleOpenSubBoardModal}
+        canCreateSubBoard={canCreateSubBoard}
       />
 
       <BoardActions
         sortOption={sortOption}
         onSortChange={handleSortChange}
         onWrite={handleOpenModal}
+        resultCount={sortedPosts.length}
       />
 
       <div className={styles.postsContainer}>
@@ -512,6 +549,7 @@ const Board = () => {
           onRemoveFile={handleRemoveFile}
           onSave={handleSave}
           onClose={handleCloseModal}
+          isSaving={isSavingPost}
         />
       )}
 

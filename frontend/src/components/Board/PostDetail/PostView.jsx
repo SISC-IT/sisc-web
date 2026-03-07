@@ -8,11 +8,13 @@ import FileAttachmentList from './FileAttachmentList';
 
 const PostView = ({
   post,
+  boardName,
   showMenu,
   setShowMenu,
   onEdit,
   onDelete,
   onDownload,
+  onMoveToBoard,
 }) => {
   const authorName =
     post.author || post.user?.name || post.createdBy?.name || '운영진';
@@ -23,6 +25,16 @@ const PostView = ({
 
   return (
     <>
+      {boardName && (
+        <button
+          type="button"
+          className={styles.boardLink}
+          onClick={onMoveToBoard}
+        >
+          {boardName}
+        </button>
+      )}
+
       <div className={styles.titleWrapper}>
         <h1 className={styles.title}>{post.title}</h1>
         <div className={styles.menuContainer}>

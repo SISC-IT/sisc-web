@@ -5,7 +5,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: transparent;
   z-index: 999;
   display: block;
 }
@@ -165,6 +165,51 @@
   margin-top: 6px;
 }
 
+.menuTitleToggle {
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 6px;
+  padding: 10px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.menuTitleToggle:hover {
+  background-color: #d9d9d90d;
+}
+
+.menuTitleToggleIcon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+}
+
+.menuTitleToggleIcon img {
+  width: 10px;
+  height: 6px;
+  display: block;
+  opacity: 0.9;
+  filter: invert(1) brightness(0.88);
+}
+
+.menuTitleToggleIconOpen {
+  transform: rotate(180deg);
+}
+
 .boardMenuTrigger {
   width: 100%;
   background: transparent;
@@ -181,37 +226,61 @@
 
 .boardMenuList {
   list-style: none;
-  margin: 8px 0 0 0;
-  padding: 6px;
-  border: 1px solid #2f3442;
-  border-radius: 8px;
-  background: #0d111c;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a4a #1f2330;
+}
+
+.boardMenuList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.boardMenuList::-webkit-scrollbar-track {
+  background: #1f2330;
+  border-radius: 8px;
+}
+
+.boardMenuList::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 8px;
+  border: 1px solid #1f2330;
+}
+
+.boardMenuList::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
 }
 
 .boardMenuItem {
   width: 100%;
   background: transparent;
   border: none;
-  border-radius: 6px;
-  padding: 8px 6px;
+  border-radius: 4px;
+  padding: 8px 8px;
   text-align: left;
-  color: #9da7bd;
-  font-size: 14px;
+  color: #a3a3a3;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
 }
 
 .boardMenuItem:hover {
-  background: #1a2235;
-  color: #c9d3ea;
+  background: transparent;
+  color: #d1d1d1;
 }
 
 .boardMenuItemActive {
   color: #ffffff;
-  background: #1a2235;
+  background: transparent;
 }
 
 .boardMenuLoading {

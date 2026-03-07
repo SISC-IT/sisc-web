@@ -280,6 +280,24 @@
   margin-bottom: 24px;
 }
 
+.boardLink {
+  width: 100%;
+  max-width: var(--width-content);
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #1d80f4;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.boardLink:hover {
+  text-decoration: underline;
+}
+
 .title {
   margin: 0;
   flex-grow: 1;
@@ -426,6 +444,14 @@
   box-sizing: border-box;
 }
 
+.attachmentItemClickable {
+  cursor: pointer;
+}
+
+.attachmentItemClickable:hover {
+  background-color: #f7f9fc;
+}
+
 .attachmentIcon {
   width: 20px;
   height: 20px;
@@ -461,7 +487,7 @@
   max-width: var(--width-content);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .editTitleWrapper {
@@ -475,10 +501,10 @@
 
 .editTitleInput {
   width: 100%;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  padding: 10px;
-  border: 2px solid #e5e7eb;
+  padding: 12px 14px;
+  border: 1px solid #d7d7d7;
   border-radius: 8px;
   outline: none;
   transition: border-color 0.2s;
@@ -486,7 +512,75 @@
 }
 
 .editTitleInput:focus {
-  border-color: #3b82f6;
+  border-color: #828282;
+}
+
+.editContentSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.editContentHeader {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.editFileAddButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgba(215, 215, 215, 1);
+  border-radius: 8px;
+  padding: 6px 10px;
+  user-select: none;
+}
+
+.editFileAddButton:hover {
+  background: rgba(246, 246, 246, 1);
+}
+
+.editFileText {
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(120, 120, 120, 1);
+}
+
+.editContentContainer {
+  width: 100%;
+  min-height: 360px;
+  border: 1px solid #d7d7d7;
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.editContentContainerDragOver {
+  border-color: rgba(29, 128, 244, 0.95);
+  background: rgba(237, 245, 255, 1);
+}
+
+.editDragOverlay {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(29, 128, 244, 0.95);
+  border-radius: 8px;
+  background: rgba(237, 245, 255, 0.85);
+  color: rgba(29, 128, 244, 1);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 .editDivider {
@@ -500,20 +594,21 @@
   width: 100%;
   font-size: 15px;
   line-height: 1.6;
-  padding: 14px;
-  margin: 20px 0;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
   outline: none;
-  resize: vertical;
+  resize: none;
   font-family: inherit;
-  transition: border-color 0.2s;
+  background: transparent;
   box-sizing: border-box;
   min-height: 300px;
+  flex: 1;
 }
 
 .editContentTextarea:focus {
-  border-color: #3b82f6;
+  border-color: transparent;
 }
 
 .editAttachments {
@@ -525,42 +620,81 @@
   box-sizing: border-box;
 }
 
+.editFileSection {
+  margin-top: 4px;
+}
+
+.editFileOutsideList {
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+.editFileOutsideItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.editFileInlineName {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(120, 120, 120, 1);
+  word-break: break-all;
+  flex: 1;
+}
+
+.editFileRemoveButton {
+  border: none;
+  background: transparent;
+  color: rgba(130, 130, 130, 1);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.editFileRemoveButton:hover {
+  color: rgba(231, 76, 60, 1);
+}
+
 .editButtons {
   display: flex;
   gap: 10px;
-  margin: 20px 0;
+  margin: 20px 0 0;
   width: 100%;
-  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .saveButton {
-  flex: 1;
-  min-width: 100px;
+  min-width: 140px;
   padding: 10px 20px;
-  background-color: #3b82f6;
+  background-color: rgba(29, 128, 244, 1);
   color: white;
   border: none;
   border-radius: 8px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .saveButton:hover {
-  background-color: #2563eb;
+  background-color: rgba(24, 102, 195, 1);
 }
 
 .cancelButton {
-  flex: 1;
-  min-width: 100px;
+  min-width: 120px;
   padding: 10px 20px;
   background-color: #e5e7eb;
   color: #374151;
   border: none;
   border-radius: 8px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
 }

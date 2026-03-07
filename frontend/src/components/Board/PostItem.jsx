@@ -27,7 +27,7 @@ const PostItem = ({ post, onLike, onBookmark }) => {
       return;
     }
 
-    const teamPath = toBoardRouteSegment(boardName) || team;
+    const teamPath = team || toBoardRouteSegment(boardName);
 
     if (!teamPath) {
       alert('게시판 정보를 찾을 수 없습니다.');
@@ -36,7 +36,13 @@ const PostItem = ({ post, onLike, onBookmark }) => {
 
     const path = `/board/${encodeURIComponent(teamPath)}/post/${postId}`;
 
-    navigate(path, { state: { post } });
+    navigate(path, {
+      state: {
+        post,
+        originTeam: team || '',
+        originBoardId: post.boardId || post.board?.boardId || '',
+      },
+    });
   };
 
   const handleBookmarkClick = (e) => {
