@@ -29,7 +29,7 @@ const PostView = ({
         <button
           type="button"
           className={styles.boardLink}
-          onClick={onMoveToBoard}
+          onClick={() => onMoveToBoard?.()}
         >
           {boardName}
         </button>

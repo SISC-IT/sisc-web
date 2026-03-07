@@ -44,7 +44,6 @@ const FileAttachmentList = ({
               src={FolderIcon}
               alt="파일"
               className={`${styles.attachmentIcon} ${!isEditMode ? styles.attachmentIconButton : ''}`}
-              onClick={() => handleDownload(file)}
             />
             <span className={styles.attachmentName}>
               {fileName}{' '}

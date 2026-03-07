@@ -283,6 +283,11 @@
   background: transparent;
 }
 
+.boardMenuItem.boardMenuItemActive:hover {
+  color: #ffffff;
+  background: transparent;
+}
+
 .boardMenuLoading {
   color: #8a94a8;
   font-size: 13px;

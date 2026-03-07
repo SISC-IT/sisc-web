@@ -14,6 +14,7 @@ const PostEditForm = ({
   onAddNewFile,
   onSave,
   onCancel,
+  isSaving = false,
 }) => {
   const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -165,10 +166,18 @@ const PostEditForm = ({
       )}
 
       <div className={styles.editButtons}>
-        <button onClick={onSave} className={styles.saveButton}>
-          게시글 수정
+        <button
+          onClick={onSave}
+          className={styles.saveButton}
+          disabled={isSaving}
+        >
+          {isSaving ? '수정 중...' : '게시글 수정'}
         </button>
-        <button onClick={onCancel} className={styles.cancelButton}>
+        <button
+          onClick={onCancel}
+          className={styles.cancelButton}
+          disabled={isSaving}
+        >
           취소
         </button>
       </div>

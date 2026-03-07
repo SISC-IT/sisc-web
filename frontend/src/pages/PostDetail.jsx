@@ -78,6 +78,7 @@ const PostDetail = () => {
   const [editContent, setEditContent] = useState('');
   const [editFiles, setEditFiles] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const [comments, setComments] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
@@ -210,10 +211,15 @@ const PostDetail = () => {
   };
 
   const handleSaveEdit = async () => {
+    if (isSavingEdit) return;
+
     if (!editTitle.trim() || !editContent.trim()) {
       alert('제목과 내용을 입력해주세요.');
       return;
     }
+
+    setIsSavingEdit(true);
+
     try {
       const boardId = post.boardId || post.board?.boardId;
       const updateData = {
@@ -229,6 +235,8 @@ const PostDetail = () => {
     } catch (error) {
       console.error('게시글 수정 실패:', error);
       alert('게시글 수정에 실패했습니다.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -368,6 +376,7 @@ const PostDetail = () => {
             onAddNewFile={handleFileHandlers.add}
             onSave={handleSaveEdit}
             onCancel={() => setIsEdit(false)}
+            isSaving={isSavingEdit}
           />
         ) : (
           <PostView

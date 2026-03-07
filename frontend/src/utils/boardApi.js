@@ -50,7 +50,51 @@ export const createSubBoard = async (boardName, parentBoardId = null) => {
   };
 
   const response = await api.post('/api/admin/board', requestBody);
-  return response.data;
+
+  const responseData = response?.data;
+  const createdBoardId = responseData?.boardId;
+
+  // Backward-compatible fast path: backend already returns { boardId }.
+  if (createdBoardId) {
+    return responseData;
+  }
+
+  const normalizeName = (value) => String(value || '').trim().toLowerCase();
+  const normalizedTargetName = normalizeName(normalizedBoardName);
+  const normalizedParentId = parentBoardId ?? null;
+
+  const boardListResponse = await api.get('/api/admin/boards');
+  const boardCandidates = Array.isArray(boardListResponse?.data)
+    ? boardListResponse.data
+    : Array.isArray(boardListResponse?.data?.content)
+      ? boardListResponse.data.content
+      : [];
+
+  const matchedBoards = boardCandidates.filter((board) => {
+    const sameName = normalizeName(board?.boardName) === normalizedTargetName;
+    const sameParent = (board?.parentBoardId ?? null) === normalizedParentId;
+    return sameName && sameParent;
+  });
+
+  if (matchedBoards.length === 0) {
+    throw new Error('Created board not found after createSubBoard');
+  }
+
+  const matchedBoard =
+    matchedBoards
+      .slice()
+      .sort((a, b) => {
+        const at = Date.parse(a?.createdAt || a?.updatedAt || 0);
+        const bt = Date.parse(b?.createdAt || b?.updatedAt || 0);
+        return bt - at;
+      })[0] || matchedBoards[matchedBoards.length - 1];
+
+  return {
+    ...(responseData && typeof responseData === 'object' ? responseData : {}),
+    boardId: matchedBoard.boardId,
+    boardName: matchedBoard.boardName,
+    parentBoardId: matchedBoard.parentBoardId ?? null,
+  };
 };
 
 /*

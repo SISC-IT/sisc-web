@@ -27,7 +27,7 @@ export const isAllBoardName = (boardName = '') => {
 
 export const toBoardRouteSegment = (boardName = '') => {
   const normalized = String(boardName).trim();
-  if (!normalized) return '';
+  if (!normalized) return null;
 
   if (BOARD_SEGMENT_MAP[normalized]) {
     return BOARD_SEGMENT_MAP[normalized];
@@ -38,10 +38,9 @@ export const toBoardRouteSegment = (boardName = '') => {
     if (BOARD_SEGMENT_MAP[withoutSuffix]) {
       return BOARD_SEGMENT_MAP[withoutSuffix];
     }
-    return withoutSuffix;
   }
 
-  return normalized;
+  return null;
 };
 
 export const toBoardPath = (boardName = '') => {
