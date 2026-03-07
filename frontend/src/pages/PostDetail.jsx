@@ -4,11 +4,15 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import * as boardApi from '../utils/boardApi';
 import styles from './PostDetail.module.css';
 import { toBoardRouteSegment } from '../utils/boardRoute';
-import { api } from '../utils/axios';
 
 import PostView from '../components/Board/PostDetail/PostView';
 import PostEditForm from '../components/Board/PostDetail/PostEditForm';
 import CommentSection from '../components/Board/PostDetail/CommentSection';
+
+const FILE_DOWNLOAD_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(
+  /\/$/,
+  ''
+);
 
 const buildCommentTree = (flatComments) => {
   const map = new Map();
@@ -164,40 +168,30 @@ const PostDetail = () => {
 
   const handleAttachmentDownload = async (file) => {
     try {
-      const rawPath = file?.filePath || file?.path || file?.url;
-      if (!rawPath) {
-        alert('다운로드할 파일 경로를 찾을 수 없습니다.');
+      const serverFileName = file?.savedFilename;
+
+      if (!serverFileName) {
+        alert('다운로드할 savedFilename을 찾을 수 없습니다.');
         return;
       }
 
-      const normalizedPath = rawPath.startsWith('http')
-        ? rawPath
-        : rawPath.startsWith('/')
-          ? rawPath
-          : `/${rawPath}`;
-
-      const response = await api.get(normalizedPath, {
-        responseType: 'blob',
-      });
-
-      const blob = new Blob([response.data], {
-        type: response.headers['content-type'] || 'application/octet-stream',
-      });
-      const objectUrl = window.URL.createObjectURL(blob);
+      const downloadUrl = `${FILE_DOWNLOAD_BASE_URL}/uploads/${encodeURIComponent(
+        serverFileName
+      )}`;
 
       const fileName =
         file?.originalFilename ||
         file?.name ||
-        decodeURIComponent(String(rawPath).split('/').pop() || 'download');
+        decodeURIComponent(serverFileName || 'download');
 
       const a = document.createElement('a');
-      a.href = objectUrl;
+      a.href = downloadUrl;
       a.download = fileName;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
       document.body.appendChild(a);
       a.click();
       a.remove();
-
-      window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error('첨부파일 다운로드 실패:', error);
       alert('첨부파일 다운로드에 실패했습니다.');
