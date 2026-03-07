@@ -11,6 +11,11 @@ const FileAttachmentList = ({
 }) => {
   if (!files || files.length === 0) return null;
 
+  const handleDownload = (file) => {
+    if (isEditMode || !onDownload) return;
+    onDownload(file);
+  };
+
   return (
     <div className={styles.attachmentList}>
       {files.map((file, index) => {
@@ -21,12 +26,24 @@ const FileAttachmentList = ({
           : '';
 
         return (
-          <div key={key} className={styles.attachmentItem}>
+          <div
+            key={key}
+            className={`${styles.attachmentItem} ${!isEditMode ? styles.attachmentItemClickable : ''}`}
+            onClick={() => handleDownload(file)}
+            role={!isEditMode ? 'button' : undefined}
+            tabIndex={!isEditMode ? 0 : undefined}
+            onKeyDown={(e) => {
+              if (isEditMode) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleDownload(file);
+              }
+            }}
+          >
             <img
               src={FolderIcon}
               alt="파일"
               className={`${styles.attachmentIcon} ${!isEditMode ? styles.attachmentIconButton : ''}`}
-              onClick={() => !isEditMode && onDownload && onDownload(file)}
             />
             <span className={styles.attachmentName}>
               {fileName}{' '}

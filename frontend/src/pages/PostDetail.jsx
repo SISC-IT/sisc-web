@@ -1,12 +1,18 @@
 // components/Board/PostDetail.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import * as boardApi from '../utils/boardApi';
 import styles from './PostDetail.module.css';
+import { toBoardRouteSegment } from '../utils/boardRoute';
 
 import PostView from '../components/Board/PostDetail/PostView';
 import PostEditForm from '../components/Board/PostDetail/PostEditForm';
 import CommentSection from '../components/Board/PostDetail/CommentSection';
+
+const FILE_DOWNLOAD_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(
+  /\/$/,
+  ''
+);
 
 const buildCommentTree = (flatComments) => {
   const map = new Map();
@@ -60,6 +66,7 @@ const findCommentInTree = (nodes, targetId) => {
 const PostDetail = () => {
   const { postId, team } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 상태 관리
   const [post, setPost] = useState(null);
@@ -71,11 +78,16 @@ const PostDetail = () => {
   const [editContent, setEditContent] = useState('');
   const [editFiles, setEditFiles] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const [comments, setComments] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
   const [showCommentMenu, setShowCommentMenu] = useState(null);
   const [replyTargetId, setReplyTargetId] = useState(null);
+
+  const boardName =
+    post?.boardName || post?.board?.boardName || post?.board?.name || '';
+  const boardId = post?.boardId || post?.board?.boardId || '';
 
   // 데이터 로드 로직
   const refreshPostAndComments = async () => {
@@ -155,15 +167,36 @@ const PostDetail = () => {
     }
   };
 
-  const handleAttachmentDownload = (file) => {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${baseUrl}${file.filePath}`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.originalFilename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  const handleAttachmentDownload = async (file) => {
+    try {
+      const serverFileName = file?.savedFilename;
+
+      if (!serverFileName) {
+        alert('다운로드할 savedFilename을 찾을 수 없습니다.');
+        return;
+      }
+
+      const downloadUrl = `${FILE_DOWNLOAD_BASE_URL}/uploads/${encodeURIComponent(
+        serverFileName
+      )}`;
+
+      const fileName =
+        file?.originalFilename ||
+        file?.name ||
+        decodeURIComponent(serverFileName || 'download');
+
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (error) {
+      console.error('첨부파일 다운로드 실패:', error);
+      alert('첨부파일 다운로드에 실패했습니다.');
+    }
   };
 
   // --- 수정 모드 핸들러 ---
@@ -178,10 +211,15 @@ const PostDetail = () => {
   };
 
   const handleSaveEdit = async () => {
+    if (isSavingEdit) return;
+
     if (!editTitle.trim() || !editContent.trim()) {
       alert('제목과 내용을 입력해주세요.');
       return;
     }
+
+    setIsSavingEdit(true);
+
     try {
       const boardId = post.boardId || post.board?.boardId;
       const updateData = {
@@ -197,6 +235,8 @@ const PostDetail = () => {
     } catch (error) {
       console.error('게시글 수정 실패:', error);
       alert('게시글 수정에 실패했습니다.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -217,6 +257,28 @@ const PostDetail = () => {
       console.error('게시글 삭제 실패:', error);
       alert('게시글 삭제에 실패했습니다.');
     }
+  };
+
+  const handleMoveToBoard = () => {
+    const targetTeamSegment =
+      location.state?.originTeam || team || toBoardRouteSegment(boardName);
+    const targetBoardId = location.state?.originBoardId || boardId;
+
+    if (!targetTeamSegment) {
+      navigate('/board');
+      return;
+    }
+
+    const query = targetBoardId
+      ? `?subBoardId=${encodeURIComponent(targetBoardId)}`
+      : '';
+
+    if (targetTeamSegment === 'root') {
+      navigate(`/board${query}`);
+      return;
+    }
+
+    navigate(`/board/${encodeURIComponent(targetTeamSegment)}${query}`);
   };
 
   // --- 댓글 핸들러 ---
@@ -314,15 +376,18 @@ const PostDetail = () => {
             onAddNewFile={handleFileHandlers.add}
             onSave={handleSaveEdit}
             onCancel={() => setIsEdit(false)}
+            isSaving={isSavingEdit}
           />
         ) : (
           <PostView
             post={post}
+            boardName={boardName}
             showMenu={showMenu}
             setShowMenu={setShowMenu}
             onEdit={handleEditStart}
             onDelete={handleDelete}
             onDownload={handleAttachmentDownload}
+            onMoveToBoard={handleMoveToBoard}
           />
         )}
 

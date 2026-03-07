@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import styles from './Modal.module.css';
 import FolderIcon from '../../assets/boardFolder.svg';
 import CloseIcon from '../../assets/boardCloseIcon.svg';
@@ -8,23 +9,55 @@ const Modal = ({
   setTitle,
   content,
   setContent,
+  boardOptions,
+  selectedBoardId,
+  onBoardChange,
   selectedFiles,
   onFileChange,
   onRemoveFile,
   onSave,
   onClose,
+  isSaving,
 }) => {
+  const fileInputRef = useRef(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const clearDragState = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      clearDragState();
+    }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    clearDragState();
 
     const droppedFiles = Array.from(e.dataTransfer.files);
     onFileChange({ target: { files: droppedFiles } });
+  };
+
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -32,9 +65,31 @@ const Modal = ({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>게시글 작성</h2>
-          <button className={styles.closeButton} onClick={onClose}>
-            <img src={CloseIcon} alt="닫기" />
-          </button>
+          <div className={styles.headerRight}>
+            <div className={styles.sessionFieldHeader}>
+              <span className={styles.sessionLabel}>세션 선택</span>
+              <div className={styles.selectWrapper}>
+                <select
+                  className={styles.select}
+                  value={selectedBoardId}
+                  onChange={(e) => onBoardChange?.(e.target.value)}
+                >
+                  <option value="">세션 선택</option>
+                  {(boardOptions || []).map((board) => (
+                    <option key={board.id} value={board.id}>
+                      {board.name}
+                    </option>
+                  ))}
+                </select>
+                <div className={styles.selectIcon}>
+                  <img src={DropdownArrowIcon} alt="드롭다운 화살표" />
+                </div>
+              </div>
+            </div>
+            <button className={styles.closeButton} onClick={onClose}>
+              <img src={CloseIcon} alt="닫기" />
+            </button>
+          </div>
         </div>
 
         <div className={styles.form}>
@@ -50,72 +105,85 @@ const Modal = ({
           </div>
 
           <div className={styles.contentField}>
-            <label className={styles.label}>내용</label>
-            <div className={styles.contentContainer}>
+            <div className={styles.contentHeader}>
+              <label className={styles.label}>내용</label>
               <div
                 className={styles.fileSection}
-                onClick={() => document.getElementById('fileUpload').click()}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+                onClick={handleFileButtonClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleFileButtonClick();
+                  }
+                }}
               >
                 <img src={FolderIcon} alt="폴더" />
                 <span className={styles.fileText}>파일 추가</span>
-                <input
-                  type="file"
-                  id="fileUpload"
-                  className={styles.fileInput}
-                  style={{ display: 'none' }}
-                  multiple
-                  onChange={onFileChange}
-                />
               </div>
-              <div className={styles.divider}></div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                id="fileUpload"
+                className={styles.fileInput}
+                style={{ display: 'none' }}
+                multiple
+                onChange={onFileChange}
+              />
+            </div>
+            <div
+              className={`${styles.contentContainer} ${isDragOver ? styles.contentContainerDragOver : ''}`}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {isDragOver && (
+                <div className={styles.dragOverlay}>
+                  파일을 업로드하려면 여기에 놓아주세요.
+                </div>
+              )}
+
               <textarea
                 className={styles.textarea}
                 placeholder="내용을 입력해주세요."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               />
             </div>
-          </div>
 
-          {selectedFiles && selectedFiles.length > 0 && (
-            <div className={styles.fileList}>
-              <label className={styles.label}>
-                첨부 파일 ({selectedFiles.length})
-              </label>
-              {selectedFiles.map((file, index) => (
-                <div key={index} className={styles.fileItem}>
-                  <span className={styles.fileName}>
-                    {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.removeFileButton}
-                    onClick={() => onRemoveFile(index)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className={styles.accessField}>
-            <label className={styles.accessLabel}>접근 권한</label>
-            <div className={styles.selectWrapper}>
-              <select className={styles.select} defaultValue="세션선택">
-                <option value="세션선택">세션선택</option>
-              </select>
-              <div className={styles.selectIcon}>
-                <img src={DropdownArrowIcon} alt="드롭다운 화살표" />
+            {selectedFiles && selectedFiles.length > 0 && (
+              <div className={styles.fileOutsideList}>
+                {selectedFiles.map((file, index) => (
+                  <div key={`${file.name}-${index}`} className={styles.fileOutsideItem}>
+                    <p className={styles.fileInlineName}>{file.name}</p>
+                    <button
+                      type="button"
+                      className={styles.fileRemoveButton}
+                      onClick={() => onRemoveFile?.(index)}
+                      aria-label={`${file.name} 삭제`}
+                    >
+                      X
+                    </button>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
+
         </div>
 
-        <button className={styles.saveButton} onClick={onSave}>
-          게시글 작성
+        <button
+          className={styles.saveButton}
+          onClick={onSave}
+          disabled={isSaving}
+        >
+          {isSaving ? '게시글 작성 중...' : '게시글 작성'}
         </button>
       </div>
     </div>
