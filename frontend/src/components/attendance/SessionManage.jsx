@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import styles from './SessionManage.module.css';
 import { ClipboardCheck } from 'lucide-react';
+import { normalizeSessionTitle } from '../../utils/normalizeSessionTitle';
 
 const getRoundKey = (session) => session.roundId || `${session.roundDate || ''}-${session.roundStartAt || ''}`;
 
@@ -44,7 +45,7 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
   const roundIndexMapBySession = useMemo(() => {
     const roundMapBySession = new Map();
     sessions.forEach((session) => {
-      const sessionTitle = session.sessionTitle || '기타';
+      const sessionTitle = normalizeSessionTitle(session.sessionTitle);
       if (!roundMapBySession.has(sessionTitle)) {
         roundMapBySession.set(sessionTitle, new Map());
       }
@@ -75,11 +76,32 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
   }, [sessions]);
 
   const visibleSessions = useMemo(() => {
+    const selectedSessionTitle = normalizeSessionTitle(selectedSession);
+
     const filtered = selectedSession
-      ? sessions.filter((session) => session.sessionTitle === selectedSession)
+      ? sessions.filter((session) => normalizeSessionTitle(session.sessionTitle) === selectedSessionTitle)
       : sessions;
 
-    return [...filtered].sort((a, b) => getTimestamp(a) - getTimestamp(b));
+    const seenAttendanceIds = new Set();
+    const deduplicated = [];
+
+    filtered.forEach((session) => {
+      const attendanceId = session?.attendanceId;
+
+      if (!attendanceId) {
+        deduplicated.push(session);
+        return;
+      }
+
+      if (seenAttendanceIds.has(attendanceId)) {
+        return;
+      }
+
+      seenAttendanceIds.add(attendanceId);
+      deduplicated.push(session);
+    });
+
+    return [...deduplicated].sort((a, b) => getTimestamp(a) - getTimestamp(b));
   }, [sessions, selectedSession]);
 
   if (error) return <div>{error}</div>;
@@ -106,7 +128,7 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
 
         <tbody>
           {rows.map((s) => {
-            const sessionTitle = s.sessionTitle || '기타';
+            const sessionTitle = normalizeSessionTitle(s.sessionTitle);
             const roundKey = getRoundKey(s);
             const roundIndex = roundIndexMapBySession.get(sessionTitle)?.get(roundKey) ?? '-';
 
