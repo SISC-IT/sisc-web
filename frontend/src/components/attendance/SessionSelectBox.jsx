@@ -1,6 +1,9 @@
 import styles from './SessionSelectBox.module.css';
 import { ClipboardCheck } from 'lucide-react';
 
+const normalizeSessionTitle = (sessionTitle) =>
+  typeof sessionTitle === 'string' ? sessionTitle.trim() : '';
+
 const SessionSelectBox = ({
   sessions = [],
   selectedSession = '',
@@ -10,10 +13,12 @@ const SessionSelectBox = ({
   const sessionList = Array.from(
     new Set(
       sessions
-        .map((session) => session.sessionTitle)
-        .filter((sessionTitle) => typeof sessionTitle === 'string' && sessionTitle.trim() !== ''),
+        .map((session) => normalizeSessionTitle(session.sessionTitle))
+        .filter((sessionTitle) => sessionTitle !== ''),
     ),
   );
+
+  const currentValue = sessionList.includes(selectedSession) ? selectedSession : sessionList[0] || '';
 
   return (
     <div className={styles.box}>
@@ -24,11 +29,10 @@ const SessionSelectBox = ({
       <select
         id="session-select"
         className={styles.session}
-        value={selectedSession}
+        value={currentValue}
         onChange={(event) => onChange?.(event.target.value)}
         disabled={disabled}
       >
-        <option value="">세션선택</option>
         {sessionList.map((item) => (
           <option key={item} value={item}>
             {item}

@@ -1,5 +1,5 @@
 import styles from './Attendance.module.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SessionSelectBox from '../components/attendance/SessionSelectBox';
 // import ExcusedTime from '../components/attendance/ExcusedTime';
 import SessionManage from '../components/attendance/SessionManage';
@@ -16,6 +16,30 @@ const Attendance = () => {
   const [selectedSession, setSelectedSession] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const sessionOptions = useMemo(() => {
+    const uniqueSessionTitles = new Set();
+
+    attendanceSessions.forEach((session) => {
+      const title = typeof session?.sessionTitle === 'string' ? session.sessionTitle.trim() : '';
+      if (title) uniqueSessionTitles.add(title);
+    });
+
+    return Array.from(uniqueSessionTitles);
+  }, [attendanceSessions]);
+
+  useEffect(() => {
+    if (sessionOptions.length === 0) {
+      if (selectedSession !== '') {
+        setSelectedSession('');
+      }
+      return;
+    }
+
+    if (!selectedSession || !sessionOptions.includes(selectedSession)) {
+      setSelectedSession(sessionOptions[0]);
+    }
+  }, [selectedSession, sessionOptions]);
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -40,7 +64,7 @@ const Attendance = () => {
           sessions={attendanceSessions}
           selectedSession={selectedSession}
           onChange={setSelectedSession}
-          disabled={loading || !!error}
+          disabled={loading || !!error || sessionOptions.length === 0}
         />
         {/* <ExcusedTime /> */}
       </div>

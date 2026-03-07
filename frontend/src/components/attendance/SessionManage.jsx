@@ -2,6 +2,9 @@ import { useMemo } from 'react';
 import styles from './SessionManage.module.css';
 import { ClipboardCheck } from 'lucide-react';
 
+const normalizeSessionTitle = (sessionTitle) =>
+  typeof sessionTitle === 'string' && sessionTitle.trim() !== '' ? sessionTitle.trim() : '기타';
+
 const getRoundKey = (session) => session.roundId || `${session.roundDate || ''}-${session.roundStartAt || ''}`;
 
 const getTimestamp = (session) => {
@@ -44,7 +47,7 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
   const roundIndexMapBySession = useMemo(() => {
     const roundMapBySession = new Map();
     sessions.forEach((session) => {
-      const sessionTitle = session.sessionTitle || '기타';
+      const sessionTitle = normalizeSessionTitle(session.sessionTitle);
       if (!roundMapBySession.has(sessionTitle)) {
         roundMapBySession.set(sessionTitle, new Map());
       }
@@ -75,11 +78,18 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
   }, [sessions]);
 
   const visibleSessions = useMemo(() => {
+    const selectedSessionTitle = normalizeSessionTitle(selectedSession);
+
     const filtered = selectedSession
-      ? sessions.filter((session) => session.sessionTitle === selectedSession)
+      ? sessions.filter((session) => normalizeSessionTitle(session.sessionTitle) === selectedSessionTitle)
       : sessions;
 
-    return [...filtered].sort((a, b) => getTimestamp(a) - getTimestamp(b));
+    const deduplicated = filtered.filter((session, index, array) => {
+      if (!session?.attendanceId) return true;
+      return array.findIndex((item) => item?.attendanceId === session.attendanceId) === index;
+    });
+
+    return [...deduplicated].sort((a, b) => getTimestamp(a) - getTimestamp(b));
   }, [sessions, selectedSession]);
 
   if (error) return <div>{error}</div>;
@@ -106,7 +116,7 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
 
         <tbody>
           {rows.map((s) => {
-            const sessionTitle = s.sessionTitle || '기타';
+            const sessionTitle = normalizeSessionTitle(s.sessionTitle);
             const roundKey = getRoundKey(s);
             const roundIndex = roundIndexMapBySession.get(sessionTitle)?.get(roundKey) ?? '-';
 
