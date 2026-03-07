@@ -15,10 +15,9 @@ services:
       - /etc/localtime:/etc/localtime:ro  # 시간대 설정 : 호스트의 시간 설정 파일 공유
       - /etc/timezone:/etc/timezone:ro
       - /mnt/storage/logs:/app/logs
-      - /mnt/storage/uploads:/app/uploadss
+      - /mnt/storage/uploads:/app/uploads
     networks:
       - sisc-net
-    # 1GB 램 서버 생존을 위한 메모리 제한 (Docker 레벨)
     deploy:
       resources:
         limits:
@@ -75,7 +74,7 @@ services:
       # 외부망(공유기)에서 들어오는 80, 443 요청을 NPM이 모두 받음
       - '80:80'
       - '443:443'
-      - '81:81' # NPM 관리자 페이지 (접속: http://서버IP:81)
+      #- '81:81' # NPM 관리자 페이지 (접속: http://서버IP:81)
     volumes:
       - ./data/npm:/data               # NPM 설정 데이터 유지
       - ./data/letsencrypt:/etc/letsencrypt # SSL 인증서 데이터 유지
