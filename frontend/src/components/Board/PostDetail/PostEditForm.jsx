@@ -20,7 +20,17 @@ const PostEditForm = ({
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileButtonClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e) => {
+    onAddNewFile(e);
+
+    // Allow selecting the same file name again by resetting the input value.
+    e.target.value = '';
   };
 
   const handleDragEnter = (e) => {
@@ -87,7 +97,7 @@ const PostEditForm = ({
             ref={fileInputRef}
             type="file"
             multiple
-            onChange={onAddNewFile}
+            onChange={handleFileInputChange}
             style={{ display: 'none' }}
           />
         </div>
