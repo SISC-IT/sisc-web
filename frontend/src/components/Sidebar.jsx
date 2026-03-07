@@ -9,6 +9,8 @@ import { getParentBoards } from '../utils/boardApi';
 import { isAllBoardName, toBoardPath } from '../utils/boardRoute';
 import DropdownArrowIcon from '../assets/boardSelectArrow.svg';
 
+const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT'];
+
 const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const nav = useNavigate();
   const location = useLocation();
@@ -16,7 +18,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const [selectedBoard, setSelectedBoard] = useState('');
   const [isBoardMenuOpen, setIsBoardMenuOpen] = useState(false);
   const { isLoggedIn, logout } = useAuth();
-  const [isPresident, setIsPresident] = useState(false);
+  const [canSeeAdminMenu, setCanSeeAdminMenu] = useState(false);
 
   useEffect(() => {
     const loadParentBoards = async () => {
@@ -63,16 +65,16 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   useEffect(() => {
     const checkAdminRole = async () => {
       if (!isLoggedIn) {
-        setIsPresident(false);
+        setCanSeeAdminMenu(false);
         return;
       }
 
       try {
         const { data } = await api.get('/api/user/details');
         const normalizedRole = String(data?.role || '').trim().toUpperCase();
-        setIsPresident(normalizedRole === 'PRESIDENT');
+        setCanSeeAdminMenu(ADMIN_VISIBLE_ROLES.includes(normalizedRole));
       } catch {
-        setIsPresident(false);
+        setCanSeeAdminMenu(false);
       }
     };
 
@@ -255,7 +257,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                 </NavLink>
               </li>
 
-              {isLoggedIn && isPresident && (
+              {isLoggedIn && canSeeAdminMenu && (
                 <li>
                   <NavLink
                     to="/admin"
