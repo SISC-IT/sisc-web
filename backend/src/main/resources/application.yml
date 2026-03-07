@@ -13,6 +13,10 @@ spring:
         format_sql: false       # 가로로 너무 길어지는 게 싫다면 이것도 false
         use_sql_comments: false # 부가 설명 제거
 
+  servlet:    # 파일 설정
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
   boot:
     admin:
       context-path: /admin

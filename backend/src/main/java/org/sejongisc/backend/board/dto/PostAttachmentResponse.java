@@ -13,14 +13,12 @@ import org.sejongisc.backend.board.entity.PostAttachment;
 @AllArgsConstructor
 public class PostAttachmentResponse {
   private UUID postAttachmentId;
-  private String originalFilename;
-  private String filePath;
+  private String savedFilename;
 
   public static PostAttachmentResponse of(PostAttachment attachment) {
     return PostAttachmentResponse.builder()
         .postAttachmentId(attachment.getPostAttachmentId())
-        .originalFilename(attachment.getOriginalFilename())
-        .filePath(attachment.getFilePath())
+        .savedFilename(attachment.getSavedFilename())
         .build();
   }
 }

@@ -36,7 +36,7 @@ spring:
     password: ${DB_PASSWORD} # .env의 DB_PASSWORD 값
     hikari:
       pool-name: HikariPool
-      maximum-pool-size: ${DB_POOL_MAX:30} # t2.micro니까 커넥션 풀 작게 유지
+      maximum-pool-size: ${DB_POOL_MAX:30} # t2.micro는 커넥션 풀 작게 유지
       minimum-idle: 10
 
 

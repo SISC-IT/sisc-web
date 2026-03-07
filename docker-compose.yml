@@ -78,6 +78,7 @@ services:
     volumes:
       - ./data/npm:/data               # NPM 설정 데이터 유지
       - ./data/letsencrypt:/etc/letsencrypt # SSL 인증서 데이터 유지
+      - /mnt/storage/uploads:/mnt/storage/uploads:ro  # Nginx도 파일을 읽을 수 있게 연결 (읽기전용 :ro)
     networks:
       - sisc-net
     deploy:
