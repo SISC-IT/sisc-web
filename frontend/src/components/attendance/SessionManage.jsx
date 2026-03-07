@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
 import styles from './SessionManage.module.css';
 import { ClipboardCheck } from 'lucide-react';
-
-const normalizeSessionTitle = (sessionTitle) =>
-  typeof sessionTitle === 'string' && sessionTitle.trim() !== '' ? sessionTitle.trim() : '기타';
+import { normalizeSessionTitle } from '../../utils/normalizeSessionTitle';
 
 const getRoundKey = (session) => session.roundId || `${session.roundDate || ''}-${session.roundStartAt || ''}`;
 
@@ -84,9 +82,23 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
       ? sessions.filter((session) => normalizeSessionTitle(session.sessionTitle) === selectedSessionTitle)
       : sessions;
 
-    const deduplicated = filtered.filter((session, index, array) => {
-      if (!session?.attendanceId) return true;
-      return array.findIndex((item) => item?.attendanceId === session.attendanceId) === index;
+    const seenAttendanceIds = new Set();
+    const deduplicated = [];
+
+    filtered.forEach((session) => {
+      const attendanceId = session?.attendanceId;
+
+      if (!attendanceId) {
+        deduplicated.push(session);
+        return;
+      }
+
+      if (seenAttendanceIds.has(attendanceId)) {
+        return;
+      }
+
+      seenAttendanceIds.add(attendanceId);
+      deduplicated.push(session);
     });
 
     return [...deduplicated].sort((a, b) => getTimestamp(a) - getTimestamp(b));

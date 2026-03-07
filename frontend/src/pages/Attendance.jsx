@@ -4,6 +4,7 @@ import SessionSelectBox from '../components/attendance/SessionSelectBox';
 // import ExcusedTime from '../components/attendance/ExcusedTime';
 import SessionManage from '../components/attendance/SessionManage';
 import { attendanceList } from '../utils/attendanceList';
+import { normalizeSessionTitle } from '../utils/normalizeSessionTitle';
 
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useCheckIn } from '../hooks/useCheckIn';
@@ -21,8 +22,7 @@ const Attendance = () => {
     const uniqueSessionTitles = new Set();
 
     attendanceSessions.forEach((session) => {
-      const title = typeof session?.sessionTitle === 'string' ? session.sessionTitle.trim() : '';
-      if (title) uniqueSessionTitles.add(title);
+      uniqueSessionTitles.add(normalizeSessionTitle(session?.sessionTitle));
     });
 
     return Array.from(uniqueSessionTitles);
