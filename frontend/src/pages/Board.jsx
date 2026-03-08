@@ -8,7 +8,11 @@ import CategoryTabs from '../components/Board/CategoryTabs';
 import CreateSubBoardModal from '../components/Board/CreateSubBoardModal';
 import styles from './Board.module.css';
 import * as boardApi from '../utils/boardApi';
-import { isAllBoardName, toBoardRouteSegment } from '../utils/boardRoute';
+import {
+  isAllBoardName,
+  normalizeBoardRouteSegment,
+  toBoardRouteSegment,
+} from '../utils/boardRoute';
 import { api } from '../utils/axios';
 
 const ALL_TAB_ID = 'all';
@@ -64,7 +68,7 @@ const Board = () => {
     return params.get('subBoardId') || '';
   }, [location.search]);
 
-  const currentSegment = team ? decodeURIComponent(team) : 'root';
+  const currentSegment = team ? normalizeBoardRouteSegment(team) || 'root' : 'root';
   const currentBoardId = boardIdMap[currentSegment];
   const currentBoardName = boardNameMap[currentSegment] || '게시판';
 

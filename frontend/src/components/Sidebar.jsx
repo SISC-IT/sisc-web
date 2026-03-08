@@ -6,7 +6,7 @@ import { api } from '../utils/axios';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { getParentBoards } from '../utils/boardApi';
-import { isAllBoardName, toBoardPath } from '../utils/boardRoute';
+import { isAllBoardName, normalizeBoardPath, toBoardPath } from '../utils/boardRoute';
 import DropdownArrowIcon from '../assets/boardSelectArrow.svg';
 
 const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT'];
@@ -55,10 +55,8 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
 
   useEffect(() => {
     if (!boardList.length) return;
-    const currentPath = decodeURIComponent(location.pathname);
-    const currentBoard = boardList.find(
-      (item) => decodeURIComponent(item.path) === currentPath
-    );
+    const currentPath = normalizeBoardPath(location.pathname);
+    const currentBoard = boardList.find((item) => normalizeBoardPath(item.path) === currentPath);
     setSelectedBoard(currentBoard?.name || '');
   }, [boardList, location.pathname]);
 
@@ -100,16 +98,17 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     setSelectedBoard(board.name);
     setIsBoardMenuOpen(false);
 
-    const currentPath = decodeURIComponent(location.pathname);
-    const targetPath = decodeURIComponent(board.path);
+    const currentPath = normalizeBoardPath(location.pathname);
+    const targetPath = normalizeBoardPath(board.path);
+    const nextPath = normalizeBoardPath(board.path);
 
     if (currentPath === targetPath) {
-      nav(board.path, {
+      nav(nextPath, {
         replace: false,
         state: { boardSwitchAt: Date.now() },
       });
     } else {
-      nav(board.path);
+      nav(nextPath);
     }
 
     handleNavLinkClick();
