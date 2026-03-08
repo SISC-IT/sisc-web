@@ -221,6 +221,10 @@
   padding: 6px 0;
 }
 
+.emptyPanelContent {
+  min-height: 92px;
+}
+
 @media (min-width: 768px) {
   .statsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

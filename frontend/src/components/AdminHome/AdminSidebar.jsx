@@ -6,6 +6,7 @@ import {
   Star,
   Gamepad2,
   BarChart3,
+  Home,
   Activity,
   Server,
   Database,
@@ -114,6 +115,13 @@ const AdminSidebar = () => {
       </nav>
 
       <div className={styles.footer}>
+        <Link
+          to="/"
+          className={styles.settingsLink}
+        >
+          <Home size={16} />
+          홈페이지
+        </Link>
         <Link
           to="/admin/settings"
           className={styles.settingsLink}

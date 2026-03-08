@@ -14,7 +14,6 @@ import {
   YAxis,
 } from 'recharts';
 import {
-  BarChart3,
   Calendar,
   Eye,
   FileText,
@@ -306,12 +305,7 @@ const AdminDashbord = () => {
         </article>
 
         <article className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <span>활동 로그</span>
-            <Calendar size={16} />
-          </div>
-          <strong className={styles.statValue}>{activities.length.toLocaleString()}개</strong>
-          <span className={styles.statSubText}>최신 순 표시</span>
+          <div className={styles.emptyPanelContent} />
         </article>
       </section>
 
@@ -402,28 +396,7 @@ const AdminDashbord = () => {
         </article>
 
         <article className={styles.panel}>
-          <header className={styles.panelHeader}>
-            <h2 className={styles.panelTitle}>요약 지표</h2>
-            <BarChart3 size={16} />
-          </header>
-          <ul className={styles.summaryList}>
-            <li className={styles.summaryItem}>
-              <span>조회 기간</span>
-              <strong>{periodDays}일</strong>
-            </li>
-            <li className={styles.summaryItem}>
-              <span>방문자 데이터 포인트</span>
-              <strong>{chartVisitorsData.length}개</strong>
-            </li>
-            <li className={styles.summaryItem}>
-              <span>활동 집계 게시판 수</span>
-              <strong>{boardsDistribution.length}개</strong>
-            </li>
-            <li className={styles.summaryItem}>
-              <span>권한 종류 수</span>
-              <strong>{usersDistribution.length}개</strong>
-            </li>
-          </ul>
+          <div className={styles.emptyPanelContent} />
         </article>
       </section>
 
