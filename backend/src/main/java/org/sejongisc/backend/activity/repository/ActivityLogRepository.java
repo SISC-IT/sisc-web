@@ -39,8 +39,8 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
     // 게시판별 활동량 집계 (게시글+댓글+좋아요)
     @Query("SELECT a.boardName, COUNT(a) FROM ActivityLog a " +
         "WHERE a.activityType IN ('BOARD_POST', 'BOARD_COMMENT', 'BOARD_LIKE') " +
-        "AND (:start IS NULL OR a.createdAt >= :start) " +
-        "AND (:end IS NULL OR a.createdAt <= :end) " +
+        "AND a.createdAt >= :start " +
+        "AND a.createdAt <= :end " +
         "GROUP BY a.boardName")
     List<Object[]> countActivityByBoard(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
