@@ -148,8 +148,11 @@ const AdminDashboard = () => {
   const loadActivities = useCallback(async () => {
     const response = await getDashboardActivities(0, ACTIVITY_FETCH_SIZE);
     const content = Array.isArray(response?.content) ? response.content : [];
+    const normalizedFetched = content.map(normalizeActivity);
 
-    setActivities(content.map(normalizeActivity).slice(0, MAX_ACTIVITY_LOGS));
+    setActivities((prev) =>
+      mergeActivityLists(prev, normalizedFetched).slice(0, MAX_ACTIVITY_LOGS)
+    );
   }, []);
 
   const loadDashboard = useCallback(async () => {
@@ -230,13 +233,14 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     let eventSource;
+    let handleMessage;
 
     try {
       eventSource = new EventSource(getDashboardActivitiesStreamUrl(), {
         withCredentials: true,
       });
 
-      eventSource.onmessage = (event) => {
+      handleMessage = (event) => {
         if (!event?.data) return;
 
         try {
@@ -246,12 +250,18 @@ const AdminDashboard = () => {
           // Ignore heartbeat/non-JSON messages.
         }
       };
+
+      eventSource.onmessage = handleMessage;
+      eventSource.addEventListener('newLog', handleMessage);
     } catch (streamError) {
       console.error('활동 로그 스트림 연결 실패:', streamError);
     }
 
     return () => {
       if (eventSource) {
+        if (handleMessage) {
+          eventSource.removeEventListener('newLog', handleMessage);
+        }
         eventSource.close();
       }
     };

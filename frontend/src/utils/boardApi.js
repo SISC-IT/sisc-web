@@ -90,7 +90,13 @@ export const getPosts = async (boardId, pageNumber = 0, pageSize = 20) => {
   const response = await api.get('/api/board/posts', {
     params: { boardId, pageNumber, pageSize },
   });
-  return response.data;
+
+  const data = response?.data;
+  if (!Array.isArray(data?.content)) {
+    throw new Error('Invalid posts response: content must be an array');
+  }
+
+  return data;
 };
 
 /*

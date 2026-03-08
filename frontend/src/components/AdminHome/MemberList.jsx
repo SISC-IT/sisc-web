@@ -27,7 +27,7 @@ const getStatusClassName = (statusLabel, styles) => {
 	return styles.statusPending;
 };
 
-const MemberList = ({ members = [], styles }) => {
+const MemberList = ({ members = [], styles = {} }) => {
 	if (members.length === 0) {
 		return <div>표시할 회원이 없습니다.</div>;
 	}
