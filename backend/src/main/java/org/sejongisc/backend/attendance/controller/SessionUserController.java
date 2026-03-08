@@ -13,6 +13,7 @@ import org.sejongisc.backend.attendance.service.SessionUserService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("/api/attendance/sessions/users")
+@RequestMapping("/api/attendance/sessions")
 @Tag(
     name = "06. 세션 유저 API",
     description = "세션 사용자 관련 API"
@@ -138,5 +139,29 @@ public class SessionUserController {
     UUID adminUserId = requireUserId(userDetails);
     List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId, adminUserId);
     return ResponseEntity.ok(users);
+  }
+
+  /**
+   * 정규 세션 용 전체 회원 넣는 API(회장용)
+   */
+  @Operation(
+      summary = "정규세션에 active 상태인 전체 회원 추가",
+      description = """
+          ## 인증(JWT): **필요**
+          
+          ## 요청 파라미터 ( `sessionId` )
+          
+          ## 회장이면서 세션의 장이어야만 가능
+          """
+  )
+  @PostMapping("/{sessionId}/users/add-all")
+  @PreAuthorize("hasRole('PRESIDENT')")
+  public ResponseEntity<Void> addAllUsers(
+      @PathVariable UUID sessionId,
+      @AuthenticationPrincipal CustomUserDetails userDetails
+  ) {
+    UUID adminUserId = requireUserId(userDetails);
+    sessionUserService.addAllUsers(sessionId, adminUserId);
+    return ResponseEntity.ok().build();
   }
 }

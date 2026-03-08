@@ -13,6 +13,7 @@ import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.sejongisc.backend.attendance.repository.SessionUserRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
+import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,33 @@ public class SessionUserService {
   private final UserRepository userRepository;
 
   private final AttendanceAuthorizationService authorizationService;
+
+  public void addAllUsers(UUID sessionId, UUID userId) {
+    // 권한 확인
+    authorizationService.ensureAdmin(sessionId, userId);
+    log.info("세션에 모든 사용자 추가 시작: 세션ID={}", sessionId);
+
+    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+    // UserStatus.ACTIVE인 사용자만 추가하도록 수정
+    List<User> allUsers = userRepository.findAllByStatus(UserStatus.ACTIVE);
+
+    for (User user : allUsers) {
+      boolean alreadyAdded = sessionUserRepository.existsByAttendanceSessionAndUser(session, user);
+      if (!alreadyAdded) {
+        SessionUser su = SessionUser.builder()
+            .attendanceSession(session)
+            .user(user)
+            .sessionRole(SessionRole.PARTICIPANT)
+            .build();
+        sessionUserRepository.save(su);
+        log.info("사용자 {} 세션에 추가됨", user.getUserId());
+      }
+    }
+
+    log.info("세션에 모든 사용자 추가 완료. 세션 ID : {}", sessionId);
+  }
 
   /**
    * 세션에 사용자 추가 (OWNER 전용 추천)

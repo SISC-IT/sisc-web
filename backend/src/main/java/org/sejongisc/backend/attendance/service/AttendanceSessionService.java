@@ -153,31 +153,4 @@ public class AttendanceSessionService {
     attendanceSessionRepository.save(session);
     log.info("출석 세션 종료 완료: 세션ID={}", sessionId);
   }
-
-  public void addAllUsers(UUID sessionId, UUID userId) {
-    // 권한 확인
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
-    log.info("세션에 모든 사용자 추가 시작: 세션ID={}", sessionId);
-
-    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-
-    // UserStatus.ACTIVE인 사용자만 추가하도록 수정
-    List<User> allUsers = userRepository.findAllByStatus(UserStatus.ACTIVE);
-
-    for (User user : allUsers) {
-      boolean alreadyAdded = sessionUserRepository.existsByAttendanceSessionAndUser(session, user);
-      if (!alreadyAdded) {
-        SessionUser su = SessionUser.builder()
-            .attendanceSession(session)
-            .user(user)
-            .sessionRole(SessionRole.PARTICIPANT)
-            .build();
-        sessionUserRepository.save(su);
-        log.info("사용자 {} 세션에 추가됨", user.getUserId());
-      }
-    }
-
-    log.info("세션에 모든 사용자 추가 완료: 세션ID={}", sessionId);
-  }
 }
