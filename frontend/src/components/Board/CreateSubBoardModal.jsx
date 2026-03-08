@@ -1,14 +1,15 @@
 import React from 'react';
 import styles from './CreateSubBoardModal.module.css';
 
-const CreateSubBoardModal = ({ value, onChange, onSave, onClose }) => {
+const CreateSubBoardModal = ({ value, onChange, onSave, onClose, isSaving = false }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isSaving) return;
     onSave();
   };
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <div className={styles.modalOverlay} onClick={() => !isSaving && onClose()}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <h2 className={styles.modalTitle}>하위 게시판 생성</h2>
 
@@ -20,6 +21,7 @@ const CreateSubBoardModal = ({ value, onChange, onSave, onClose }) => {
             placeholder="하위 게시판 이름을 입력하세요"
             className={styles.input}
             autoFocus
+            disabled={isSaving}
           />
 
           <div className={styles.buttonGroup}>
@@ -27,11 +29,12 @@ const CreateSubBoardModal = ({ value, onChange, onSave, onClose }) => {
               type="button"
               onClick={onClose}
               className={styles.cancelButton}
+              disabled={isSaving}
             >
               취소
             </button>
-            <button type="submit" className={styles.saveButton}>
-              생성
+            <button type="submit" className={styles.saveButton} disabled={isSaving}>
+              {isSaving ? '생성 중...' : '생성'}
             </button>
           </div>
         </form>
