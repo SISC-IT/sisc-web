@@ -100,6 +100,7 @@ const AdminDashbord = () => {
   const [visitorsTrend, setVisitorsTrend] = useState([]);
   const [usersDistribution, setUsersDistribution] = useState([]);
   const [boardsDistribution, setBoardsDistribution] = useState([]);
+  const [todayVisitors, setTodayVisitors] = useState(0);
 
   const [activities, setActivities] = useState([]);
 
@@ -139,11 +140,6 @@ const AdminDashbord = () => {
     [boardsDistribution]
   );
 
-  const visitorTotalInPeriod = useMemo(
-    () => visitorsTrend.reduce((acc, item) => acc + toNumber(item?.visitorCount), 0),
-    [visitorsTrend]
-  );
-
   const boardTotalInPeriod = useMemo(
     () => boardsDistribution.reduce((acc, item) => acc + toNumber(item?.activityCount), 0),
     [boardsDistribution]
@@ -163,10 +159,12 @@ const AdminDashbord = () => {
 
       const [
         visitorsTrendResult,
+        todayVisitorsResult,
         usersDistributionResult,
         boardsDistributionResult,
       ] = await Promise.allSettled([
         getVisitorsTrend(periodDays),
+        getVisitorsTrend(1),
         getUsersDistribution(),
         getBoardsDistribution(periodDays),
       ]);
@@ -178,6 +176,20 @@ const AdminDashbord = () => {
       } else {
         setVisitorsTrend([]);
         partialFailures.push('방문자 추이');
+      }
+
+      if (todayVisitorsResult.status === 'fulfilled') {
+        const todayTrendItems = Array.isArray(todayVisitorsResult.value)
+          ? todayVisitorsResult.value
+          : [];
+        const nextTodayVisitors = todayTrendItems.reduce(
+          (sum, item) => sum + toNumber(item?.visitorCount),
+          0
+        );
+        setTodayVisitors(nextTodayVisitors);
+      } else {
+        setTodayVisitors(0);
+        partialFailures.push('금일 방문자');
       }
 
       if (usersDistributionResult.status === 'fulfilled') {
@@ -283,16 +295,14 @@ const AdminDashbord = () => {
             <Users size={16} />
           </div>
           <strong className={styles.statValue}>{totalUserCount.toLocaleString()}명</strong>
-          <span className={styles.statSubText}>권한 분포 기준</span>
         </article>
 
         <article className={styles.statCard}>
           <div className={styles.statHeader}>
-            <span>최근 {periodDays}일 방문자</span>
+            <span>금일 방문자</span>
             <Eye size={16} />
           </div>
-          <strong className={styles.statValue}>{visitorTotalInPeriod.toLocaleString()}명</strong>
-          <span className={styles.statSubText}>방문자 추이 합계</span>
+          <strong className={styles.statValue}>{todayVisitors.toLocaleString()}명</strong>
         </article>
 
         <article className={styles.statCard}>

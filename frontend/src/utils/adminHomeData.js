@@ -22,10 +22,13 @@ const quickActions = [
 ];
 
 export const getAdminHomeData = async () => {
-  const [usersResult, activitiesResult] = await Promise.allSettled([
+  const [usersResult, activitiesResult, visitorsTrendResult] = await Promise.allSettled([
     api.get('/api/admin/users'),
     api.get('/api/admin/dashboard/activities', {
       params: { page: 0, size: 20, sort: 'createdAt,desc' },
+    }),
+    api.get('/api/admin/dashboard/stats/visitors/trend', {
+      params: { days: 1 },
     }),
   ]);
 
@@ -36,6 +39,8 @@ export const getAdminHomeData = async () => {
   const usersResponse = usersResult.value;
   const activitiesResponse =
     activitiesResult.status === 'fulfilled' ? activitiesResult.value : { data: { content: [] } };
+  const visitorsTrendResponse =
+    visitorsTrendResult.status === 'fulfilled' ? visitorsTrendResult.value : { data: [] };
 
   const users = Array.isArray(usersResponse.data)
     ? usersResponse.data
@@ -57,6 +62,14 @@ export const getAdminHomeData = async () => {
     time: formatDateTime(activity?.createdAt),
   }));
 
+  const visitorsTrendItems = Array.isArray(visitorsTrendResponse.data)
+    ? visitorsTrendResponse.data
+    : [];
+  const todayVisitorCount = visitorsTrendItems.reduce(
+    (sum, item) => sum + Number(item?.visitorCount || 0),
+    0
+  );
+
   const pendingApprovals = users.filter((user) => user.role === 'PENDING_MEMBER');
   const members = users.filter((user) => user.role !== 'PENDING_MEMBER');
 
@@ -71,8 +84,8 @@ export const getAdminHomeData = async () => {
       {
         id: 'visitors',
         title: '금일 방문자',
-        value: '-',
-        description: '집계 준비 중',
+        value: String(todayVisitorCount),
+        description: '방문자 추이 기준',
       },
       {
         id: 'attendance',
