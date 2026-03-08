@@ -217,7 +217,16 @@ const AdminDashboard = () => {
         await loadActivities();
       } catch (activitiesError) {
         console.error('활동 로그 조회 실패:', activitiesError);
-        setActivities([]);
+        setError((prev) => {
+          const activityErrorMessage = '활동 로그를 불러오지 못했습니다.';
+          if (!prev) {
+            return activityErrorMessage;
+          }
+
+          return prev.includes(activityErrorMessage)
+            ? prev
+            : `${prev} ${activityErrorMessage}`;
+        });
       }
     } catch (loadError) {
       console.error('관리자 대시보드 로딩 실패:', loadError);

@@ -383,14 +383,16 @@ const Board = () => {
       const nextTabId = createdBoardId || ALL_TAB_ID;
       setActiveSubBoard(nextTabId);
 
-      const cache = {
-        ...postCacheByBoardId,
-        ...(createdBoardId && !postCacheByBoardId[createdBoardId]
-          ? { [createdBoardId]: [] }
-          : {}),
-      };
+      setPostCacheByBoardId((prev) => {
+        if (!createdBoardId || prev[createdBoardId] !== undefined) {
+          return prev;
+        }
 
-      setPostCacheByBoardId(cache);
+        return {
+          ...prev,
+          [createdBoardId]: [],
+        };
+      });
       setCurrentPage(1);
       alert('하위 게시판이 생성되었습니다!');
     } catch (error) {
@@ -445,12 +447,10 @@ const Board = () => {
       setSelectedFiles([]);
 
       const refreshedCurrentBoardCache = await fetchPostsByBoardIds([writeBoardId]);
-      const cache = {
-        ...postCacheByBoardId,
+      setPostCacheByBoardId((prev) => ({
+        ...prev,
         ...refreshedCurrentBoardCache,
-      };
-
-      setPostCacheByBoardId(cache);
+      }));
       setCurrentPage(1);
 
       alert('게시글이 작성되었습니다!');
@@ -495,7 +495,19 @@ const Board = () => {
   }, []);
 
   const handleLike = useCallback(async (postId) => {
-    const snapshot = postCacheByBoardId;
+    let previousLikeState = null;
+    Object.values(postCacheByBoardId).some((postList) => {
+      if (!Array.isArray(postList)) return false;
+
+      const matched = postList.find((post) => getPostId(post) === postId);
+      if (!matched) return false;
+
+      previousLikeState = {
+        isLiked: Boolean(matched.isLiked),
+        likeCount: Number(matched.likeCount || 0),
+      };
+      return true;
+    });
 
     updatePostInCache(postId, (post) => ({
       ...post,
@@ -510,7 +522,14 @@ const Board = () => {
     } catch (error) {
       console.error('좋아요 처리 실패:', error);
       alert('좋아요 처리에 실패했습니다.');
-      setPostCacheByBoardId(snapshot);
+
+      if (previousLikeState) {
+        updatePostInCache(postId, (post) => ({
+          ...post,
+          isLiked: previousLikeState.isLiked,
+          likeCount: previousLikeState.likeCount,
+        }));
+      }
     }
   }, [postCacheByBoardId, updatePostInCache]);
 
