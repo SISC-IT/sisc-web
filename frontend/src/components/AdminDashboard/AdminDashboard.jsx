@@ -27,7 +27,7 @@ import {
   getVisitorsTrend,
   getDashboardActivitiesStreamUrl,
 } from '../../utils/adminDashboardApi';
-import styles from './AdminDashbord.module.css';
+import styles from './AdminDashboard.module.css';
 
 const PERIOD_OPTIONS = [
   { label: '최근 7일', value: 7 },
@@ -92,7 +92,7 @@ const mergeActivityLists = (current = [], incoming = []) => {
     .slice(0, MAX_ACTIVITY_LOGS);
 };
 
-const AdminDashbord = () => {
+const AdminDashboard = () => {
   const [periodDays, setPeriodDays] = useState(7);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -437,4 +437,4 @@ const AdminDashbord = () => {
   );
 };
 
-export default AdminDashbord;
+export default AdminDashboard;
