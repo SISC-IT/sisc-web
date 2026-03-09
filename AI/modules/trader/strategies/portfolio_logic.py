@@ -14,6 +14,8 @@ def calculate_portfolio_allocation(
     data_map: Dict[str, pd.DataFrame],
     macro_data: pd.DataFrame,       # [추가] Gating과 Risk Overlay에 쓰일 매크로/시장 상태 데이터
     model_wrappers: Dict[str, Any], # Base Models (TCN, PatchTST, iTransformer)
+    ticker_ids: Dict[str, int],     
+    sector_ids: Dict[str, int],
     gating_model: Any,              # [추가] Gating 네트워크 모델 (Meta Learner)
     config: Dict[str, Any]
 ) -> Tuple[Dict[str, float], Dict[str, float], Dict[str, Dict[str, float]]]:
@@ -31,13 +33,15 @@ def calculate_portfolio_allocation(
     for ticker, df in data_map.items():
         if df is None or len(df) < 60:
             continue
+        t_id = ticker_ids.get(ticker, -1)
+        s_id = sector_ids.get(ticker, 0)
             
         ticker_signals = {}
         for model_name, wrapper in model_wrappers.items():
             try:
                 # 명세서에 따라 각 모델은 자신만의 필요 데이터(Tech, Log_return, Macro)를
                 # Wrapper 내부에서 추출하여 추론합니다.
-                preds_dict = wrapper.predict(df) 
+                preds_dict = wrapper.predict(df, ticker_id=t_id, sector_id=s_id)
                 ticker_signals.update(preds_dict)
             except Exception as e:
                 print(f"[{ticker}] {model_name} 추론 에러: {e}")
