@@ -99,6 +99,7 @@ public class SessionUserController {
       - **`NOT_SESSION_OWNER`**: 세션 소유자 권한이 없습니다.
       
       """)
+  // todo : ensureAdmin, ensureOwner 이용하는 API 별로 문서화 추가
   @DeleteMapping("/{sessionId}/users/{userId}")
   public ResponseEntity<Void> removeUserFromSession(
       @PathVariable UUID sessionId,

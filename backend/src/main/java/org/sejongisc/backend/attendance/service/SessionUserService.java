@@ -154,6 +154,7 @@ public class SessionUserService {
    * 세션 가입
    */
   @Transactional
+  // todo : 삭제 가능한지 확인 후(중복여부) 삭제
   public void joinSession(UUID sessionId, UUID userId) {
     // 이미 가입했는지 체크
     boolean exists = sessionUserRepository.existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId,
@@ -191,6 +192,7 @@ public class SessionUserService {
    */
   @Transactional
   public void addAdmin(UUID sessionId, UUID targetUserId) {
+    // todo : API 추가
     SessionUser su = sessionUserRepository
         .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
         .orElseThrow(() -> new CustomException(ErrorCode.TARGET_NOT_SESSION_MEMBER));

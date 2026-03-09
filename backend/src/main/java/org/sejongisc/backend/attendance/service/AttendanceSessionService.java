@@ -37,7 +37,7 @@ public class AttendanceSessionService {
    */
   @Transactional
   public void createSession(UUID creatorId, AttendanceSessionRequest request) {
-
+    // todo : Role 검증 추가
     // 출석 세션 엔티티 생성
     AttendanceSession attendanceSession = AttendanceSession.builder()
         .title(request.title())
@@ -133,6 +133,7 @@ public class AttendanceSessionService {
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
+    // todo : cascade 여부
     attendanceSessionRepository.delete(session);
     log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
   }
