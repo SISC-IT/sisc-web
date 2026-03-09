@@ -1,26 +1,15 @@
 package org.sejongisc.backend.board.service;
 
-import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.activity.entity.ActivityType;
 import org.sejongisc.backend.activity.event.ActivityEvent;
-import org.sejongisc.backend.board.dto.BoardResponse;
-import org.sejongisc.backend.board.dto.CommentResponse;
-import org.sejongisc.backend.board.dto.PostAttachmentResponse;
-import org.sejongisc.backend.board.dto.PostRequest;
-import org.sejongisc.backend.board.dto.PostResponse;
+import org.sejongisc.backend.board.dto.*;
 import org.sejongisc.backend.board.entity.Board;
 import org.sejongisc.backend.board.entity.Comment;
 import org.sejongisc.backend.board.entity.Post;
 import org.sejongisc.backend.board.entity.PostAttachment;
-import org.sejongisc.backend.board.repository.BoardRepository;
-import org.sejongisc.backend.board.repository.CommentRepository;
-import org.sejongisc.backend.board.repository.PostAttachmentRepository;
-import org.sejongisc.backend.board.repository.PostBookmarkRepository;
-import org.sejongisc.backend.board.repository.PostLikeRepository;
-import org.sejongisc.backend.board.repository.PostRepository;
+import org.sejongisc.backend.board.repository.*;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.dto.UserInfoResponse;
@@ -35,6 +24,9 @@ import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -70,6 +62,7 @@ public class PostServiceImpl implements PostService {
         .board(board)
         .title(request.getTitle())
         .content(request.getContent())
+        .anonymous(request.isAnonymous())
         .build();
 
     post = postRepository.save(post);
@@ -116,6 +109,7 @@ public class PostServiceImpl implements PostService {
 
     post.setTitle(request.getTitle());
     post.setContent(request.getContent());
+    post.setAnonymous(request.isAnonymous());
 
     // 기존 파일 조회 및 삭제
     List<PostAttachment> existingAttachments = postAttachmentRepository.findAllByPostPostId(postId);
@@ -307,7 +301,8 @@ public class PostServiceImpl implements PostService {
   private PostResponse.PostResponseBuilder getCommonPostBuilder(Post post, User user) {
     return PostResponse.builder()
         .postId(post.getPostId())
-        .user(UserInfoResponse.from(post.getUser()))
+        .user(post.isAnonymous() ? getAnonymousUserInfo() : UserInfoResponse.from(post.getUser()))
+        .anonymous(post.isAnonymous())
         .board(BoardResponse.from(post.getBoard()))
         .title(post.getTitle())
         .content(post.getContent())
@@ -318,6 +313,14 @@ public class PostServiceImpl implements PostService {
         .updatedDate(post.getUpdatedDate())
         .isLiked(postLikeRepository.existsByUserUserIdAndPostPostId(user.getUserId(), post.getPostId()))
         .isBookmarked(postBookmarkRepository.existsByUserUserIdAndPostPostId(user.getUserId(), post.getPostId()));
+  }
+
+  /**
+   * 회원 이름 "익명" 처리
+   * 그 외 정보 모두 null로
+   */
+  private UserInfoResponse getAnonymousUserInfo() {
+    return new UserInfoResponse(null, "익명", null, null, null, null, List.of());
   }
 
   private PostResponse mapToPostResponse(Post post, User user) {
