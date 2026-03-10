@@ -113,6 +113,7 @@ public class AttendanceService {
       UUID targetUserId,
       AttendanceStatusUpdateRequest request
   ) {
+    // todo: activityLog 추가
     String status = (request.getStatus() == null) ? null : request.getStatus().toString();
     String reason = request.getReason();
 
