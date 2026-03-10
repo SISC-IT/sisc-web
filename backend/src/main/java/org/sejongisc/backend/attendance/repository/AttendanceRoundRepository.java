@@ -31,14 +31,14 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-    update AttendanceRound r
-    set r.roundStatus = 'CLOSED'
-    where r.roundStatus <> 'CLOSED'
-      and r.closeAt <= :now
-""")
+        update AttendanceRound r
+        set r.roundStatus = 'CLOSED'
+        where r.roundStatus <> 'CLOSED'
+          and r.closeAt <= :now
+    """)
     int closeDueRounds(LocalDateTime now);
 
-  List<AttendanceRound> findByRoundStatusAndCloseAtBefore(RoundStatus status, LocalDateTime dateTime);
+    List<AttendanceRound> findByRoundStatusAndCloseAtBefore(RoundStatus status, LocalDateTime dateTime);
 
     Optional<AttendanceRound> findByQrSecret(String qrCode);
     List<AttendanceRound> findByAttendanceSession_AttendanceSessionId(UUID sessionId);
@@ -89,4 +89,8 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
     List<AttendanceRound> findBySession_SessionIdAndRoundDateAfterOrEqual(
             @Param("sessionId") UUID sessionId,
             @Param("date") LocalDate date);
+
+    @Modifying
+    @Query("DELETE FROM AttendanceRound a WHERE a.attendanceSession.attendanceSessionId = :sessionId")
+    void deleteBySessionId(@Param("sessionId") UUID sessionId);
 }

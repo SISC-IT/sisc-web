@@ -25,7 +25,9 @@ public interface SessionUserRepository extends JpaRepository<SessionUser, UUID> 
 
     List<SessionUser> findByAttendanceSession_AttendanceSessionId(UUID sessionId);
 
-
+    @Modifying
+    @Query("DELETE FROM SessionUser a WHERE a.attendanceSession.attendanceSessionId = :sessionId")
+    void deleteBySessionId(@Param("sessionId") UUID sessionId);
 
 
     /**

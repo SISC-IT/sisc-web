@@ -68,7 +68,7 @@ public class User extends BasePostgresEntity{
     @Enumerated(EnumType.STRING)        // 새 장부 업로드 시: 기존에 ACTIVE한 모든 인원을 INACTIVE로 일괄 업데이트
     @Column(nullable = false)           // 새 엑셀에 있는 studentId을 대조하여, 명단에 있는 사람만 다시 ACTIVE로 바꾸고
     @Builder.Default                    // generation(기수)과 positionName(직위)을 최신화
-    private UserStatus status = UserStatus.ACTIVE; // 활동 상태 (ACTIVE, INACTIVE, GRADUATED, OUT 등)
+    private UserStatus status = UserStatus.ACTIVE; // 활동 상태 (ACTIVE, INACTIVE, OUT 등)
 
     @Column(columnDefinition = "integer default 0",nullable = false)
     private Integer point;
@@ -85,11 +85,12 @@ public class User extends BasePostgresEntity{
 
     // 권한 확인용 편의 메서드
     public boolean isManagerPosition() {
-        if (this.positionName == null) return false;
+        if (this.role == Role.TEAM_MEMBER || this.role == Role.PENDING_MEMBER ) return false;
         // 직위에 '팀장', '대표', '부대표' 등의 키워드가 있으면 운영진 권한 부여 후보
-        return this.positionName.contains("팀장") ||
-            this.positionName.contains("대표") ||
-            this.positionName.contains("회장");
+        return this.role == Role.SYSTEM_ADMIN ||
+            this.role == Role.PRESIDENT ||
+            this.role == Role.VICE_PRESIDENT ||
+            this.role == Role.TEAM_LEADER;
     }
 
     // 기본값 지정

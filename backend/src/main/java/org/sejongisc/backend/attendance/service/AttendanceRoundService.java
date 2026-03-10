@@ -167,7 +167,7 @@ public class AttendanceRoundService {
         .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
-    authorizationService.ensureAdmin(sessionId, userId);
+    authorizationService.ensureOwner(sessionId, userId);
 
     attendanceRoundRepository.delete(round);
     log.info("라운드 삭제 완료 - roundId: {}", roundId);

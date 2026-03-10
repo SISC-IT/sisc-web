@@ -101,7 +101,7 @@ public class AttendanceRoundController {
       - **필요**
       
       ## 권한
-      - **세션 MANAGER** 또는 **OWNER**
+      - **세션 OWNER**
       
       ## 경로 파라미터
       - **`roundId`**: 삭제할 라운드 ID (`UUID`)
@@ -137,7 +137,7 @@ public class AttendanceRoundController {
         ## 인증(JWT): **필요**
         
         ## 권한
-        - **세션 MEMBER**
+        - **세션 MEMBER/MANAGER/OWNER**
         
         ## 동작 설명
         - 특정 라운드 ID(`roundId`)를 통해 회차의 상세 정보 조회

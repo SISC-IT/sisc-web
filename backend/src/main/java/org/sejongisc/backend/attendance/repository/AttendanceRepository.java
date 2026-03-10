@@ -7,6 +7,7 @@ import org.sejongisc.backend.attendance.entity.Attendance;
 import org.sejongisc.backend.attendance.entity.AttendanceRound;
 import org.sejongisc.backend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -33,4 +34,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
   Optional<Attendance> findByAttendanceRound_RoundIdAndUser(@Param("roundId") UUID roundId, @Param("user") User user);
 
   List<Attendance> findAllByAttendanceRound(AttendanceRound round);
+
+  @Modifying(clearAutomatically = true) // 벌크 연산 후 영속성 컨텍스트 동기화
+  @Query("DELETE FROM Attendance a " +
+      "WHERE a.attendanceRound IN " +
+      "(SELECT r FROM AttendanceRound r WHERE r.attendanceSession.attendanceSessionId = :sessionId)")
+  void deleteBySessionId(@Param("sessionId") UUID sessionId);
 }
