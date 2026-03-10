@@ -24,7 +24,6 @@ const ProfileCard = () => {
     const fetchUserInfo = async () => {
       try {
         const response = await api.get('/api/user/details');
-        console.log('사용자 정보:', response.data);
 
         const { name, point, role } = response.data;
 

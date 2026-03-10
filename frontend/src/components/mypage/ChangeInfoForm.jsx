@@ -20,13 +20,15 @@ export default function ChangeInfoForm({ onValidChange }) {
     currentPassword && passwordValid && newPassword === confirmPassword;
 
   useEffect(() => {
-    if (isValid) {
-      onValidChange({
-        currentPassword,
-        newPassword,
-      });
-    }
-  }, [currentPassword, newPassword, confirmPassword]);
+    onValidChange(
+      isValid
+        ? {
+            currentPassword,
+            newPassword,
+          }
+        : null
+    );
+  }, [isValid, currentPassword, newPassword, onValidChange]);
 
   return (
     <div className={styles.modalContent}>

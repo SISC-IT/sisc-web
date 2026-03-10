@@ -14,6 +14,7 @@ export default function EditProfileModal({ onClose }) {
   const [passwordData, setPasswordData] = useState(null);
 
   const [formValid, setFormValid] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleMenuSelect = (nextMode) => {
     setMode(nextMode);
@@ -88,12 +89,14 @@ export default function EditProfileModal({ onClose }) {
   };
 
   const handleSubmit = async () => {
-    try {
-      if (mode === 'password' && step === 'verify') {
-        setStep('form');
-        return;
-      }
+    if (mode === 'password' && step === 'verify') {
+      setStep('form');
+      return;
+    }
 
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
       if (mode === 'password' && step === 'form') {
         await updateUserDetails({
           currentPassword: passwordData.currentPassword,
@@ -115,14 +118,21 @@ export default function EditProfileModal({ onClose }) {
       }
     } catch (error) {
       toast.error('변경에 실패했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const buttonText = getButtonText();
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.modal}>
+    <div className={styles.overlay} role="presentation">
+      <div
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-profile-modal-title"
+      >
         <div className={styles.modalHeaderColumn}>
           <div className={styles.modalHeader}>
             <h1>{getHeaderTitle()}</h1>
@@ -143,10 +153,10 @@ export default function EditProfileModal({ onClose }) {
           {buttonText && (
             <button // 계속하기 or 비밀번호 변경하기 or 이메일 변경하기 button
               className={`${styles.primaryButton} ${styles.halfButton}`}
-              disabled={!isButtonEnabled()}
+              disabled={!isButtonEnabled() || isSubmitting}
               onClick={handleSubmit}
             >
-              {buttonText}
+              {isSubmitting ? '처리 중...' : buttonText}
             </button>
           )}
         </div>

@@ -4,7 +4,7 @@ import { getActivityLogs } from '../../utils/myPageMenu';
 
 const ActivitySection = () => {
   const [items, setItems] = useState([]);
-  const [page, setPage] = useState(0); // API는 보통 0부터 시작
+  const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const size = 5;
 

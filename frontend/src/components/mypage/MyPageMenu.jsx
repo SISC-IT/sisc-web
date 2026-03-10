@@ -2,7 +2,6 @@ import { useState } from 'react';
 import styles from './MyPageMenu.module.css';
 import ActivityIcon from '../../assets/s-coin-purple.svg';
 import PointPocketIcon from '../../assets/point-pocket.svg';
-import { getMockByKey } from '../../utils/myPageMenuMock';
 import ActivityModal from './ActivityModal';
 
 const MENU_ITEMS = [
