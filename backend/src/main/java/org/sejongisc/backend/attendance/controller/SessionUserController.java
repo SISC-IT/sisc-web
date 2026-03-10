@@ -155,7 +155,7 @@ public class SessionUserController {
           """
   )
   @PostMapping("/{sessionId}/users/add-all")
-  @PreAuthorize("hasRole('PRESIDENT')")
+  @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
   public ResponseEntity<Void> addAllUsers(
       @PathVariable UUID sessionId,
       @AuthenticationPrincipal CustomUserDetails userDetails
