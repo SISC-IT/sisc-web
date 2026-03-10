@@ -6,19 +6,31 @@ import { api } from '../../utils/axios';
 import { toast } from 'react-toastify';
 import AccountSecurity from './AccountSecurity';
 
+const roleMap = {
+  SYSTEM_ADMIN: '시스템관리자',
+  PRESIDENT: '회장',
+  VICE_PRESIDENT: '부회장',
+  TEAM_LEADER: '팀장',
+  TEAM_MEMBER: '부원',
+};
+
 const ProfileCard = () => {
   const [userName, setUserName] = useState('로딩 중...');
   const [userPoint, setUserPoint] = useState(0);
+  const [userRole, setUserRole] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // 사용자 정보 불러오기
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
         const response = await api.get('/api/user/details');
-        const { name, point } = response.data;
+        console.log('사용자 정보:', response.data);
+
+        const { name, point, role } = response.data;
+
         setUserName(name || '사용자');
         setUserPoint(point || 0);
+        setUserRole(roleMap[role] || '일반');
       } catch (error) {
         console.error('사용자 정보 불러오기 실패:', error);
         toast.error('사용자 정보를 불러올 수 없습니다.');
@@ -36,19 +48,15 @@ const ProfileCard = () => {
       <div>
         <img src={ProfileImage} alt="프로필 이미지" />
       </div>
+
       <div>
         <div className={styles.textWrap}>
           <div className={styles.nameRow}>
             <h2 className={styles.username}>{userName}</h2>
           </div>
+
           <div className={styles.metaRow}>
-            <button
-              type="button"
-              className={styles.gradeBtn}
-              aria-label="등급 보기"
-            >
-              일반 등급
-            </button>
+            <div className={styles.gradeBtn}>{userRole}</div>
 
             <div className={styles.metaDivider} aria-hidden="true" />
 
@@ -62,6 +70,7 @@ const ProfileCard = () => {
             </div>
           </div>
         </div>
+
         <AccountSecurity />
       </div>
     </section>
