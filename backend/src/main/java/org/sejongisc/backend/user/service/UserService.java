@@ -98,13 +98,9 @@ public class UserService {
     }
 
     @Transactional
-    public void promoteToSenior(UUID userId) {
+    public void updateUserGrade(UUID userId, Grade grade) {
         User user = findUser(userId);
-
-        // grade 및 status 변경
-        user.setGrade(Grade.SENIOR);
-        user.setStatus(UserStatus.GRADUATED);
-
+        user.setGrade(grade);
         log.info("선배 등급 전환 완료: userId={}, 학번={}", userId, user.getStudentId());
     }
 

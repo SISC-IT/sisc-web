@@ -113,8 +113,8 @@ public class AdminUserService {
      * 특정 사용자를 선배(SENIOR) 등급으로 변경
      */
     @Transactional
-    public void promoteToSenior(UUID userId) {
-        userService.promoteToSenior(userId);
+    public void updateUserGrade(UUID userId, Grade grade) {
+        userService.updateUserGrade(userId, grade);
     }
 
     /**

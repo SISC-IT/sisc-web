@@ -99,7 +99,6 @@ public class SessionUserController {
       - **`NOT_SESSION_OWNER`**: 세션 소유자 권한이 없습니다.
       
       """)
-  // todo : ensureAdmin, ensureOwner 이용하는 API 별로 문서화 추가
   @DeleteMapping("/{sessionId}/users/{userId}")
   public ResponseEntity<Void> removeUserFromSession(
       @PathVariable UUID sessionId,
@@ -164,5 +163,53 @@ public class SessionUserController {
     UUID adminUserId = requireUserId(userDetails);
     sessionUserService.addAllUsers(sessionId, adminUserId);
     return ResponseEntity.ok().build();
+  }
+
+  /**
+   * 세션 관리자(MANAGER) 권한 부여
+   */
+  @Operation(
+      summary = "세션 관리자 추가",
+      description = """
+    ## 권한
+    - **세션 OWNER**
+    
+    ## 동작 설명
+    - 특정 사용자의 역할을 `MANAGER`로 격상시킵니다.
+    """)
+  @PostMapping("/{sessionId}/admins/{userId}")
+  public ResponseEntity<Void> addAdminToSession(
+      @PathVariable UUID sessionId,
+      @PathVariable UUID userId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+    UUID adminUserId = requireUserId(userDetails);
+    // 서비스단에서 세션 소유자(OWNER)인지 검증하는 로직이 포함되어야 함
+    sessionUserService.addAdmin(sessionId, userId, adminUserId);
+    return ResponseEntity.ok().build();
+  }
+
+  /**
+   * 세션 관리자(MANAGER) 권한 해제
+   */
+  @Operation(
+      summary = "세션 관리자 제거",
+      description = """
+    ## 권한
+    - **세션 OWNER**
+    
+    ## 동작 설명
+    - 특정 사용자의 역할을 `PARTICIPANT`로 강등시킵니다.
+    - `OWNER`는 강등될 수 없습니다.
+    """)
+  @DeleteMapping("/{sessionId}/admins/{userId}")
+  public ResponseEntity<Void> removeAdminFromSession(
+      @PathVariable UUID sessionId,
+      @PathVariable UUID userId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+    UUID adminUserId = requireUserId(userDetails);
+    sessionUserService.removeAdmin(sessionId, userId, adminUserId);
+    return ResponseEntity.noContent().build();
   }
 }

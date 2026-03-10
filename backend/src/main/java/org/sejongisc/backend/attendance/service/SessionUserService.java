@@ -35,7 +35,7 @@ public class SessionUserService {
 
   public void addAllUsers(UUID sessionId, UUID userId) {
     // 권한 확인
-    authorizationService.ensureAdmin(sessionId, userId);
+    authorizationService.ensureOwner(sessionId, userId);
     log.info("세션에 모든 사용자 추가 시작: 세션ID={}", sessionId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
@@ -99,7 +99,7 @@ public class SessionUserService {
   public void removeUserFromSession(UUID sessionId, UUID targetUserId, UUID actorUserId) {
     authorizationService.ensureOwner(sessionId, actorUserId);
 
-    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+    attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
     // SessionUser 삭제
@@ -124,11 +124,6 @@ public class SessionUserService {
     return users.stream().map(SessionUserResponse::from).toList();
   }
 
-  @Transactional(readOnly = true)
-  public boolean isUserInSession(UUID sessionId, UUID userId) {
-    return sessionUserRepository.existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, userId);
-  }
-
   private void createAbsentForPastRounds(UUID sessionId, User user) {
     List<AttendanceRound> pastRounds = attendanceRoundRepository
         .findByAttendanceSession_AttendanceSessionIdAndRoundDateBefore(sessionId, LocalDate.now());
@@ -150,49 +145,13 @@ public class SessionUserService {
     }
   }
 
-  /**
-   * 세션 가입
-   */
-  @Transactional
-  // todo : 삭제 가능한지 확인 후(중복여부) 삭제
-  public void joinSession(UUID sessionId, UUID userId) {
-    // 이미 가입했는지 체크
-    boolean exists = sessionUserRepository.existsByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId,
-        userId);
-    if (exists) {
-      throw new CustomException(ErrorCode.ALREADY_JOINED);
-    }
-
-    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-    sessionUserRepository.save(SessionUser.builder()
-        .attendanceSession(session)
-        .user(user)
-        .sessionRole(SessionRole.PARTICIPANT)
-        .build());
-  }
-
-  /**
-   * 세션 탈퇴
-   */
-  @Transactional
-  public void leaveSession(UUID sessionId, UUID userId) {
-    SessionUser su = sessionUserRepository
-        .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, userId)
-        .orElseThrow(() -> new CustomException(ErrorCode.NOT_SESSION_MEMBER));
-
-    sessionUserRepository.delete(su);
-  }
 
   /**
    * 세션 관리자 추가/제거
    */
   @Transactional
-  public void addAdmin(UUID sessionId, UUID targetUserId) {
-    // todo : API 추가
+  public void addAdmin(UUID sessionId, UUID targetUserId, UUID actorUserId) {
+    authorizationService.ensureOwner(sessionId, actorUserId);
     SessionUser su = sessionUserRepository
         .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
         .orElseThrow(() -> new CustomException(ErrorCode.TARGET_NOT_SESSION_MEMBER));
@@ -200,7 +159,8 @@ public class SessionUserService {
   }
 
   @Transactional
-  public void removeAdmin(UUID sessionId, UUID targetUserId) {
+  public void removeAdmin(UUID sessionId, UUID targetUserId, UUID actorUserId) {
+    authorizationService.ensureOwner(sessionId, actorUserId);
     SessionUser su = sessionUserRepository
         .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
         .orElseThrow(() -> new CustomException(ErrorCode.TARGET_NOT_SESSION_MEMBER));

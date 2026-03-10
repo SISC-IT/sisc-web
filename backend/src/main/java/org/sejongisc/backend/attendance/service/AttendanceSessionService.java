@@ -37,7 +37,11 @@ public class AttendanceSessionService {
    */
   @Transactional
   public void createSession(UUID creatorId, AttendanceSessionRequest request) {
-    // todo : Role 검증 추가
+    User creator = userRepository.findById(creatorId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    if (!creator.isManagerPosition()) {
+      throw new CustomException(ErrorCode.NOT_MANAGER_POSITION);
+    }
     // 출석 세션 엔티티 생성
     AttendanceSession attendanceSession = AttendanceSession.builder()
         .title(request.title())
@@ -48,8 +52,6 @@ public class AttendanceSessionService {
 
     AttendanceSession saved = attendanceSessionRepository.save(attendanceSession);
 
-    User creator = userRepository.findById(creatorId)
-        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
     // 세션 생성자를 OWNER로 세션 사용자에 추가
     SessionUser su = SessionUser.builder()
@@ -108,7 +110,7 @@ public class AttendanceSessionService {
    */
   public void updateSession(UUID sessionId, AttendanceSessionRequest request, UUID userId) {
     // 권한 확인
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
+    attendanceAuthorizationService.ensureOwner(sessionId, userId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
@@ -128,7 +130,7 @@ public class AttendanceSessionService {
    */
   public void deleteSession(UUID sessionId, UUID userId) {
     // 권한 확인
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
+    attendanceAuthorizationService.ensureOwner(sessionId, userId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
@@ -142,7 +144,7 @@ public class AttendanceSessionService {
    * 세션 수동 종료(해당 세션 관리자용) - 세션 상태를 CLOSED로 변경 - 체크인 비활성화
    */
   public void closeSession(UUID sessionId, UUID userId) {
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
+    attendanceAuthorizationService.ensureOwner(sessionId, userId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
