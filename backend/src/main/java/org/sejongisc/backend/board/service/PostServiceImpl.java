@@ -66,10 +66,13 @@ public class PostServiceImpl implements PostService {
         .build();
 
     post = postRepository.save(post);
+
     User user = post.getUser();
+    String username = request.isAnonymous() ? "익명" : user.getName();
+
     eventPublisher.publishEvent(new ActivityEvent(
             userId,
-            user.getName(),
+            username,
             ActivityType.BOARD_POST,
             "[" + post.getTitle() + "]글을 게시했습니다.",
             post.getPostId(),
