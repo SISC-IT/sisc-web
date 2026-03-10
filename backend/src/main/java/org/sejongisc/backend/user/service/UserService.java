@@ -15,6 +15,8 @@ import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.util.PasswordPolicyValidator;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,15 +63,17 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public List<ActivityLog> getAttendanceActivityLog(UUID userId) {
-        return activityLogRepository.findByUserIdAndActivityTypesOrderByCreatedAtDesc(userId,
-                List.of(ActivityType.ATTENDANCE));
+    public Page<ActivityLog> getAttendanceActivityLog(UUID userId, Pageable pageable) {
+        return activityLogRepository.findByUserIdAndActivityTypeIn(userId,
+            List.of(ActivityType.ATTENDANCE),
+            pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<ActivityLog> getBoardActivityLog(UUID userId) {
-        return activityLogRepository.findByUserIdAndActivityTypesOrderByCreatedAtDesc(userId,
-                List.of(ActivityType.BOARD_LIKE, ActivityType.BOARD_POST, ActivityType.BOARD_COMMENT));
+    public Page<ActivityLog> getBoardActivityLog(UUID userId, Pageable pageable) {
+        return activityLogRepository.findByUserIdAndActivityTypeIn(userId,
+            List.of(ActivityType.BOARD_LIKE, ActivityType.BOARD_POST, ActivityType.BOARD_COMMENT),
+            pageable);
     }
 
     @Transactional

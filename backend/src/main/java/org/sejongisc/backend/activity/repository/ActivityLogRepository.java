@@ -2,6 +2,7 @@ package org.sejongisc.backend.activity.repository;
 
 import org.sejongisc.backend.activity.entity.ActivityLog;
 import org.sejongisc.backend.activity.entity.ActivityType;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,9 +16,8 @@ import java.util.UUID;
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
     // 마이페이지 내 활동 조회
     @Query("SELECT a FROM ActivityLog a WHERE a.userId = :userId " +
-            "AND a.activityType IN :activityTypes " +
-            "ORDER BY a.createdAt DESC")
-    List<ActivityLog> findByUserIdAndActivityTypesOrderByCreatedAtDesc(UUID userId, List<ActivityType> activityTypes);
+        "AND a.activityType IN :activityTypes")
+    Page<ActivityLog> findByUserIdAndActivityTypeIn(@Param("userId") UUID userId, @Param("activityTypes") List<ActivityType> activityTypes, Pageable pageable);
 
     @Query("SELECT COUNT(a) FROM ActivityLog a " +
         "WHERE a.activityType IN :types " +
