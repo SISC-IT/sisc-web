@@ -1,4 +1,25 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: db
+    environment:
+      POSTGRES_DB: sisc_db
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data              # [SSD] 기본 DB 데이터 (엔진, 메인 테이블)
+      - /mnt/storage/pg_ai_data:/var/lib/postgresql/ai_data   # [HDD] AI 전용 테이블스페이스 공간 (HDD 경로로 매핑)
+    networks:
+      - sisc-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G    # AI 쿼리 고려해서 1GB 권장
+        reservations:
+          memory: 256M
+
   # 백엔드 (Spring Boot)
   api:
     image: ghcr.io/sisc-it/sisc-web-back:${TAG:-latest} # TAG 변수가 없으면 latest 사용
@@ -10,18 +31,21 @@ services:
       - .env
     environment:
       - TZ=Asia/Seoul                   # 시간대 설정 : 컨테이너 내부 환경변수
-      - JAVA_OPTS=-Xmx2560M -Xms1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200     # 자바 힙 메모리를 1GB ~ 2.5GB로 확장 (8GB 서버 기준)
+      - JAVA_OPTS=-Xmx2G -Xms1G -XX:+UseG1GC -XX:MaxGCPauseMillis=200     # 자바 힙 메모리를 1GB ~ 2GB로 확장 (8GB 서버 기준)
     volumes:
       - /etc/localtime:/etc/localtime:ro  # 시간대 설정 : 호스트의 시간 설정 파일 공유
       - /etc/timezone:/etc/timezone:ro
-      - /mnt/storage/logs:/app/logs
-      - /mnt/storage/uploads:/app/uploads
+      - /mnt/storage/logs:/app/logs       # 로그 파일 저장 경로 hdd로 마운트
+      - /mnt/storage/uploads:/app/uploads # 업로드된 파일 저장 경로 hdd로 마운트
     networks:
       - sisc-net
+    depends_on: # redis, db 컨테이너가 켜진 후에 api 실행됨
+      - redis
+      - db
     deploy:
       resources:
         limits:
-          memory: 3500M                 # JVM 힙 외 여유 공간 포함 3.5GB 할당
+          memory: 3G                 # JVM 힙 외 여유 공간 포함 3GB 할당
         reservations:
           memory: 1G                 # 최소 1GB 보장
   redis:
@@ -36,7 +60,7 @@ services:
         limits:
           memory: 250M
 
-  # 프론트엔드 (React + Nginx)
+  # 프론트엔드 (React)
   web:
     image: ghcr.io/sisc-it/sisc-web-front:${TAG:-latest}
     container_name: web
