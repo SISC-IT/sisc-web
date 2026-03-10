@@ -3,7 +3,7 @@ import styles from './ActivityModal.module.css';
 import PointIcon from '../../assets/coin4.svg';
 import { getUserPoints } from '../../utils/myPageMenu';
 
-export default function PointsSection() {
+const PointsSection = () => {
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -75,4 +75,5 @@ export default function PointsSection() {
       {renderPagination()}
     </div>
   );
-}
+};
+export default PointsSection;

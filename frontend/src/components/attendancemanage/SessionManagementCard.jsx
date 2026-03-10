@@ -52,21 +52,6 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
     fetchRounds();
   }, [selectedSessionId, roundsVersion]);
 
-  const handleAddRound = async (newRoundData) => {
-    if (!selectedSessionId) {
-      toast.error('세션을 먼저 선택해주세요.');
-      return;
-    }
-
-    try {
-      await handleAddRounds(selectedSessionId, [newRoundData]);
-
-      toast.success('라운드가 추가되었습니다.');
-    } catch (err) {
-      toast.error('라운드 추가에 실패했습니다.');
-    }
-  };
-
   return (
     <div className={styles.sessionManagementCardContainer}>
       <div className={commonStyles.header}>
@@ -94,7 +79,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
       {/*세션 선택 드롭다운 */}
       <div className={styles.selectGroup}>
         <select
-          value={selectedSessionId}
+          value={selectedSessionId || ''}
           onChange={(e) => setSelectedSessionId(e.target.value)}
         >
           <option value="" disabled>
