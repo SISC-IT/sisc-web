@@ -4,12 +4,14 @@ import AttendanceSection from './AttendanceSection';
 import ActivitySection from './ActivitySection';
 import PointsSection from './PointsSection';
 
-const ActivityModal = ({ isOpen, onClose, title, kind, data }) => {
+const ActivityModal = ({ isOpen, onClose, title, kind }) => {
   useEffect(() => {
     if (!isOpen) return;
+
     const onKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
     };
+
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [isOpen, onClose]);
@@ -26,6 +28,7 @@ const ActivityModal = ({ isOpen, onClose, title, kind, data }) => {
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>{title}</h2>
+
           <button
             type="button"
             className={styles.closeButton}
@@ -39,9 +42,9 @@ const ActivityModal = ({ isOpen, onClose, title, kind, data }) => {
         <hr className={styles.modalDivider} />
 
         <div className={styles.modalBody}>
-          {kind === 'attendance' && <AttendanceSection items={data.items} />}
-          {kind === 'activity' && <ActivitySection items={data.items} />}
-          {kind === 'points' && <PointsSection items={data.items} />}
+          {kind === 'attendance' && <AttendanceSection />}
+          {kind === 'activity' && <ActivitySection />}
+          {kind === 'points' && <PointsSection />}
         </div>
       </div>
     </div>

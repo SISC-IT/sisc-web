@@ -1,7 +1,6 @@
 import styles from './Mypage.module.css';
 import MyPageMenu from '../components/mypage/MyPageMenu';
 import ProfileCard from '../components/mypage/ProfileCard';
-import AccountSecurity from '../components/mypage/AccountSecurity';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 
 const Mypage = () => {
@@ -13,7 +12,6 @@ const Mypage = () => {
 
       <ProfileCard />
       <MyPageMenu />
-      <AccountSecurity />
     </div>
   );
 };
