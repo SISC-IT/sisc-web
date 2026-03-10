@@ -26,8 +26,6 @@ const MyPageMenu = () => {
 
   const selectedItem = MENU_ITEMS.find((m) => m.key === selectedKey);
 
-  const data = getMockByKey(selectedKey);
-
   const handleOpen = (key) => setSelectedKey(key);
   const handleClose = () => setSelectedKey(null);
 
@@ -48,7 +46,9 @@ const MyPageMenu = () => {
                   <span className={styles.chevronRight}>&gt;</span>
                 </h3>
               </div>
+
               <p className={styles.menuDesc}>{item.description}</p>
+
               <img
                 src={item.icon}
                 alt=""
@@ -65,7 +65,6 @@ const MyPageMenu = () => {
         onClose={handleClose}
         title={selectedItem?.title || ''}
         kind={selectedItem?.key}
-        data={data}
       />
     </>
   );
