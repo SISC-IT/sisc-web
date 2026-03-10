@@ -8,6 +8,8 @@ import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.SessionRole;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
 import org.sejongisc.backend.attendance.entity.SessionUser;
+import org.sejongisc.backend.attendance.repository.AttendanceRepository;
+import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.sejongisc.backend.attendance.repository.SessionUserRepository;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -27,6 +29,8 @@ import java.util.UUID;
 @Slf4j
 public class AttendanceSessionService {
 
+  private final AttendanceRoundRepository attendanceRoundRepository;
+  private final AttendanceRepository attendanceRepository;
   private final AttendanceSessionRepository attendanceSessionRepository;
   private final UserRepository userRepository;
   private final SessionUserRepository sessionUserRepository;
@@ -135,7 +139,16 @@ public class AttendanceSessionService {
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-    // todo : cascade 여부
+    // 최하위 자식인 Attendance(출석기록) 삭제
+    attendanceRepository.deleteBySessionId(sessionId);
+
+    // 중간 자식인 AttendanceRound(라운드) 삭제
+    attendanceRoundRepository.deleteBySessionId(sessionId);
+
+    // 참여자 명단(SessionUser) 삭제
+    sessionUserRepository.deleteBySessionId(sessionId);
+
+    // session 삭제
     attendanceSessionRepository.delete(session);
     log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
   }

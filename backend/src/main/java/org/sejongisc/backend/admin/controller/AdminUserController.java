@@ -93,7 +93,7 @@ public class AdminUserController {
         - NEW_MEMBER, // 신입부원
         - ASSOCIATE_MEMBER, // 준회원
         - REGULAR_MEMBER, // 정회원
-    """
+    """)
     @PatchMapping("/{userId}/grade")
     @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
     public ResponseEntity<Void> promoteToSenior(@PathVariable UUID userId,
