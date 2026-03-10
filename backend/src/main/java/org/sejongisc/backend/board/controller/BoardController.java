@@ -36,7 +36,7 @@ public class BoardController {
       summary = "게시물 작성",
       description = "게시판 ID, 제목, 내용, 첨부파일을 포함한 게시물 생성"
                     + "anonymous 값을 true로 보내면 익명 게시물 작성됨"
-                    + "기본값은 false, 값을 보내지 않으면 기본값으로 설정됨"
+                    + "값을 보내지 않으면 기본값(false) 으로 설정됨"
   )
   @PostMapping(value = "/post", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> createPost(
