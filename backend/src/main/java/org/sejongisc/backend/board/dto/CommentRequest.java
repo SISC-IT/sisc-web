@@ -25,6 +25,9 @@ public class CommentRequest {
   @NotBlank(message = "댓글 내용은 필수 항목입니다.")
   private String content;
 
+  @Builder.Default
+  private boolean anonymous = false;
+
   @Schema(description = "부모 댓글 ID (대댓글인 경우에만 필요)")
   private UUID parentCommentId;
 }

@@ -42,6 +42,10 @@ public class Comment extends BasePostgresEntity {
   @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
 
+  @Builder.Default
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean anonymous = false;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "parent_comment_id")
   private Comment parentComment;
