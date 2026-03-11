@@ -12,6 +12,116 @@ from psycopg2.extras import execute_values
 
 from AI.libs.database.connection import get_db_conn
 
+def get_current_position(ticker: str, target_date: str = None, initial_cash: float = 10000000, db_name: str = "db") -> dict:
+    """
+    [현재 포지션 조회] (업그레이드: 누적 실현손익 추가 & 미래 데이터 차단)
+    특정 날짜(target_date) 이전까지의 체결 내역만 계산하여 정확한 과거 스냅샷을 만듭니다.
+    """
+    conn = get_db_conn(db_name)
+    if conn is None:
+        return {"cash": initial_cash, "qty": 0, "avg_price": 0.0, "pnl_realized_cum": 0.0}
+        
+    cursor = conn.cursor()
+    
+    # target_date가 주어지면 그 날짜 '이하'의 체결내역만 가져옵니다 (미래 데이터 훔쳐보기 방지)
+    query = """
+        SELECT side, qty, fill_price, commission
+        FROM public.executions
+        WHERE ticker = %s 
+    """
+    params = [ticker]
+    
+    if target_date:
+        query += " AND fill_date <= %s "
+        params.append(target_date)
+        
+    query += " ORDER BY fill_date ASC, created_at ASC"
+    
+    try:
+        cursor.execute(query, tuple(params))
+        rows = cursor.fetchall()
+        
+        current_qty = 0
+        current_cash = initial_cash
+        total_cost = 0.0 
+        avg_price = 0.0
+        pnl_realized_cum = 0.0 # 누적 실현 손익 추가
+        
+        for side, qty, price, commission in rows:
+            qty = int(qty)
+            price = float(price)
+            commission = float(commission)
+            trade_amount = price * qty
+            
+            if side == "BUY":
+                cost = trade_amount + commission
+                current_cash -= cost
+                
+                total_cost += trade_amount
+                current_qty += qty
+                if current_qty > 0:
+                    avg_price = total_cost / current_qty
+                    
+            elif side == "SELL":
+                revenue = trade_amount - commission
+                current_cash += revenue
+                
+                # 실현 손익 계산: (매도단가 - 평단가) * 수량 - 수수료
+                realized = ((price - avg_price) * qty) - commission
+                pnl_realized_cum += realized
+                
+                current_qty -= qty
+                if current_qty > 0:
+                    total_cost = avg_price * current_qty
+                else:
+                    avg_price = 0.0
+                    total_cost = 0.0
+
+        return {
+            "cash": current_cash,
+            "qty": current_qty,
+            "avg_price": avg_price,
+            "pnl_realized_cum": pnl_realized_cum
+        }
+        
+    except Exception as e:
+        print(f"[Repository][Error] 포지션 조회 중 오류 발생: {e}")
+        return {"cash": initial_cash, "qty": 0, "avg_price": 0.0, "pnl_realized_cum": 0.0}
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_current_cash(target_date: str = None, initial_cash: float = 10000000, db_name: str = "db") -> float:
+    """
+    [현재 포트폴리오 현금 조회] (업그레이드: 미래 데이터 차단)
+    target_date 이전까지의 체결 내역을 기반으로 정확한 현금 잔고를 계산합니다.
+    """
+    conn = get_db_conn(db_name)
+    if conn is None:
+        return initial_cash
+        
+    cursor = conn.cursor()
+    
+    query = """
+        SELECT cash 
+        FROM public.portfolio_summary 
+        WHERE date = (SELECT MAX(date) FROM public.portfolio_summary WHERE date < %s)
+        LIMIT 1;
+    """
+    
+    try:
+        cursor.execute(query, (target_date,))
+        result = cursor.fetchone()
+        if result:
+            return float(result[0])
+        else:
+            return initial_cash
+    except Exception as e:
+        print(f"[Repository][Error] 포트폴리오 현금 조회 중 오류 발생: {e}")
+        return initial_cash
+    finally:
+        cursor.close()
+        conn.close()
 
 def save_executions_to_db(fills_df: pd.DataFrame, db_name: str = "db") -> None:
     """
@@ -143,85 +253,6 @@ def save_reports_to_db(reports_tuple_list: list) -> list:
         if conn:
             cursor.close()
             conn.close()
-
-def get_current_position(ticker: str, target_date: str = None, initial_cash: float = 10000000, db_name: str = "db") -> dict:
-    """
-    [현재 포지션 조회] (업그레이드: 누적 실현손익 추가 & 미래 데이터 차단)
-    특정 날짜(target_date) 이전까지의 체결 내역만 계산하여 정확한 과거 스냅샷을 만듭니다.
-    """
-    conn = get_db_conn(db_name)
-    if conn is None:
-        return {"cash": initial_cash, "qty": 0, "avg_price": 0.0, "pnl_realized_cum": 0.0}
-        
-    cursor = conn.cursor()
-    
-    # target_date가 주어지면 그 날짜 '이하'의 체결내역만 가져옵니다 (미래 데이터 훔쳐보기 방지)
-    query = """
-        SELECT side, qty, fill_price, commission
-        FROM public.executions
-        WHERE ticker = %s 
-    """
-    params = [ticker]
-    
-    if target_date:
-        query += " AND fill_date <= %s "
-        params.append(target_date)
-        
-    query += " ORDER BY fill_date ASC, created_at ASC"
-    
-    try:
-        cursor.execute(query, tuple(params))
-        rows = cursor.fetchall()
-        
-        current_qty = 0
-        current_cash = initial_cash
-        total_cost = 0.0 
-        avg_price = 0.0
-        pnl_realized_cum = 0.0 # 누적 실현 손익 추가
-        
-        for side, qty, price, commission in rows:
-            qty = int(qty)
-            price = float(price)
-            commission = float(commission)
-            trade_amount = price * qty
-            
-            if side == "BUY":
-                cost = trade_amount + commission
-                current_cash -= cost
-                
-                total_cost += trade_amount
-                current_qty += qty
-                if current_qty > 0:
-                    avg_price = total_cost / current_qty
-                    
-            elif side == "SELL":
-                revenue = trade_amount - commission
-                current_cash += revenue
-                
-                # 실현 손익 계산: (매도단가 - 평단가) * 수량 - 수수료
-                realized = ((price - avg_price) * qty) - commission
-                pnl_realized_cum += realized
-                
-                current_qty -= qty
-                if current_qty > 0:
-                    total_cost = avg_price * current_qty
-                else:
-                    avg_price = 0.0
-                    total_cost = 0.0
-
-        return {
-            "cash": current_cash,
-            "qty": current_qty,
-            "avg_price": avg_price,
-            "pnl_realized_cum": pnl_realized_cum # 추가됨
-        }
-        
-    except Exception as e:
-        print(f"[Repository][Error] 포지션 조회 중 오류 발생: {e}")
-        return {"cash": initial_cash, "qty": 0, "avg_price": 0.0, "pnl_realized_cum": 0.0}
-    finally:
-        cursor.close()
-        conn.close()
 
 def save_portfolio_summary(date: str, total_asset: float, cash: float, market_value: float, 
                            pnl_unrealized: float, pnl_realized_cum: float, 

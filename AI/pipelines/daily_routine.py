@@ -11,6 +11,8 @@
 import os
 import warnings
 
+from AI.libs.database.connection import get_db_conn
+
 # 1. TensorFlow C++ 레벨 로그 및 oneDNN 안내문 완벽 차단
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
@@ -36,15 +38,13 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 # 모듈 Import
-# [수정] 뼈대를 직접 가져오지 않고, 우리가 새로 만든 래퍼(Wrapper) 클래스를 가져옵니다.
 from AI.modules.signal.models.transformer.wrapper import TransformerSignalModel 
 from AI.modules.trader.strategies.rule_based import decide_order
 from AI.modules.trader.strategies.portfolio_logic import calculate_portfolio_allocation
 from AI.modules.analysis.generator import ReportGenerator
-from AI.libs.database.repository import save_executions_to_db, save_reports_to_db, get_current_position
+from AI.libs.database.repository import save_executions_to_db, save_reports_to_db, get_current_position,save_portfolio_summary, save_portfolio_positions, get_current_cash
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.features.legacy.technical_features import add_technical_indicators, add_multi_timeframe_features
-from AI.libs.database.repository import save_portfolio_summary, save_portfolio_positions
 from AI.modules.finder.screener import DynamicScreener
 
 
@@ -218,6 +218,10 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     report_results = []
     
     print("5. 매매 주문 및 리스크 관리 실행...")
+    
+    #초기 현금 잔고 세팅
+    current_portfolio_cash = get_current_cash(target_date=exec_date_str, initial_cash=100_000_000)
+    
     for ticker in target_tickers:
         try:
             if ticker not in data_map: continue
@@ -251,7 +255,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
                 
             print(f" >> [{ticker}] Score:{score*100:.1f}% | {action} {qty}주 | {reason}")
 
-            next_cash = 0 
+            next_cash = current_portfolio_cash
             next_qty = my_qty
             next_avg_price = my_avg_price
             pnl_realized = 0.0
@@ -261,14 +265,24 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
                 next_qty = my_qty + qty
                 total_val_old = my_qty * my_avg_price
                 total_val_new = qty * current_price
+                # 현재 전체 현금에서 매수 금액만큼 차감
+                next_cash = current_portfolio_cash - (current_price * qty) 
+                
                 if next_qty > 0:
                     next_avg_price = (total_val_old + total_val_new) / next_qty
+                    
             elif action == 'SELL':
                 next_qty = my_qty - qty
+                # 현재 전체 현금에 매도 금액만큼 더함
+                next_cash = current_portfolio_cash + (current_price * qty)
+                
                 if my_avg_price > 0:
                     pnl_realized = (current_price - my_avg_price) * qty
                 if next_qty <= 0:
                     next_avg_price = 0.0
+
+
+            current_portfolio_cash = next_cash
 
             if next_qty > 0 and next_avg_price > 0:
                 pnl_unrealized = (current_price - next_avg_price) * next_qty
@@ -315,7 +329,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
         except Exception as e:
             print(f"   [Error] {ticker} 매매/리포트 처리 중 에러: {e}")
             traceback.print_exc()
-
+            
     # =========================================================================
     # 6. DB 일괄 저장 (Transaction)
     # =========================================================================
