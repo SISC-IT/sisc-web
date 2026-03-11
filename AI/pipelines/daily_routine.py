@@ -42,7 +42,10 @@ from AI.modules.signal.models.transformer.wrapper import TransformerSignalModel
 from AI.modules.trader.strategies.rule_based import decide_order
 from AI.modules.trader.strategies.portfolio_logic import calculate_portfolio_allocation
 from AI.modules.analysis.generator import ReportGenerator
-from AI.libs.database.repository import save_executions_to_db, save_reports_to_db, get_current_position,save_portfolio_summary, save_portfolio_positions, get_current_cash
+
+# 💡 [수정 1] 개별 DB 함수들 대신 PortfolioRepository 클래스 하나만 임포트합니다.
+from AI.libs.database.repository import PortfolioRepository
+
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.features.legacy.technical_features import add_technical_indicators, add_multi_timeframe_features
 from AI.modules.finder.screener import DynamicScreener
@@ -55,6 +58,9 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
         exec_date_str = datetime.now().strftime("%Y-%m-%d")
         
     print(f"\n[{exec_date_str}] === AI Daily Portfolio Routine (Mode: {mode}) ===")
+
+    # 💡 [수정 2] DB 저장소 객체(Repository) 인스턴스화
+    repo = PortfolioRepository(db_name="db")
 
     if not target_tickers:
         screener = DynamicScreener()
@@ -85,13 +91,12 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     # =========================================================================
     # 2. 다중 모델(Wrappers) 로드 및 초기화 (신규 메타 앙상블 로직)
     # =========================================================================
-    model_wrappers = {} # 포트폴리오 로직에 넘길 모델 보관함
+    model_wrappers = {}
     
     try:
         real_n_tickers = len(loader.ticker_to_id)
         real_n_sectors = len(loader.sector_to_id)
 
-        # 래퍼용 설정값 구성
         transformer_config = {
             "seq_len": strategy_config['seq_len'],
             "features": feature_columns,
@@ -99,7 +104,6 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
             "n_sectors": real_n_sectors
         }
         
-        # 래퍼 인스턴스 생성 및 뼈대 빌드
         transformer_wrapper = TransformerSignalModel(config=transformer_config)
         transformer_wrapper.build(input_shape=(strategy_config['seq_len'], len(feature_columns)))
         
@@ -109,11 +113,9 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
         
         if os.path.exists(weights_path):
             try:
-                # 1차 시도: 기본 Keras 포맷으로 가중치 로드
                 transformer_wrapper.model.load_weights(weights_path)
                 print("✅ [Transformer V1] 모델 가중치 로드 완료 (Standard)")
             except Exception as load_e:
-                # 2차 시도: HDF5 Fallback (기존 로직 완벽 보존)
                 if "not a zip file" in str(load_e) or "header" in str(load_e):
                     temp_h5_path = weights_path.replace(".keras", "_temp_fallback.h5")
                     try:
@@ -129,7 +131,6 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
                 else:
                     raise load_e
             
-            # 스케일러 로드 (래퍼 내부 함수 호출)
             if os.path.exists(scaler_path):
                 transformer_wrapper.load_scaler(scaler_path)
             else:
@@ -171,7 +172,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
                 df = add_multi_timeframe_features(df)
                 df.set_index('date', inplace=True)
                 
-                df = df.loc[:target_timestamp] # Look-ahead bias 방지
+                df = df.loc[:target_timestamp] 
                 
                 if df.empty or df.index[-1] != target_timestamp:
                     continue
@@ -185,7 +186,6 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
         print("⚠️ 오늘(해당일) 처리할 수 있는 데이터가 없습니다. 루틴을 종료합니다.")
         return
 
-    # 게이팅/리스크 오버레이용 매크로 더미 데이터 (향후 DB 연결 시 교체)
     dummy_macro_data = pd.DataFrame([{
         "vix_z_score": 0.0, 
         "mkt_breadth_nh_nl": 0.0,
@@ -199,11 +199,11 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     try:
         target_weights, scores, all_signals_map = calculate_portfolio_allocation(
             data_map=data_map,
-            macro_data=dummy_macro_data,    # 거시 지표
-            model_wrappers=model_wrappers,  # 준비된 모델 딕셔너리 전달
+            macro_data=dummy_macro_data,
+            model_wrappers=model_wrappers,
             ticker_ids=loader.ticker_to_id, 
-            sector_ids=loader.sector_to_id,
-            gating_model=None,              # 아직 강화학습 모델이 없으므로 None
+            ticker_to_sector_id=loader.ticker_to_sector_id, 
+            gating_model=None,
             config=strategy_config
         )
     except Exception as e:
@@ -219,8 +219,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     
     print("5. 매매 주문 및 리스크 관리 실행...")
     
-    #초기 현금 잔고 세팅
-    current_portfolio_cash = get_current_cash(target_date=exec_date_str, initial_cash=100_000_000)
+    current_portfolio_cash = repo.get_current_cash(target_date=exec_date_str, initial_cash=100_000_000)
     
     for ticker in target_tickers:
         try:
@@ -233,7 +232,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
             current_row = data_map[ticker].iloc[-1]
             data_date_str = current_row.name.strftime("%Y-%m-%d") if isinstance(current_row.name, (datetime, pd.Timestamp)) else exec_date_str
 
-            pos_info = get_current_position(ticker, target_date=exec_date_str, initial_cash=0)
+            pos_info = repo.get_current_position(ticker, target_date=exec_date_str, initial_cash=0)
             allocation_cash = 10_000_000 
             
             my_qty = pos_info['qty']
@@ -265,7 +264,6 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
                 next_qty = my_qty + qty
                 total_val_old = my_qty * my_avg_price
                 total_val_new = qty * current_price
-                # 현재 전체 현금에서 매수 금액만큼 차감
                 next_cash = current_portfolio_cash - (current_price * qty) 
                 
                 if next_qty > 0:
@@ -273,14 +271,12 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
                     
             elif action == 'SELL':
                 next_qty = my_qty - qty
-                # 현재 전체 현금에 매도 금액만큼 더함
                 next_cash = current_portfolio_cash + (current_price * qty)
                 
                 if my_avg_price > 0:
                     pnl_realized = (current_price - my_avg_price) * qty
                 if next_qty <= 0:
                     next_avg_price = 0.0
-
 
             current_portfolio_cash = next_cash
 
@@ -338,7 +334,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
         print(f"6-1. XAI 리포트 DB 저장 중... ({len(report_results)}건)")
         reports_tuple = [(r["ticker"], r["signal"], float(r["price"]), r["date"], r["text"]) for r in report_results]
         try:
-            saved_report_ids = save_reports_to_db(reports_tuple)
+            saved_report_ids = repo.save_reports_to_db(reports_tuple)
             saved_report_map = {r["ticker"]: saved_id for r, saved_id in zip(report_results, saved_report_ids)}
         except Exception as db_e:
             print(f"   [Error] 리포트 저장 실패: {db_e}")
@@ -351,7 +347,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
         print(f"6-2. 매매 실행 내역 DB 저장 중... ({len(execution_results)}건)")
         try:
             df_results = pd.DataFrame(execution_results)
-            save_executions_to_db(df_results)
+            repo.save_executions_to_db(df_results)
         except Exception as db_e:
             print(f"   [Error] 실행 내역 저장 실패: {db_e}")
             
@@ -370,7 +366,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     daily_positions = []
     
     for ticker in target_tickers:
-        pos_info = get_current_position(ticker, target_date=exec_date_str, initial_cash=0)
+        pos_info = repo.get_current_position(ticker, target_date=exec_date_str, initial_cash=0)
         
         qty = pos_info['qty']
         avg_price = pos_info['avg_price']
@@ -397,7 +393,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     total_asset = cash + total_market_value
     return_rate = (total_asset / INITIAL_CAPITAL) - 1.0
 
-    save_portfolio_summary(
+    repo.save_portfolio_summary(
         date=exec_date_str, 
         total_asset=total_asset, 
         cash=cash, 
@@ -409,7 +405,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     )
     
     if daily_positions:
-        save_portfolio_positions(exec_date_str, daily_positions)
+        repo.save_portfolio_positions(exec_date_str, daily_positions)
         
     print(f"   => [마감] 총자산: ₩{total_asset:,.0f} | 수익률: {return_rate*100:.2f}%")
     print(f"=== Daily Routine Finished ===\n")

@@ -47,7 +47,7 @@ class DataLoader:
         # 메타데이터 ID 매핑
         self.ticker_to_id: Dict[str, int] = {}
         self.sector_to_id: Dict[str, int] = {}
-        self.ticker_sector_map: Dict[str, int] = {}
+        self.ticker_sector_id: Dict[str, int] = {}
         
         # 공통 데이터 캐싱 (Macro, Market Breadth)
         self.macro_df: pd.DataFrame = pd.DataFrame()
@@ -72,7 +72,7 @@ class DataLoader:
             self.sector_to_id = {sec: i for i, sec in enumerate(unique_sectors)}
             
             for _, row in df_meta.iterrows():
-                self.ticker_sector_map[row['ticker']] = self.sector_to_id[row['sector']]
+                self.ticker_sector_id[row['ticker']] = self.sector_to_id[row['sector']]
                 
             self.ticker_to_id = {t: i for i, t in enumerate(df_meta['ticker'])}
             print(f"[DataLoader] 메타데이터 로드 완료: {len(self.ticker_to_id)}개 종목")
@@ -254,7 +254,7 @@ class DataLoader:
 
             # 메타데이터 매핑
             t_id = self.ticker_to_id.get(ticker, 0)
-            s_id = self.ticker_sector_map.get(ticker, 0)
+            s_id = self.ticker_sector_id.get(ticker, 0)
 
             # Numpy 변환 (속도 최적화)
             feature_vals = sub_df[available_cols].values
