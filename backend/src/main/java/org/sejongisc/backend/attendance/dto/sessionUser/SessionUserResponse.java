@@ -1,4 +1,4 @@
-package org.sejongisc.backend.attendance.dto;
+package org.sejongisc.backend.attendance.dto.sessionUser;
 
 
 import lombok.Builder;

@@ -92,7 +92,7 @@ public class AttendanceRoundService {
     authorizationService.ensureMember(sessionId, userId);
 
     List<AttendanceRound> rounds = attendanceRoundRepository
-        .findByAttendanceSession_AttendanceSessionIdOrderByRoundDateAsc(sessionId);
+        .findByAttendanceSession_AttendanceSessionIdOrderByStartAtAsc(sessionId);
 
     return rounds.stream()
         .map(r -> AttendanceRoundResponse.from(r, false))

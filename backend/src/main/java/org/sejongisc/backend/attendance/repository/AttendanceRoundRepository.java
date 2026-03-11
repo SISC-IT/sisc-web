@@ -46,7 +46,7 @@ public interface AttendanceRoundRepository extends JpaRepository<AttendanceRound
     /**
      * 세션 ID로 해당 세션의 모든 라운드 조회
      */
-    List<AttendanceRound> findByAttendanceSession_AttendanceSessionIdOrderByRoundDateAsc(UUID sessionId);
+    List<AttendanceRound> findByAttendanceSession_AttendanceSessionIdOrderByStartAtAsc(UUID sessionId);
 
     /**
      * 세션 ID와 라운드 날짜로 조회

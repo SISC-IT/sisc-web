@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.SessionUserResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.SessionAttendanceTableResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.SessionUserResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.UserAttendanceRowResponse;
 import org.sejongisc.backend.attendance.service.SessionUserService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.HttpStatus;
@@ -133,12 +135,11 @@ public class SessionUserController {
       
       """)
   @GetMapping("/{sessionId}/users")
-  public ResponseEntity<List<SessionUserResponse>> getSessionUsers(
+  public ResponseEntity<SessionAttendanceTableResponse> getSessionUsers(
       @PathVariable UUID sessionId,
       @AuthenticationPrincipal CustomUserDetails userDetails) {
     UUID adminUserId = requireUserId(userDetails);
-    List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId, adminUserId);
-    return ResponseEntity.ok(users);
+    return ResponseEntity.ok(sessionUserService.getSessionUsers(sessionId, adminUserId));
   }
 
   /**
