@@ -30,7 +30,7 @@ def calculate_portfolio_allocation(
     
     # 모델의 순서를 고정하기 위해 리스트화 (가중치 곱셈 시 순서 꼬임 방지)
     model_names = list(model_wrappers.keys())
-    
+
     # =========================================================================
     # [Phase 3] Base Models (Signal Generation) - 개별 종목별 시그널 추출
     # =========================================================================
@@ -38,21 +38,17 @@ def calculate_portfolio_allocation(
         if df is None or len(df) < 60:
             continue
             
-        t_id = ticker_ids.get(ticker, 0) # 없는 티커는 기본값 0 처리
-        # 💡 NameError 방지를 위해 파라미터로 받은 변수명 사용
+        t_id = ticker_ids.get(ticker, 0) 
         s_id = ticker_to_sector_id.get(ticker, 0) 
             
         ticker_signals = {}
         for model_name in model_names:
             wrapper = model_wrappers[model_name]
             try:
-                # 각 Wrapper 내부에서 필요 데이터를 전처리하고 추론값을 반환
-                preds_dict = wrapper.predict(df, ticker_id=t_id, sector_id=s_id)
-                # preds_dict가 {'TCN': 0.65} 형태라고 가정
+                preds_dict = wrapper.get_signals(df, ticker_id=t_id, sector_id=s_id)
                 ticker_signals.update(preds_dict)
             except Exception as e:
                 print(f"[Phase 3] [{ticker}] {model_name} 추론 에러: {e}")
-                # 에러 발생 시 중립(0.5) 스코어 부여
                 ticker_signals[model_name] = 0.5 
                 
         all_signals_map[ticker] = ticker_signals

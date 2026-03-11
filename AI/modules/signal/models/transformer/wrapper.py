@@ -19,7 +19,6 @@ class TransformerSignalModel(BaseSignalModel):
         super().__init__(config)
         self.model_name = "transformer"
         
-        # [추가] 신규 앙상블 파이프라인을 위한 설정값 초기화
         self.seq_len = config.get("seq_len", 60)
         self.features = config.get("features", []) # 사용할 17개 피처 리스트
         self.scaler = None
@@ -83,51 +82,49 @@ class TransformerSignalModel(BaseSignalModel):
         )
         return history
 
-    def predict(self, X_input: Union[np.ndarray, pd.DataFrame], ticker_id: int = 0, sector_id: int = 0, **kwargs) -> Union[np.ndarray, Dict[str, float]]:
+    def predict(self, X_input: np.ndarray, ticker_id: int = 0, sector_id: int = 0, **kwargs) -> np.ndarray:
         """
-        - 파이프라인에서 DataFrame을 넘기면 -> 전처리 후 딕셔너리로 리턴
-        - 과거 테스트 코드에서 ndarray를 넘기면 -> 배열로 리턴 (기존 하위 호환성)
+        [기본 계약 준수] 
+        - 순수 Numpy 배열을 받아 예측을 수행하고 Numpy 배열을 반환합니다.
         """
         if self.model is None:
             raise ValueError("모델이 없습니다. load()하거나 build() 하세요.")
             
-        if isinstance(X_input, pd.DataFrame):
-            if not self.features:
-                raise ValueError("추론에 필요한 features(컬럼 리스트)가 설정되지 않았습니다.")
-            if self.scaler is None:
-                raise ValueError("스케일러가 로드되지 않았습니다. load_scaler()를 먼저 호출하세요.")
-                
-            # 피처 추출 및 시퀀스 길이만큼 자르기
-            data = X_input[self.features].iloc[-self.seq_len:].values
+        if len(X_input.shape) == 2:
+            X_input = np.expand_dims(X_input, axis=0)
             
-            # 스케일링 및 텐서 변환
-            scaled_data = self.scaler.transform(data)
+        t_id_tensor = np.array([[ticker_id]])
+        s_id_tensor = np.array([[sector_id]])
+        
+        return self.model.predict([X_input, t_id_tensor, s_id_tensor], **kwargs)
 
-            tensor_data = np.expand_dims(scaled_data, axis=0) # (1, 60, 17)
-            t_id_tensor = np.array([[ticker_id]])             # (1, 1) 종목 차원
-            s_id_tensor = np.array([[sector_id]])             # (1, 1) 섹터 차원
+    def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
+        """
+        [파이프라인 전용 메서드] 
+        - DataFrame을 입력받아 전처리 후 포트폴리오 로직에 맞는 딕셔너리로 반환합니다.
+        """
+        if not self.features:
+            raise ValueError("추론에 필요한 features(컬럼 리스트)가 설정되지 않았습니다.")
+        if self.scaler is None:
+            raise ValueError("스케일러가 로드되지 않았습니다. load_scaler()를 먼저 호출하세요.")
 
-            # 모델 예측
-            pred_array = self.model.predict([tensor_data, t_id_tensor, s_id_tensor], verbose=0, **kwargs)
-            probs = pred_array[0]
-    
-            
-            # 포트폴리오 로직에 맞게 딕셔너리로 반환
-            return {
-                f"{self.model_name}_1d": float(probs[0]),
-                f"{self.model_name}_3d": float(probs[1]),
-                f"{self.model_name}_5d": float(probs[2]),
-                f"{self.model_name}_7d": float(probs[3])
-            }
-            
-        else:
-            # 기존 레거시 (ndarray 입력 시)
-            if isinstance(X_input, list): # 이미 3개가 묶여 들어온 경우
-                return self.model.predict(X_input, **kwargs)
-            else: # 1개만 들어온 경우 방어
-                if len(X_input.shape) == 2: X_input = np.expand_dims(X_input, axis=0)
-                return self.model.predict([X_input, np.array([[ticker_id]]), np.array([[sector_id]])], **kwargs)
+        # 1. 피처 추출 및 시퀀스 길이만큼 자르기
+        data = df[self.features].iloc[-self.seq_len:].values
+        
+        # 2. 스케일링
+        scaled_data = self.scaler.transform(data)
+        
+        # 3. 모델 예측 (내부의 predict 재사용)
+        pred_array = self.predict(scaled_data, ticker_id=ticker_id, sector_id=sector_id, verbose=0)
+        probs = pred_array[0]
 
+        # 4. 딕셔너리로 반환
+        return {
+            f"{self.model_name}_1d": float(probs[0]),
+            f"{self.model_name}_3d": float(probs[1]),
+            f"{self.model_name}_5d": float(probs[2]),
+            f"{self.model_name}_7d": float(probs[3])
+        }
     def save(self, filepath: str):
         """모델 저장"""
         if self.model is None:
