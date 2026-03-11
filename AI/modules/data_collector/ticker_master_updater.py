@@ -6,6 +6,7 @@ import pandas as pd
 from typing import List, Dict
 import requests
 from datetime import datetime
+from io import StringIO
 
 # 프로젝트 루트 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +35,14 @@ class TickerMasterUpdater:
         print("[Master] S&P 500 리스트 다운로드 중 (Wikipedia)...")
         try:
             url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-            tables = pd.read_html(url)
+            # 봇 차단 우회를 위한 User-Agent 헤더 추가
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+            
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            
+            # StringIO로 텍스트를 감싸서 pandas로 읽기
+            tables = pd.read_html(StringIO(response.text))
             df = tables[0]
             
             # yfinance 호환성을 위해 티커 변경 (예: BRK.B -> BRK-B)
@@ -59,14 +67,23 @@ class TickerMasterUpdater:
         print("[Master] NASDAQ 100 리스트 다운로드 중...")
         try:
             url = 'https://en.wikipedia.org/wiki/Nasdaq-100'
-            tables = pd.read_html(url)
+            # 봇 차단 우회를 위한 User-Agent 헤더 추가
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+            
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            
+            tables = pd.read_html(StringIO(response.text))
+            
             # 보통 5번째 테이블이 구성 종목 (Wikipedia 구조 변경 시 확인 필요)
             # 안전하게 컬럼명으로 찾기
+            df = None
             for table in tables:
                 if 'Ticker' in table.columns and 'Company' in table.columns:
                     df = table
                     break
-            else:
+            
+            if df is None:
                 return []
 
             df['Ticker'] = df['Ticker'].str.replace('.', '-', regex=False)
