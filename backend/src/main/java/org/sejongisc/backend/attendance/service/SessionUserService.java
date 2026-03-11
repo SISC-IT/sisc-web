@@ -165,6 +165,18 @@ public class SessionUserService {
     return new SessionAttendanceTableResponse(session.getTitle(), roundHeaders, userRows);
   }
 
+  @Transactional(readOnly = true)
+  public List<AvailableSessionUserResponse> getAvailableUsers(UUID sessionId, UUID actorUserId) {
+    authorizationService.ensureOwner(sessionId, actorUserId);
+
+    attendanceSessionRepository.findById(sessionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+    return userRepository.findUsersByStatusNotInSession(UserStatus.ACTIVE, sessionId).stream()
+        .map(AvailableSessionUserResponse::from)
+        .toList();
+  }
+
   private void createAbsentForPastRounds(UUID sessionId, User user) {
     List<AttendanceRound> pastRounds = attendanceRoundRepository
         .findByAttendanceSession_AttendanceSessionIdAndRoundDateBefore(sessionId, LocalDate.now());

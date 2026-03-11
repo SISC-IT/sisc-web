@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.attendance.dto.sessionUser.SessionAttendanceTableResponse;
 import org.sejongisc.backend.attendance.dto.sessionUser.SessionUserResponse;
 import org.sejongisc.backend.attendance.dto.sessionUser.UserAttendanceRowResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.AvailableSessionUserResponse;
 import org.sejongisc.backend.attendance.service.SessionUserService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.HttpStatus;
@@ -143,6 +144,31 @@ public class SessionUserController {
       @AuthenticationPrincipal CustomUserDetails userDetails) {
     UUID adminUserId = requireUserId(userDetails);
     return ResponseEntity.ok(sessionUserService.getSessionUsers(sessionId, adminUserId));
+  }
+
+  @Operation(
+      summary = "세션에 추가 가능한 사용자 조회",
+      description = """
+      ## 인증(JWT)
+      - **필요**
+
+      ## 권한
+      - **세션 OWNER**
+
+      ## 경로 파라미터
+      - **`sessionId`**: 조회할 세션 ID (`UUID`)
+
+      ## 동작 설명
+      - 전체 사용자 중 해당 세션에 아직 참여하지 않은 사용자만 반환합니다.
+      - 응답 필드: `userId`, `studentId`, `name`, `teamName`
+      - `ACTIVE` 상태 사용자만 포함됩니다.
+      """)
+  @GetMapping("/{sessionId}/users/available")
+  public ResponseEntity<List<AvailableSessionUserResponse>> getAvailableUsers(
+      @PathVariable UUID sessionId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
+    UUID adminUserId = requireUserId(userDetails);
+    return ResponseEntity.ok(sessionUserService.getAvailableUsers(sessionId, adminUserId));
   }
 
   /**

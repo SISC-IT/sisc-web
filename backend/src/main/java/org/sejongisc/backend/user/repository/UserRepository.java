@@ -4,6 +4,7 @@ package org.sejongisc.backend.user.repository;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -30,4 +31,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByStudentId(String studentId);
 
     List<User> findAllByStatus(UserStatus status);
+
+    @Query("""
+        SELECT u
+        FROM User u
+        WHERE u.status = :status
+          AND u.userId NOT IN (
+              SELECT su.user.userId
+              FROM SessionUser su
+              WHERE su.attendanceSession.attendanceSessionId = :sessionId
+          )
+        ORDER BY u.name ASC
+        """)
+    List<User> findUsersByStatusNotInSession(@Param("status") UserStatus status, @Param("sessionId") UUID sessionId);
 }
