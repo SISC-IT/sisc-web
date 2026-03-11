@@ -104,13 +104,10 @@ class TickerMasterUpdater:
         if not ticker_list:
             print("[Master] 저장할 종목이 없습니다.")
             return
-
-        # self.db_name이 'db'로 들어오면 환경변수의 값을 쓰도록 보정
-        target_db = os.getenv("DB_NAME", "sisc_db") if self.db_name == "db" else self.db_name
-        conn = get_db_conn(target_db)
+        conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
         
-        print(f"[Master] DB 업데이트 시작 ({len(ticker_list)}개 종목) -> DB: {target_db}")
+        print(f"[Master] DB 업데이트 시작 ({len(ticker_list)}개 종목) -> DB: {self.db_name}")
         
         try:
             # 1. stock_info 테이블 업데이트 (전체 배치 처리)
