@@ -1,7 +1,7 @@
 # AI/modules/features/market_derived.py
 import pandas as pd
 import numpy as np
-from features.technical import compute_rsi, compute_atr, compute_macd, compute_bollinger_bands
+from .technical import compute_rsi, compute_atr, compute_macd, compute_bollinger_bands
 
 def add_market_changes(df: pd.DataFrame) -> pd.DataFrame:
     """가격 및 거래량 기반 변화율 계산 [명세서 준수]"""

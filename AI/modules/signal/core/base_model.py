@@ -55,6 +55,19 @@ class BaseSignalModel(ABC):
         pass
 
     @abstractmethod
+    def get_signals(self, df: pd.DataFrame, ticker_id: int, sector_id: int) -> Dict[str, float]:
+        """
+        모델별 시그널을 딕셔너리 형태로 반환하는 메서드
+        Args:
+            df (pd.DataFrame): 종목별 시계열 데이터
+            ticker_id (int): 종목 ID
+            sector_id (int): 섹터 ID
+        Returns:
+            Dict[str, float]: 모델 이름을 키로 하고 예측 확률을 값으로 하는 딕셔너리
+        """
+        pass
+
+    @abstractmethod
     def save(self, filepath: str):
         """모델 가중치 저장"""
         pass

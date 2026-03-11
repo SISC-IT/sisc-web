@@ -3,7 +3,6 @@
 레거시 버전입니다.
 [Stationary Multi-Timeframe Features - Fixed]
 - 절대 가격(Price)을 Ratio로 변환합니다.
-- [수정] 주가 데이터를 파괴하던 clip(-10, 10) 로직을 제거했습니다.
 - 무한대(inf)는 NaN -> 0 처리하여 안전하게 만듭니다.
 """
 
