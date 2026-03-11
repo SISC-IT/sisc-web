@@ -1,8 +1,8 @@
 # AI/modules/features/processor.py
 import pandas as pd
-from .market_derived import add_standard_technical_features, add_multi_timeframe_features
-from .event_features import add_date_distance, add_event_window_flags
-from .technical import compute_correlation_spike, compute_recent_loss_ema
+from AI.modules.features.market_derived import add_standard_technical_features, add_multi_timeframe_features
+from AI.modules.features.event_features import add_date_distance, add_event_window_flags
+from AI.modules.features.technical import compute_correlation_spike, compute_recent_loss_ema
 
 class FeatureProcessor:
     """
