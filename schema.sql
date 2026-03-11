@@ -1,10 +1,10 @@
 ----------------------------------------------------------------------
--- Schema: public / neon_auth
+-- Schema: public
 --  - 퀀트 트레이딩, 백테스트, XAI 분석 및 포트폴리오 관리 시스템의 핵심 데이터 모델
 ----------------------------------------------------------------------
 
-CREATE SCHEMA IF NOT EXISTS "public";
-CREATE SCHEMA IF NOT EXISTS "neon_auth";
+-- 1. HDD 경로를 테이블스페이스로 등록
+CREATE TABLESPACE ts_ai_hdd LOCATION '/var/lib/postgresql/ai_data';
 
 ----------------------------------------------------------------------
 -- 1. stock_info / company_names
@@ -13,7 +13,7 @@ CREATE SCHEMA IF NOT EXISTS "neon_auth";
 CREATE TABLE "company_names" (
     "company_name" varchar(100) PRIMARY KEY, -- 기업 한글/영문 정식 명칭
     "ticker" varchar(255) NOT NULL UNIQUE    -- 종목 티커
-);
+) TABLESPACE ts_ai_hdd;
 
 CREATE TABLE "stock_info" (
     "ticker" varchar(20) PRIMARY KEY,  -- 종목 티커
@@ -21,7 +21,7 @@ CREATE TABLE "stock_info" (
     "industry" varchar(200),           -- 세부 산업 분류
     "market_cap" bigint,               -- 시가총액 (필터링/비중 계산용)
     "updated_at" timestamp DEFAULT now() -- 정보 갱신 일시
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 2. price_data
@@ -41,7 +41,7 @@ CREATE TABLE "price_data" (
     "pbr" numeric(18, 6),              -- 주가순자산비율 (PBR)
     "amount" numeric(38, 2),           -- 일일 거래대금
     CONSTRAINT "price_data_pkey" PRIMARY KEY("date", "ticker")
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 3. crypto_price_data
@@ -58,7 +58,7 @@ CREATE TABLE "crypto_price_data" (
     "volume" numeric(38, 8),           -- 거래량
     "market_cap" numeric(38, 2),       -- 시가총액
     CONSTRAINT "crypto_price_data_pkey" PRIMARY KEY("date", "ticker")
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 4. macroeconomic_indicators (거시경제 지표)
@@ -93,7 +93,7 @@ CREATE TABLE "macroeconomic_indicators" (
     "wti_price" numeric(10, 2),        -- WTI 유가
     "gold_price" numeric(10, 2),       -- 국제 금 가격
     "credit_spread_hy" numeric(10, 4)  -- 하이일드 채권 신용 스프레드
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 5. company_fundamentals (제무제표 데이터)
@@ -115,7 +115,7 @@ CREATE TABLE "company_fundamentals" (
     "interest_coverage" numeric(10, 2),  -- 이자보상배율
     "shares_issued" numeric(20, 2),      -- 유통 주식 수
     CONSTRAINT "company_fundamentals_pkey" PRIMARY KEY("ticker","date")
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 6. Market Breadth Stats (마켓 상태 지표)
@@ -134,10 +134,10 @@ CREATE TABLE IF NOT EXISTS "market_breadth" (
     "ma200_pct" numeric(5, 2), 
     
     "created_at" timestamp DEFAULT now()
-);
+) TABLESPACE ts_ai_hdd;
 
 -- 인덱스
-CREATE INDEX IF NOT EXISTS "idx_market_breadth_date" ON "market_breadth" ("date");
+CREATE INDEX IF NOT EXISTS "idx_market_breadth_date" ON "market_breadth" ("date") TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 7. news_sentiment
@@ -153,7 +153,7 @@ CREATE TABLE "news_sentiment" (
     "risk_keyword_cnt" integer,        -- 위험 키워드 빈도수
     "article_count" integer,           -- 분석된 기사 수
     "created_at" timestamp DEFAULT now() -- 분석 기록 생성 시각
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 8. xai_reports
@@ -171,7 +171,7 @@ CREATE TABLE "xai_reports" (
     "run_id" varchar(64),              -- 분석 실행 프로세스 식별 ID
     CONSTRAINT "uq_xai_reports_ticker_date_signal" UNIQUE("ticker","date","signal"),
     CONSTRAINT "ck_xai_reports_signal" CHECK (signal = ANY (ARRAY['BUY', 'SELL', 'HOLD']))
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 9. executions
@@ -199,7 +199,7 @@ CREATE TABLE "executions" (
     "created_at" timestamp with time zone DEFAULT now() NOT NULL, -- DB 기록 시각
     "xai_report_id" bigint,            -- 연관된 XAI 리포트 참조 ID
     CONSTRAINT "fk_executions_xai_reports" FOREIGN KEY ("xai_report_id") REFERENCES "xai_reports"("id") ON DELETE SET NULL
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 10. portfolio_summary
@@ -215,11 +215,10 @@ CREATE TABLE "portfolio_summary" (
     "initial_capital" numeric(20, 6) NOT NULL, -- 투자 원금
     "return_rate" numeric(10, 6) NOT NULL, -- 누적 수익률
     "created_at" timestamp with time zone DEFAULT now() -- 기록 시각
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 11. portfolio_positions
---    - 특정 run_id(백테스트/실거래 실행 회차) 기준으로
 --      날짜별 종목 포지션 스냅샷을 저장
 --    - portfolio_summary(일자별 총자산)와 함께 일별 상태 재현/검증 가능
 ----------------------------------------------------------------------
@@ -234,7 +233,7 @@ CREATE TABLE "portfolio_positions" (
     "pnl_unrealized" numeric(20, 6) NOT NULL,-- 미실현 손익
     "pnl_realized_cum" numeric(20, 6) NOT NULL, -- 누적 실현 손익(해당 종목)
     "created_at" timestamp with time zone DEFAULT now() NOT NULL -- 기록 시각
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 12. event_calendar
@@ -254,7 +253,7 @@ CREATE TABLE IF NOT EXISTS "event_calendar" (
     
     -- 중복 방지: 같은 날짜, 같은 타입, 같은 대상(티커)의 이벤트는 중복될 수 없음
     CONSTRAINT "uq_event_calendar" UNIQUE ("event_date", "event_type", "ticker")
-);
+) TABLESPACE ts_ai_hdd;
 
 ----------------------------------------------------------------------
 -- 13. sector_returns
@@ -271,18 +270,26 @@ CREATE TABLE IF NOT EXISTS "sector_returns" (
     
     -- PK: 날짜와 섹터의 조합은 유일해야 함
     CONSTRAINT "pk_sector_returns" PRIMARY KEY ("date", "sector")
-);
+) TABLESPACE ts_ai_hdd;
 
-----------------------------------------------------------------------
--- 14. neon_auth.users_sync
---    - 인증 서비스(Neon/Clerk 등)와 동기화된 사용자 데이터 정보
-----------------------------------------------------------------------
-CREATE TABLE "neon_auth"."users_sync" (
-    "raw_json" jsonb NOT NULL,         -- 인증 서버에서 전달받은 원본 JSON 데이터
-    "id" text PRIMARY KEY GENERATED ALWAYS AS ((raw_json ->> 'id')) STORED, -- 사용자 UUID
-    "name" text GENERATED ALWAYS AS ((raw_json ->> 'display_name')) STORED, -- 사용자 이름
-    "email" text GENERATED ALWAYS AS ((raw_json ->> 'primary_email')) STORED, -- 사용자 이메일
-    "created_at" timestamp with time zone GENERATED ALWAYS AS (to_timestamp((trunc((((raw_json ->> 'signed_up_at_millis'::text))::bigint)::double precision) / (1000)::double precision))) STORED, -- 가입 시각
-    "updated_at" timestamp with time zone, -- 정보 수정 시각
-    "deleted_at" timestamp with time zone  -- 계정 삭제 시각 (Soft Delete)
-);
+-- 1. price_data: 종목별 시세 히스토리 단독 조회용
+CREATE INDEX IF NOT EXISTS "idx_price_data_ticker" ON "price_data" ("ticker") TABLESPACE ts_ai_hdd;
+CREATE INDEX IF NOT EXISTS "idx_crypto_price_data_ticker" ON "crypto_price_data" ("ticker") TABLESPACE ts_ai_hdd;
+
+-- 2. executions: 특정 백테스트 회차의 체결 내역 모아보기
+CREATE INDEX IF NOT EXISTS "idx_executions_run_id" ON "executions" ("run_id") TABLESPACE ts_ai_hdd;
+
+-- 3. executions: XAI 리포트 조인용 (외래키는 자동 인덱스 생성이 안 됨)
+CREATE INDEX IF NOT EXISTS "idx_executions_xai_report_id" ON "executions" ("xai_report_id") TABLESPACE ts_ai_hdd;
+
+-- 4. news_sentiment: 특정 종목의 감성 점수 필터링
+CREATE INDEX IF NOT EXISTS "idx_news_sentiment_ticker_date" ON "news_sentiment" ("ticker", "date") TABLESPACE ts_ai_hdd;
+
+-- 5. portfolio_positions: PK 누락 보완 및 날짜/종목 조회용
+CREATE INDEX IF NOT EXISTS "idx_portfolio_positions_date_ticker" ON "portfolio_positions" ("date", "ticker") TABLESPACE ts_ai_hdd;
+
+-- 6. xai_reports: 특정 분석 실행(run_id)에 대한 리포트 조회용
+CREATE INDEX IF NOT EXISTS "idx_xai_reports_run_id" ON "xai_reports" ("run_id") TABLESPACE ts_ai_hdd;
+
+-- 7. company_fundamentals: 종목별 재무제표 데이터 조회용 (날짜 기준)
+CREATE INDEX IF NOT EXISTS "idx_company_fundamentals_date" ON "company_fundamentals" ("date") TABLESPACE ts_ai_hdd;
