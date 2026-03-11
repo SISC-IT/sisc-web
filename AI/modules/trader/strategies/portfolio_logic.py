@@ -45,10 +45,19 @@ def calculate_portfolio_allocation(
         for model_name in model_names:
             wrapper = model_wrappers[model_name]
             try:
+                # 1. 래퍼에서 다중 호라이즌 예측값 가져오기 (예: 1d, 3d, 5d, 7d)
                 preds_dict = wrapper.get_signals(df, ticker_id=t_id, sector_id=s_id)
-                ticker_signals.update(preds_dict)
+                
+                # 💡 [핵심 수정] 반환된 예측값들의 '평균'을 구하여 이 모델의 대표 점수로 사용합니다.
+                # preds_dict.values()는 [0.6, 0.65, 0.55, 0.7] 형태의 값을 가짐
+                model_mean_score = float(np.mean(list(preds_dict.values())))
+                
+                # 'transformer_v1' 이라는 정확한 키에 대표 점수 할당!
+                ticker_signals[model_name] = model_mean_score
+                
             except Exception as e:
                 print(f"[Phase 3] [{ticker}] {model_name} 추론 에러: {e}")
+                # 에러 발생 시 중립(0.5) 스코어 부여
                 ticker_signals[model_name] = 0.5 
                 
         all_signals_map[ticker] = ticker_signals

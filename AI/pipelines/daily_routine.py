@@ -58,8 +58,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
         exec_date_str = datetime.now().strftime("%Y-%m-%d")
         
     print(f"\n[{exec_date_str}] === AI Daily Portfolio Routine (Mode: {mode}) ===")
-
-    # 💡 [수정 2] DB 저장소 객체(Repository) 인스턴스화
+    
     repo = PortfolioRepository(db_name="db")
 
     if not target_tickers:
