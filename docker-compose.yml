@@ -2,6 +2,8 @@ services:
   db:
     image: postgres:16-alpine
     container_name: db
+    ports:
+      - "127.0.0.1:5432:5432"  # 외부 인터넷은 차단되고 서버 내부에서만 접속 가능
     environment:
       POSTGRES_DB: sisc_db
       POSTGRES_USER: ${DB_USERNAME}
