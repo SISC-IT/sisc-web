@@ -20,7 +20,7 @@ class DynamicScreener:
     """
     def __init__(self, db_name="db"):
         self.db_name = db_name
-        self.config_path = os.path.join(project_root, "AI", "config", "watchlist.json")
+        self.config_path = os.path.join(project_root, "config", "watchlist.json")
 
     def update_watchlist(self, target_date: str, top_n: int = 30) -> list:
         """
