@@ -142,7 +142,7 @@ def main():
         try:
             print("\n>>> [Step 1] 거시경제 지표(Macro) 업데이트")
             collector = MacroDataCollector(db_name=args.db)
-            collector.run(lookback_days=365*5 if args.repair else 365*2)
+            collector.run(lookback_days=365*10 if args.repair else 365*2)
         except Exception as e:
             print(f"[Error] Macro Data 수집 중단: {e}")
 
