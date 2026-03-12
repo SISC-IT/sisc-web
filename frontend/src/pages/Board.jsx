@@ -86,6 +86,7 @@ const Board = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isAnonymousPost, setIsAnonymousPost] = useState(false);
   const [sortOption, setSortOption] = useState('latest');
   const [loading, setLoading] = useState(false);
   const [boardsLoaded, setBoardsLoaded] = useState(false);
@@ -315,6 +316,7 @@ const Board = () => {
 
   const handleOpenModal = () => {
     setWriteBoardId('');
+    setIsAnonymousPost(false);
     setShowModal(true);
   };
 
@@ -324,6 +326,7 @@ const Board = () => {
     setContent('');
     setSelectedFiles([]);
     setWriteBoardId('');
+    setIsAnonymousPost(false);
     setIsSavingPost(false);
   };
 
@@ -439,6 +442,7 @@ const Board = () => {
         title: title.trim(),
         content: content.trim(),
         files: selectedFiles,
+        anonymous: isAnonymousPost,
       };
 
       await boardApi.createPost(writeBoardId, postData);
@@ -680,6 +684,8 @@ const Board = () => {
           setTitle={setTitle}
           content={content}
           setContent={setContent}
+          isAnonymous={isAnonymousPost}
+          setIsAnonymous={setIsAnonymousPost}
           boardOptions={subBoardTabs.filter((tab) => tab.id !== ALL_TAB_ID)}
           selectedBoardId={writeBoardId}
           onBoardChange={setWriteBoardId}

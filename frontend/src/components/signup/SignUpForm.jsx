@@ -37,10 +37,14 @@ const SignUpForm = () => {
   );
 
   const [isSending, setIsSending] = useState(false);
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [isVerificationSent, setVerificationSent] = useState(false);
   const [isVerificationChecked, setVerificationChecked] = useState(false);
 
-  const abortRef = useRef(null);
+  const abortRefSend = useRef(null);
+  const abortRefCheck = useRef(null);
+  const abortRefSignUp = useRef(null);
   const nav = useNavigate();
 
   const handlePasswordChange = (e) => {
@@ -118,13 +122,13 @@ const SignUpForm = () => {
   const handleSendVerificationNumber = async (e) => {
     e.preventDefault();
 
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    abortRefSend.current?.abort();
+    abortRefSend.current = new AbortController();
 
     setIsSending(true);
 
     try {
-      await sendVerificationNumber({ email }, abortRef.current.signal);
+      await sendVerificationNumber({ email }, abortRefSend.current.signal);
       setVerificationSent(true);
       toast.success('인증번호가 발송되었습니다.');
     } catch (error) {
@@ -136,27 +140,41 @@ const SignUpForm = () => {
   };
 
   const handleCheckVerificationNumber = async () => {
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    if (isCheckingVerification) {
+      return;
+    }
+
+    abortRefCheck.current?.abort();
+    abortRefCheck.current = new AbortController();
+
+    setIsCheckingVerification(true);
 
     try {
       await checkVerificationNumber(
         { email, verificationNumber },
-        abortRef.current.signal
+        abortRefCheck.current.signal
       );
       setVerificationChecked(true);
       toast.success('인증되었습니다.');
     } catch (error) {
       console.log(error);
       toast.error('인증에 실패했습니다.');
+    } finally {
+      setIsCheckingVerification(false);
     }
   };
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    if (isSigningUp) {
+      return;
+    }
+
+    abortRefSignUp.current?.abort();
+    abortRefSignUp.current = new AbortController();
+
+    setIsSigningUp(true);
 
     try {
       await signUp(
@@ -173,13 +191,15 @@ const SignUpForm = () => {
           teamName,
           remark,
         },
-        abortRef.current.signal
+        abortRefSignUp.current.signal
       );
       toast.success('회원가입이 완료되었습니다.');
       nav('/login');
     } catch (error) {
       console.log(error);
       toast.error('회원가입에 실패하였습니다.');
+    } finally {
+      setIsSigningUp(false);
     }
   };
 
@@ -288,9 +308,9 @@ const SignUpForm = () => {
                 type="button"
                 className={styles.verifyButton}
                 onClick={handleCheckVerificationNumber}
-                disabled={!isVerificationSent}
+                disabled={!isVerificationSent || isCheckingVerification}
               >
-                인증번호 확인
+                {isCheckingVerification ? '확인 중...' : '인증번호 확인'}
               </button>
             </div>
           </div>
@@ -382,9 +402,9 @@ const SignUpForm = () => {
           <button
             type="submit"
             className={styles.signUpButton}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSigningUp}
           >
-            회원가입
+            {isSigningUp ? '회원가입 중...' : '회원가입'}
           </button>
         </form>
       </div>
