@@ -18,7 +18,7 @@ export default function EditProfileModal({ onClose, onSuccess }) {
 
   const handleMenuSelect = (nextMode) => {
     setMode(nextMode);
-    setStep('verify');
+    setStep(nextMode === 'password' ? 'form' : 'verify');
     setVerifiedEmail(null);
     setPasswordData(null);
     setFormValid(false);
@@ -53,7 +53,7 @@ export default function EditProfileModal({ onClose, onSuccess }) {
       );
     }
 
-    if (step === 'verify') {
+    if (mode === 'email' && step === 'verify') {
       return (
         <EmailVerify
           type={mode === 'email' ? 'newEmail' : 'currentEmail'}
@@ -67,7 +67,7 @@ export default function EditProfileModal({ onClose, onSuccess }) {
         <ChangeInfoForm
           onValidChange={(data) => {
             setPasswordData(data);
-            setFormValid(true);
+            setFormValid(Boolean(data));
           }}
         />
       );
@@ -75,29 +75,22 @@ export default function EditProfileModal({ onClose, onSuccess }) {
   };
 
   const getButtonText = () => {
-    if (mode === 'password' && step === 'verify') return '계속하기';
-    if (mode === 'password' && step === 'form') return '비밀번호 변경하기';
+    if (mode === 'password') return '비밀번호 변경하기';
     if (mode === 'email') return '이메일 변경하기';
     return null;
   };
 
   const isButtonEnabled = () => {
-    if (mode === 'password' && step === 'verify') return !!verifiedEmail;
-    if (mode === 'password' && step === 'form') return formValid;
+    if (mode === 'password') return formValid;
     if (mode === 'email') return !!verifiedEmail;
     return false;
   };
 
   const handleSubmit = async () => {
-    if (mode === 'password' && step === 'verify') {
-      setStep('form');
-      return;
-    }
-
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      if (mode === 'password' && step === 'form') {
+      if (mode === 'password') {
         await updateUserDetails({
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
