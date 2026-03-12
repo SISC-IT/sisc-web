@@ -18,12 +18,11 @@ project_root = os.path.abspath(os.path.join(current_dir, "../../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from AI.modules.features.legacy.technical_features import add_technical_indicators
+from AI.modules.signal.core.dataset_builder import get_standard_training_data
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models.TCN.architecture import TCNClassifier
 
 
-# TCN은 명세에 맞춰 개별 기술적 지표만 사용합니다.
 FEATURE_COLUMNS = [
     "log_return",
     "open_ratio",
@@ -38,7 +37,6 @@ FEATURE_COLUMNS = [
     "bb_position",
 ]
 
-# 서비스 추론 결과와 맞추기 위해 1/3/5/7일 방향성을 동시에 학습합니다.
 HORIZONS = [1, 3, 5, 7]
 
 
@@ -48,16 +46,16 @@ def build_sequences(
     feature_cols: List[str],
     horizons: List[int],
 ) -> Tuple[np.ndarray, np.ndarray]:
-    # 종목별 시계열을 순회하면서 [seq_len, features] 윈도우와 멀티 호라이즌 라벨을 만듭니다.
+    """
+    미리 스케일링이 완료된 DataFrame을 받아 [Batch, Seq, Features] 형태의 윈도우와 라벨을 생성합니다.
+    """
     features = []
     labels = []
     max_horizon = max(horizons)
 
     for _, sub_df in df.groupby("ticker"):
         sub_df = sub_df.sort_values("date").copy()
-        sub_df = add_technical_indicators(sub_df)
         sub_df = sub_df.dropna(subset=["close"])
-        sub_df = sub_df.replace([np.inf, -np.inf], np.nan).fillna(0)
 
         if len(sub_df) < seq_len + max_horizon:
             continue
@@ -68,60 +66,55 @@ def build_sequences(
         for start in range(len(sub_df) - seq_len - max_horizon + 1):
             end = start + seq_len
             current_close = closes[end - 1]
+            
             target = []
             for horizon in horizons:
                 future_close = closes[end + horizon - 1]
+                # 미래 종가가 현재 종가보다 크면 상승(1), 아니면 하락(0)
                 target.append(1.0 if future_close > current_close else 0.0)
 
             features.append(feature_values[start:end])
             labels.append(target)
 
+    # 빈 배열 처리
     if not features:
-        raise ValueError("No training sequences were created. Check DB data coverage.")
+        return np.empty((0, seq_len, len(feature_cols)), dtype=np.float32), np.empty((0, len(horizons)), dtype=np.float32)
 
     return np.array(features, dtype=np.float32), np.array(labels, dtype=np.float32)
 
 
-def fit_scaler(X_train: np.ndarray) -> StandardScaler:
-    # 시퀀스 축을 펼쳐 feature 단위로 표준화 스케일러를 학습합니다.
-    scaler = StandardScaler()
-    scaler.fit(X_train.reshape(-1, X_train.shape[-1]))
-    return scaler
-
-
-def transform_sequences(X: np.ndarray, scaler: StandardScaler) -> np.ndarray:
-    # 학습 시 저장한 스케일러를 시퀀스 전체에 동일하게 적용합니다.
-    shape = X.shape
-    flat = X.reshape(-1, shape[-1])
-    scaled = scaler.transform(flat)
-    return scaled.reshape(shape).astype(np.float32)
-
-
 def train_model(args: argparse.Namespace):
-    # 공통 DataLoader로 DB에서 가격 데이터를 읽고 TCN 전용 입력만 추립니다.
-    loader = DataLoader(lookback=args.seq_len, horizons=HORIZONS)
-    raw_df = loader.load_data_from_db(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        tickers=args.tickers,
-    )
+    # 1. DB에서 원시 데이터 로드 및 파이프라인 표준 전처리 적용 (단일 데이터프레임 반환)
+    # [주의] get_standard_training_data가 원본 DB 로드 기능까지 수행하므로 DataLoader 별도 호출 불필요
+    raw_df = get_standard_training_data(args.start_date, args.end_date)
 
     if raw_df.empty:
         raise ValueError("No raw price data loaded from DB.")
 
-    X, y = build_sequences(raw_df, args.seq_len, FEATURE_COLUMNS, HORIZONS)
+    # 예: 전체 기간의 80% 시점을 기준으로 날짜를 분할합니다.
+    dates = raw_df['date'].sort_values().unique()
+    split_date_idx = int(len(dates) * 0.8) # 전체 날짜의 80% 지점에서 분할 날짜 인덱스 계산
+    split_date = dates[split_date_idx]
 
-    # 시계열 순서를 유지한 채 뒤쪽 구간을 검증셋으로 둡니다.
-    split_idx = max(int(len(X) * 0.8), 1)
-    if split_idx >= len(X):
-        split_idx = len(X) - 1
+    train_df = raw_df[raw_df['date'] <= split_date].copy()
+    val_df = raw_df[raw_df['date'] > split_date].copy()
 
-    X_train, X_val = X[:split_idx], X[split_idx:]
-    y_train, y_val = y[:split_idx], y[split_idx:]
+    print(f"Data Split - Train: ~{split_date}, Validation: {split_date}~")
 
-    scaler = fit_scaler(X_train)
-    X_train = transform_sequences(X_train, scaler)
-    X_val = transform_sequences(X_val, scaler)
+    # 2D 형태에서 스케일링 수행 (안전하고 직관적)
+    scaler = StandardScaler()
+    # Train 데이터로만 스케일러 학습 (Validation 데이터 유출 방지)
+    scaler.fit(train_df[FEATURE_COLUMNS])
+
+    train_df[FEATURE_COLUMNS] = scaler.transform(train_df[FEATURE_COLUMNS])
+    val_df[FEATURE_COLUMNS] = scaler.transform(val_df[FEATURE_COLUMNS])
+
+    # 4. 스케일링된 DataFrame으로 3D 시퀀스(윈도우) 텐서 구축
+    X_train, y_train = build_sequences(train_df, args.seq_len, FEATURE_COLUMNS, HORIZONS)
+    X_val, y_val = build_sequences(val_df, args.seq_len, FEATURE_COLUMNS, HORIZONS)
+
+    if len(X_train) == 0 or len(X_val) == 0:
+        raise ValueError("Insufficient data to create sequences for either train or validation set.")
 
     train_dataset = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
     val_dataset = TensorDataset(torch.from_numpy(X_val), torch.from_numpy(y_val))
@@ -130,7 +123,8 @@ def train_model(args: argparse.Namespace):
     val_loader = TorchDataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # output_size는 horizon 개수와 동일합니다.
+    print(f"Using device: {device}")
+    
     model = TCNClassifier(
         input_size=len(FEATURE_COLUMNS),
         output_size=len(HORIZONS),
@@ -145,12 +139,12 @@ def train_model(args: argparse.Namespace):
     best_val_loss = float("inf")
     best_state = None
 
+    # 5. 모델 학습 루프
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0.0
         for batch_x, batch_y in train_loader:
-            batch_x = batch_x.to(device)
-            batch_y = batch_y.to(device)
+            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
 
             optimizer.zero_grad()
             logits = model(batch_x)
@@ -164,19 +158,16 @@ def train_model(args: argparse.Namespace):
         val_loss = 0.0
         with torch.no_grad():
             for batch_x, batch_y in val_loader:
-                batch_x = batch_x.to(device)
-                batch_y = batch_y.to(device)
+                batch_x, batch_y = batch_x.to(device), batch_y.to(device)
                 logits = model(batch_x)
                 loss = criterion(logits, batch_y)
                 val_loss += loss.item() * batch_x.size(0)
 
         train_loss /= len(train_dataset)
         val_loss /= len(val_dataset)
-        print(
-            f"Epoch {epoch + 1}/{args.epochs} "
-            f"- train_loss: {train_loss:.4f} val_loss: {val_loss:.4f}"
-        )
+        print(f"Epoch {epoch + 1}/{args.epochs} - train_loss: {train_loss:.4f} val_loss: {val_loss:.4f}")
 
+        # 검증 손실이 최저일 때 모델 가중치 저장 (Early Stopping 준비)
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_state = model.state_dict()
@@ -184,7 +175,7 @@ def train_model(args: argparse.Namespace):
     if best_state is None:
         best_state = model.state_dict()
 
-    # wrapper가 바로 사용할 수 있도록 가중치, scaler, 메타데이터를 함께 저장합니다.
+    # 6. 아티팩트(가중치, 스케일러, 메타데이터) 파일 시스템 저장
     os.makedirs(args.output_dir, exist_ok=True)
     model_path = os.path.join(args.output_dir, "model.pt")
     scaler_path = os.path.join(args.output_dir, "scaler.pkl")
@@ -205,18 +196,18 @@ def train_model(args: argparse.Namespace):
         "scaler_path": scaler_path,
     }
     with open(metadata_path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=True, indent=2)
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
 
+    print("\n✅ Training Complete!")
     print(f"Saved model to: {model_path}")
     print(f"Saved scaler to: {scaler_path}")
     print(f"Saved metadata to: {metadata_path}")
 
 
 def parse_args() -> argparse.Namespace:
-    # 실험 시 종목, 기간, 모델 폭을 CLI에서 바로 바꿀 수 있게 둡니다.
     parser = argparse.ArgumentParser(description="Train TCN signal model.")
     parser.add_argument("--start-date", default="2018-01-01")
-    parser.add_argument("--end-date", default=None)
+    parser.add_argument("--end-date", default="2024-01-01")
     parser.add_argument("--tickers", nargs="*", default=None)
     parser.add_argument("--seq-len", type=int, default=60)
     parser.add_argument("--epochs", type=int, default=20)
@@ -224,16 +215,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--kernel-size", type=int, default=3)
     parser.add_argument("--dropout", type=float, default=0.2)
-    parser.add_argument(
-        "--channels",
-        type=int,
-        nargs="+",
-        default=[32, 64, 64],
-    )
-    parser.add_argument(
-        "--output-dir",
-        default=os.path.join(project_root, "AI", "data", "weights", "tcn"),
-    )
+    parser.add_argument("--channels", type=int, nargs="+", default=[32, 64, 64])
+    parser.add_argument("--output-dir", default=os.path.join(project_root, "AI", "data", "weights", "tcn"))
     return parser.parse_args()
 
 
