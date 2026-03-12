@@ -37,6 +37,8 @@ const SignUpForm = () => {
   );
 
   const [isSending, setIsSending] = useState(false);
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [isVerificationSent, setVerificationSent] = useState(false);
   const [isVerificationChecked, setVerificationChecked] = useState(false);
 
@@ -136,8 +138,14 @@ const SignUpForm = () => {
   };
 
   const handleCheckVerificationNumber = async () => {
+    if (isCheckingVerification) {
+      return;
+    }
+
     abortRef.current?.abort();
     abortRef.current = new AbortController();
+
+    setIsCheckingVerification(true);
 
     try {
       await checkVerificationNumber(
@@ -149,14 +157,22 @@ const SignUpForm = () => {
     } catch (error) {
       console.log(error);
       toast.error('인증에 실패했습니다.');
+    } finally {
+      setIsCheckingVerification(false);
     }
   };
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
+    if (isSigningUp) {
+      return;
+    }
+
     abortRef.current?.abort();
     abortRef.current = new AbortController();
+
+    setIsSigningUp(true);
 
     try {
       await signUp(
@@ -180,6 +196,8 @@ const SignUpForm = () => {
     } catch (error) {
       console.log(error);
       toast.error('회원가입에 실패하였습니다.');
+    } finally {
+      setIsSigningUp(false);
     }
   };
 
@@ -288,9 +306,9 @@ const SignUpForm = () => {
                 type="button"
                 className={styles.verifyButton}
                 onClick={handleCheckVerificationNumber}
-                disabled={!isVerificationSent}
+                disabled={!isVerificationSent || isCheckingVerification}
               >
-                인증번호 확인
+                {isCheckingVerification ? '확인 중...' : '인증번호 확인'}
               </button>
             </div>
           </div>
@@ -382,9 +400,9 @@ const SignUpForm = () => {
           <button
             type="submit"
             className={styles.signUpButton}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSigningUp}
           >
-            회원가입
+            {isSigningUp ? '회원가입 중...' : '회원가입'}
           </button>
         </form>
       </div>

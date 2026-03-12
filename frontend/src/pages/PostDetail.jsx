@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import * as boardApi from '../utils/boardApi';
+import { api } from '../utils/axios';
 import styles from './PostDetail.module.css';
 import { toBoardRouteSegment } from '../utils/boardRoute';
 
@@ -84,10 +85,23 @@ const PostDetail = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [showCommentMenu, setShowCommentMenu] = useState(null);
   const [replyTargetId, setReplyTargetId] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const boardName =
     post?.boardName || post?.board?.boardName || post?.board?.name || '';
   const boardId = post?.boardId || post?.board?.boardId || '';
+
+  const postAuthorId = post?.user?.id || post?.userId || post?.createdBy?.id;
+  const postAuthorName = post?.author || post?.user?.name || post?.createdBy?.name;
+  const currentUserId = currentUser?.id || currentUser?.userId;
+  const currentUserName = currentUser?.name;
+
+  const isPostOwner = Boolean(
+    post &&
+      currentUser &&
+      ((postAuthorId && currentUserId && postAuthorId === currentUserId) ||
+        (postAuthorName && currentUserName && postAuthorName === currentUserName))
+  );
 
   // 데이터 로드 로직
   const refreshPostAndComments = async () => {
@@ -131,6 +145,19 @@ const PostDetail = () => {
     };
     fetchPostAndComments();
   }, [postId]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const { data } = await api.get('/api/user/details');
+        setCurrentUser(data || null);
+      } catch {
+        setCurrentUser(null);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   // --- 게시글 액션 핸들러 ---
   const handleLike = async () => {
@@ -283,9 +310,9 @@ const PostDetail = () => {
 
   // --- 댓글 핸들러 ---
   const handleCommentHandlers = {
-    add: async (text) => {
+    add: async (text, anonymous) => {
       try {
-        await boardApi.createComment({ postId, content: text });
+        await boardApi.createComment({ postId, content: text, anonymous });
         await refreshPostAndComments();
       } catch (error) {
         console.error('댓글 작성 실패:', error);
@@ -326,12 +353,13 @@ const PostDetail = () => {
         alert('댓글 삭제에 실패했습니다.');
       }
     },
-    reply: async (parentId, text) => {
+    reply: async (parentId, text, anonymous) => {
       try {
         await boardApi.createComment({
           postId,
           content: text,
           parentCommentId: parentId,
+          anonymous,
         });
         await refreshPostAndComments();
         setReplyTargetId(null);
@@ -382,6 +410,7 @@ const PostDetail = () => {
           <PostView
             post={post}
             boardName={boardName}
+            canManagePost={isPostOwner}
             showMenu={showMenu}
             setShowMenu={setShowMenu}
             onEdit={handleEditStart}

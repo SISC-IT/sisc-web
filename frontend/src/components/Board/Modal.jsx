@@ -9,6 +9,8 @@ const Modal = ({
   setTitle,
   content,
   setContent,
+  isAnonymous,
+  setIsAnonymous,
   boardOptions,
   selectedBoardId,
   onBoardChange,
@@ -178,13 +180,23 @@ const Modal = ({
 
         </div>
 
-        <button
-          className={styles.saveButton}
-          onClick={onSave}
-          disabled={isSaving}
-        >
-          {isSaving ? '게시글 작성 중...' : '게시글 작성'}
-        </button>
+        <div className={styles.actionRow}>
+          <label className={styles.anonymousOption}>
+            <input
+              type="checkbox"
+              checked={Boolean(isAnonymous)}
+              onChange={(e) => setIsAnonymous?.(e.target.checked)}
+            />
+            익명
+          </label>
+          <button
+            className={styles.saveButton}
+            onClick={onSave}
+            disabled={isSaving}
+          >
+            {isSaving ? '게시글 작성 중...' : '게시글 작성'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -7,11 +7,12 @@ import { toast } from 'react-toastify';
 import AccountSecurity from './AccountSecurity';
 
 const roleMap = {
-  SYSTEM_ADMIN: '시스템관리자',
+  SYSTEM_ADMIN: '관리자',
   PRESIDENT: '회장',
   VICE_PRESIDENT: '부회장',
   TEAM_LEADER: '팀장',
-  TEAM_MEMBER: '부원',
+  TEAM_MEMBER: '일반',
+  PENDING_MEMBER: '대기회원',
 };
 
 const ProfileCard = () => {
@@ -29,7 +30,7 @@ const ProfileCard = () => {
 
         setUserName(name || '사용자');
         setUserPoint(point || 0);
-        setUserRole(roleMap[role] || '일반');
+        setUserRole(roleMap[role] || '-');
       } catch (error) {
         console.error('사용자 정보 불러오기 실패:', error);
         toast.error('사용자 정보를 불러올 수 없습니다.');
