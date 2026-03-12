@@ -148,7 +148,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", en
     xai_generator = None
     if enable_xai:
         try:
-            xai_generator = ReportGenerator(use_api_llm=True) 
+            xai_generator = ReportGenerator(use_api_llm=False) 
         except Exception as e:
             print(f"⚠️ XAI 초기화 실패. 리포트 생성 건너뜀. {e}")
 
