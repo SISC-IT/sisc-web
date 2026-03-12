@@ -92,15 +92,14 @@ const PostDetail = () => {
   const boardId = post?.boardId || post?.board?.boardId || '';
 
   const postAuthorId = post?.user?.id || post?.userId || post?.createdBy?.id;
-  const postAuthorName = post?.author || post?.user?.name || post?.createdBy?.name;
   const currentUserId = currentUser?.id || currentUser?.userId;
-  const currentUserName = currentUser?.name;
 
   const isPostOwner = Boolean(
     post &&
       currentUser &&
-      ((postAuthorId && currentUserId && postAuthorId === currentUserId) ||
-        (postAuthorName && currentUserName && postAuthorName === currentUserName))
+      postAuthorId &&
+      currentUserId &&
+      postAuthorId === currentUserId
   );
 
   // 데이터 로드 로직
