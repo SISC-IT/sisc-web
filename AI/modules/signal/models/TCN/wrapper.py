@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-from AI.modules.features.legacy.technical_features import add_technical_indicators
+from AI.modules.signal.core.dataset_builder import get_standard_training_data
 from AI.modules.signal.core.base_model import BaseSignalModel
 from AI.modules.signal.models.TCN.architecture import TCNClassifier
 
@@ -151,7 +151,7 @@ class TCNWrapper(BaseSignalModel):
         if df is None or df.empty:
             raise ValueError("Input dataframe is empty.")
 
-        prepared = add_technical_indicators(df.copy())
+        prepared = get_standard_training_data(df.copy())
         missing = [col for col in self.feature_columns if col not in prepared.columns]
         if missing:
             raise ValueError(f"Missing required TCN feature columns: {missing}")
