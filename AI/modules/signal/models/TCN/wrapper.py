@@ -201,6 +201,66 @@ class TCNWrapper(BaseSignalModel):
             f"tcn_{horizon}d": float(prob)
             for horizon, prob in zip(self.horizons, probs)
         }
+    
+    def predict_batch(self, ticker_data_map: Dict[str, pd.DataFrame]) -> Dict[str, Dict[str, float]]:
+        """
+        [Batch 추론] 여러 종목의 DataFrame을 받아 한 번의 GPU 연산으로 결과를 반환합니다.
+        입력: {"AAPL": df_aapl, "MSFT": df_msft, ...}
+        출력: {"AAPL": {"tcn_1d": 0.55, ...}, "MSFT": {"tcn_1d": 0.61, ...}}
+        """
+        self._load_artifacts()
+
+        if self.model is None:
+            raise ValueError("TCN model is not available.")
+
+        valid_tickers = []
+        tensor_list = []
+
+        # 1. 딕셔너리로 받은 종목별 데이터를 순회하며 전처리 및 윈도우 추출
+        for ticker, df in ticker_data_map.items():
+            try:
+                # dataset_builder의 다형성을 활용하여 전처리 (에러 발생 종목은 스킵)
+                prepared = get_standard_training_data(df.copy())
+                feature_frame = prepared[self.feature_columns]
+
+                if len(feature_frame) < self.seq_len:
+                    continue # 시퀀스 길이가 부족한 신규 상장 종목 등은 건너뜁니다.
+
+                latest_window = feature_frame.tail(self.seq_len).to_numpy(dtype=np.float32)
+                
+                # [참고] Global Scaler를 가정하고 일괄 적용합니다.
+                if self.scaler is not None:
+                    latest_window = self.scaler.transform(latest_window).astype(np.float32)
+
+                tensor_list.append(latest_window)
+                valid_tickers.append(ticker)
+                
+            except Exception as e:
+                # 특정 종목 데이터 불량 시 전체 파이프라인이 멈추지 않도록 예외 처리
+                print(f"⚠️ [{ticker}] 전처리 실패로 배치 추론에서 제외됨: {e}")
+
+        if not tensor_list:
+            return {} # 유효한 종목이 없으면 빈 결과 반환
+
+        # 2. 리스트에 모인 2D 배열들을 3D 텐서로 조립 [Batch, Seq, Features]
+        batch_array = np.stack(tensor_list, axis=0)
+        batch_tensor = torch.from_numpy(batch_array).float().to(self.device)
+
+        # 3. GPU 병렬 추론 (단 1번의 호출로 전체 종목 예측)
+        self.model.eval()
+        with torch.no_grad():
+            logits = self.model(batch_tensor)
+            probs = torch.sigmoid(logits).cpu().numpy() # 형태: [Batch, Horizons]
+
+        # 4. 결과를 포트폴리오 모듈이 인식할 수 있도록 딕셔너리로 매핑
+        results = {}
+        for i, ticker in enumerate(valid_tickers):
+            results[ticker] = {
+                f"tcn_{horizon}d": float(probs[i, j])
+                for j, horizon in enumerate(self.horizons)
+            }
+            
+        return results
 
     def save(self, filepath: str):
         # 수동 저장이 필요한 경우 wrapper에서도 state_dict 저장이 가능합니다.
