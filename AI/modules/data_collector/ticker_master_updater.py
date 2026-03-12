@@ -101,70 +101,50 @@ class TickerMasterUpdater:
             return []
 
     def save_to_db(self, ticker_list: List[Dict]):
-        """
-        확보된 티커 리스트를 DB에 '초기화' 저장합니다.
-        (이미 존재하는 종목은 건너뛰거나 이름만 업데이트)
-        """
         if not ticker_list:
             print("[Master] 저장할 종목이 없습니다.")
             return
-
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
         
-        inserted_count = 0
-        
-        # 1. stock_info 테이블 (Ticker 마스터)
-        #    - 여기서는 종목의 '존재'만 알립니다.
-        #    - Sector, Industry 등 세부 정보는 stock_info_collector.py가 채웁니다.
-        query_stock_info = """
-            INSERT INTO public.stock_info (ticker)
-            VALUES (%s)
-            ON CONFLICT (ticker) DO NOTHING;
-        """
-        
-        # 2. company_names 테이블 (옵션, 기업명 관리용)
-        #    - 스키마에 정의된 company_names 테이블 활용
-        query_company_names = """
-            INSERT INTO public.company_names (ticker, company_name)
-            VALUES (%s, %s)
-            ON CONFLICT (company_name) DO UPDATE 
-            SET ticker = EXCLUDED.ticker -- 이름이 같으면 티커 갱신 (드문 경우)
-            ON CONFLICT (ticker) DO UPDATE
-            SET company_name = EXCLUDED.company_name; -- 티커 같으면 이름 갱신
-        """
-
-        print(f"[Master] DB 업데이트 시작 ({len(ticker_list)}개 종목)...")
+        print(f"[Master] DB 업데이트 시작 ({len(ticker_list)}개 종목) -> DB: {self.db_name}")
         
         try:
-            # 배치 처리를 위해 데이터 정리
+            # 1. stock_info 테이블 업데이트 (전체 배치 처리)
+            query_stock_info = """
+                INSERT INTO public.stock_info (ticker)
+                VALUES (%s)
+                ON CONFLICT (ticker) DO NOTHING;
+            """
             stock_info_data = [(item['ticker'],) for item in ticker_list]
-            
-            # executemany로 고속 처리
             cursor.executemany(query_stock_info, stock_info_data)
+            conn.commit() # 여기서 중간 저장!
+            print(f"[Master] stock_info 테이블 동기화 완료.")
+
+            # 2. company_names 테이블 업데이트
+            query_company_names = """
+                INSERT INTO public.company_names (ticker, company_name)
+                VALUES (%s, %s)
+                ON CONFLICT (ticker) DO UPDATE SET company_name = EXCLUDED.company_name;
+            """
             
-            # 이름 정보가 있는 경우 company_names도 업데이트
-            company_name_data = [
-                (item['ticker'], item['name']) 
-                for item in ticker_list 
-                if item.get('name')
-            ]
-            if company_name_data:
-                # upsert 로직이 복잡하므로 개별 실행 혹은 executemany (PK 충돌 주의)
-                # 여기서는 단순화를 위해 반복문 사용 (데이터 양이 적으므로)
-                for t, n in company_name_data:
-                    try:
-                        cursor.execute(query_company_names, (t, n))
-                    except Exception:
-                        conn.rollback() # 개별 실패 무시
-                        continue
+            success_count = 0
+            for item in ticker_list:
+                if not item.get('name'): continue
+                try:
+                    cursor.execute(query_company_names, (item['ticker'], item['name']))
+                    success_count += 1
+                except Exception as e:
+                    conn.rollback() # 이 건만 취소
+                    print(f"  - [{item['ticker']}] 업데이트 건너뜀")
+                    continue
             
-            conn.commit()
-            print("[Master] DB 동기화 완료.")
+            conn.commit() # 최종 저장!
+            print(f"[Master] company_names 테이블 {success_count}개 동기화 완료.")
             
         except Exception as e:
             conn.rollback()
-            print(f"[Master][Error] DB 저장 중 오류: {e}")
+            print(f"[Master][Error] 전체 프로세스 중 오류 발생: {e}")
         finally:
             cursor.close()
             conn.close()

@@ -20,6 +20,7 @@ CREATE TABLE "stock_info" (
     "sector" varchar(100),             -- 섹터 분류 (예: IT, 금융)
     "industry" varchar(200),           -- 세부 산업 분류
     "market_cap" bigint,               -- 시가총액 (필터링/비중 계산용)
+    "fmp_completed" boolean DEFAULT false,        -- FMP 재무제표 데이터 수집 완료 여부
     "updated_at" timestamp DEFAULT now() -- 정보 갱신 일시
 ) TABLESPACE ts_ai_hdd;
 

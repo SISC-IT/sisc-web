@@ -1,24 +1,29 @@
-﻿# --- 핵심 데이터 및 GPU ---
+# --- 핵심 데이터 처리 ---
 python-dotenv
 pandas
 numpy<2.0
-tensorflow<2.11
+
+# [변경] GPU 바이너리가 포함되지 않은 가벼운 CPU 버전의 TensorFlow 사용
+tensorflow-cpu<2.11
 
 # --- DB 및 웹 ---
 psycopg2-binary
 requests
 beautifulsoup4
-selenium
-webdriver-manager
 groq
 fredapi
 yfinance
 
-# --- AI & 강화학습 (SB3는 PyTorch 자동 설치됨) ---
+# --- AI & 강화학습 ---
 scikit-learn
 langchain-community
-stable-baselines3[extra]
+# [변경] 무거운 GUI/Vision 라이브러리를 제외하기 위해 [extra] 옵션 제거
+stable-baselines3
 gymnasium
 shimmy
 matplotlib
 tqdm
+
+# --- 동적 크롤링 (보류) ---
+# selenium
+# webdriver-manager

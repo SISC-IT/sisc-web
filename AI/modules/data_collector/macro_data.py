@@ -248,4 +248,4 @@ class MacroDataCollector:
 if __name__ == "__main__":
     # 최근 5년치 데이터 업데이트
     collector = MacroDataCollector()
-    collector.run(lookback_days=365*5)
+    collector.run(lookback_days=365*10)
