@@ -101,17 +101,61 @@ function HoldingsList({ positions, loading, error }) {
           </div>
           <div className="holding-right">
             <div className="holding-amount">
-              {Number(p.marketPrice).toLocaleString()}원
+              {formatHoldingAmount(p.marketPrice)}원
             </div>
-            <div className="holding-pnl">
-              {p.pnl >= 0 ? '+' : ''}
-              {Number(p.pnl).toLocaleString()}원 ({p.pnlRate}%)
+            <div className={getHoldingPnlClassName(p.pnlRate)}>
+              {formatSignedHoldingAmount(p.pnl)}원 ({formatPnlRatePercent(p.pnlRate)})
             </div>
           </div>
         </div>
       ))}
     </div>
   );
+}
+
+function roundToInteger(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return 0;
+  }
+
+  return Math.round(number);
+}
+
+function formatHoldingAmount(value) {
+  return roundToInteger(value).toLocaleString();
+}
+
+function formatSignedHoldingAmount(value) {
+  const rounded = roundToInteger(value);
+
+  if (rounded > 0) {
+    return `+${rounded.toLocaleString()}`;
+  }
+
+  return rounded.toLocaleString();
+}
+
+function formatPnlRatePercent(value) {
+  const percentValue = roundToInteger(Number(value) * 100);
+  const sign = percentValue > 0 ? '+' : '';
+
+  return `${sign}${percentValue}%`;
+}
+
+function getHoldingPnlClassName(pnlRate) {
+  const rate = Number(pnlRate);
+
+  if (rate > 0) {
+    return 'holding-pnl holding-pnl-profit';
+  }
+
+  if (rate < 0) {
+    return 'holding-pnl holding-pnl-loss';
+  }
+
+  return 'holding-pnl holding-pnl-neutral';
 }
 
 // --- 전략 수익 곡선: /api/quant-bot/assets 사용 ---
@@ -525,11 +569,10 @@ export default function QuantTradingDashboard() {
               </div>
               <div className="holding-right">
                 <div className="holding-amount">
-                  {Number(p.marketPrice).toLocaleString()}원
+                  {formatHoldingAmount(p.marketPrice)}원
                 </div>
-                <div className="holding-pnl">
-                  {Number(p.pnl) >= 0 ? '+' : ''}
-                  {Number(p.pnl).toLocaleString()}원 ({p.pnlRate}%)
+                <div className={getHoldingPnlClassName(p.pnlRate)}>
+                  {formatSignedHoldingAmount(p.pnl)}원 ({formatPnlRatePercent(p.pnlRate)})
                 </div>
               </div>
             </div>
