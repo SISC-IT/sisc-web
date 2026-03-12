@@ -43,7 +43,7 @@ public class AttendanceService {
   /**
    * QR 토큰 기반 출석 체크인 처리(세션 멤버용) - qrToken으로 라운드 검증/조회 (HMAC + 만료 + ACTIVE) - 세션 멤버십 및 중복 출석 방지 - 지각 판별 및 출석 상태 결정
    */
-  public void checkIn(UUID userId, String username, AttendanceRoundQrTokenRequest request) {
+  public void checkIn(UUID userId, String name, AttendanceRoundQrTokenRequest request) {
 
     // 토큰 검증 + ACTIVE 라운드 조회
     AttendanceRound round = attendanceRoundService.verifyQrTokenAndGetRound(request.qrToken());
@@ -75,7 +75,7 @@ public class AttendanceService {
     }
     eventPublisher.publishEvent(new ActivityEvent(
             userId,
-            username,
+            name,
             ActivityType.ATTENDANCE,
             round.getAttendanceSession().getTitle() + " 세션에 출석했습니다.",
             att.getAttendanceId(),
