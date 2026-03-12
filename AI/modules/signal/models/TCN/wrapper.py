@@ -1,7 +1,7 @@
 import json
 import os
 import pickle
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -47,6 +47,7 @@ class TCNWrapper(BaseSignalModel):
         self.dropout = float(config.get("dropout", 0.2))
         self.scaler = None
         self.metadata = {}
+        self.is_loaded = False #중복로딩 방지 플래그
 
         base_dir = config.get(
             "weights_dir",
@@ -118,6 +119,9 @@ class TCNWrapper(BaseSignalModel):
 
     def _load_artifacts(self):
         # metadata -> scaler -> model 순서로 읽어 추론에 필요한 상태를 복원합니다.
+
+        if self.is_loaded:
+            return # 이미 로드된 상태라면 중복 로딩을 방지합니다.
         if self.metadata_path and os.path.exists(self.metadata_path):
             with open(self.metadata_path, "r", encoding="utf-8") as f:
                 self.metadata = json.load(f)
@@ -139,6 +143,8 @@ class TCNWrapper(BaseSignalModel):
             state_dict = torch.load(self.model_path, map_location=self.device)
             self.model.load_state_dict(state_dict)
             self.model.eval()
+
+        self.is_loaded = True
 
     def _prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         # 서비스 파이프라인이 넘겨준 원본 df에서 TCN용 기술지표를 생성합니다.
@@ -170,7 +176,7 @@ class TCNWrapper(BaseSignalModel):
         batch = np.expand_dims(latest_window, axis=0)
         return torch.from_numpy(batch).float().to(self.device)
 
-    def predict(self, X_input) -> Dict[str, float]:
+    def predict(self, X_input: Union[pd.DataFrame, np.ndarray]) -> Dict[str, float]:
         # DataFrame 입력이 기본 경로이며, 테스트 편의를 위해 ndarray도 허용합니다.
         self._load_artifacts()
 
@@ -204,6 +210,14 @@ class TCNWrapper(BaseSignalModel):
         torch.save(self.model.state_dict(), filepath)
 
     def load(self, filepath: str):
-        # 외부 경로의 가중치를 덮어쓸 수 있게 model_path를 갱신한 뒤 공통 로더를 재사용합니다.
+        """
+        외부 경로의 가중치를 불러옵니다.
+        가중치가 위치한 동일 폴더 내의 scaler 및 metadata를 읽어오도록 경로를 동기화합니다.
+        """
         self.model_path = filepath
+        target_dir = os.path.dirname(filepath)
+        self.scaler_path = os.path.join(target_dir, "scaler.pkl")
+        self.metadata_path = os.path.join(target_dir, "metadata.json")
+        
+        self.is_loaded = False # 새 경로로 로드할 때는 중복 로딩 방지 플래그를 초기화합니다.
         self._load_artifacts()
