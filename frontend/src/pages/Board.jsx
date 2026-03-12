@@ -431,7 +431,7 @@ const Board = () => {
     }
 
     if (!writeBoardId) {
-      alert('세션을 선택해야 합니다.');
+      alert('하위 게시판을 선택해야 합니다.');
       return;
     }
 
