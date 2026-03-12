@@ -6,7 +6,7 @@ import rightArrow from '../../assets/right-arrow.svg';
 import { toast } from 'react-toastify';
 import { updateUserDetails } from '../../utils/userApi';
 
-export default function EditProfileModal({ onClose }) {
+export default function EditProfileModal({ onClose, onSuccess }) {
   const [mode, setMode] = useState('menu');
   const [step, setStep] = useState('verify');
 
@@ -104,6 +104,7 @@ export default function EditProfileModal({ onClose }) {
         });
 
         toast.success('비밀번호가 변경되었습니다.');
+        onSuccess?.();
         onClose();
         return;
       }
@@ -114,6 +115,7 @@ export default function EditProfileModal({ onClose }) {
         });
 
         toast.success('이메일이 변경되었습니다.');
+        onSuccess?.();
         onClose();
       }
     } catch (error) {
@@ -151,7 +153,7 @@ export default function EditProfileModal({ onClose }) {
             취소
           </button>
           {buttonText && (
-            <button // 계속하기 or 비밀번호 변경하기 or 이메일 변경하기 button
+            <button
               className={`${styles.primaryButton} ${styles.halfButton}`}
               disabled={!isButtonEnabled() || isSubmitting}
               onClick={handleSubmit}
