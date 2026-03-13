@@ -14,6 +14,86 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 
+.headerLeft {
+  display: flex;
+}
+
+/* 헤더 왼쪽 타이틀 및 카운트 정렬 */
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selectedCount {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  display: block;
+}
+
+.selectedCount strong {
+  color: #2563eb;
+}
+
+/* 우측 액션 버튼들 그룹핑 */
+.headerActions {
+  display: flex;
+  align-items: center;
+}
+.addUserButton {
+  border: 0.4px solid #aaaaaa;
+  border-radius: 4px;
+  background: none;
+  font: #6a6a6a;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 136px;
+}
+.addUserButton img {
+  width: 24px;
+  height: 24px;
+}
+
+.buttonWithIcon {
+  padding: 0;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.handleRoleButton {
+  background: none;
+  border: none;
+}
+.handleRoleButton img {
+  width: 40px;
+  height: 40px;
+}
+
+.iconActionButton img {
+  width: 24px;
+  height: 24px;
+}
+.iconActionButton:last-child:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+/* 화면이 매우 작아질 때를 대비한 미디어 쿼리 */
+@media (max-width: 768px) {
+  .actionButtonGroup {
+    display: flex;
+  }
+}
+
 .tableGroup {
   border-radius: 8px;
   overflow: auto;
@@ -21,8 +101,8 @@
   border: 1px solid #e5e7eb;
   background: white;
   width: 100%;
+  display: block;
 }
-
 .tableGroup::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -46,10 +126,8 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;
 }
-
 .attendanceSelect {
   display: inline-flex;
   align-items: center;
@@ -127,19 +205,24 @@
 
 .table tbody td:nth-child(1) {
   font-weight: 500;
+  width: 40px;
   color: #1e293b;
 }
 
 .table tbody td:nth-child(2) {
   white-space: nowrap;
+  min-width: 100px;
+  padding-left: 10px;
 }
 
 .table tbody td:nth-child(3) {
   white-space: nowrap;
+  min-width: 120px;
 }
 
 .table tbody td:nth-child(4) {
   white-space: nowrap;
+  min-width: 100px;
 }
 
 /* 컬럼 너비 - 비율 기반 */

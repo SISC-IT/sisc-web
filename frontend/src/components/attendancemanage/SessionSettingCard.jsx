@@ -8,7 +8,7 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
   const [sessionTitle, setSessionTitle] = useState('');
   const [description, setDescription] = useState('');
   const [allowedMinutes, setAllowedMinutes] = useState('');
-  const [status, setStatus] = useState('OPEN');
+  const status = 'OPEN'; // 세션 생성 시 기본 상태는 OPEN으로 설정
 
   const handleCreateClick = async () => {
     const parsedMinutes = parseInt(allowedMinutes, 10);
@@ -95,21 +95,6 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
               placeholder="분(MM)"
             />
           </div>
-        </div>
-
-        {/* 세션 상태 */}
-        <div className={commonStyles.inputGroup}>
-          <label htmlFor="sessionStatus" className={commonStyles.label}>
-            세션 상태
-          </label>
-          <select
-            id="sessionStatus"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <option value="OPEN">OPEN</option>
-            <option value="CLOSED">CLOSED</option>
-          </select>
         </div>
 
         <div className={commonStyles.buttonGroup}>

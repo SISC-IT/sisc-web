@@ -17,53 +17,12 @@ import {
   deleteSession,
   getAttendanceSessions,
   getRounds,
+  addManager,
+  deleteManager,
+  deleteUser,
 } from '../utils/attendanceManage';
 
 export const AttendanceContext = createContext(null);
-
-// 세션 목 데이터
-const sessionData = [
-  // {
-  //   id: 'session-1',
-  //   title: '금융 IT팀 세션',
-  //   // 세션의 기본 위치 정보
-  //   location: {
-  //     lat: 37.5499,
-  //     lng: 127.0751,
-  //   },
-  //   defaultStartTime: '18:30:00', // 세션의 기본 시간 설정
-  //   defaultAvailableMinutes: 30, // 출석 인정 시간 (분 단위)
-  //   rewardPoints: 100, // 세션의 리워드
-  //   isVisible: true, // 세션 공개 여부
-  //   // 세션 회차들
-  //   rounds: [
-  //     {
-  //       id: 'round-1',
-  //       date: '2025-11-06',
-  //       startTime: '10:00:00',
-  //       availableMinutes: 20,
-  //       status: 'opened',
-  //       participants: [
-  //         { memberId: 'member-1', name: '김민준', attendance: '출석' },
-  //         { memberId: 'member-2', name: '이서연', attendance: '결석' },
-  //         { memberId: 'member-3', name: '박도윤', attendance: '출석' },
-  //       ],
-  //     },
-  //     {
-  //       id: 'round-2',
-  //       date: '2025-11-06',
-  //       startTime: '11:00:00',
-  //       availableMinutes: 30,
-  //       status: 'opened',
-  //       participants: [
-  //         { memberId: 'member-1', name: '김민준', attendance: '출석' },
-  //         { memberId: 'member-2', name: '이서연', attendance: '출석' },
-  //         { memberId: 'member-3', name: '박도윤', attendance: '결석' },
-  //       ],
-  //     },
-  //   ],
-  // },
-];
 
 export const AttendanceProvider = ({ children }) => {
   const [sessions, setSessions] = useImmer([]);
@@ -95,28 +54,22 @@ export const AttendanceProvider = ({ children }) => {
     fetchSessions();
   }, [fetchSessions]);
 
-  const handleAttendanceChange = async (memberId, newAttendance) => {
-    // setSessions((draft) => {
-    //   const session = draft.find((s) => s.id === selectedSessionId);
-    //   if (!session) return;
-    //   const round = session.rounds.find((r) => r.id === selectedRound);
-    //   if (!round) return;
-    //   const participant = round.participants.find(
-    //     (p) => p.memberId === memberId
-    //   );
-    //   if (participant) {
-    //     participant.attendance = newAttendance;
-    //   }
-    // });
+  const handleAttendanceChange = async (userId, roundId, newStatus) => {
     try {
-      await changeUserAttendance(selectedRound, memberId, {
-        status: newAttendance,
+      // API 호출: 이제 selectedRound가 아닌 매개변수로 받은 roundId를 사용합니다.
+      await changeUserAttendance(roundId, userId, {
+        status: newStatus,
         reason: '관리자에 의한 출석 상태 변경',
       });
 
+      // 버전 업을 통해 AttendanceManagementCard의 useEffect가 다시 실행되어 목록을 갱신합니다.
       setRoundAttendanceVersion((prev) => prev + 1);
+
+      // 선택 사항: 성공 토스트
+      // toast.success('출석 상태가 변경되었습니다.');
     } catch (error) {
       console.error('유저 출석 상태 변경에 실패했습니다. ', error);
+      alert('출석 상태 변경에 실패했습니다.');
     }
   };
 
@@ -278,6 +231,45 @@ export const AttendanceProvider = ({ children }) => {
     }
   };
 
+  const handleDeleteUsers = async (sessionId, userIds) => {
+    try {
+      const promises = userIds.map((userId) => deleteUser(sessionId, userId));
+      await Promise.all(promises);
+      setRoundAttendanceVersion((v) => v + 1);
+    } catch (error) {
+      console.error('유저 삭제 실패', error);
+      alert('일부 유저 삭제에 실패했습니다.');
+    }
+  };
+
+  const handleAddManager = async (sessionId, userIds) => {
+    try {
+      const promises = userIds.map((userId) => addManager(sessionId, userId));
+      await Promise.all(promises);
+
+      setRoundAttendanceVersion((v) => v + 1);
+      alert('선택한 유저가 매니저로 격상되었습니다.');
+    } catch (error) {
+      console.error('매니저 추가 실패:', error);
+      alert('매니저 권한 부여에 실패했습니다.');
+    }
+  };
+
+  const handleRemoveManager = async (sessionId, userIds) => {
+    try {
+      const promises = userIds.map((userId) =>
+        deleteManager(sessionId, userId)
+      );
+      await Promise.all(promises);
+
+      setRoundAttendanceVersion((v) => v + 1);
+      alert('선택한 유저가 일반 참가자로 변경되었습니다.');
+    } catch (error) {
+      console.error('매니저 제거 실패:', error);
+      alert('권한 제거에 실패했습니다. (OWNER 여부 확인 필요)');
+    }
+  };
+
   // 공유할 값들을 객체로 묶기
   const value = {
     sessions,
@@ -308,10 +300,14 @@ export const AttendanceProvider = ({ children }) => {
     closeAddRoundsModal,
     roundsVersion,
     roundAttendanceVersion,
+
     openAddUsersModal,
     closeAddUsersModal,
     isAddUsersModalOpen,
     handleAddUsers,
+    handleDeleteUsers,
+    handleAddManager,
+    handleRemoveManager,
   };
 
   return (

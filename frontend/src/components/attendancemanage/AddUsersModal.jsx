@@ -4,17 +4,15 @@ import { useAttendance } from '../../contexts/AttendanceContext';
 import { getUserList } from '../../utils/attendanceManage';
 
 const AddUsersModal = () => {
-  const { sessions, selectedSessionId, handleAddUsers, closeAddUsersModal } =
+  const { selectedSessionId, handleAddUsers, closeAddUsersModal } =
     useAttendance();
-  const [selectedUserId, setSelectedUserId] = useState(null);
   const [users, setUsers] = useState([]);
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
 
-  // ESC 키로 모달 또는 토스트를 닫는 기능
   useEffect(() => {
-    // 유저 리스트 가져오기
     const fetchUsers = async () => {
       try {
-        const userList = await getUserList();
+        const userList = await getUserList(selectedSessionId);
         setUsers(userList);
       } catch (err) {
         console.error('사용자 목록을 불러오는 데 실패했습니다:', err);
@@ -25,80 +23,123 @@ const AddUsersModal = () => {
     }
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        closeAddUsersModal();
-      }
+      if (event.key === 'Escape') closeAddUsersModal();
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [closeAddUsersModal]);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedSessionId, closeAddUsersModal]);
 
-  const handleComplete = () => {
-    const currentSession = sessions.find(
-      (s) => s.attendanceSessionId === selectedSessionId
-    );
+  const toggleUser = (userId) => {
+    const newSelection = new Set(selectedUserIds);
+    if (newSelection.has(userId)) newSelection.delete(userId);
+    else newSelection.add(userId);
+    setSelectedUserIds(newSelection);
+  };
 
-    if (!currentSession) {
-      alert('세션을 먼저 선택해주세요.');
+  const toggleAll = () => {
+    if (selectedUserIds.size === users.length) setSelectedUserIds(new Set());
+    else setSelectedUserIds(new Set(users.map((u) => u.userId)));
+  };
+
+  const handleComplete = async () => {
+    if (selectedUserIds.size === 0) {
+      alert('추가할 인원을 1명 이상 선택해주세요.');
       return;
     }
-    if (!selectedUserId) {
-      alert('추가할 인원를 1명 이상 선택해주세요.');
-      return;
-    }
 
-    handleAddUsers(selectedSessionId, selectedUserId);
-    closeAddUsersModal();
+    const idsArray = Array.from(selectedUserIds);
+
+    try {
+      for (const userId of idsArray) {
+        await handleAddUsers(selectedSessionId, userId);
+      }
+      closeAddUsersModal();
+    } catch (error) {
+      alert('유저 추가 중 오류가 발생했습니다.');
+    }
   };
 
   return (
     <div className={styles.overlay}>
-      <div className={styles.modal}>
+      <div className={`${styles.modal} ${styles.largeModal}`}>
+        {' '}
+        {/* 목록을 위해 큰 사이즈 클래스 추가 */}
+        <div></div>
         <div className={styles.modalHeader}>
-          <h1>세션에 유저 추가하기</h1>
+          <div className={styles.titleDiv}>
+            <h1>세션에 유저 추가</h1>
+            {selectedUserIds.size}명 선택되었습니다.
+          </div>
           <button
             type="button"
             className={styles.closeButton}
-            onClick={() => {
-              closeAddUsersModal();
-            }}
+            onClick={closeAddUsersModal}
           >
             &times;
           </button>
         </div>
-
         <div className={styles.modalContent}>
-          <div className={styles.inputGroup}>
-            <label htmlFor="userSelect" className={styles.label}>
-              유저 선택
-            </label>
-            <select
-              id="userSelect"
-              className={styles.selectInput}
-              value={selectedUserId || ''}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-            >
-              <option value="" disabled>
-                ------ 유저를 선택하세요 ------
-              </option>
-              {users &&
-                users.map((user) => (
-                  <option key={user.userId} value={user.userId}>
-                    {user.name} ({user.email})
-                  </option>
-                ))}
-            </select>
+          <div className={styles.tableWrapper}>
+            <table className={styles.userTable}>
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      onChange={toggleAll}
+                      checked={
+                        users.length > 0 &&
+                        selectedUserIds.size === users.length
+                      }
+                    />
+                  </th>
+                  <th>이름</th>
+                  <th>팀</th>
+                  <th>학번</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.length > 0 ? (
+                  users.map((user) => (
+                    <tr
+                      key={user.userId}
+                      className={
+                        selectedUserIds.has(user.userId) ? styles.activeRow : ''
+                      }
+                      onClick={() => toggleUser(user.userId)}
+                    >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.has(user.userId)}
+                          onChange={() => toggleUser(user.userId)}
+                        />
+                      </td>
+                      <td>{user.name}</td>
+                      <td>{user.teamName}</td>
+                      <td>{user.studentId || '-'}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className={styles.noData}>
+                      불러올 수 있는 유저가 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-
         <div className={styles.modifyButtonGroup}>
+          <button className={styles.cancelButton} onClick={closeAddUsersModal}>
+            취소
+          </button>
           <button
             className={`${styles.button} ${styles.submitButton}`}
             onClick={handleComplete}
           >
-            추가
+            추가하기
           </button>
         </div>
       </div>

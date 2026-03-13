@@ -4,8 +4,7 @@ import calendarAddIcon from '../../assets/calendar-icon.svg';
 import { useContext, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useAttendance } from '../../contexts/AttendanceContext';
-import { getRounds, addRound } from '../../utils/attendanceManage';
-import RoundDayPicker from './RoundDayPicker';
+import { getRounds } from '../../utils/attendanceManage';
 
 // 날짜 포맷 함수
 const formatDate = (dateStr) => {
@@ -20,7 +19,6 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
   const {
     sessions,
     roundsVersion,
-    handleAddRounds,
     openAddRoundsModal,
     selectedSessionId,
     setSelectedSessionId,
@@ -52,27 +50,29 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
     fetchRounds();
   }, [selectedSessionId, roundsVersion]);
 
-  const handleAddRound = async (newRoundData) => {
-    if (!selectedSessionId) {
-      toast.error('세션을 먼저 선택해주세요.');
-      return;
-    }
-
-    try {
-      await handleAddRounds(selectedSessionId, [newRoundData]);
-
-      toast.success('라운드가 추가되었습니다.');
-    } catch (err) {
-      toast.error('라운드 추가에 실패했습니다.');
-    }
-  };
-
   return (
     <div className={styles.sessionManagementCardContainer}>
       <div className={commonStyles.header}>
         <h1>세션 관리</h1>
 
         <div className={commonStyles.buttonGroup}>
+          {/*세션 선택 드롭다운 */}
+          <div className={styles.selectGroup}>
+            <select
+              value={selectedSessionId}
+              onChange={(e) => setSelectedSessionId(e.target.value)}
+            >
+              <option value="" disabled>
+                ------ 세션을 선택하세요 ------
+              </option>
+
+              {sessionList.map((session) => (
+                <option key={session.sessionId} value={session.sessionId}>
+                  {session.session.title}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             className={commonStyles.iconButton}
             onClick={() => {
@@ -89,24 +89,6 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
             </div>
           </button>
         </div>
-      </div>
-
-      {/*세션 선택 드롭다운 */}
-      <div className={styles.selectGroup}>
-        <select
-          value={selectedSessionId}
-          onChange={(e) => setSelectedSessionId(e.target.value)}
-        >
-          <option value="" disabled>
-            ------ 세션을 선택하세요 ------
-          </option>
-
-          {sessionList.map((session) => (
-            <option key={session.sessionId} value={session.sessionId}>
-              {session.session.title}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* 라운드 테이블 (API 연결 전 구조만) */}
