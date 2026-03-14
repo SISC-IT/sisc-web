@@ -93,10 +93,10 @@ export const deleteRound = async (roundId) => {
 };
 
 // 세션 정보 수정
-export const changeSessionData = async (updateSessionData) => {
+export const changeSessionData = async (sessionId, updateSessionData) => {
   try {
     const res = await api.put(
-      `/api/attendance/sessions/${updateSessionData.attendanceSessionId}`,
+      `/api/attendance/sessions/${sessionId}`,
       updateSessionData
     );
     return res.data;

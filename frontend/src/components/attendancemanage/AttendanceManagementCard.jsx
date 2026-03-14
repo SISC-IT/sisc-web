@@ -52,14 +52,18 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
 
   useEffect(() => {
     const fetchAttendanceSheet = async () => {
-      if (selectedSessionId) {
-        try {
-          const data = await getUsers(selectedSessionId);
-          setAttendanceData(data);
-        } catch (error) {
-          console.error('출석부 조회 실패:', error);
-          setAttendanceData({ sessionTitle: '', rounds: [], userRows: [] });
-        }
+      if (!selectedSessionId) {
+        setAttendanceData({ sessionTitle: '', rounds: [], userRows: [] });
+        setSelectedUserIds(new Set());
+        return;
+      }
+
+      try {
+        const data = await getUsers(selectedSessionId);
+        setAttendanceData(data);
+      } catch (error) {
+        console.error('출석부 조회 실패:', error);
+        setAttendanceData({ sessionTitle: '', rounds: [], userRows: [] });
       }
     };
     fetchAttendanceSheet();

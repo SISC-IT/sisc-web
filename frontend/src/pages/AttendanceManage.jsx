@@ -8,7 +8,6 @@ import SessionSettingCard from '../components/attendancemanage/SessionSettingCar
 import AttendanceManagementCard from '../components/attendancemanage/AttendanceManagementCard';
 import SessionManagementCard from '../components/attendancemanage/SessionManagementCard';
 import RoundModifyModal from '../components/attendancemanage/RoundModifyModal';
-import SessionModifyModal from '../components/attendancemanage/SessionModifyModal';
 import RoundDayPicker from '../components/attendancemanage/RoundDayPicker';
 
 import { ToastContainer } from 'react-toastify';
@@ -21,11 +20,6 @@ const AttendanceContent = () => {
     editingRound,
     closeRoundModifyModal,
     handleRoundChange,
-    isSessionModifyModalOpen,
-    editingSession,
-    closeSessionModifyModal,
-    handleSessionChange,
-    handleDeleteSession,
     handleDeleteRound,
     isAddRoundsModalOpen,
     selectedSessionId,
@@ -52,15 +46,7 @@ const AttendanceContent = () => {
           onDelete={handleDeleteRound}
         />
       )}
-      {isSessionModifyModalOpen && (
-        <SessionModifyModal
-          styles={styles}
-          onClose={closeSessionModifyModal}
-          session={editingSession}
-          onSave={handleSessionChange}
-          onDelete={handleDeleteSession}
-        />
-      )}
+
       {isAddRoundsModalOpen && <RoundDayPicker />}
       {isAddUsersModalOpen && <AddUsersModal />}
     </>

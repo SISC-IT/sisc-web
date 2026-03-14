@@ -101,23 +101,29 @@ export const AttendanceProvider = ({ children }) => {
     }
   };
 
-  const handleSessionChange = async (updateSessionData) => {
-    // setSessions((draft) => {
-    //   const session = draft.find((s) => s.id === updateSessionData.id);
-    //   if (session) {
-    //     session.defaultStartTime = updateSessionData.defaultStartTime;
-    //     session.defaultAvailableMinutes =
-    //       updateSessionData.defaultAvailableMinutes;
-    //   }
-    // });
+  const handleSessionChange = async (sessionId, updateSessionData) => {
+    // 낙관적 업데이트
+    setSessions((draft) => {
+      const session = draft.find((s) => String(s.sessionId) === String(sessionId));
+      if (session && session.session) {
+        if (updateSessionData.title !== undefined) session.session.title = updateSessionData.title;
+        if (updateSessionData.description !== undefined) session.session.description = updateSessionData.description;
+        if (updateSessionData.allowedMinutes !== undefined) session.session.allowedMinutes = updateSessionData.allowedMinutes;
+        if (updateSessionData.status !== undefined) session.session.status = updateSessionData.status;
+      }
+    });
 
     try {
-      await changeSessionData(updateSessionData);
+      await changeSessionData(sessionId, updateSessionData);
 
       const updatedSessions = await getAttendanceSessions();
       setSessions(updatedSessions || []);
     } catch (error) {
       console.error('세션 수정에 실패했습니다. ', error);
+      // 실패 시 롤백 (전체 갱신)
+      const restoredSessions = await getAttendanceSessions();
+      setSessions(restoredSessions || []);
+      throw error;
     }
   };
 
@@ -175,14 +181,6 @@ export const AttendanceProvider = ({ children }) => {
     //     draft.splice(sessionIndex, 1);
     //   }
     // });
-
-    // 세션 삭제 시 먼저 해당 세션의 회차들 삭제
-    const roundsToDelete = await getRounds(sessionId);
-    if (roundsToDelete && roundsToDelete.length > 0) {
-      for (const round of roundsToDelete) {
-        await deleteRound(round.id);
-      }
-    }
     // 세션 삭제
     await deleteSession(sessionId);
 

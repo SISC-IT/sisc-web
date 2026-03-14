@@ -1,123 +1,39 @@
 import { useState, useEffect } from 'react';
 import styles from '../VerificationModal.module.css';
-import { toast } from 'react-toastify';
-import ConfirmationToast from './ConfirmationToast';
 
 const SessionModifyModal = ({
   styles: commonStyles,
   onClose,
   session,
   onSave,
-  onDelete,
 }) => {
-  const [activeToastId, setActiveToastId] = useState(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [allowedMinutes, setAllowedMinutes] = useState(0);
 
-  // 받은 session 파싱
-  const parseTime = (timeStr) => {
-    const parts = (timeStr || '00:00:00').split(':');
-    return {
-      h: parts[0] || '00',
-      m: parts[1] || '00',
-      s: parts[2] || '00',
-    };
-  };
-  const { h = '00', m = '00', s = '00' } = parseTime(session.defaultStartTime);
-
-  const [hh, setHh] = useState(h);
-  const [mm, setMm] = useState(m);
-  const [ss, setSs] = useState(s);
-  const [defaultAvailableMinutes, setDefaultAvailableMinutes] = useState(
-    session.defaultAvailableMinutes
-  );
-
-  // ESC 키로 모달 또는 토스트를 닫는 기능
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        if (activeToastId) {
-          toast.dismiss(activeToastId);
-          setActiveToastId(null);
-        } else {
-          onClose();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose, activeToastId]);
-
-  const isFormValid = (hour, minute, second, defaultAvailableMinutes) => {
-    if (isNaN(hour) || hour < 0 || hour > 23) {
-      alert('출석 시작 시간(시)은 0-23 사이의 숫자로 입력해주세요.');
-      return false;
+    if (session && session.session) {
+      setTitle(session.session.title || '');
+      setDescription(session.session.description || '');
+      setAllowedMinutes(session.session.allowedMinutes || 0);
     }
-    if (isNaN(minute) || minute < 0 || minute > 59) {
-      alert('출석 시작 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
-      return false;
-    }
-    if (isNaN(second) || second < 0 || second > 59) {
-      alert('출석 시작 시간(초)은 0-59 사이의 숫자로 입력해주세요.');
-      return false;
-    }
-    if (
-      isNaN(defaultAvailableMinutes) ||
-      defaultAvailableMinutes < 0 ||
-      defaultAvailableMinutes > 59
-    ) {
-      alert('출석 가능 시간(분)은 0-59 사이의 숫자로 입력해주세요.');
-      return false;
-    }
-    return true;
-  };
+  }, [session]);
 
   const handleModifyClick = () => {
-    const hour = parseInt(hh, 10);
-    const minute = parseInt(mm, 10);
-    const second = parseInt(ss, 10);
-    const availableMinute = parseInt(defaultAvailableMinutes, 10);
+    const minutes = parseInt(allowedMinutes, 10);
+    if (isNaN(minutes) || minutes < 0) {
+      alert('체크인 허용 시간은 0 이상의 숫자로 입력해주세요.');
+      return;
+    }
 
-    // 유효성 검사
-    if (!isFormValid(hour, minute, second, availableMinute)) return;
-
-    // 상위 컴포넌트로 업데이트된 회차 데이터 전달
-    onSave({
-      attendanceSessionId: session.attendanceSessionId,
-      title: session.title,
-      defaultStartTime: `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`,
-      allowedMinutes: defaultAvailableMinutes,
-      rewardPoints: session.rewardPoints,
-      latitude: session.location.lat,
-      longitude: session.location.lng,
-      radiusMeters: session.radiusMeters,
+    onSave(session.sessionId, {
+      title,
+      description,
+      allowedMinutes: minutes,
+      status: session.session.status || 'ACTIVE'
     });
 
     onClose();
-  };
-
-  const handleDeleteClick = () => {
-    const handleConfirm = () => {
-      onDelete(session.attendanceSessionId);
-      onClose();
-    };
-
-    const toastId = toast(
-      <ConfirmationToast
-        onConfirm={handleConfirm}
-        message="이 세션을 정말로 삭제하시겠습니까?"
-      />,
-      {
-        autoClose: false,
-        closeOnClick: false,
-        draggable: false,
-        closeButton: false,
-        onClose: () => setActiveToastId(null), // 토스트가 닫히면 초기화
-      }
-    );
-    setActiveToastId(toastId);
   };
 
   return (
@@ -129,7 +45,6 @@ const SessionModifyModal = ({
             type="button"
             className={styles.closeButton}
             onClick={onClose}
-            disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
           >
             &times;
           </button>
@@ -137,67 +52,55 @@ const SessionModifyModal = ({
 
         <div className={styles.form}>
           <div className={commonStyles.modalInputGroup}>
-            <label htmlFor="sessionStartTime" className={commonStyles.label}>
-              출석 시작 시간
+            <label htmlFor="sessionTitle" className={commonStyles.label}>
+              세션 제목
             </label>
-            <div className={styles.timeInputGroup}>
-              <input
-                type="text"
-                id="sessionStartTime"
-                value={hh}
-                maxLength="2"
-                onChange={(e) => setHh(e.target.value)}
-                placeholder="시(HH)"
-              />
-              <input
-                type="text"
-                value={mm}
-                maxLength="2"
-                onChange={(e) => setMm(e.target.value)}
-                placeholder="분(MM)"
-              />
-              <input
-                type="text"
-                value={ss}
-                maxLength="2"
-                onChange={(e) => setSs(e.target.value)}
-                placeholder="초(SS)"
-              />
-            </div>
+            <input
+              type="text"
+              id="sessionTitle"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="세션 제목"
+              style={{ padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%', boxSizing: 'border-box' }}
+            />
           </div>
-          <div className={commonStyles.inputGroup}>
-            <label
-              htmlFor="sessionAvailableTime"
-              className={commonStyles.label}
-            >
-              출석 가능 시간
+
+          <div className={commonStyles.modalInputGroup} style={{ marginTop: '1rem' }}>
+            <label htmlFor="sessionDescription" className={commonStyles.label}>
+              세션 설명
             </label>
-            <div className={styles.availableTimeInputGroup}>
-              <input
-                type="text"
-                id="sessionAvailableTime"
-                value={defaultAvailableMinutes}
-                maxLength="2"
-                onChange={(e) => setDefaultAvailableMinutes(e.target.value)}
-                placeholder="분(MM)"
-              />
-            </div>
-            <div className={styles.modifyButtonGroup}>
-              <button
-                className={`${styles.button} ${styles.resetPasswordButton}`}
-                onClick={handleDeleteClick}
-                disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
-              >
-                삭제
-              </button>
-              <button
-                className={`${styles.button} ${styles.submitButton}`}
-                onClick={handleModifyClick}
-                disabled={!!activeToastId} // 토스트가 활성화되면 버튼 비활성화
-              >
-                완료
-              </button>
-            </div>
+            <input
+              type="text"
+              id="sessionDescription"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="세션 설명"
+              style={{ padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div className={commonStyles.modalInputGroup} style={{ marginTop: '1rem' }}>
+            <label htmlFor="sessionAllowedMinutes" className={commonStyles.label}>
+              체크인 허용 시간 (분)
+            </label>
+            <input
+              type="number"
+              id="sessionAllowedMinutes"
+              value={allowedMinutes}
+              min="0"
+              onChange={(e) => setAllowedMinutes(e.target.value)}
+              placeholder="분(MM)"
+              style={{ padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px', width: '100%', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div className={styles.modifyButtonGroup} style={{ marginTop: '2rem' }}>
+            <button
+              className={`${styles.button} ${styles.submitButton}`}
+              onClick={handleModifyClick}
+            >
+              완료
+            </button>
           </div>
         </div>
       </div>
