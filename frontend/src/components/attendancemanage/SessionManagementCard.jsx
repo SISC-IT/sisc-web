@@ -1,6 +1,7 @@
 import styles from './SessionManagementCard.module.css';
 import calendarAddIcon from '../../assets/calendar-icon.svg';
 import menuIcon from '../../assets/menu-icon.svg';
+import xIcon from '../../assets/x-icon.svg';
 
 import { useEffect, useState, useRef } from 'react'; // useRef 추가
 import { toast } from 'react-toastify';
@@ -29,6 +30,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
     closeSessionModifyModal,
     isSessionModifyModalOpen,
     handleSessionChange,
+    handleDeleteRound,
   } = useAttendance();
 
   const [currentDisplayedRounds, setCurrentDisplayedRounds] = useState([]);
@@ -116,7 +118,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
         <div className={commonStyles.buttonGroup}>
           <div className={styles.selectGroup}>
             <select
-              value={selectedSessionId || ""}
+              value={selectedSessionId || ''}
               onChange={(e) => setSelectedSessionId(e.target.value)}
             >
               <option value="" disabled>
@@ -149,7 +151,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
           {/* 메뉴 영역 */}
           <div className={styles.menuWrapper} ref={menuRef}>
             <button
-              className={commonStyles.menuButton}
+              className={styles.menuButton}
               onClick={() => {
                 if (!currentSession) {
                   toast.error('세션을 먼저 선택해주세요.');
@@ -182,6 +184,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               <th>가능(분)</th>
               <th>회차</th>
               <th>QR 코드</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -212,7 +215,39 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
                           )
                         }
                       >
-                        QR 생성
+                        생성
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className={styles.deleteRoundButton}
+                        onClick={() => {
+                          toast(
+                            ({ closeToast }) => (
+                              <ConfirmationToast
+                                message={`${index + 1}회차를 정말 삭제하시겠습니까?`}
+                                onConfirm={async () => {
+                                  try {
+                                    await handleDeleteRound(round.roundId);
+                                    toast.success('회차가 삭제되었습니다.');
+                                  } catch (error) {
+                                    toast.error('회차 삭제에 실패했습니다.');
+                                  }
+                                }}
+                                closeToast={closeToast}
+                              />
+                            ),
+                            {
+                              position: 'top-center',
+                              autoClose: false,
+                              closeOnClick: false,
+                              draggable: false,
+                              closeButton: false,
+                            }
+                          );
+                        }}
+                      >
+                        <img src={xIcon} alt="라운드삭제" />
                       </button>
                     </td>
                   </tr>
@@ -220,7 +255,7 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               })
             ) : (
               <tr>
-                <td colSpan="5" className={styles.noData}>
+                <td colSpan="6" className={styles.noData}>
                   회차 정보가 없습니다.
                 </td>
               </tr>

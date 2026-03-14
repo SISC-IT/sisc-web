@@ -53,10 +53,11 @@
 
 .tableGroup {
   border-radius: 8px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   max-height: 500px;
-  border: 1px solid #e5e7eb;
-  background: white;
+  border: none;
+  background: transparent;
   width: 100%;
 }
 
@@ -82,6 +83,7 @@
 
 .table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   border-spacing: 0;
   table-layout: fixed;
@@ -90,13 +92,13 @@
 .table thead {
   position: sticky;
   top: 0;
-  background-color: #f8fafc;
+  background-color: transparent;
   z-index: 10;
 }
 
 .table thead th {
   text-align: left;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 0.4px solid #6a6a6a;
   color: #1e293b;
   padding: 10px 6px;
   white-space: nowrap;
@@ -104,7 +106,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
-  background-color: #f8fafc;
+  background-color: transparent;
   letter-spacing: 0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,11 +118,11 @@
 }
 
 .row:hover {
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
 .table tbody td {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 0.4px solid #6a6a6a;
   padding: 10px 6px;
   font-size: 12px;
   text-align: left;
@@ -163,24 +165,36 @@
 /* 컬럼 너비 - 비율 기반 */
 .table thead th:nth-child(1),
 .table tbody td:nth-child(1) {
-  width: 26%;
+  width: 22%;
 }
 .table thead th:nth-child(2),
 .table tbody td:nth-child(2) {
-  width: 24%;
+  width: 20%;
 }
 .table thead th:nth-child(3),
 .table tbody td:nth-child(3) {
-  width: 22%;
+  width: 18%;
 }
 .table thead th:nth-child(4),
 .table tbody td:nth-child(4) {
-  width: 18%;
+  width: 15%;
 }
 .table thead th:nth-child(5),
 .table tbody td:nth-child(5) {
+  width: 15%;
+  text-align: center;
+}
+.table thead th:nth-child(6),
+.table tbody td:nth-child(6) {
   width: 10%;
   text-align: center;
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .menuButton {
@@ -256,6 +270,33 @@
 .dropdownMenu .deleteBtn {
   color: #ff4d4f; /* 삭제 버튼 빨간색 */
   border-top: 1px solid #f0f0f0;
+}
+
+.deleteRoundButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.deleteRoundButton:hover {
+  background-color: #fee2e2;
+}
+
+.deleteRoundButton img {
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.deleteRoundButton:hover img {
+  opacity: 1;
 }
 
 /* 태블릿 이상 */
@@ -382,4 +423,33 @@
     padding: 15px 12px;
     font-size: 15px;
   }
+}
+
+.qrButton {
+  background: linear-gradient(99.86deg, #b3ebff -15.44%, #91c3ff 39.86%, #d3edff 94.81%);
+  width: 89px;
+  height: 40px;
+  border-radius: 8px;
+  padding: 12px 26px;
+  gap: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: Inter, Pretendard, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.qrButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.qrButton:active {
+  transform: translateY(0);
 }

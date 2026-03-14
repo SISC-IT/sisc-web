@@ -153,7 +153,8 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
               openAddUsersModal();
             }}
           >
-            <img src={addUserIcon} alt="" /> 유저 추가
+            <img src={addUserIcon} alt="" />
+            세션 유저 추가
           </button>
           <div className={styles.buttonWithIcon}>
             <button

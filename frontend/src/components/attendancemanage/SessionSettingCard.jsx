@@ -98,7 +98,9 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
         </div>
 
         <div className={commonStyles.buttonGroup}>
-          <button onClick={handleCreateClick}>생성</button>
+          <button className={styles.createButton} onClick={handleCreateClick}>
+            생성
+          </button>
         </div>
       </div>
     </div>
