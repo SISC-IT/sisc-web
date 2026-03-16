@@ -34,11 +34,6 @@ public class AdminBoardService {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-    // 회장만 게시판 생성 가능
-    if (!user.getRole().equals(Role.PRESIDENT)) {
-      throw new CustomException(ErrorCode.BOARD_ACCESS_DENIED);
-    }
-
     Board board;
     // 하위 게시판인 경우
     if (request.getParentBoardId() != null) {
