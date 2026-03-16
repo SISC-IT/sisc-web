@@ -405,8 +405,8 @@ input:focus {
 }
 
 .mainTitle {
-  font-size: 44px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   line-height: 1.15;
   margin-bottom: 20px;
   letter-spacing: -0.02em;
@@ -431,8 +431,8 @@ input:focus {
 }
 
 .header h1 {
-  font-size: 34px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -508,7 +508,7 @@ input:focus {
 
 @media (max-width: 1024px) {
   .mainTitle {
-    font-size: 36px;
+    font-size: 24px;
   }
 
   .header {
@@ -527,12 +527,12 @@ input:focus {
   }
 
   .mainTitle {
-    font-size: 30px;
+    font-size: 24px;
     margin-bottom: 14px;
   }
 
   .header h1 {
-    font-size: 28px;
+    font-size: 20px;
   }
 
   .inputGroup .label {
