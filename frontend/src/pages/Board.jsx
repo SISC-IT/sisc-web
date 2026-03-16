@@ -17,6 +17,7 @@ import { api } from '../utils/axios';
 
 const ALL_TAB_ID = 'all';
 const SUB_BOARD_ADMIN_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT', 'VICE_PRESIDENT'];
+const SUB_BOARD_DELETE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT'];
 
 const getPostId = (post) => post?.postId || post?.id;
 
@@ -96,7 +97,9 @@ const Board = () => {
   const [isCreatingSubBoard, setIsCreatingSubBoard] = useState(false);
   const [writeBoardId, setWriteBoardId] = useState('');
   const [canCreateSubBoard, setCanCreateSubBoard] = useState(false);
+  const [canDeleteSubBoard, setCanDeleteSubBoard] = useState(false);
   const [isSavingPost, setIsSavingPost] = useState(false);
+  const [deletingSubBoardId, setDeletingSubBoardId] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
@@ -168,8 +171,10 @@ const Board = () => {
         const { data } = await api.get('/api/user/details');
         const normalizedRole = String(data?.role || '').trim().toUpperCase();
         setCanCreateSubBoard(SUB_BOARD_ADMIN_ROLES.includes(normalizedRole));
+        setCanDeleteSubBoard(SUB_BOARD_DELETE_ROLES.includes(normalizedRole));
       } catch {
         setCanCreateSubBoard(false);
+        setCanDeleteSubBoard(false);
       }
     };
 
@@ -403,6 +408,62 @@ const Board = () => {
     }
   };
 
+  const handleDeleteSubBoard = async (boardId, boardName) => {
+    if (!canDeleteSubBoard) {
+      alert('하위 게시판 삭제 권한이 없습니다.');
+      return;
+    }
+
+    if (!boardId || boardId === ALL_TAB_ID) {
+      return;
+    }
+
+    if (deletingSubBoardId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `'${boardName || '해당'}' 하위 게시판을 삭제하시겠습니까?\n관련 첨부파일 및 댓글도 함께 삭제됩니다.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingSubBoardId(boardId);
+      await boardApi.deleteBoard(boardId);
+
+      const subBoards = await boardApi.getSubBoards(currentBoardId);
+      const tabs = [
+        { id: ALL_TAB_ID, name: '전체 게시판' },
+        ...(Array.isArray(subBoards)
+          ? subBoards.map((board) => ({ id: board.boardId, name: board.boardName }))
+          : []),
+      ];
+
+      setSubBoardTabs(tabs);
+      setPostCacheByBoardId((prev) => {
+        if (!prev[boardId]) {
+          return prev;
+        }
+
+        const next = { ...prev };
+        delete next[boardId];
+        return next;
+      });
+
+      setActiveSubBoard((prev) => (prev === boardId ? ALL_TAB_ID : prev));
+      setCurrentPage(1);
+      alert('하위 게시판이 삭제되었습니다.');
+    } catch (error) {
+      console.error('하위 게시판 삭제 실패:', error);
+      alert('하위 게시판 삭제에 실패했습니다.');
+    } finally {
+      setDeletingSubBoardId('');
+    }
+  };
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
@@ -618,6 +679,9 @@ const Board = () => {
         tabs={subBoardTabs}
         onCreateSubBoard={handleOpenSubBoardModal}
         canCreateSubBoard={canCreateSubBoard}
+        canDeleteSubBoard={canDeleteSubBoard}
+        deletingTabId={deletingSubBoardId}
+        onDeleteSubBoard={handleDeleteSubBoard}
       />
 
       <BoardActions

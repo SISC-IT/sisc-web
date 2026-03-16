@@ -9,6 +9,11 @@
 .tabsLeft {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tabItem {
+  position: relative;
 }
 
 .tab {
@@ -47,6 +52,44 @@
   font-size: 16px;
   line-height: 100%;
   letter-spacing: 0;
+}
+
+.deleteTabButton {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(23, 23, 23, 0.78);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+  z-index: 1;
+}
+
+.tabItem:hover .deleteTabButton,
+.tabItem:focus-within .deleteTabButton {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.deleteTabButton:hover:not(:disabled) {
+  background: rgba(194, 31, 31, 0.92);
+}
+
+.deleteTabButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+  pointer-events: auto;
 }
 
 /* 하위 게시판 추가 버튼 */
