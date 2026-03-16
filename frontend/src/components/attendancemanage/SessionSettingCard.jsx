@@ -38,7 +38,6 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
       setSessionTitle('');
       setDescription('');
       setAllowedMinutes('');
-      setStatus('OPEN');
 
       alert('세션이 생성되었습니다.');
     } catch (err) {

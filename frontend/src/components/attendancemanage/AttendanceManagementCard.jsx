@@ -245,8 +245,17 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     );
 
   // 3. 유저 삭제(퇴출) 버튼 핸들러
-  const onDeleteUsersClick = () =>
+  const onDeleteUsersClick = () => {
+    const selectedUsers = getSelectedUsers();
+    const hasOwner = selectedUsers.some((user) => isOwnerRole(user.role));
+
+    if (hasOwner) {
+      alert('세션 생성자를 삭제할 수 없습니다');
+      return;
+    }
+
     confirmAction('유저를 삭제하시겠습니까?', handleDeleteUsers);
+  };
 
   const toggleUserSelection = (userId) => {
     const newSelection = new Set(selectedUserIds);
