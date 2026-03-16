@@ -42,6 +42,12 @@ const ATTENDANCE_MENU_ORDER = [
   'PENDING',
 ];
 
+const EMPTY_ATTENDANCE_DATA = {
+  sessionTitle: '',
+  rounds: [],
+  userRows: [],
+};
+
 const AttendanceStatusDropdown = ({
   value,
   statusClass,
@@ -109,6 +115,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
   const [activeToastId, setActiveToastId] = useState(null);
   const [openDropdownKey, setOpenDropdownKey] = useState(null);
   const cardRef = useRef(null);
+  const fetchRequestIdRef = useRef(0);
 
   const getSelectedUsers = () =>
     attendanceData.userRows.filter((user) => selectedUserIds.has(user.userId));
@@ -123,22 +130,35 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
   };
 
   useEffect(() => {
+    const requestId = ++fetchRequestIdRef.current;
+    const isStale = () => requestId !== fetchRequestIdRef.current;
+
+    setAttendanceData(EMPTY_ATTENDANCE_DATA);
+    setSelectedUserIds(new Set());
+
     const fetchAttendanceSheet = async () => {
       if (!selectedSessionId) {
-        setAttendanceData({ sessionTitle: '', rounds: [], userRows: [] });
-        setSelectedUserIds(new Set());
         return;
       }
 
       try {
         const data = await getUsers(selectedSessionId);
-        setAttendanceData(data);
+        if (isStale()) return;
+        setAttendanceData(data || EMPTY_ATTENDANCE_DATA);
       } catch (error) {
+        if (isStale()) return;
         console.error('출석부 조회 실패:', error);
-        setAttendanceData({ sessionTitle: '', rounds: [], userRows: [] });
+        setAttendanceData(EMPTY_ATTENDANCE_DATA);
       }
     };
+
     fetchAttendanceSheet();
+
+    return () => {
+      if (fetchRequestIdRef.current === requestId) {
+        fetchRequestIdRef.current += 1;
+      }
+    };
   }, [selectedSessionId, roundAttendanceVersion, roundsVersion]);
 
   useEffect(() => {
@@ -156,18 +176,18 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     if (selectedUserIds.size === 0) return alert('대상을 선택해주세요.');
     if (activeToastId) toast.dismiss(activeToastId);
 
-    const handleConfirm = async () => {
-      await onConfirm(selectedSessionId, Array.from(selectedUserIds));
-      setSelectedUserIds(new Set()); // 성공 후 선택 초기화
-      toast.dismiss();
-    };
-
     const toastId = toast(
-      <ConfirmationToast
-        onConfirm={handleConfirm}
-        onCancel={() => toast.dismiss()}
-        message={`${selectedUserIds.size}명의 유저에 대해 ${message}`}
-      />,
+      ({ closeToast }) => (
+        <ConfirmationToast
+          onConfirm={async () => {
+            await onConfirm(selectedSessionId, Array.from(selectedUserIds));
+            setSelectedUserIds(new Set()); // 성공 후 선택 초기화
+            closeToast?.();
+          }}
+          onCancel={() => closeToast?.()}
+          message={`${selectedUserIds.size}명의 유저를 ${message}`}
+        />
+      ),
       {
         autoClose: false,
         closeOnClick: false,
@@ -194,21 +214,22 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
         ? `${firstName} 외 ${restCount}명의 권한을 변경하시겠습니까?`
         : `${firstName}님의 권한을 변경하시겠습니까?`;
 
-    const handleConfirm = async () => {
-      await onConfirm(selectedSessionId, Array.from(selectedUserIds));
-      setSelectedUserIds(new Set());
-      toast.dismiss();
-    };
-
     const toastId = toast(
-      <ConfirmationToast
-        onConfirm={handleConfirm}
-        title={title}
-        description={description}
-        confirmLabel="권한 변경하기"
-        cancelLabel="취소"
-        variant="roleChange"
-      />,
+      ({ closeToast }) => (
+        <ConfirmationToast
+          onConfirm={async () => {
+            await onConfirm(selectedSessionId, Array.from(selectedUserIds));
+            setSelectedUserIds(new Set());
+            closeToast?.();
+          }}
+          onCancel={() => closeToast?.()}
+          title={title}
+          description={description}
+          confirmLabel="권한 변경하기"
+          cancelLabel="취소"
+          variant="roleChange"
+        />
+      ),
       {
         autoClose: false,
         closeOnClick: false,
@@ -254,7 +275,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
       return;
     }
 
-    confirmAction('유저를 삭제하시겠습니까?', handleDeleteUsers);
+    confirmAction('삭제하시겠습니까?', handleDeleteUsers);
   };
 
   const toggleUserSelection = (userId) => {

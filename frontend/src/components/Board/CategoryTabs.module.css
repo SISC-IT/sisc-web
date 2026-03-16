@@ -77,9 +77,18 @@
 }
 
 .tabItem:hover .deleteTabButton,
-.tabItem:focus-within .deleteTabButton {
+.tabItem:focus-within .deleteTabButton,
+.tabItem:active .deleteTabButton,
+.tabItem:focus .deleteTabButton {
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .deleteTabButton {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .deleteTabButton:hover:not(:disabled) {

@@ -226,46 +226,77 @@ export const AttendanceProvider = ({ children }) => {
       setRoundAttendanceVersion((prev) => prev + 1);
     } catch (error) {
       console.error('유저 추가에 실패했습니다. ', error);
+      throw error;
     }
   };
 
   const handleDeleteUsers = async (sessionId, userIds) => {
-    try {
-      const promises = userIds.map((userId) => deleteUser(sessionId, userId));
-      await Promise.all(promises);
-      setRoundAttendanceVersion((v) => v + 1);
-    } catch (error) {
-      console.error('유저 삭제 실패', error);
-      alert('일부 유저 삭제에 실패했습니다.');
+    const results = await Promise.allSettled(
+      userIds.map((userId) => deleteUser(sessionId, userId))
+    );
+
+    setRoundAttendanceVersion((v) => v + 1);
+
+    const failedCount = results.filter(
+      (result) => result.status === 'rejected'
+    ).length;
+
+    if (failedCount > 0) {
+      const successCount = userIds.length - failedCount;
+      console.error(
+        `유저 삭제 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
+        results.filter((result) => result.status === 'rejected')
+      );
+      alert(`유저 삭제 중 ${failedCount}명이 실패했습니다.`);
     }
   };
 
   const handleAddManager = async (sessionId, userIds) => {
-    try {
-      const promises = userIds.map((userId) => addManager(sessionId, userId));
-      await Promise.all(promises);
+    const results = await Promise.allSettled(
+      userIds.map((userId) => addManager(sessionId, userId))
+    );
 
-      setRoundAttendanceVersion((v) => v + 1);
-      alert('선택한 유저가 매니저로 격상되었습니다.');
-    } catch (error) {
-      console.error('매니저 추가 실패:', error);
-      alert('매니저 권한 부여에 실패했습니다.');
+    setRoundAttendanceVersion((v) => v + 1);
+
+    const failedCount = results.filter(
+      (result) => result.status === 'rejected'
+    ).length;
+
+    if (failedCount > 0) {
+      const successCount = userIds.length - failedCount;
+      console.error(
+        `매니저 추가 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
+        results.filter((result) => result.status === 'rejected')
+      );
+      alert(`매니저 권한 부여 중 ${failedCount}명이 실패했습니다.`);
+      return;
     }
+
+    alert('선택한 유저가 매니저로 격상되었습니다.');
   };
 
   const handleRemoveManager = async (sessionId, userIds) => {
-    try {
-      const promises = userIds.map((userId) =>
-        deleteManager(sessionId, userId)
-      );
-      await Promise.all(promises);
+    const results = await Promise.allSettled(
+      userIds.map((userId) => deleteManager(sessionId, userId))
+    );
 
-      setRoundAttendanceVersion((v) => v + 1);
-      alert('선택한 유저가 일반 참가자로 변경되었습니다.');
-    } catch (error) {
-      console.error('매니저 제거 실패:', error);
-      alert('권한 제거에 실패했습니다. (OWNER 여부 확인 필요)');
+    setRoundAttendanceVersion((v) => v + 1);
+
+    const failedCount = results.filter(
+      (result) => result.status === 'rejected'
+    ).length;
+
+    if (failedCount > 0) {
+      const successCount = userIds.length - failedCount;
+      console.error(
+        `매니저 제거 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
+        results.filter((result) => result.status === 'rejected')
+      );
+      alert(`권한 제거 중 ${failedCount}명이 실패했습니다. (OWNER 여부 확인 필요)`);
+      return;
     }
+
+    alert('선택한 유저가 일반 참가자로 변경되었습니다.');
   };
 
   // 공유할 값들을 객체로 묶기

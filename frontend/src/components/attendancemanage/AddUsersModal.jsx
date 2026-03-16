@@ -42,6 +42,11 @@ const AddUsersModal = () => {
   };
 
   const handleComplete = async () => {
+    if (!selectedSessionId) {
+      alert('선택된 세션이 없습니다.');
+      return;
+    }
+
     if (selectedUserIds.size === 0) {
       alert('추가할 인원을 1명 이상 선택해주세요.');
       return;
@@ -49,14 +54,25 @@ const AddUsersModal = () => {
 
     const idsArray = Array.from(selectedUserIds);
 
-    try {
-      for (const userId of idsArray) {
-        await handleAddUsers(selectedSessionId, userId);
-      }
+    const results = await Promise.allSettled(
+      idsArray.map((userId) => handleAddUsers(selectedSessionId, userId))
+    );
+
+    const failedCount = results.filter(
+      (result) => result.status === 'rejected'
+    ).length;
+
+    if (failedCount === 0) {
       closeAddUsersModal();
-    } catch (error) {
-      alert('유저 추가 중 오류가 발생했습니다.');
+      return;
     }
+
+    const successCount = idsArray.length - failedCount;
+    console.error(
+      `유저 추가 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
+      results.filter((result) => result.status === 'rejected')
+    );
+    alert(`유저 추가 중 ${failedCount}명이 실패했습니다.`);
   };
 
   return (

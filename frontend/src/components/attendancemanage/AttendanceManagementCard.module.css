@@ -163,6 +163,7 @@
   --status-color: #2f80ed;
   --status-bg: #eaf4ff;
   --status-bg-hover: #deeeff;
+
   position: relative;
   width: 100%;
   max-width: 92px;

@@ -6,6 +6,19 @@ import { useAttendance } from '../../contexts/AttendanceContext';
 
 const DEFAULT_TIME = '18:00';
 
+const formatDatePart = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatTimePart = (date) => {
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  return `${hour}:${minute}`;
+};
+
 const RoundDayPicker = () => {
   const { selectedSessionId, sessions, handleAddRounds, closeAddRoundsModal } =
     useAttendance();
@@ -31,15 +44,35 @@ const RoundDayPicker = () => {
 
   const today = new Date();
 
-  const calculateEndTime = (baseTime, minutesToAdd) => {
-    if (!baseTime || !minutesToAdd || Number(minutesToAdd) <= 0) return '';
-    const [hours, minutes] = baseTime.split(':').map(Number);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return '';
+  const calculateEndTime = (baseTime, minutesToAdd, baseDate = new Date()) => {
+    if (!baseTime || !minutesToAdd || Number(minutesToAdd) <= 0) {
+      return {
+        time: '',
+        nextDay: false,
+        iso: '',
+      };
+    }
 
-    const totalMinutes = (hours * 60 + minutes + Number(minutesToAdd)) % (24 * 60);
-    const endHour = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
-    const endMinute = String(totalMinutes % 60).padStart(2, '0');
-    return `${endHour}:${endMinute}`;
+    const [hours, minutes] = baseTime.split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+      return {
+        time: '',
+        nextDay: false,
+        iso: '',
+      };
+    }
+
+    const startDateTime = new Date(baseDate);
+    startDateTime.setHours(hours, minutes, 0, 0);
+
+    const endDateTime = new Date(startDateTime);
+    endDateTime.setMinutes(endDateTime.getMinutes() + Number(minutesToAdd));
+
+    return {
+      time: formatTimePart(endDateTime),
+      nextDay: endDateTime.getDate() !== startDateTime.getDate(),
+      iso: `${formatDatePart(endDateTime)}T${formatTimePart(endDateTime)}:00`,
+    };
   };
 
   useEffect(() => {
@@ -57,7 +90,8 @@ const RoundDayPicker = () => {
 
   useEffect(() => {
     if (!startTime || allowedMinutes <= 0) return;
-    setEndTime(calculateEndTime(startTime, allowedMinutes));
+    const calculated = calculateEndTime(startTime, allowedMinutes);
+    setEndTime(calculated.time);
   }, [startTime, allowedMinutes]);
 
   const handleStartTimeChange = (e) => {
@@ -65,7 +99,8 @@ const RoundDayPicker = () => {
     setStartTime(nextStartTime);
 
     if (allowedMinutes > 0) {
-      setEndTime(calculateEndTime(nextStartTime, allowedMinutes));
+      const calculated = calculateEndTime(nextStartTime, allowedMinutes);
+      setEndTime(calculated.time);
     }
   };
 
@@ -90,7 +125,15 @@ const RoundDayPicker = () => {
     const roundDate = selectedDate.toLocaleDateString('sv-SE');
 
     const startAt = `${roundDate}T${startTime}:00`;
-    const closeAt = `${roundDate}T${endTime}:00`;
+
+    const startDateTime = new Date(`${roundDate}T${startTime}:00`);
+    const endDateTime = new Date(`${roundDate}T${endTime}:00`);
+
+    if (endDateTime <= startDateTime) {
+      endDateTime.setDate(endDateTime.getDate() + 1);
+    }
+
+    const closeAt = `${formatDatePart(endDateTime)}T${formatTimePart(endDateTime)}:00`;
 
     const newRound = {
       roundDate,
