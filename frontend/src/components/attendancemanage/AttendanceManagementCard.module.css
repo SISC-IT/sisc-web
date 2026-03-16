@@ -131,33 +131,156 @@
   table-layout: auto;
 }
 .attendanceSelect {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border-radius: 6px;
-  border: 1.5px solid #d1d5db;
-  padding: 5px 8px;
-  font-size: 11px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s;
   width: 100%;
-  max-width: 90px;
+  height: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 0 30px 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  max-width: 100%;
   white-space: nowrap;
-  font-family: Inter, sans-serif;
+  font-family: Pretendard, Inter, sans-serif;
   box-sizing: border-box;
+  text-align: left;
 }
 
 .attendanceSelect:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  background-color: transparent;
 }
 
 .attendanceSelect:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(143, 190, 255, 0.25);
+}
+
+.attendanceSelectWrap {
+  --status-color: #2f80ed;
+  --status-bg: #eaf4ff;
+  --status-bg-hover: #deeeff;
+  position: relative;
+  width: 100%;
+  max-width: 92px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.04);
+  background: var(--status-bg);
+  color: var(--status-color);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.attendanceSelectWrap.open {
+  overflow: visible;
+  z-index: 40;
+}
+
+.attendanceSelectWrap::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-60%) rotate(45deg);
+  pointer-events: none;
+  border-right: 3px solid var(--status-color);
+  border-bottom: 3px solid var(--status-color);
+}
+
+.attendanceSelectWrap:hover {
+  background: var(--status-bg-hover);
+}
+
+.attendanceDropdownMenu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: 100%;
+  min-width: 92px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 120;
+}
+
+.attendanceDropdownItem {
+  width: 100%;
+  height: 38px;
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.attendanceDropdownItem:first-child {
+  border-top: none;
+}
+
+.attendanceDropdownItem:hover {
+  background: #f8fafc;
+}
+
+.activeDropdownItem {
+  background: #b9def7;
+}
+
+.statusCell {
+  overflow: visible !important;
+  position: relative;
+  z-index: 80;
+}
+
+.openStatusCell {
+  z-index: 200;
+}
+
+.table tbody td.statusCell {
+  overflow: visible !important;
+}
+
+.statusPresent {
+  --status-color: #2f80ed;
+  --status-bg: #eaf4ff;
+  --status-bg-hover: #dff0ff;
+}
+
+.statusLate {
+  --status-color: #9b5cf4;
+  --status-bg: #f2eafe;
+  --status-bg-hover: #eadcff;
+}
+
+.statusAbsent {
+  --status-color: #ff4d2d;
+  --status-bg: #fdecea;
+  --status-bg-hover: #fadfdc;
+}
+
+.statusExcused {
+  --status-color: #22a06b;
+  --status-bg: #eaf9ef;
+  --status-bg-hover: #dcf4e4;
+}
+
+.statusPending {
+  --status-color: #64748b;
+  --status-bg: #eef2f6;
+  --status-bg-hover: #e7ecf2;
 }
 
 .table thead {
@@ -367,5 +490,195 @@
   .table tbody td {
     padding: 15px 12px;
     font-size: 15px;
+  }
+}
+
+/* Attendance User Management Design Alignment */
+.attendanceManagementCardContainer {
+  border: 1px solid #d7dbe3;
+  border-radius: 12px;
+  background: #f8f9fb;
+  padding: 20px 16px;
+  box-shadow: none;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+.dropdownOpenContainer {
+  z-index: 220;
+}
+
+.attendanceManagementCardContainer:hover {
+  box-shadow: none;
+}
+
+.titleArea {
+  align-items: center;
+  gap: 10px;
+}
+
+.sessionIcon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
+}
+
+.selectedCount {
+  font-size: 14px;
+  color: #7b8290;
+  margin-top: 2px;
+}
+
+.selectedCount span {
+  color: #5a8fd8;
+  font-weight: 700;
+}
+
+.actionButtonGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.addUserButton {
+  width: 138px;
+  height: 40px;
+  border: 1px solid #d4d7de;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.addUserButton img {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+}
+
+.actionButtonGroup > .buttonWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.actionButtonGroup button.buttonWithIcon,
+.handleRoleButton {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d4d7de;
+  border-radius: 8px;
+  background: #f7f8fa;
+}
+
+.actionButtonGroup button.buttonWithIcon img,
+.handleRoleButton img {
+  width: 18px;
+  height: 18px;
+}
+
+.tableGroup {
+  margin-top: 4px;
+  max-height: none;
+  overflow: visible;
+}
+
+.table {
+  min-width: 920px;
+}
+
+.table thead th {
+  border-bottom: 1px solid #cfd4dd;
+  color: #3b4250;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 10px;
+}
+
+.table tbody td {
+  border-bottom: 1px solid #e2e6ee;
+  color: #3f4754;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 10px 10px;
+}
+
+.selectedRow {
+  background: #f1f7ff;
+}
+
+.attendanceSelect {
+  font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+  .actionButtonGroup {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .attendanceManagementCardContainer {
+    padding: 16px 14px;
+  }
+
+  .selectedCount {
+    font-size: 12px;
+  }
+
+  .addUserButton {
+    width: 126px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .actionButtonGroup button.buttonWithIcon,
+  .handleRoleButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .table {
+    min-width: 760px;
+  }
+
+  .table thead th,
+  .table tbody td {
+    font-size: 13px;
+    padding: 9px 8px;
+  }
+
+  .attendanceSelect {
+    font-size: 13px;
+    padding: 0 34px 0 14px;
+  }
+
+  .attendanceSelectWrap {
+    height: 34px;
+    max-width: 86px;
+    border-radius: 10px;
+  }
+
+  .attendanceDropdownMenu {
+    min-width: 86px;
+  }
+
+  .attendanceDropdownItem {
+    height: 34px;
+    font-size: 13px;
+    padding: 0 12px;
+  }
+
+  .attendanceSelectWrap::after {
+    right: 9px;
+    width: 8px;
+    height: 8px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
   }
 }

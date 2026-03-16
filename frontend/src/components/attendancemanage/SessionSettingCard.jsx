@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import styles from './SessionSettingCard.module.css';
 import { useAttendance } from '../../contexts/AttendanceContext';
+import fileIcon from '../../assets/file-icon.svg';
 
 const SessionSettingCard = ({ styles: commonStyles }) => {
   const { handleAddSession } = useAttendance();
@@ -48,7 +49,10 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
   return (
     <div className={styles.SessionSettingCardContainer}>
       <header className={commonStyles.header}>
-        <h1>세션 설정</h1>
+        <div className={styles.titleArea}>
+          <img src={fileIcon} alt="세션 아이콘" className={styles.titleIcon} />
+          <h1>세션 설정</h1>
+        </div>
       </header>
 
       <div className={styles.form}>
@@ -97,7 +101,7 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
           </div>
         </div>
 
-        <div className={commonStyles.buttonGroup}>
+        <div className={`${commonStyles.buttonGroup} ${styles.createButtonGroup}`}>
           <button className={styles.createButton} onClick={handleCreateClick}>
             생성
           </button>

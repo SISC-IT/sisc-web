@@ -2,6 +2,8 @@ import styles from './SessionManagementCard.module.css';
 import calendarAddIcon from '../../assets/calendar-icon.svg';
 import menuIcon from '../../assets/menu-icon.svg';
 import xIcon from '../../assets/x-icon.svg';
+import fileIcon from '../../assets/file-icon.svg';
+import pencilIcon from '../../assets/pencil-icon.svg';
 
 import { useEffect, useState, useRef } from 'react'; // useRef 추가
 import { toast } from 'react-toastify';
@@ -114,10 +116,14 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
   return (
     <div className={styles.sessionManagementCardContainer}>
       <div className={commonStyles.header}>
-        <h1>세션 관리</h1>
+        <div className={styles.titleArea}>
+          <img src={fileIcon} alt="세션 아이콘" className={styles.titleIcon} />
+          <h1>세션 관리</h1>
+        </div>
         <div className={commonStyles.buttonGroup}>
           <div className={styles.selectGroup}>
             <select
+              className={styles.sessionSelect}
               value={selectedSessionId || ''}
               onChange={(e) => setSelectedSessionId(e.target.value)}
             >
@@ -165,9 +171,13 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
 
             {isMenuOpen && (
               <div className={styles.dropdownMenu}>
-                <button onClick={onEditClick}>세션 수정하기</button>
+                <button onClick={onEditClick}>
+                  <img src={pencilIcon} alt="수정" />
+                  <span>세션 수정하기</span>
+                </button>
                 <button onClick={onDeleteClick} className={styles.deleteBtn}>
-                  세션 삭제하기
+                  <img src={xIcon} alt="삭제" />
+                  <span>세션 삭제하기</span>
                 </button>
               </div>
             )}

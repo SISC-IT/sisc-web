@@ -241,34 +241,45 @@
 
 .dropdownMenu {
   position: absolute;
-  top: 45px; /* 버튼 아래 적당한 위치 */
+  top: 44px;
   right: 0;
   background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
   z-index: 999;
   display: flex;
   flex-direction: column;
-  min-width: 120px;
+  min-width: 170px;
   overflow: hidden;
 }
 
 .dropdownMenu button {
-  padding: 10px 15px;
+  padding: 12px 16px;
   border: none;
   background: none;
   text-align: left;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
+  color: #111827;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .dropdownMenu button:hover {
-  background-color: #f9f9f9;
+  background-color: #f4f6fa;
+}
+
+.dropdownMenu button img {
+  width: 18px;
+  height: 18px;
+  opacity: 0.92;
 }
 
 .dropdownMenu .deleteBtn {
-  color: #ff4d4f; /* 삭제 버튼 빨간색 */
+  color: #111827;
   border-top: 1px solid #f0f0f0;
 }
 
@@ -452,4 +463,132 @@
 
 .qrButton:active {
   transform: translateY(0);
+}
+
+/* Session Management Design Alignment */
+.sessionManagementCardContainer {
+  border: 1px solid #d7dbe3;
+  border-radius: 12px;
+  background: #f8f9fb;
+  padding: 20px 16px;
+  box-shadow: none;
+}
+
+.sessionManagementCardContainer:hover {
+  box-shadow: none;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleIcon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
+}
+
+.selectGroup {
+  margin-bottom: 0;
+}
+
+.sessionSelect {
+  min-width: 260px;
+  height: 40px;
+  border: 1px solid #ced3dc;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #fff;
+  color: #475569;
+  font-size: 15px;
+}
+
+.tableGroup {
+  max-height: none;
+  margin-top: 2px;
+}
+
+.table {
+  min-width: 720px;
+}
+
+.table thead th {
+  border-bottom: 1px solid #cfd4dd;
+  color: #3b4250;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 10px;
+}
+
+.table tbody td {
+  border-bottom: 1px solid #e2e6ee;
+  color: #3f4754;
+  font-size: 15px;
+  font-weight: 400;
+  padding: 12px 10px;
+}
+
+.qrButton {
+  width: 86px;
+  height: 40px;
+  border-radius: 10px;
+  padding: 0;
+  border: none;
+  background: linear-gradient(180deg, #b8ddff 0%, #9dc9f9 100%);
+  color: #2a3340;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.qrButton:hover {
+  opacity: 0.95;
+  transform: none;
+}
+
+.menuButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid #d4d7de;
+  background: #f7f8fa;
+}
+
+.deleteRoundButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+@media (max-width: 1024px) {
+  .table thead th {
+    font-size: 16px;
+  }
+
+  .table tbody td {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sessionManagementCardContainer {
+    padding: 16px 14px;
+  }
+
+  .sessionSelect {
+    min-width: 220px;
+    font-size: 14px;
+  }
+
+  .table thead th {
+    font-size: 13px;
+    padding: 9px 8px;
+  }
+
+  .table tbody td {
+    font-size: 13px;
+    padding: 10px 8px;
+  }
 }

@@ -62,13 +62,10 @@ const AddUsersModal = () => {
   return (
     <div className={styles.overlay}>
       <div className={`${styles.modal} ${styles.largeModal}`}>
-        {' '}
-        {/* 목록을 위해 큰 사이즈 클래스 추가 */}
-        <div></div>
         <div className={styles.modalHeader}>
           <div className={styles.titleDiv}>
-            <h1>세션에 유저 추가</h1>
-            {selectedUserIds.size}명 선택되었습니다.
+            <h1>세션 유저 추가</h1>
+            <span>{selectedUserIds.size}명 선택되었습니다.</span>
           </div>
           <button
             type="button"

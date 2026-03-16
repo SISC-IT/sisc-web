@@ -298,3 +298,108 @@
 .createButton:active {
   transform: translateY(0);
 }
+
+/* Session Setting Design Alignment */
+.SessionSettingCardContainer {
+  border: 1px solid #d7dbe3;
+  border-radius: 12px;
+  background: #f8f9fb;
+  padding: 20px 16px;
+  box-shadow: none;
+}
+
+.SessionSettingCardContainer:hover {
+  box-shadow: none;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleIcon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1.3fr 1.3fr 0.7fr auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.availableTimeInputGroup {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.availableTimeInputGroup > input {
+  text-align: left;
+  border: 1px solid #ced3dc;
+  border-radius: 10px;
+  height: 48px;
+  padding: 0 14px;
+  font-size: 15px;
+  background: #fff;
+}
+
+.createButtonGroup {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.createButton {
+  background: linear-gradient(99.86deg, #b3ebff -15.44%, #91c3ff 39.86%, #d3edff 94.81%);
+  width: 89px;
+  min-width: 89px;
+  height: 40px;
+  border-radius: 8px;
+  padding: 12px 26px;
+  gap: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: Inter, Pretendard, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.createButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1100px) {
+  .form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .createButtonGroup {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .SessionSettingCardContainer {
+    padding: 16px 14px;
+  }
+
+  .form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .availableTimeInputGroup > input {
+    height: 44px;
+    font-size: 14px;
+  }
+
+}
