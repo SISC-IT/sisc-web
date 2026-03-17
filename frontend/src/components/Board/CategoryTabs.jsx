@@ -35,7 +35,7 @@ const CategoryTabs = ({
                   event.stopPropagation();
                   onDeleteSubBoard?.(tab.id, tab.name);
                 }}
-                disabled={Boolean(deletingTabId)}
+                disabled={deletingTabId === tab.id}
                 aria-label={`${tab.name} 하위 게시판 삭제`}
                 title="하위 게시판 삭제"
               >

@@ -133,6 +133,12 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     const requestId = ++fetchRequestIdRef.current;
     const isStale = () => requestId !== fetchRequestIdRef.current;
 
+    // Dismiss any active confirmation toast when session changes
+    if (activeToastId) {
+      toast.dismiss(activeToastId);
+      setActiveToastId(null);
+    }
+
     setAttendanceData(EMPTY_ATTENDANCE_DATA);
     setSelectedUserIds(new Set());
 
@@ -180,8 +186,18 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
       ({ closeToast }) => (
         <ConfirmationToast
           onConfirm={async () => {
-            await onConfirm(selectedSessionId, Array.from(selectedUserIds));
-            setSelectedUserIds(new Set()); // 성공 후 선택 초기화
+            const result = await onConfirm(selectedSessionId, Array.from(selectedUserIds));
+            
+            // Handle partial failures
+            if (result?.failedIds && result.failedIds.length > 0) {
+              // Keep only failed IDs selected for retry
+              setSelectedUserIds(new Set(result.failedIds));
+              // Don't close the toast, keep it open for retry
+              return;
+            }
+            
+            // All succeeded, clear selection and close
+            setSelectedUserIds(new Set());
             closeToast?.();
           }}
           onCancel={() => closeToast?.()}
@@ -218,7 +234,17 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
       ({ closeToast }) => (
         <ConfirmationToast
           onConfirm={async () => {
-            await onConfirm(selectedSessionId, Array.from(selectedUserIds));
+            const result = await onConfirm(selectedSessionId, Array.from(selectedUserIds));
+            
+            // Handle partial failures
+            if (result?.failedIds && result.failedIds.length > 0) {
+              // Keep only failed IDs selected for retry
+              setSelectedUserIds(new Set(result.failedIds));
+              // Don't close the toast, keep it open for retry
+              return;
+            }
+            
+            // All succeeded, clear selection and close
             setSelectedUserIds(new Set());
             closeToast?.();
           }}

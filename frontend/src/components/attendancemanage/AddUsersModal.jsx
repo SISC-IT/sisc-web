@@ -58,21 +58,36 @@ const AddUsersModal = () => {
       idsArray.map((userId) => handleAddUsers(selectedSessionId, userId))
     );
 
-    const failedCount = results.filter(
-      (result) => result.status === 'rejected'
-    ).length;
+    // Extract failed IDs from results
+    const failedIds = results
+      .map((result, index) => ({ result, index }))
+      .filter((item) => item.result.status === 'rejected')
+      .map((item) => idsArray[item.index]);
+
+    const failedCount = failedIds.length;
+    const successCount = idsArray.length - failedCount;
 
     if (failedCount === 0) {
       closeAddUsersModal();
       return;
     }
 
-    const successCount = idsArray.length - failedCount;
+    // Remove successfully-added users from the list
+    const successfulIds = new Set(idsArray.filter((id) => !failedIds.includes(id)));
+    setUsers((prevUsers) =>
+      prevUsers.filter((user) => !successfulIds.has(user.userId))
+    );
+
+    // Keep only failed IDs selected for retry
+    setSelectedUserIds(new Set(failedIds));
+
     console.error(
       `유저 추가 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
-      results.filter((result) => result.status === 'rejected')
+      results
+        .map((result, index) => ({ result, userId: idsArray[index] }))
+        .filter((item) => item.result.status === 'rejected')
     );
-    alert(`유저 추가 중 ${failedCount}명이 실패했습니다.`);
+    alert(`유저 추가 중 ${failedCount}명이 실패했습니다. 실패한 유저를 다시 추가할 수 있습니다.`);
   };
 
   return (

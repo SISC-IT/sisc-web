@@ -584,7 +584,7 @@
 .tableGroup {
   margin-top: 4px;
   max-height: none;
-  overflow: visible;
+  overflow: auto;
 }
 
 .table {
