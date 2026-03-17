@@ -70,7 +70,7 @@ public class AttendanceController {
       @RequestBody AttendanceRoundQrTokenRequest request
   ) {
     UUID userId = requireUserId(userDetails);
-    attendanceService.checkIn(userId, userDetails.getUsername(), request);
+    attendanceService.checkIn(userId, userDetails.getName(), request);
     return ResponseEntity.ok().build();
   }
 

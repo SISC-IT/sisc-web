@@ -2,10 +2,14 @@ package org.sejongisc.backend.attendance.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.SessionUserResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.*;
 import org.sejongisc.backend.attendance.entity.*;
 import org.sejongisc.backend.attendance.repository.AttendanceRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
@@ -115,13 +119,62 @@ public class SessionUserService {
    * 세션 참여자 조회 (멤버면 조회 가능 / 또는 공개)
    */
   @Transactional(readOnly = true)
-  public List<SessionUserResponse> getSessionUsers(UUID sessionId, UUID viewerUserId) {
+  public SessionAttendanceTableResponse getSessionUsers(UUID sessionId, UUID viewerUserId) {
     authorizationService.ensureMember(sessionId, viewerUserId);
 
-    List<SessionUser> users = sessionUserRepository
-        .findByAttendanceSession_AttendanceSessionId(sessionId);
+    // 세션 및 모든 회차 조회
+    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+    List<AttendanceRound> rounds = attendanceRoundRepository.findByAttendanceSession_AttendanceSessionIdOrderByStartAtAsc(sessionId); // roundNumber 컬럼이 있다고 가정
 
-    return users.stream().map(SessionUserResponse::from).toList();
+    // 세션의 모든 유저 조회
+    List<SessionUser> sessionUsers = sessionUserRepository.findByAttendanceSession_AttendanceSessionId(sessionId);
+
+    // 해당 세션의 모든 출석 기록 한꺼번에 조회 (N+1 방지)
+    List<Attendance> allAttendances = attendanceRepository.findByAttendanceRoundIn(rounds);
+
+    // 유저 ID별로 출석 기록 그룹화 (Map<UserId, Map<RoundId, Attendance>>)
+    Map<UUID, Map<UUID, Attendance>> attendanceMap = allAttendances.stream()
+        .collect(Collectors.groupingBy(
+            a -> a.getUser().getUserId(),
+            Collectors.toMap(a -> a.getAttendanceRound().getRoundId(), a -> a)
+        ));
+
+    // IntStream을 사용하여 인덱스 기반으로 RoundHeaderResponse 생성 (1부터 시작)
+    List<RoundHeaderResponse> roundHeaders = IntStream.range(0, rounds.size())
+        .mapToObj(i -> {
+          AttendanceRound r = rounds.get(i);
+          return new RoundHeaderResponse(r.getRoundId(), i + 1); // i + 1이 roundNumber
+        })
+        .toList();
+
+    List<UserAttendanceRowResponse> userRows = sessionUsers.stream().map(su -> {
+      User user = su.getUser();
+
+      // 해당 유저의 회차별 상태 리스트 생성 (회차 순서 보장)
+      List<AttendanceStatusResponse> statusList = rounds.stream().map(r -> {
+        Attendance att = attendanceMap.getOrDefault(user.getUserId(), Map.of()).get(r.getRoundId());
+        return new AttendanceStatusResponse(r.getRoundId(),
+            att != null ? att.getAttendanceStatus().name() : "ABSENT", // 기록 없으면 미출석
+            att != null ? att.getAttendanceId() : null);
+      }).toList();
+
+      return new UserAttendanceRowResponse(user.getUserId(), user.getName(), user.getStudentId(), su.getSessionRole().name(), statusList);
+    }).toList();
+
+    return new SessionAttendanceTableResponse(session.getTitle(), roundHeaders, userRows);
+  }
+
+  @Transactional(readOnly = true)
+  public List<AvailableSessionUserResponse> getAvailableUsers(UUID sessionId, UUID actorUserId) {
+    authorizationService.ensureOwner(sessionId, actorUserId);
+
+    attendanceSessionRepository.findById(sessionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+    return userRepository.findUsersByStatusNotInSession(UserStatus.ACTIVE, sessionId).stream()
+        .map(AvailableSessionUserResponse::from)
+        .toList();
   }
 
   private void createAbsentForPastRounds(UUID sessionId, User user) {

@@ -8,7 +8,10 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sejongisc.backend.attendance.dto.SessionUserResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.SessionAttendanceTableResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.SessionUserResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.UserAttendanceRowResponse;
+import org.sejongisc.backend.attendance.dto.sessionUser.AvailableSessionUserResponse;
 import org.sejongisc.backend.attendance.service.SessionUserService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.http.HttpStatus;
@@ -110,10 +113,11 @@ public class SessionUserController {
   }
 
   /**
-   * 세션 참여자 조회 - 세션에 참여 중인 모든 사용자 목록 - 참여 순서대로 정렬
+   * 세션 전체 출석부 조회 (표 형식)
+   * - 세션에 참여 중인 모든 사용자 목록과 각 회차별 출석 상태를 매트릭스 형태로 반환
    */
   @Operation(
-      summary = "세션 참여자 조회",
+      summary = "세션 전체 출석부 조회",
       description = """
       ## 인증(JWT)
       - **필요**
@@ -122,23 +126,49 @@ public class SessionUserController {
       - **세션 MEMBER** (OWNER, MANAGER, PARTICIPANT 모두 가능)
       
       ## 경로 파라미터
-      - **`sessionId`**: 참여자 목록을 조회할 세션 ID (`UUID`)
+      - **`sessionId`**: 출석부를 조회할 세션 ID (`UUID`)
       
       ## 동작 설명
-      - 세션에 참여 중인 모든 사용자 목록을 조회
-      - 해당 세션의 멤버가 아닌 경우 조회 불가
+      - 프론트엔드 표(Table) 렌더링에 최적화된 데이터를 반환합니다.
+      - **`rounds`**: 테이블 헤더용 (날짜순 정렬된 회차 정보 및 회차 번호 포함)
+      - **`userRows`**: 테이블 바디용 (사용자 정보 및 해당 사용자의 모든 회차별 출석 상태 리스트)
+      - 해당 세션의 멤버가 아닌 경우 조회할 수 없습니다.
       
       ## 에러 코드
+      - **`SESSION_NOT_FOUND`**: 해당 출석 세션이 존재하지 않습니다.
       - **`NOT_SESSION_MEMBER`**: 출석 세션의 멤버가 아닙니다.
-      
       """)
   @GetMapping("/{sessionId}/users")
-  public ResponseEntity<List<SessionUserResponse>> getSessionUsers(
+  public ResponseEntity<SessionAttendanceTableResponse> getSessionUsers(
       @PathVariable UUID sessionId,
       @AuthenticationPrincipal CustomUserDetails userDetails) {
     UUID adminUserId = requireUserId(userDetails);
-    List<SessionUserResponse> users = sessionUserService.getSessionUsers(sessionId, adminUserId);
-    return ResponseEntity.ok(users);
+    return ResponseEntity.ok(sessionUserService.getSessionUsers(sessionId, adminUserId));
+  }
+
+  @Operation(
+      summary = "세션에 추가 가능한 사용자 조회",
+      description = """
+      ## 인증(JWT)
+      - **필요**
+
+      ## 권한
+      - **세션 OWNER**
+
+      ## 경로 파라미터
+      - **`sessionId`**: 조회할 세션 ID (`UUID`)
+
+      ## 동작 설명
+      - 전체 사용자 중 해당 세션에 아직 참여하지 않은 사용자만 반환합니다.
+      - 응답 필드: `userId`, `studentId`, `name`, `teamName`
+      - `ACTIVE` 상태 사용자만 포함됩니다.
+      """)
+  @GetMapping("/{sessionId}/users/available")
+  public ResponseEntity<List<AvailableSessionUserResponse>> getAvailableUsers(
+      @PathVariable UUID sessionId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
+    UUID adminUserId = requireUserId(userDetails);
+    return ResponseEntity.ok(sessionUserService.getAvailableUsers(sessionId, adminUserId));
   }
 
   /**

@@ -61,4 +61,17 @@ public class SseService {
             }
         }
     }
+
+    public void complete(String channelId) {
+        CopyOnWriteArrayList<SseEmitter> list = emitters.remove(channelId);
+        if (list == null) return;
+
+        for (SseEmitter emitter : list) {
+            try {
+                emitter.complete();
+            } catch (Exception e) {
+                log.debug("Failed to complete SSE emitter: channelId={}", channelId, e);
+            }
+        }
+    }
 }

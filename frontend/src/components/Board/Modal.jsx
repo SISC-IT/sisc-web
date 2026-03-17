@@ -9,6 +9,8 @@ const Modal = ({
   setTitle,
   content,
   setContent,
+  isAnonymous,
+  setIsAnonymous,
   boardOptions,
   selectedBoardId,
   onBoardChange,
@@ -67,14 +69,14 @@ const Modal = ({
           <h2 className={styles.title}>게시글 작성</h2>
           <div className={styles.headerRight}>
             <div className={styles.sessionFieldHeader}>
-              <span className={styles.sessionLabel}>세션 선택</span>
+              <span className={styles.sessionLabel}>하위 게시판 선택</span>
               <div className={styles.selectWrapper}>
                 <select
                   className={styles.select}
                   value={selectedBoardId}
                   onChange={(e) => onBoardChange?.(e.target.value)}
                 >
-                  <option value="">세션 선택</option>
+                  <option value="">하위 게시판 선택</option>
                   {(boardOptions || []).map((board) => (
                     <option key={board.id} value={board.id}>
                       {board.name}
@@ -178,13 +180,23 @@ const Modal = ({
 
         </div>
 
-        <button
-          className={styles.saveButton}
-          onClick={onSave}
-          disabled={isSaving}
-        >
-          {isSaving ? '게시글 작성 중...' : '게시글 작성'}
-        </button>
+        <div className={styles.actionRow}>
+          <label className={styles.anonymousOption}>
+            <input
+              type="checkbox"
+              checked={Boolean(isAnonymous)}
+              onChange={(e) => setIsAnonymous?.(e.target.checked)}
+            />
+            익명
+          </label>
+          <button
+            className={styles.saveButton}
+            onClick={onSave}
+            disabled={isSaving}
+          >
+            {isSaving ? '게시글 작성 중...' : '게시글 작성'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -147,6 +147,7 @@ export const createPost = async (boardId, postData) => {
   formData.append('boardId', boardId);
   formData.append('title', postData.title);
   formData.append('content', postData.content);
+  formData.append('anonymous', String(Boolean(postData.anonymous)));
 
   if (postData.files && postData.files.length > 0) {
     postData.files.forEach((file) => {
@@ -251,6 +252,7 @@ export const createComment = async (commentData) => {
   const requestBody = {
     postId: commentData.postId,
     content: commentData.content,
+    anonymous: Boolean(commentData.anonymous),
   };
 
   if (commentData.parentCommentId) {

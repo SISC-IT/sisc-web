@@ -39,7 +39,23 @@ const PIE_COLORS = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#475569', '#dc2
 const ACTIVITY_FETCH_SIZE = 100;
 const MAX_ACTIVITY_LOGS = 300;
 
+const DASHBOARD_ROLE_LABELS = {
+  SYSTEM_ADMIN: '관리자',
+  '시스템 관리자': '관리자',
+  PRESIDENT: '회장',
+  VICE_PRESIDENT: '부회장',
+  TEAM_LEADER: '팀장',
+  TEAM_MEMBER: '일반',
+  PENDING_MEMBER: '대기회원',
+};
+
 const toNumber = (value) => Number(value || 0);
+
+const formatDashboardRoleLabel = (value) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) return 'UNKNOWN';
+  return DASHBOARD_ROLE_LABELS[normalizedValue] || normalizedValue;
+};
 
 const formatDateLabel = (value) => {
   if (!value) return '-';
@@ -112,7 +128,7 @@ const AdminDashboard = () => {
   const pieChartData = useMemo(
     () =>
       usersDistribution.map((item, index) => ({
-        name: item?.roleName || 'UNKNOWN',
+        name: formatDashboardRoleLabel(item?.roleName),
         value: toNumber(item?.count),
         color: PIE_COLORS[index % PIE_COLORS.length],
       })),
@@ -443,7 +459,7 @@ const AdminDashboard = () => {
                 <li key={activity.id} className={styles.logItem}>
                   <span className={styles.logTime}>{formatDateTime(activity.createdAt)}</span>
                   <span className={styles.logMessage}>
-                    <strong>{activity.username}</strong> {activity.message}
+                    <strong>{activity.username}님이</strong> {activity.message}
                     {activity.boardName ? ` (${activity.boardName})` : ''}
                   </span>
                 </li>

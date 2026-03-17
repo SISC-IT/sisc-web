@@ -40,4 +40,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
       "WHERE a.attendanceRound IN " +
       "(SELECT r FROM AttendanceRound r WHERE r.attendanceSession.attendanceSessionId = :sessionId)")
   void deleteBySessionId(@Param("sessionId") UUID sessionId);
+
+  List<Attendance> findByAttendanceRoundIn(List<AttendanceRound> rounds);
 }

@@ -1,25 +1,53 @@
 # AI/modules/signal/core/dataset_builder.py
+import pandas as pd
+from typing import Union, Optional
 
 from AI.modules.signal.core.data_loader import DataLoader
-from AI.modules.features.technical import add_technical_indicators
-from AI.modules.features.market_derived import add_macro_features
+from AI.modules.features.processor import FeatureProcessor
+from AI.modules.features.market_derived import add_market_changes, add_macro_changes
 
-def get_standard_training_data(start_date: str, end_date: str) -> pd.DataFrame:
+def apply_strict_nan_rules(df: pd.DataFrame) -> pd.DataFrame:
     """
-    데이터 수집/전처리 코드를 짤 필요 없이 이 함수만 호출하면 됩니다.
-    명세서에 정의된 모든 원천/파생 피처가 포함된 DataFrame을 반환합니다.
+    SISC 데이터 명세서에 따른 엄격한 결측치 처리 규칙을 적용합니다.
     """
-    # 1. DB에서 원천 데이터(Raw) 로드
-    loader = DataLoader()
-    raw_df = loader.load_data_from_db(start_date, end_date)
+    df_clean = df.copy()
+
+    macro_cols = ['vix_close', 'vix_change_rate', 'us10y', 'us10y_chg', 'dxy_close', 'dxy_chg']
+    available_macro = [col for col in macro_cols if col in df_clean.columns]
     
-    # 2. 파생 피처 레이어 계산
-    # (팀장님이 기존 features 모듈을 활용해 모든 지표를 미리 계산해서 붙여줌)
-    df = add_technical_indicators(raw_df)   # rsi_14, macd 등 추가
-    df = add_macro_features(df)             # vix_z_score, us10y_chg 등 추가
+    if available_macro:
+        df_clean[available_macro] = df_clean[available_macro].ffill()
     
-    # 3. 결측치(NaN) 처리
-    # Market은 Drop, Macro는 ffill 등...
+    df_clean = df_clean.dropna().reset_index(drop=True)
+    return df_clean
+
+def get_standard_training_data(
+    start_date_or_df: Union[str, pd.DataFrame], 
+    end_date: Optional[str] = None
+) -> pd.DataFrame:
+    """
+    SISC 파이프라인 표준 학습 데이터셋 생성기. (학습/추론 겸용)
+    - 사용법 1 (학습용): get_standard_training_data('2020-01-01', '2024-01-01') -> DB 조회
+    - 사용법 2 (추론용): get_standard_training_data(df) -> DB 생략하고 전처리만 수행
+    """
+    # 1. 입력 타입에 따른 분기 처리 (DB 로드 vs 직접 주입)
+    if isinstance(start_date_or_df, pd.DataFrame):
+        df = start_date_or_df.copy()
+    else:
+        loader = DataLoader()
+        df = loader.load_data_from_db(start_date_or_df, end_date)
+        if df is None or df.empty:
+            raise ValueError(f"지정된 기간({start_date_or_df} ~ {end_date})의 데이터를 불러오지 못했습니다.")
+    
+    # 2. 파생 피처 레이어 계산 (1차: 기초 변화율 연산)
+    df = add_market_changes(df)
+    df = add_macro_changes(df)
+    
+    # 3. 파생 피처 레이어 계산 (2차: FeatureProcessor를 통한 심화 지표 일괄 연산)
+    processor = FeatureProcessor(df)
+    df = processor.execute_pipeline() 
+    
+    # 4. 결측치(NaN) 처리 규칙 적용
     df = apply_strict_nan_rules(df)
     
     return df

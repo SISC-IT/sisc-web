@@ -19,14 +19,22 @@ import org.sejongisc.backend.user.dto.UserInfoResponse;
 @Setter
 @Builder
 public class CommentResponse {
-    private UUID commentId;
-    private UserInfoResponse user;
-    private UUID postId;
-    private String content;
-    private LocalDateTime createdDate;
-    private LocalDateTime updatedDate;
-    private UUID parentCommentId;
-    private List<CommentResponse> replies;
+  private UUID commentId;
+  private UserInfoResponse user;
+  private UUID postId;
+  private String content;
+  private boolean anonymous;
+  private LocalDateTime createdDate;
+  private LocalDateTime updatedDate;
+  private UUID parentCommentId;
+  private List<CommentResponse> replies;
+
+  private static UserInfoResponse getCommentUser(Comment comment) {
+    if (comment.isAnonymous()) {
+      return new UserInfoResponse(null, "익명", null, null, null, null, List.of());
+    }
+    return UserInfoResponse.from(comment.getUser());
+  }
 
   public static CommentResponse from(Comment comment) {
     UUID parentId = (comment.getParentComment() != null)
@@ -35,9 +43,10 @@ public class CommentResponse {
 
     return CommentResponse.builder()
         .commentId(comment.getCommentId())
-        .user(UserInfoResponse.from(comment.getUser()))
+        .user(getCommentUser(comment))
         .postId(comment.getPost().getPostId())
         .content(comment.getContent())
+        .anonymous(comment.isAnonymous())
         .createdDate(comment.getCreatedDate())
         .updatedDate(comment.getUpdatedDate())
         .parentCommentId(parentId)
@@ -51,9 +60,10 @@ public class CommentResponse {
 
     return CommentResponse.builder()
         .commentId(comment.getCommentId())
-        .user(UserInfoResponse.from(comment.getUser()))
+        .user(getCommentUser(comment))
         .postId(comment.getPost().getPostId())
         .content(comment.getContent())
+        .anonymous(comment.isAnonymous())
         .createdDate(comment.getCreatedDate())
         .updatedDate(comment.getUpdatedDate())
         .parentCommentId(parentCommentId)

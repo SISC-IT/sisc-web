@@ -116,3 +116,69 @@
   font-weight: 700;
   color: #c62828;
 }
+/* Pagination 스타일 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.pageButton {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #171717;
+}
+
+.pageButton:hover {
+  background-color: #f0f0f0;
+}
+
+.activePage {
+  background-color: #e0e0e0; /* 현재 페이지 연한 그레이 */
+  font-weight: 700;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: #f1f1f1;
+  border-color: #999;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination .pageInfo {
+  font-size: 14px;
+  font-weight: 500;
+  color: #171717;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* 모바일 대응 */
+@media (max-width: 600px) {
+  .pagination {
+    gap: 8px;
+  }
+
+  .pagination button {
+    min-width: 32px;
+    height: 32px;
+    font-size: 13px;
+    padding: 0 8px;
+  }
+
+  .pagination .pageInfo {
+    font-size: 12px;
+    min-width: 40px;
+  }
+}

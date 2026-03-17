@@ -58,7 +58,7 @@ export const getAdminHomeData = async () => {
 
   const recentActivities = activityItems.map((activity, index) => ({
     id: activity?.id || `${activity?.createdAt || 'unknown'}-${index}`,
-    message: `${activity?.username || '시스템'} ${activity?.message || '-'}`,
+    message: `${activity?.username || '시스템'}님이 ${activity?.message || '-'}`,
     time: formatDateTime(activity?.createdAt),
   }));
 
