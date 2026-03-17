@@ -8,21 +8,9 @@ import SessionSettingCard from '../components/attendancemanage/SessionSettingCar
 import AttendanceManagementCard from '../components/attendancemanage/AttendanceManagementCard';
 import SessionManagementCard from '../components/attendancemanage/SessionManagementCard';
 import RoundModifyModal from '../components/attendancemanage/RoundModifyModal';
-import SessionModifyModal from '../components/attendancemanage/SessionModifyModal';
 import RoundDayPicker from '../components/attendancemanage/RoundDayPicker';
 
 import { ToastContainer } from 'react-toastify';
-import {
-  getAttendanceSessions,
-  addUser,
-  getUsers,
-  getAttendance,
-  getSessionAttendance,
-  getRounds,
-  changeUserAttendance,
-  getRoundUserAttendance,
-  getUserList,
-} from '../utils/attendanceManage';
 import AddUsersModal from '../components/attendancemanage/AddUsersModal';
 
 const AttendanceContent = () => {
@@ -32,11 +20,6 @@ const AttendanceContent = () => {
     editingRound,
     closeRoundModifyModal,
     handleRoundChange,
-    isSessionModifyModalOpen,
-    editingSession,
-    closeSessionModifyModal,
-    handleSessionChange,
-    handleDeleteSession,
     handleDeleteRound,
     isAddRoundsModalOpen,
     selectedSessionId,
@@ -45,32 +28,6 @@ const AttendanceContent = () => {
 
   return (
     <>
-      {/* <button
-        onClick={async () => {
-          console.log(await getAttendanceSessions());
-        }}
-      >
-        세션정보확인(임시)
-      </button>
-      <button
-        onClick={async () => {
-          console.log(
-            await getUserList('e5e1e709-6178-4b88-aa1f-2dc63fc72f4d')
-          );
-        }}
-      >
-        모든 유저 리스트 가져오기
-      </button>
-      <button
-        onClick={async () => {
-          console.log(await getRounds(sessions[0].attendanceSessionId));
-        }}
-      >
-        0번 세션 회차들 가져오기
-      </button> */}
-
-      {/* --------------------------------------------------------------- */}
-
       <div className={styles.cardLayout}>
         <div className={styles.leftColumn}>
           <SessionSettingCard styles={styles} />
@@ -89,15 +46,7 @@ const AttendanceContent = () => {
           onDelete={handleDeleteRound}
         />
       )}
-      {isSessionModifyModalOpen && (
-        <SessionModifyModal
-          styles={styles}
-          onClose={closeSessionModifyModal}
-          session={editingSession}
-          onSave={handleSessionChange}
-          onDelete={handleDeleteSession}
-        />
-      )}
+
       {isAddRoundsModalOpen && <RoundDayPicker />}
       {isAddUsersModalOpen && <AddUsersModal />}
     </>
