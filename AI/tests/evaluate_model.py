@@ -29,7 +29,6 @@ if project_root not in sys.path:
 from AI.modules.signal.models import get_model
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.libs.database.ticker_loader import load_all_tickers_from_db
-# [필수 추가] 기술적 지표 생성 모듈
 from AI.modules.features.legacy.technical_features import add_technical_indicators
 
 # ─────────────────────────────────────────────────────────────────────────────
