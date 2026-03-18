@@ -71,8 +71,8 @@ def run_backfill(start_date: str, end_date: str, tickers: list, enable_xai: bool
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="과거 매매 기록 소급 생성기")
-    parser.add_argument("--start_date", type=str, default="2025-03-01", help="시작일 (YYYY-MM-DD)")
-    parser.add_argument("--end_date", type=str, default="2026-03-08", help="종료일 (YYYY-MM-DD)")
+    parser.add_argument("--start_date", type=str, default="2026-03-12", help="시작일 (YYYY-MM-DD)")
+    parser.add_argument("--end_date", type=str, default="2026-03-17", help="종료일 (YYYY-MM-DD)")
     parser.add_argument("--enable_xai", action="store_true", help="XAI 리포트 생성 켜기 (비용/시간 주의)")
     
     args = parser.parse_args()
