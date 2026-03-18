@@ -96,10 +96,12 @@ public class SessionUserController {
       ## 동작 설명
       - 세션에서 특정 사용자를 제거
       - 해당 사용자가 이 세션에서 가졌던 모든 출석 기록(`Attendance`)을 함께 삭제
+      - `OWNER`는 제거할 수 없습니다.
       
       ## 에러 코드
       - **`SESSION_NOT_FOUND`**: 해당 출석 세션이 존재하지 않습니다.
       - **`NOT_SESSION_OWNER`**: 세션 소유자 권한이 없습니다.
+      - **`CANNOT_MODIFY_OWNER`**: 세션 소유자는 제거할 수 없습니다.
       
       """)
   @DeleteMapping("/{sessionId}/users/{userId}")
@@ -206,6 +208,7 @@ public class SessionUserController {
     
     ## 동작 설명
     - 특정 사용자의 역할을 `MANAGER`로 격상시킵니다.
+    - `OWNER`의 역할은 변경할 수 없습니다.
     """)
   @PostMapping("/{sessionId}/admins/{userId}")
   public ResponseEntity<Void> addAdminToSession(
@@ -230,7 +233,7 @@ public class SessionUserController {
     
     ## 동작 설명
     - 특정 사용자의 역할을 `PARTICIPANT`로 강등시킵니다.
-    - `OWNER`는 강등될 수 없습니다.
+    - `OWNER`의 역할은 변경할 수 없습니다.
     """)
   @DeleteMapping("/{sessionId}/admins/{userId}")
   public ResponseEntity<Void> removeAdminFromSession(

@@ -182,7 +182,7 @@ public enum ErrorCode {
 
   TARGET_NOT_SESSION_MEMBER(HttpStatus.BAD_REQUEST, "대상 사용자가 출석 세션의 멤버가 아닙니다."),
 
-  CANNOT_DEMOTE_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 강등할 수 없습니다."),
+  CANNOT_MODIFY_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 변경하거나 제거할 수 없습니다."),
 
   UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
 
