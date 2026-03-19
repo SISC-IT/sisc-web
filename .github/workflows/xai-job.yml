@@ -66,6 +66,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
+          command_timeout: 30m
           script: |
             set -euo pipefail
 

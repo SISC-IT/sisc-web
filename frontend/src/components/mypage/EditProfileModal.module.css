@@ -1,0 +1,261 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 20px;
+
+  z-index: 1000;
+}
+
+.modal {
+  width: 451px;
+  max-width: 100%;
+  min-height: 406px;
+
+  background: #fff;
+  padding: 53px 41px;
+  border-radius: 16px;
+
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  animation: fadeIn 0.2s ease;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-family: Pretendard;
+  font-size: 20px;
+  font-weight: 700;
+  color: #000;
+}
+
+.modalDescription {
+  color: #aaaaaa;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.modalContent {
+  padding: 10px 0 30px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 21px;
+}
+
+.label {
+  font-size: 18px;
+  font-weight: 500;
+  color: #171717;
+}
+
+.input {
+  height: 36px;
+  padding: 0 12px;
+
+  border-radius: 8px;
+  border: 0.4px solid #afafaf;
+
+  font-size: 14px;
+}
+
+.codeInput {
+  width: 100%;
+
+  padding: 14px 16px;
+  font-size: 14px;
+
+  border-radius: 8px;
+  border: 0.4px solid #afafaf;
+}
+
+.verificationContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timer {
+  font-size: 13px;
+  color: #ff2c4c;
+  font-weight: 600;
+}
+
+.passwordPolicy {
+  margin-top: 10px;
+  padding-left: 18px;
+}
+
+.passwordPolicy li {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.valid {
+  color: #2ecc71;
+}
+
+.invalid {
+  color: #999;
+}
+
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 100px;
+  height: 42px;
+
+  border-radius: 8px;
+  border: none;
+
+  font-family: Pretendard;
+  font-size: 16px;
+  font-weight: 500;
+
+  color: #fff;
+  cursor: pointer;
+}
+
+.sendButton {
+  background: #1d80f4;
+}
+
+.submitButton {
+  background: #1d80f4;
+}
+
+.resetPasswordButton {
+  background: #ff2c4c;
+}
+
+.sendButton:disabled,
+.submitButton:disabled {
+  background: #bce5ff;
+}
+
+.resetPasswordButton:disabled {
+  background: #ff9ead;
+}
+
+.menuList {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 57px;
+}
+
+.menuItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 16px 4px;
+  font-size: 16px;
+  font-weight: 500;
+
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.menuItem:first-child {
+  margin-top: 50px;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.menuItem:hover {
+  background-color: #fafafa;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.cancelButton {
+  background: none;
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+
+  font-size: 16px;
+  font-weight: 500;
+
+  padding: 12px 16px;
+  cursor: pointer;
+
+  width: 100%;
+}
+
+.cancelButton:hover {
+  text-decoration: underline;
+}
+
+.primaryButton {
+  background: #2f80ed;
+  color: white;
+  border: none;
+
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+
+  width: 100%;
+}
+
+.halfButton {
+  flex: 1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- MOBILE ---------- */
+
+@media (max-width: 530px) {
+  .modal {
+    padding: 32px 24px;
+    width: 100%;
+  }
+
+  .label {
+    font-size: 16px;
+  }
+
+  .verificationContainer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modalFooter {
+    flex-direction: column;
+  }
+
+  .menuItem:first-child {
+    margin-top: 30px;
+  }
+}

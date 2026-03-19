@@ -1,0 +1,35 @@
+.layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.mainArea {
+  flex: 1;
+  min-width: 0;
+}
+
+.contentArea {
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .contentArea {
+    padding: 36px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .contentArea {
+    padding: 48px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    display: block;
+  }
+}

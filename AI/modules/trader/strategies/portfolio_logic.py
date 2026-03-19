@@ -1,3 +1,4 @@
+# AI/modules/trader/strategies/portfolio_logic.py
 """
 [SISC AI 전략 코어 모듈] - Meta-Gating & Risk Overlay 반영 버전
 - Data Flow Specification에 정의된 파이프라인(Phase 3 ~ 6)을 수행합니다.
@@ -14,17 +15,22 @@ def calculate_portfolio_allocation(
     data_map: Dict[str, pd.DataFrame],
     macro_data: pd.DataFrame,       # [추가] Gating과 Risk Overlay에 쓰일 매크로/시장 상태 데이터
     model_wrappers: Dict[str, Any], # Base Models (TCN, PatchTST, iTransformer)
+    ticker_ids: Dict[str, int],     
+    ticker_to_sector_id: Dict[str, int], # [추가] 티커별 섹터 ID 매핑
     gating_model: Any,              # [추가] Gating 네트워크 모델 (Meta Learner)
     config: Dict[str, Any]
 ) -> Tuple[Dict[str, float], Dict[str, float], Dict[str, Dict[str, float]]]:
     
-    # 설정값 로드 (Trader 설정)
+    # 설정값 로드
     top_k = config.get('top_k', 3)
     buy_threshold = config.get('buy_threshold', 0.6)
     
     scores = {}
     all_signals_map = {}
     
+    # 모델의 순서를 고정하기 위해 리스트화 (가중치 곱셈 시 순서 꼬임 방지)
+    model_names = list(model_wrappers.keys())
+
     # =========================================================================
     # [Phase 3] Base Models (Signal Generation) - 개별 종목별 시그널 추출
     # =========================================================================
@@ -32,43 +38,56 @@ def calculate_portfolio_allocation(
         if df is None or len(df) < 60:
             continue
             
+        t_id = ticker_ids.get(ticker, 0) 
+        s_id = ticker_to_sector_id.get(ticker, 0) 
+            
         ticker_signals = {}
-        for model_name, wrapper in model_wrappers.items():
+        for model_name in model_names:
+            wrapper = model_wrappers[model_name]
             try:
-                # 명세서에 따라 각 모델은 자신만의 필요 데이터(Tech, Log_return, Macro)를
-                # Wrapper 내부에서 추출하여 추론합니다.
-                preds_dict = wrapper.predict(df) 
-                ticker_signals.update(preds_dict)
+                # 1. 래퍼에서 다중 호라이즌 예측값 가져오기 (예: 1d, 3d, 5d, 7d)
+                preds_dict = wrapper.get_signals(df, ticker_id=t_id, sector_id=s_id)
+                
+                # 💡 [핵심 수정] 반환된 예측값들의 '평균'을 구하여 이 모델의 대표 점수로 사용합니다.
+                # preds_dict.values()는 [0.6, 0.65, 0.55, 0.7] 형태의 값을 가짐
+                model_mean_score = float(np.mean(list(preds_dict.values())))
+                
+                # 'transformer_v1' 이라는 정확한 키에 대표 점수 할당!
+                ticker_signals[model_name] = model_mean_score
+                
             except Exception as e:
-                print(f"[{ticker}] {model_name} 추론 에러: {e}")
-                continue
+                print(f"[Phase 3] [{ticker}] {model_name} 추론 에러: {e}")
+                # 에러 발생 시 중립(0.5) 스코어 부여
+                ticker_signals[model_name] = 0.5 
                 
         all_signals_map[ticker] = ticker_signals
 
     # =========================================================================
     # [Phase 4] Gating (Soft/Meta) - 상황별 모델 비중 동적 조절
     # =========================================================================
-    # 현재 시장 상태 추출 (명세서 기준: vix_z_score, atr_rank, ma_trend_score 등)
-    current_market_state = macro_data.iloc[-1]
+    # 💡  차원 에러(Shape Mismatch) 방지를 위해 2D 배열로 변환 (1, features) (맞는지 잘 모르겠음...)
+    current_market_series = macro_data.iloc[-1]
+    current_market_state_2d = current_market_series.values.reshape(1, -1)
     
+    # Gating 가중치 추론 (for loop 밖에서 한 번만 연산하여 효율성 극대화)
+    if gating_model:
+        # 출력 예: [[0.2, 0.5, 0.3]] (TCN, PatchTST, iTransformer 가중치)
+        weights_pred = gating_model.predict(current_market_state_2d)
+        model_weights = weights_pred[0] # 1D 배열로 축소
+    else:
+        # Gating이 없으면 단순 평균 (Equal Weight)
+        model_weights = np.ones(len(model_names)) / len(model_names)
+
     for ticker, signals in all_signals_map.items():
         if not signals:
             scores[ticker] = 0.5
             continue
             
-        # 신호들을 하나의 벡터로 정렬
-        base_signal_vector = np.array(list(signals.values()))
+        # 💡 keys() 순서가 꼬이는 것을 방지하기 위해 고정된 model_names 순서대로 벡터 생성
+        base_signal_vector = np.array([signals.get(name, 0.5) for name in model_names])
         
-        # [핵심] Gating Network를 통해 모델별 가중치(weights) 산출
-        # 입력: [시장 상태 데이터 + 종목의 트렌드 + 오차율] -> 출력: [TCN가중치, Patch가중치, iTrans가중치]
-        if gating_model:
-            model_weights = gating_model.predict(current_market_state)
-            # 가중 평균으로 최종 점수 도출
-            final_score = np.dot(base_signal_vector, model_weights)
-        else:
-            # Gating 모델이 아직 학습 전이라면 단순 평균(Phase 1.5용 임시 처리)
-            final_score = np.mean(base_signal_vector)
-            
+        # [핵심] 가중 평균 (Dot Product)
+        final_score = np.dot(base_signal_vector, model_weights)
         scores[ticker] = final_score
 
     # =========================================================================
@@ -77,7 +96,7 @@ def calculate_portfolio_allocation(
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     selected_tickers = [ticker for ticker, score in sorted_scores[:top_k] if score >= buy_threshold]
     
-    # 1차 목표 비중 계산 (Rule: Equal Weight. 향후 RL 도입 시 교체)
+    # 목표 비중 계산 (Equal Weight)
     w_target = {ticker: 0.0 for ticker in data_map.keys()}
     if selected_tickers:
         weight_per_asset = 1.0 / len(selected_tickers)
@@ -87,17 +106,17 @@ def calculate_portfolio_allocation(
     # =========================================================================
     # [Phase 6] Risk Overlay (System Brake) - 시장 위험 기반 익스포저 스케일링
     # =========================================================================
-    # 명세서 기준: VIX Z-score, 환율 변동성 등에 따른 계단형 브레이크 적용
-    vix_z = current_market_state.get('vix_z_score', 0)
+    # Pandas Series에서 안전하게 get 활용
+    vix_z = current_market_series.get('vix_z_score', 0)
     system_brake_ratio = 1.0 # 기본 100% 진입
     
     # 극단적 공포장(VIX 2표준편차 이상) 시 투자 비중 강제 축소
-    if vix_z > 2.0:
-        system_brake_ratio = 0.5   # 총 투자금의 50%만 사용
-    elif vix_z > 3.0:
+    if vix_z > 3.0:
         system_brake_ratio = 0.0   # 전량 현금화 (안전 자산 회피)
+    elif vix_z > 2.0:
+        system_brake_ratio = 0.5   # 총 투자금의 50%만 사용
         
-    # w_target 에 브레이크 비율을 곱하여 최종 비중(w_final) 산출
+    #최종 익스포저 스케일링
     w_final = {ticker: weight * system_brake_ratio for ticker, weight in w_target.items()}
 
     return w_final, scores, all_signals_map

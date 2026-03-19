@@ -8,6 +8,8 @@ import org.sejongisc.backend.attendance.entity.AttendanceSession;
 import org.sejongisc.backend.attendance.entity.SessionRole;
 import org.sejongisc.backend.attendance.entity.SessionStatus;
 import org.sejongisc.backend.attendance.entity.SessionUser;
+import org.sejongisc.backend.attendance.repository.AttendanceRepository;
+import org.sejongisc.backend.attendance.repository.AttendanceRoundRepository;
 import org.sejongisc.backend.attendance.repository.AttendanceSessionRepository;
 import org.sejongisc.backend.attendance.repository.SessionUserRepository;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -27,6 +29,8 @@ import java.util.UUID;
 @Slf4j
 public class AttendanceSessionService {
 
+  private final AttendanceRoundRepository attendanceRoundRepository;
+  private final AttendanceRepository attendanceRepository;
   private final AttendanceSessionRepository attendanceSessionRepository;
   private final UserRepository userRepository;
   private final SessionUserRepository sessionUserRepository;
@@ -37,7 +41,11 @@ public class AttendanceSessionService {
    */
   @Transactional
   public void createSession(UUID creatorId, AttendanceSessionRequest request) {
-
+    User creator = userRepository.findById(creatorId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    if (!creator.isManagerPosition()) {
+      throw new CustomException(ErrorCode.NOT_MANAGER_POSITION);
+    }
     // 출석 세션 엔티티 생성
     AttendanceSession attendanceSession = AttendanceSession.builder()
         .title(request.title())
@@ -48,8 +56,6 @@ public class AttendanceSessionService {
 
     AttendanceSession saved = attendanceSessionRepository.save(attendanceSession);
 
-    User creator = userRepository.findById(creatorId)
-        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
     // 세션 생성자를 OWNER로 세션 사용자에 추가
     SessionUser su = SessionUser.builder()
@@ -108,7 +114,7 @@ public class AttendanceSessionService {
    */
   public void updateSession(UUID sessionId, AttendanceSessionRequest request, UUID userId) {
     // 권한 확인
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
+    attendanceAuthorizationService.ensureOwner(sessionId, userId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
@@ -128,11 +134,21 @@ public class AttendanceSessionService {
    */
   public void deleteSession(UUID sessionId, UUID userId) {
     // 권한 확인
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
+    attendanceAuthorizationService.ensureOwner(sessionId, userId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
+    // 최하위 자식인 Attendance(출석기록) 삭제
+    attendanceRepository.deleteBySessionId(sessionId);
+
+    // 중간 자식인 AttendanceRound(라운드) 삭제
+    attendanceRoundRepository.deleteBySessionId(sessionId);
+
+    // 참여자 명단(SessionUser) 삭제
+    sessionUserRepository.deleteBySessionId(sessionId);
+
+    // session 삭제
     attendanceSessionRepository.delete(session);
     log.info("출석 세션 삭제 완료: 세션ID={}", sessionId);
   }
@@ -141,7 +157,7 @@ public class AttendanceSessionService {
    * 세션 수동 종료(해당 세션 관리자용) - 세션 상태를 CLOSED로 변경 - 체크인 비활성화
    */
   public void closeSession(UUID sessionId, UUID userId) {
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
+    attendanceAuthorizationService.ensureOwner(sessionId, userId);
 
     AttendanceSession session = attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
@@ -152,32 +168,5 @@ public class AttendanceSessionService {
 
     attendanceSessionRepository.save(session);
     log.info("출석 세션 종료 완료: 세션ID={}", sessionId);
-  }
-
-  public void addAllUsers(UUID sessionId, UUID userId) {
-    // 권한 확인
-    attendanceAuthorizationService.ensureAdmin(sessionId, userId);
-    log.info("세션에 모든 사용자 추가 시작: 세션ID={}", sessionId);
-
-    AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-
-    // UserStatus.ACTIVE인 사용자만 추가하도록 수정
-    List<User> allUsers = userRepository.findAllByStatus(UserStatus.ACTIVE);
-
-    for (User user : allUsers) {
-      boolean alreadyAdded = sessionUserRepository.existsByAttendanceSessionAndUser(session, user);
-      if (!alreadyAdded) {
-        SessionUser su = SessionUser.builder()
-            .attendanceSession(session)
-            .user(user)
-            .sessionRole(SessionRole.PARTICIPANT)
-            .build();
-        sessionUserRepository.save(su);
-        log.info("사용자 {} 세션에 추가됨", user.getUserId());
-      }
-    }
-
-    log.info("세션에 모든 사용자 추가 완료: 세션ID={}", sessionId);
   }
 }

@@ -9,7 +9,7 @@ import lombok.Getter;
 public enum UserStatus {
   ACTIVE("활동 중"),
   INACTIVE("활동 중지"),
-  GRADUATED("졸업생"),
+  //GRADUATED("졸업생"),
   OUT("탈퇴");
 
   private final String description; // 한글 명칭

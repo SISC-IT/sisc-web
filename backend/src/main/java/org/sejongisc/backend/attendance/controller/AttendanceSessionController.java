@@ -52,6 +52,9 @@ public class AttendanceSessionController {
           - **`description`**: 세션 상세 설명
           - **`allowedMinutes`**: 지각 처리 전 체크인 허용 시간 (분 단위)
           
+          ## 권한
+          - positionName: **회장, 부회장, 팀장**
+          
           ## 동작 설명
           - 새로운 출석 세션(Session) 엔티티 생성
           - 세션 상태(`SessionStatus`)는 기본적으로 **OPEN**으로 설정
@@ -157,6 +160,9 @@ public class AttendanceSessionController {
       description = """
           ## 인증(JWT): **필요**
           
+          ## 권한
+          - **세션 OWNER**
+          
           ## 요청 파라미터 ( `AttendanceSessionRequest` )
           - **`title`**: 세션 제목
           - **`description`**: 세션 설명
@@ -189,7 +195,7 @@ public class AttendanceSessionController {
       - **필요**
       
       ## 권한
-      - **세션 MANAGER** 또는 **OWNER**
+      - **세션 OWNER**
       
       ## 경로 파라미터
       - **`sessionId`**: 종료할 세션 ID (`UUID`)
@@ -223,7 +229,7 @@ public class AttendanceSessionController {
       - **필요**
       
       ## 권한
-      - **세션 MANAGER** 또는 **OWNER**
+      - **세션 OWNER**
       
       ## 경로 파라미터
       - **`sessionId`**: 삭제할 세션 ID (`UUID`)
@@ -246,28 +252,4 @@ public class AttendanceSessionController {
     attendanceSessionService.deleteSession(sessionId, adminUserId);
     return ResponseEntity.ok().build();
   }
-
-  /**
-   * 정규 세션 용 전체 회원 넣는 API(회장용)
-   */
-
-  @Operation(
-      summary = "정규세션에 active 상태인 전체 회원 추가",
-      description = """
-          ## 인증(JWT): **필요**
-          
-          ## 요청 파라미터 ( `sessionId` )
-          
-          ## 회장이면서 세션의 장이어야만 가능
-          """
-  )
-  @PostMapping("/{sessionId}/add-all-users")
-  @PreAuthorize("hasRole('PRESIDENT')")
-  public ResponseEntity<Void> addAllUsers(
-      @PathVariable UUID sessionId,
-      @AuthenticationPrincipal CustomUserDetails userDetails
-  ) {
-    UUID adminUserId = requireUserId(userDetails);
-    attendanceSessionService.addAllUsers(sessionId, adminUserId);
-    return ResponseEntity.ok().build();
-}}
+}

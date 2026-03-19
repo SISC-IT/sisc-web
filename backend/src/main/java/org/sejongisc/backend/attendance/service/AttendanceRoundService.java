@@ -92,7 +92,7 @@ public class AttendanceRoundService {
     authorizationService.ensureMember(sessionId, userId);
 
     List<AttendanceRound> rounds = attendanceRoundRepository
-        .findByAttendanceSession_AttendanceSessionIdOrderByRoundDateAsc(sessionId);
+        .findByAttendanceSession_AttendanceSessionIdOrderByStartAtAsc(sessionId);
 
     return rounds.stream()
         .map(r -> AttendanceRoundResponse.from(r, false))
@@ -161,14 +161,22 @@ public class AttendanceRoundService {
     return round;
   }
 
-  /** 라운드 삭제(관리자/OWNER) */
+  /** 라운드 삭제(관리자/OWNER) - 관련 출석 기록도 함께 삭제 */
   public void deleteRound(UUID roundId, UUID userId) {
     AttendanceRound round = attendanceRoundRepository.findRoundById(roundId)
         .orElseThrow(() -> new CustomException(ErrorCode.ROUND_NOT_FOUND));
 
     UUID sessionId = round.getAttendanceSession().getAttendanceSessionId();
-    authorizationService.ensureAdmin(sessionId, userId);
+    authorizationService.ensureOwner(sessionId, userId);
 
+    // 해당 라운드의 모든 출석 기록 조회 후 삭제
+    List<Attendance> attendanceRecords = attendanceRepository.findAllByAttendanceRound(round);
+    if (!attendanceRecords.isEmpty()) {
+      attendanceRepository.deleteAll(attendanceRecords);
+      log.debug("라운드에 관련된 출석 기록 {}개 삭제 - roundId: {}", attendanceRecords.size(), roundId);
+    }
+
+    // 라운드 삭제
     attendanceRoundRepository.delete(round);
     log.info("라운드 삭제 완료 - roundId: {}", roundId);
   }

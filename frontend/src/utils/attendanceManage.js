@@ -93,10 +93,10 @@ export const deleteRound = async (roundId) => {
 };
 
 // 세션 정보 수정
-export const changeSessionData = async (updateSessionData) => {
+export const changeSessionData = async (sessionId, updateSessionData) => {
   try {
     const res = await api.put(
-      `/api/attendance/sessions/${updateSessionData.attendanceSessionId}`,
+      `/api/attendance/sessions/${sessionId}`,
       updateSessionData
     );
     return res.data;
@@ -123,12 +123,28 @@ export const changeRoundData = async (roundId, updateRoundData) => {
 // 세션에 유저 추가
 export const addUser = async (sessionId, userId) => {
   try {
-    const res = await api.post(`/api/attendance/sessions/${sessionId}/users`, {
-      userId: userId,
-    });
+    const res = await api.post(
+      `/api/attendance/sessions/${sessionId}/users`,
+      null,
+      {
+        params: { userId: userId },
+      }
+    );
     return res.data;
   } catch (err) {
     console.error('유저 추가 중 오류 발생', err);
+    throw err;
+  }
+};
+
+export const deleteUser = async (sessionId, userId) => {
+  try {
+    const res = await api.delete(
+      `/api/attendance/sessions/${sessionId}/users/${userId}`
+    );
+    return res.data;
+  } catch (err) {
+    console.error('세션 삭제 중 오류 발생', err);
     throw err;
   }
 };
@@ -193,13 +209,48 @@ export const getRoundUserAttendance = async (roundId) => {
   }
 };
 
-// 전체 유저 조회
-export const getUserList = async () => {
+// 세션에 추가가능한 유저 조회
+export const getUserList = async (sessionId) => {
   try {
-    const res = await api.get('/api/attendance/sessions/get-users');
+    const res = await api.get(
+      `/api/attendance/sessions/${sessionId}/users/available`
+    );
     return res.data;
   } catch (err) {
     console.error('모든 유저 데이터 조회 중 오류 발생', err);
+    throw err;
+  }
+};
+//관리자 권한 추가
+export const addManager = async (sessionId, userId) => {
+  try {
+    const res = await api.post(
+      `/api/attendance/sessions/${sessionId}/admins/${userId}`
+    );
+
+    return res.data;
+  } catch (err) {
+    if (err.response) {
+      console.error('서버 에러 응답:', err.response.data);
+    }
+    console.error('매니저 권한 추가 중 오류 발생:', err);
+    throw err;
+  }
+};
+
+// 세션 관리자 권한 제거 (일반 참가자로 강등)
+export const deleteManager = async (sessionId, userId) => {
+  try {
+    const res = await api.delete(
+      `/api/attendance/sessions/${sessionId}/admins/${userId}`
+    );
+
+    return res.data;
+  } catch (err) {
+    if (err.response) {
+      console.error('서버 에러 응답:', err.response.data);
+    }
+    console.error('매니저 권한 제거 중 오류 발생:', err);
     throw err;
   }
 };

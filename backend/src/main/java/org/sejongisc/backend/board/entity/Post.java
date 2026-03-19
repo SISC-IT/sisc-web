@@ -51,6 +51,10 @@ public class Post extends BasePostgresEntity {
   @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
 
+  @Builder.Default
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean anonymous = false;
+
   // 북마크 수
   @Builder.Default
   private Integer bookmarkCount = 0;

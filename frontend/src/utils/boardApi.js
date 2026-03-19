@@ -32,19 +32,62 @@ export const getSubBoards = async (parentBoardId = null) => {
 };
 
 /*
- * 게시판 생성
- * POST /api/board
+ * 하위 게시판 생성 (회장 권한)
+ * POST /api/admin/board
  * @param {string} boardName - 게시판 이름
  * @param {string|null} parentBoardId - 부모 게시판 ID (최상위는 null)
  */
-export const createBoard = async (boardName, parentBoardId = null) => {
-  const requestBody = { boardName };
+export const createSubBoard = async (boardName, parentBoardId = null) => {
+  const normalizedBoardName = String(boardName || '').trim();
 
-  if (parentBoardId) {
-    requestBody.parentBoardId = parentBoardId;
+  if (!normalizedBoardName) {
+    throw new Error('boardName is required');
   }
 
-  const response = await api.post('/api/board', requestBody);
+  const requestBody = {
+    boardName: normalizedBoardName,
+    parentBoardId: parentBoardId ?? null,
+  };
+
+  const response = await api.post('/api/admin/board', requestBody);
+
+  const responseData = response?.data;
+  const createdBoardId = responseData?.boardId;
+
+  // Backward-compatible fast path: backend already returns { boardId }.
+  if (createdBoardId) {
+    return responseData;
+  }
+
+  // Some backend versions return success without boardId.
+  // Do not treat that as failure; return minimal info for caller-side refresh flow.
+  return {
+    ...(responseData && typeof responseData === 'object' ? responseData : {}),
+    boardId: null,
+    boardName: normalizedBoardName,
+    parentBoardId: parentBoardId ?? null,
+  };
+};
+
+/*
+ * 게시판 생성 (하위 호환용)
+ * createSubBoard와 동일한 엔드포인트를 사용합니다.
+ */
+export const createBoard = async (boardName, parentBoardId = null) => {
+  return createSubBoard(boardName, parentBoardId);
+};
+
+/*
+ * 하위 게시판 삭제 (회장/시스템 관리자 권한)
+ * DELETE /api/admin/board/{boardId}
+ * @param {string} boardId - 삭제할 게시판 ID
+ */
+export const deleteBoard = async (boardId) => {
+  if (!boardId) {
+    throw new Error('boardId is required');
+  }
+
+  const response = await api.delete(`/api/admin/board/${boardId}`);
   return response.data;
 };
 
@@ -61,7 +104,13 @@ export const getPosts = async (boardId, pageNumber = 0, pageSize = 20) => {
   const response = await api.get('/api/board/posts', {
     params: { boardId, pageNumber, pageSize },
   });
-  return response.data;
+
+  const data = response?.data;
+  if (!Array.isArray(data?.content)) {
+    throw new Error('Invalid posts response: content must be an array');
+  }
+
+  return data;
 };
 
 /*
@@ -98,6 +147,7 @@ export const createPost = async (boardId, postData) => {
   formData.append('boardId', boardId);
   formData.append('title', postData.title);
   formData.append('content', postData.content);
+  formData.append('anonymous', String(Boolean(postData.anonymous)));
 
   if (postData.files && postData.files.length > 0) {
     postData.files.forEach((file) => {
@@ -202,6 +252,7 @@ export const createComment = async (commentData) => {
   const requestBody = {
     postId: commentData.postId,
     content: commentData.content,
+    anonymous: Boolean(commentData.anonymous),
   };
 
   if (commentData.parentCommentId) {
