@@ -28,6 +28,10 @@ __pycache__/
 /env
 /.vs
 /.venv/
+/venv310/
+SISC_개인메모.md
+AI/data/weights/
+
 
 # ===== Backend =====
 backend/src/main/java/org/sejongisc/backend/stock/TestController.java
