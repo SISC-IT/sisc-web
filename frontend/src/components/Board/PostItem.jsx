@@ -7,12 +7,18 @@ import BookmarkFilledIcon from '../../assets/boardBookMark.fill.svg';
 import HeartIcon from '../../assets/boardHeart.svg';
 import HeartFilledIcon from '../../assets/boardHeart.fill.svg';
 import { getTimeAgo } from '../../utils/TimeUtils';
+import { toBoardRouteSegment } from '../../utils/boardRoute';
 
 const PostItem = ({ post, onLike, onBookmark }) => {
   const navigate = useNavigate();
   const { team } = useParams();
 
   const postId = post.postId || post.id;
+  const boardName = post.boardName || post.board?.boardName;
+  const authorName = post.user?.name || post.userName || '익명';
+  const createdAt = post.createdDate || post.createdAt || post.date;
+  const likeCount = Number(post.likeCount || 0);
+  const bookmarkCount = Number(post.bookmarkCount || 0);
 
   const handleCardClick = () => {
     if (!postId) {
@@ -21,27 +27,22 @@ const PostItem = ({ post, onLike, onBookmark }) => {
       return;
     }
 
-    const nameToPath = {
-      증권1팀: 'securities-1',
-      증권2팀: 'securities-2',
-      증권3팀: 'securities-3',
-      자산운용: 'asset-management',
-      금융IT: 'finance-it',
-      매크로: 'macro',
-      트레이딩: 'trading',
-    };
-
-    const boardName = post.boardName || post.board?.boardName;
-    const teamPath = nameToPath[boardName] || team;
+    const teamPath = team || toBoardRouteSegment(boardName);
 
     if (!teamPath) {
       alert('게시판 정보를 찾을 수 없습니다.');
       return;
     }
 
-    const path = `/board/${teamPath}/post/${postId}`;
+    const path = `/board/${encodeURIComponent(teamPath)}/post/${postId}`;
 
-    navigate(path, { state: { post } });
+    navigate(path, {
+      state: {
+        post,
+        originTeam: team || '',
+        originBoardId: post.boardId || post.board?.boardId || '',
+      },
+    });
   };
 
   const handleBookmarkClick = (e) => {
@@ -78,8 +79,8 @@ const PostItem = ({ post, onLike, onBookmark }) => {
         <div className={styles.contentSection}>
           <div className={styles.header}>
             <div className={styles.metaInfo}>
-              <span className={styles.author}>운영진</span>
-              <span className={styles.time}>{getTimeAgo(post.date)}</span>
+              <span className={styles.author}>{authorName}</span>
+              <span className={styles.time}>{getTimeAgo(createdAt)}</span>
             </div>
           </div>
           <div className={styles.title}>{post.title}</div>
@@ -96,7 +97,9 @@ const PostItem = ({ post, onLike, onBookmark }) => {
               src={post.isBookmarked ? BookmarkFilledIcon : BookmarkIcon}
               alt="북마크"
             />
-            {post.isBookmarked && <span className={styles.count}>1</span>}
+            {bookmarkCount > 0 && (
+              <span className={styles.count}>{bookmarkCount}</span>
+            )}
           </button>
           <button
             className={styles.actionButton}
@@ -107,9 +110,7 @@ const PostItem = ({ post, onLike, onBookmark }) => {
               src={post.isLiked ? HeartFilledIcon : HeartIcon}
               alt="좋아요"
             />
-            {post.likeCount > 0 && (
-              <span className={styles.count}>{post.likeCount}</span>
-            )}
+            {likeCount > 0 && <span className={styles.count}>{likeCount}</span>}
           </button>
         </div>
       </div>

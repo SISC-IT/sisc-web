@@ -15,7 +15,8 @@ import org.sejongisc.backend.common.auth.service.AuthService;
 import org.sejongisc.backend.common.auth.service.RefreshTokenService;
 import org.sejongisc.backend.user.dto.*;
 import org.sejongisc.backend.user.service.UserService;
-import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.*;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,15 +59,19 @@ public class UserController {
     return ResponseEntity.ok().build();
   }
 
-  @Operation(summary = "내 출석 로그 조회")
+  @Operation(summary = "내 출석 로그 조회", description = "?page=0&size=20 방식으로 페이지네이션 조회 (최신순)")
   @GetMapping("/logs/attendance")
-  public ResponseEntity<List<ActivityLog>> getAttendanceLogs(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    return ResponseEntity.ok(userService.getAttendanceActivityLog(customUserDetails.getUserId()));
+  public ResponseEntity<Page<ActivityLog>> getAttendanceLogs(
+      @AuthenticationPrincipal CustomUserDetails customUserDetails,
+      @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+    return ResponseEntity.ok(userService.getAttendanceActivityLog(customUserDetails.getUserId(), pageable));
   }
 
-  @Operation(summary = "내 활동 로그 조회")
+  @Operation(summary = "내 활동 로그 조회", description = "?page=0&size=20 방식으로 페이지네이션 조회 (최신순)")
   @GetMapping("/logs/board")
-  public ResponseEntity<List<ActivityLog>> getBoardLogs(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
-    return ResponseEntity.ok(userService.getBoardActivityLog(customUserDetails.getUserId()));
+  public ResponseEntity<Page<ActivityLog>> getBoardLogs(
+      @AuthenticationPrincipal CustomUserDetails customUserDetails,
+      @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+    return ResponseEntity.ok(userService.getBoardActivityLog(customUserDetails.getUserId(), pageable));
   }
 }

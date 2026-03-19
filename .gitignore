@@ -32,6 +32,8 @@ __pycache__/
 SISC_개인메모.md
 AI/data/weights/
 
+AI/.venv/
+AI/data/weights/tcn/
 
 # ===== Backend =====
 backend/src/main/java/org/sejongisc/backend/stock/TestController.java

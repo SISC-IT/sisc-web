@@ -1,14 +1,24 @@
 # AI/modules/features/market_derived.py
 import pandas as pd
 import numpy as np
-from features.technical import compute_rsi, compute_atr, compute_macd, compute_bollinger_bands
+from .technical import compute_rsi, compute_atr, compute_macd, compute_bollinger_bands
 
 def add_market_changes(df: pd.DataFrame) -> pd.DataFrame:
-    """가격 및 거래량 기반 변화율 계산 [명세서 준수]"""
+    """가격 및 거래량 기반 변화율 계산 [명세서 및 레거시 하위 호환]"""
+    epsilon = 1e-9
+    
+    # --- [레거시 호환] 기존 모델 학습에 사용되었던 캔들 모양 및 거래량 피처 복구 ---
+    prev_close = df['close'].shift(1)
+    df['open_ratio'] = (df['open'] - prev_close) / (prev_close + epsilon)
+    df['high_ratio'] = (df['high'] - prev_close) / (prev_close + epsilon)
+    df['low_ratio']  = (df['low'] - prev_close) / (prev_close + epsilon)
+    df['vol_change'] = df['volume'].pct_change()
+    
+    # --- [신규 명세서] 일간 수익률 및 일중 변동성 ---
     df['ret_1d'] = df['close'].pct_change()
     df['log_return'] = np.log(df['close'] / df['close'].shift(1))
-    # 일중변동성비율 : (High - Low) / Close
-    df['intraday_vol'] = (df['high'] - df['low']) / (df['close'] + 1e-9)
+    df['intraday_vol'] = (df['high'] - df['low']) / (df['close'] + epsilon)
+    
     return df
 
 def add_macro_changes(df: pd.DataFrame) -> pd.DataFrame:
@@ -32,8 +42,10 @@ def add_standard_technical_features(df: pd.DataFrame) -> pd.DataFrame:
     """레거시 로직 + 명세서 신규 지표 통합"""
     epsilon = 1e-9
     
-    # 1. RSI (rsi_14)
+    # 1. RSI
+    # 명세서 기준(rsi_14)과 레거시 모델 호환용(rsi) 컬럼을 모두 생성합니다.
     df['rsi_14'] = compute_rsi(df['close'], 14) / 100.0
+    df['rsi'] = df['rsi_14'] 
     
     # 2. MACD (macd, macd_signal)
     df['macd'], df['macd_signal'] = compute_macd(df['close'])
@@ -48,11 +60,12 @@ def add_standard_technical_features(df: pd.DataFrame) -> pd.DataFrame:
     # 모델 입력용 포지션
     df['bb_position'] = (df['close'] - df['bollinger_lb']) / ( (df['bollinger_ub'] - df['bollinger_lb']).replace(0, epsilon) )
     
-    # 4. ATR (atr_14)
+    # 4. ATR (atr_14) - [신규 명세서 지표]
     df['atr_14'] = compute_atr(df['high'], df['low'], df['close'], 14)
     
-    # 5. Moving Averages (ma_20, ma_60)
-    for w in [20, 60]:
+    # 5. Moving Averages (ma_5, ma_20, ma_60) 
+    # [레거시 호환] 기존에 사용하던 5일 이평선(ma_5)을 복구하여 배열에 추가했습니다.
+    for w in [5, 20, 60]:
         df[f'ma_{w}'] = df['close'].rolling(window=w).mean()
         # 모델 입력용 이격도 (Standard Key: ma_trend_score 등에 활용)
         df[f'ma{w}_ratio'] = (df['close'] - df[f'ma_{w}']) / (df[f'ma_{w}'] + epsilon)

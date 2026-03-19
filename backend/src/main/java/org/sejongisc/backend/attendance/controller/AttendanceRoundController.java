@@ -101,7 +101,7 @@ public class AttendanceRoundController {
       - **필요**
       
       ## 권한
-      - **세션 MANAGER** 또는 **OWNER**
+      - **세션 OWNER**
       
       ## 경로 파라미터
       - **`roundId`**: 삭제할 라운드 ID (`UUID`)
@@ -111,11 +111,14 @@ public class AttendanceRoundController {
       
       ## 동작 설명
       - 특정 출석 회차(Round)를 삭제
-      - 요청 유저가 해당 세션의 관리 권한(MANAGER/OWNER)을 가졌는지 검증
+      - 요청 유저가 해당 세션의 OWNER 권한을 가졌는지 검증
+      - **중요**: 해당 라운드에 등록된 모든 출석 기록(Attendance)도 함께 삭제됨
+        - 특정 라운드의 모든 참가자 출석 현황 데이터 삭제
+        - 삭제된 기록은 복구 불가능
       
       ## 에러 코드
       - **`ROUND_NOT_FOUND`**: 해당 출석 라운드가 존재하지 않습니다.
-      - **`NOT_SESSION_ADMIN`**: 세션 관리자 권한이 없습니다.
+      - **`NOT_SESSION_OWNER`**: 세션 소유자 권한이 없습니다.
       
       """)  @DeleteMapping("/rounds/{roundId}")
   public ResponseEntity<Void> deleteRound(
@@ -137,7 +140,7 @@ public class AttendanceRoundController {
         ## 인증(JWT): **필요**
         
         ## 권한
-        - **세션 MEMBER**
+        - **세션 MEMBER/MANAGER/OWNER**
         
         ## 동작 설명
         - 특정 라운드 ID(`roundId`)를 통해 회차의 상세 정보 조회

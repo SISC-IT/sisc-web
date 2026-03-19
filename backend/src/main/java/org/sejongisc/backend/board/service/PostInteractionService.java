@@ -1,9 +1,6 @@
 package org.sejongisc.backend.board.service;
 
 import jakarta.persistence.OptimisticLockException;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.activity.entity.ActivityType;
 import org.sejongisc.backend.activity.event.ActivityEvent;
@@ -18,15 +15,19 @@ import org.sejongisc.backend.board.repository.PostLikeRepository;
 import org.sejongisc.backend.board.repository.PostRepository;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -77,6 +78,7 @@ public class PostInteractionService {
         .post(post)
         .user(user)
         .content(request.getContent())
+        .anonymous(request.isAnonymous())
         .parentComment(parentComment)
         .build();
 
@@ -85,9 +87,11 @@ public class PostInteractionService {
     // 게시글의 댓글 수 1 증가
     post.setCommentCount(post.getCommentCount() + 1);
 
+    String username = request.isAnonymous() ? "익명" : user.getName();
+
     eventPublisher.publishEvent(new ActivityEvent(
             user.getUserId(),
-            user.getName(),
+            username,
             ActivityType.BOARD_COMMENT,
             "[" + post.getTitle() + "]에 댓글을 달았습니다.",
             post.getPostId(),
@@ -108,6 +112,7 @@ public class PostInteractionService {
 
     // 내용 업데이트
     comment.setContent(request.getContent());
+    comment.setAnonymous(request.isAnonymous());
   }
 
   // 댓글 삭제

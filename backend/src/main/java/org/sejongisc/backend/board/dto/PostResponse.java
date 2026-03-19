@@ -25,6 +25,7 @@ public class PostResponse {
   private UserInfoResponse user;
   private String title;
   private String content;
+  private boolean anonymous;
   private Integer bookmarkCount;
   private Integer likeCount;
   private Integer commentCount;

@@ -6,7 +6,7 @@ const MembersPanel = ({ members = [], styles }) => {
       <div className={styles.panelHeader}>
         <h2 className={styles.panelTitle}>회원 목록</h2>
       </div>
-      <MemberList members={members} />
+      <MemberList members={members} styles={styles} />
     </section>
   );
 };

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import PostItem from '../components/Board/PostItem';
 import Modal from '../components/Board/Modal';
 import SearchBar from '../components/Board/SearchBar';
@@ -8,51 +8,132 @@ import CategoryTabs from '../components/Board/CategoryTabs';
 import CreateSubBoardModal from '../components/Board/CreateSubBoardModal';
 import styles from './Board.module.css';
 import * as boardApi from '../utils/boardApi';
+import {
+  isAllBoardName,
+  normalizeBoardRouteSegment,
+  toBoardRouteSegment,
+} from '../utils/boardRoute';
+import { api } from '../utils/axios';
+
+const ALL_TAB_ID = 'all';
+const SUB_BOARD_ADMIN_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT', 'VICE_PRESIDENT'];
+const SUB_BOARD_DELETE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT'];
+
+const getPostId = (post) => post?.postId || post?.id;
+
+const mergePosts = (responses = []) => {
+  const map = new Map();
+
+  responses.forEach((response) => {
+    (response?.content || []).forEach((post) => {
+      const id = getPostId(post);
+      if (!id) return;
+      if (!map.has(id)) {
+        map.set(id, post);
+      }
+    });
+  });
+
+  return Array.from(map.values());
+};
+
+const filterPostsByKeyword = (postList = [], keyword = '') => {
+  const normalizedKeyword = String(keyword || '').trim().toLowerCase();
+  if (!normalizedKeyword) return postList;
+
+  return postList.filter((post) => {
+    const title = String(post?.title || '').toLowerCase();
+    const content = String(post?.content || '').toLowerCase();
+    const author = String(post?.user?.name || post?.userName || '').toLowerCase();
+    return (
+      title.includes(normalizedKeyword) ||
+      content.includes(normalizedKeyword) ||
+      author.includes(normalizedKeyword)
+    );
+  });
+};
+
+const buildPostsFromCache = ({
+  tabId,
+  keyword = '',
+  cacheByBoardId = {},
+  tabs = [],
+  parentBoardId,
+}) => {
+  const boardIds =
+    tabId && tabId !== ALL_TAB_ID
+      ? [tabId]
+      : [parentBoardId, ...tabs.filter((tab) => tab.id !== ALL_TAB_ID).map((tab) => tab.id)];
+
+  const responses = boardIds
+    .filter(Boolean)
+    .map((boardId) => ({ content: cacheByBoardId[boardId] || [] }));
+
+  const merged = mergePosts(responses);
+  return filterPostsByKeyword(merged, keyword);
+};
 
 const Board = () => {
   const { team } = useParams();
+  const location = useLocation();
 
   const [boardIdMap, setBoardIdMap] = useState({});
   const [boardNameMap, setBoardNameMap] = useState({});
   const [posts, setPosts] = useState([]);
+  const [postCacheByBoardId, setPostCacheByBoardId] = useState({});
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isAnonymousPost, setIsAnonymousPost] = useState(false);
   const [sortOption, setSortOption] = useState('latest');
   const [loading, setLoading] = useState(false);
   const [boardsLoaded, setBoardsLoaded] = useState(false);
-  const [activeSubBoard, setActiveSubBoard] = useState('all');
+  const [activeSubBoard, setActiveSubBoard] = useState(ALL_TAB_ID);
   const [showSubBoardModal, setShowSubBoardModal] = useState(false);
   const [subBoardName, setSubBoardName] = useState('');
-  const [subBoardTabs, setSubBoardTabs] = useState([]);
+  const [subBoardTabs, setSubBoardTabs] = useState([{ id: ALL_TAB_ID, name: '전체 게시판' }]);
+  const [isCreatingSubBoard, setIsCreatingSubBoard] = useState(false);
+  const [writeBoardId, setWriteBoardId] = useState('');
+  const [canCreateSubBoard, setCanCreateSubBoard] = useState(false);
+  const [canDeleteSubBoard, setCanDeleteSubBoard] = useState(false);
+  const [isSavingPost, setIsSavingPost] = useState(false);
+  const [deletingSubBoardId, setDeletingSubBoardId] = useState('');
 
-  // 페이지네이션 state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  const prevPostsRef = useRef(posts);
+  const subBoardLoadRequestIdRef = useRef(0);
+  const requestedSubBoardId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('subBoardId') || '';
+  }, [location.search]);
 
-  const currentPath = team ? `/board/${team}` : '/board';
-  const currentBoardId = boardIdMap[currentPath];
-  const currentBoardName = boardNameMap[currentPath];
+  const currentSegment = team ? normalizeBoardRouteSegment(team) || 'root' : 'root';
+  const currentBoardId = boardIdMap[currentSegment];
+  const currentBoardName = boardNameMap[currentSegment] || '게시판';
 
   useEffect(() => {
-    prevPostsRef.current = posts;
-  }, [posts]);
+    setPosts(
+      buildPostsFromCache({
+        tabId: activeSubBoard,
+        keyword: searchKeyword,
+        cacheByBoardId: postCacheByBoardId,
+        tabs: subBoardTabs,
+        parentBoardId: currentBoardId,
+      })
+    );
+  }, [activeSubBoard, currentBoardId, postCacheByBoardId, searchKeyword, subBoardTabs]);
 
-  useEffect(() => {
-    loadBoardList();
-  }, []);
-
-  const loadBoardList = async () => {
+  const loadBoardList = useCallback(async () => {
     try {
       const boards = await boardApi.getParentBoards();
 
       if (!boards || boards.length === 0) {
-        console.warn('게시판이 없습니다.');
-        alert('등록된 게시판이 없습니다.');
+        setBoardIdMap({});
+        setBoardNameMap({});
         setBoardsLoaded(true);
         return;
       }
@@ -60,25 +141,16 @@ const Board = () => {
       const idMap = {};
       const nameMap = {};
 
-      const nameToPath = {
-        증권1팀: 'securities-1',
-        증권2팀: 'securities-2',
-        증권3팀: 'securities-3',
-        자산운용: 'asset-management',
-        금융IT: 'finance-it',
-        매크로: 'macro',
-        트레이딩: 'trading',
-      };
-
       boards.forEach((board) => {
-        const boardName = board.boardName;
-        const path =
-          boardName === '전체' ? '/board' : `/board/${nameToPath[boardName]}`;
+        const boardName = String(board.boardName || '').trim();
+        const segment = isAllBoardName(boardName)
+          ? 'root'
+          : toBoardRouteSegment(boardName);
 
-        if (path) {
-          idMap[path] = board.boardId;
-          nameMap[path] = boardName;
-        }
+        if (!segment) return;
+
+        idMap[segment] = board.boardId;
+        nameMap[segment] = boardName;
       });
 
       setBoardIdMap(idMap);
@@ -88,150 +160,168 @@ const Board = () => {
       console.error('게시판 목록 불러오기 실패:', error);
       setBoardsLoaded(true);
     }
-  };
+  }, []);
 
-  const fetchPosts = useCallback(async () => {
-    if (!currentBoardId) return;
+  useEffect(() => {
+    loadBoardList();
+  }, [loadBoardList]);
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const { data } = await api.get('/api/user/details');
+        const normalizedRole = String(data?.role || '').trim().toUpperCase();
+        setCanCreateSubBoard(SUB_BOARD_ADMIN_ROLES.includes(normalizedRole));
+        setCanDeleteSubBoard(SUB_BOARD_DELETE_ROLES.includes(normalizedRole));
+      } catch {
+        setCanCreateSubBoard(false);
+        setCanDeleteSubBoard(false);
+      }
+    };
+
+    fetchRole();
+  }, []);
+
+  const fetchPostsByBoardIds = useCallback(async (boardIds) => {
+    const uniqueBoardIds = Array.from(new Set((boardIds || []).filter(Boolean)));
+
+    if (uniqueBoardIds.length === 0) {
+      return {};
+    }
 
     try {
       setLoading(true);
 
-      if (Array.isArray(currentBoardId)) {
-        const allPostsPromises = currentBoardId.map((id) =>
-          boardApi.getPosts(id).catch((err) => {
-            console.error(`게시판 ${id} 조회 실패:`, err);
-            return { content: [] };
-          })
-        );
+      const requests = uniqueBoardIds.map((boardId) =>
+        boardApi.getPosts(boardId).then((response) => ({ boardId, response }))
+      );
 
-        const allPostsArrays = await Promise.all(allPostsPromises);
-        const allPosts = allPostsArrays.flatMap(
-          (response) => response.content || []
-        );
+      const responses = await Promise.allSettled(requests);
 
-        setPosts(allPosts);
-      } else {
-        const response = await boardApi.getPosts(currentBoardId);
-        const postsData = response.content || [];
-        setPosts(Array.isArray(postsData) ? postsData : []);
-      }
+      const nextCache = {};
+      responses.forEach((result) => {
+        if (result.status !== 'fulfilled') {
+          return;
+        }
 
-      // 게시글 로드 후 페이지를 1로 리셋
-      setCurrentPage(1);
+        const boardId = result.value?.boardId;
+        const content = result.value?.response?.content;
+
+        if (!boardId || !Array.isArray(content)) {
+          return;
+        }
+
+        nextCache[boardId] = content;
+      });
+
+      return nextCache;
     } catch (error) {
-      console.error('게시글 불러오기 실패:', error);
-      setPosts([]);
+      console.error('게시글 조회 실패:', error);
+      return {};
     } finally {
       setLoading(false);
     }
-  }, [currentBoardId]);
-
-  const handleSearch = useCallback(
-    async (keyword) => {
-      if (!currentBoardId) return;
-
-      if (!keyword || !keyword.trim()) {
-        fetchPosts();
-        return;
-      }
-
-      try {
-        setLoading(true);
-
-        if (Array.isArray(currentBoardId)) {
-          const allPostsPromises = currentBoardId.map((id) =>
-            boardApi.searchPosts(id, keyword).catch(() => ({ content: [] }))
-          );
-
-          const allPostsArrays = await Promise.all(allPostsPromises);
-          const allPosts = allPostsArrays.flatMap(
-            (response) => response.content || []
-          );
-
-          setPosts(allPosts);
-        } else {
-          const response = await boardApi.searchPosts(currentBoardId, keyword);
-          const postsData = response.content || [];
-          setPosts(postsData);
-        }
-
-        // 검색 후 페이지를 1로 리셋
-        setCurrentPage(1);
-      } catch (error) {
-        console.error('검색 실패:', error);
-        alert('검색에 실패했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [currentBoardId, fetchPosts]
-  );
+  }, []);
 
   useEffect(() => {
-    const loadSubBoards = async () => {
-      if (currentBoardId && !Array.isArray(currentBoardId)) {
-        try {
-          const subBoards = await boardApi.getSubBoards(currentBoardId);
+    const currentRequestId = ++subBoardLoadRequestIdRef.current;
+    const isStale = () => currentRequestId !== subBoardLoadRequestIdRef.current;
 
-          if (subBoards && subBoards.length > 0) {
-            const tabs = subBoards.map((board) => ({
+    const loadSubBoardsAndPosts = async () => {
+      if (!boardsLoaded || !currentBoardId) return;
+
+      try {
+        const subBoards = await boardApi.getSubBoards(currentBoardId);
+        if (isStale()) return;
+
+        const tabs = [{ id: ALL_TAB_ID, name: '전체 게시판' }];
+
+        if (Array.isArray(subBoards) && subBoards.length > 0) {
+          tabs.push(
+            ...subBoards.map((board) => ({
               id: board.boardId,
               name: board.boardName,
-            }));
-            setSubBoardTabs(tabs);
-            setActiveSubBoard(tabs[0].id);
-
-            const response = await boardApi.getPosts(tabs[0].id);
-            const postsData = response.content || [];
-            setPosts(Array.isArray(postsData) ? postsData : []);
-            setCurrentPage(1);
-          } else {
-            setSubBoardTabs([]);
-            setActiveSubBoard(null);
-            fetchPosts();
-          }
-        } catch (error) {
-          console.error('하위 게시판 조회 실패:', error);
-          setSubBoardTabs([]);
-          setActiveSubBoard(null);
-          fetchPosts();
+            }))
+          );
         }
-      } else {
-        setSubBoardTabs([]);
-        setActiveSubBoard(null);
-        fetchPosts();
+
+        if (isStale()) return;
+        setSubBoardTabs(tabs);
+
+        const isRequestedSubBoardValid =
+          requestedSubBoardId && tabs.some((tab) => tab.id === requestedSubBoardId);
+        const nextTabId = isRequestedSubBoardValid ? requestedSubBoardId : ALL_TAB_ID;
+
+        if (isStale()) return;
+        setActiveSubBoard(nextTabId);
+
+        const targetBoardIds = [
+          currentBoardId,
+          ...tabs.filter((tab) => tab.id !== ALL_TAB_ID).map((tab) => tab.id),
+        ];
+
+        const cache = await fetchPostsByBoardIds(targetBoardIds);
+        if (isStale()) return;
+
+        setPostCacheByBoardId((prev) => ({
+          ...prev,
+          ...cache,
+        }));
+        setSearchKeyword('');
+        setCurrentPage(1);
+      } catch (error) {
+        console.error('하위 게시판 조회 실패:', error);
+
+        if (isStale()) return;
+
+        setSubBoardTabs([{ id: ALL_TAB_ID, name: '전체 게시판' }]);
+        setActiveSubBoard(ALL_TAB_ID);
+        const cache = await fetchPostsByBoardIds([currentBoardId]);
+        if (isStale()) return;
+
+        setPostCacheByBoardId((prev) => ({
+          ...prev,
+          ...cache,
+        }));
+        setSearchKeyword('');
+        setCurrentPage(1);
       }
     };
 
-    if (boardsLoaded && currentBoardId) {
-      loadSubBoards();
-    }
-  }, [boardsLoaded, currentBoardId, fetchPosts]);
+    loadSubBoardsAndPosts();
+
+    return () => {
+      if (subBoardLoadRequestIdRef.current === currentRequestId) {
+        subBoardLoadRequestIdRef.current += 1;
+      }
+    };
+  }, [
+    boardsLoaded,
+    currentBoardId,
+    fetchPostsByBoardIds,
+    requestedSubBoardId,
+  ]);
 
   const handleTabChange = useCallback(
-    async (tabId) => {
+    (tabId) => {
       setActiveSubBoard(tabId);
-
-      if (!currentBoardId) return;
-
-      try {
-        setLoading(true);
-
-        const response = await boardApi.getPosts(tabId);
-        const postsData = response.content || [];
-        setPosts(Array.isArray(postsData) ? postsData : []);
-        setCurrentPage(1); // 탭 변경 시 페이지 리셋
-      } catch (error) {
-        console.error('탭 변경 중 오류:', error);
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
+      setCurrentPage(1);
     },
-    [currentBoardId]
+    []
+  );
+
+  const handleSearch = useCallback(
+    (keyword) => {
+      const normalizedKeyword = String(keyword || '').trim();
+      setSearchKeyword(normalizedKeyword);
+      setCurrentPage(1);
+    },
+    []
   );
 
   const handleOpenModal = () => {
+    setWriteBoardId('');
+    setIsAnonymousPost(false);
     setShowModal(true);
   };
 
@@ -240,9 +330,17 @@ const Board = () => {
     setTitle('');
     setContent('');
     setSelectedFiles([]);
+    setWriteBoardId('');
+    setIsAnonymousPost(false);
+    setIsSavingPost(false);
   };
 
   const handleOpenSubBoardModal = () => {
+    if (!canCreateSubBoard) {
+      alert('하위 게시판 생성 권한이 없습니다.');
+      return;
+    }
+
     setShowSubBoardModal(true);
   };
 
@@ -252,29 +350,120 @@ const Board = () => {
   };
 
   const handleCreateSubBoard = async () => {
+    if (isCreatingSubBoard) {
+      return;
+    }
+
     if (!subBoardName.trim()) {
       alert('하위 게시판 이름을 입력해주세요.');
       return;
     }
 
+    if (!currentBoardId) {
+      alert('부모 게시판 정보를 찾을 수 없습니다.');
+      return;
+    }
+
     try {
-      await boardApi.createBoard(subBoardName, currentBoardId);
-      alert('하위 게시판이 생성되었습니다!');
+      setIsCreatingSubBoard(true);
+
+      const created = await boardApi.createSubBoard(
+        subBoardName.trim(),
+        currentBoardId
+      );
       handleCloseSubBoardModal();
 
       const subBoards = await boardApi.getSubBoards(currentBoardId);
-      const tabs = subBoards.map((board) => ({
-        id: board.boardId,
-        name: board.boardName,
-      }));
+      const tabs = [
+        { id: ALL_TAB_ID, name: '전체 게시판' },
+        ...(Array.isArray(subBoards)
+          ? subBoards.map((board) => ({ id: board.boardId, name: board.boardName }))
+          : []),
+      ];
+
       setSubBoardTabs(tabs);
 
-      if (tabs.length > 0) {
-        setActiveSubBoard(tabs[0].id);
-      }
+      const createdBoardId =
+        created?.boardId ||
+        subBoards.find((board) => board.boardName === subBoardName.trim())?.boardId ||
+        null;
+
+      const nextTabId = createdBoardId || ALL_TAB_ID;
+      setActiveSubBoard(nextTabId);
+
+      setPostCacheByBoardId((prev) => {
+        if (!createdBoardId || prev[createdBoardId] !== undefined) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [createdBoardId]: [],
+        };
+      });
+      setCurrentPage(1);
+      alert('하위 게시판이 생성되었습니다!');
     } catch (error) {
       console.error('하위 게시판 생성 실패:', error);
       alert('하위 게시판 생성에 실패했습니다.');
+    } finally {
+      setIsCreatingSubBoard(false);
+    }
+  };
+
+  const handleDeleteSubBoard = async (boardId, boardName) => {
+    if (!canDeleteSubBoard) {
+      alert('하위 게시판 삭제 권한이 없습니다.');
+      return;
+    }
+
+    if (!boardId || boardId === ALL_TAB_ID) {
+      return;
+    }
+
+    if (deletingSubBoardId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `'${boardName || '해당'}' 하위 게시판을 삭제하시겠습니까?\n관련 첨부파일 및 댓글도 함께 삭제됩니다.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingSubBoardId(boardId);
+      await boardApi.deleteBoard(boardId);
+
+      const subBoards = await boardApi.getSubBoards(currentBoardId);
+      const tabs = [
+        { id: ALL_TAB_ID, name: '전체 게시판' },
+        ...(Array.isArray(subBoards)
+          ? subBoards.map((board) => ({ id: board.boardId, name: board.boardName }))
+          : []),
+      ];
+
+      setSubBoardTabs(tabs);
+      setPostCacheByBoardId((prev) => {
+        if (!prev[boardId]) {
+          return prev;
+        }
+
+        const next = { ...prev };
+        delete next[boardId];
+        return next;
+      });
+
+      setActiveSubBoard((prev) => (prev === boardId ? ALL_TAB_ID : prev));
+      setCurrentPage(1);
+      alert('하위 게시판이 삭제되었습니다.');
+    } catch (error) {
+      console.error('하위 게시판 삭제 실패:', error);
+      alert('하위 게시판 삭제에 실패했습니다.');
+    } finally {
+      setDeletingSubBoardId('');
     }
   };
 
@@ -288,18 +477,7 @@ const Board = () => {
   };
 
   const handleSave = async () => {
-    if (!currentBoardId) {
-      alert('게시판 정보를 찾을 수 없습니다.');
-      return;
-    }
-
-    if (subBoardTabs.length === 0) {
-      alert('하위 게시판이 없습니다.\n먼저 하위 게시판을 생성해주세요.');
-      return;
-    }
-
-    if (!activeSubBoard) {
-      alert('하위 게시판을 선택해주세요.');
+    if (isSavingPost) {
       return;
     }
 
@@ -313,82 +491,133 @@ const Board = () => {
       return;
     }
 
+    if (!writeBoardId) {
+      alert('하위 게시판을 선택해야 합니다.');
+      return;
+    }
+
     try {
+      setIsSavingPost(true);
+
       const postData = {
         title: title.trim(),
         content: content.trim(),
         files: selectedFiles,
+        anonymous: isAnonymousPost,
       };
 
-      await boardApi.createPost(activeSubBoard, postData);
+      await boardApi.createPost(writeBoardId, postData);
 
       handleCloseModal();
       setSelectedFiles([]);
 
-      handleTabChange(activeSubBoard);
+      const refreshedCurrentBoardCache = await fetchPostsByBoardIds([writeBoardId]);
+      setPostCacheByBoardId((prev) => ({
+        ...prev,
+        ...refreshedCurrentBoardCache,
+      }));
+      setCurrentPage(1);
 
       alert('게시글이 작성되었습니다!');
     } catch (error) {
       console.error('게시글 작성 실패:', error);
-      alert(
-        `게시글 작성에 실패했습니다: ${error.message || '알 수 없는 오류'}`
-      );
+      alert(`게시글 작성에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+    } finally {
+      window.setTimeout(() => {
+        setIsSavingPost(false);
+      }, 800);
     }
   };
 
-  const handleLike = useCallback(async (postId) => {
-    const snapshot = prevPostsRef.current;
+  const updatePostInCache = useCallback((postId, updater) => {
+    setPostCacheByBoardId((prevCache) => {
+      let hasAnyChange = false;
+      const nextCache = { ...prevCache };
 
-    setPosts((currentPosts) =>
-      currentPosts.map((post) => {
-        if ((post.postId || post.id) === postId) {
-          return {
-            ...post,
-            isLiked: !post.isLiked,
-            likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
-          };
+      Object.keys(nextCache).forEach((boardId) => {
+        const postList = nextCache[boardId];
+        if (!Array.isArray(postList)) return;
+
+        let boardChanged = false;
+
+        const nextPostList = postList.map((post) => {
+          if (getPostId(post) !== postId) {
+            return post;
+          }
+
+          boardChanged = true;
+          hasAnyChange = true;
+          return updater(post);
+        });
+
+        if (boardChanged) {
+          nextCache[boardId] = nextPostList;
         }
-        return post;
-      })
-    );
+      });
+
+      return hasAnyChange ? nextCache : prevCache;
+    });
+  }, []);
+
+  const handleLike = useCallback(async (postId) => {
+    let previousLikeState = null;
+    Object.values(postCacheByBoardId).some((postList) => {
+      if (!Array.isArray(postList)) return false;
+
+      const matched = postList.find((post) => getPostId(post) === postId);
+      if (!matched) return false;
+
+      previousLikeState = {
+        isLiked: Boolean(matched.isLiked),
+        likeCount: Number(matched.likeCount || 0),
+      };
+      return true;
+    });
+
+    updatePostInCache(postId, (post) => ({
+      ...post,
+      isLiked: !post.isLiked,
+      likeCount: post.isLiked
+        ? Math.max((post.likeCount || 1) - 1, 0)
+        : (post.likeCount || 0) + 1,
+    }));
 
     try {
       await boardApi.toggleLike(postId);
     } catch (error) {
       console.error('좋아요 처리 실패:', error);
       alert('좋아요 처리에 실패했습니다.');
-      setPosts(snapshot);
+
+      if (previousLikeState) {
+        updatePostInCache(postId, (post) => ({
+          ...post,
+          isLiked: previousLikeState.isLiked,
+          likeCount: previousLikeState.likeCount,
+        }));
+      }
     }
-  }, []);
+  }, [postCacheByBoardId, updatePostInCache]);
 
   const handleBookmark = useCallback(async (postId) => {
-    const snapshot = prevPostsRef.current;
+    const snapshot = postCacheByBoardId;
 
-    setPosts((currentPosts) =>
-      currentPosts.map((post) => {
-        if ((post.postId || post.id) === postId) {
-          return {
-            ...post,
-            isBookmarked: !post.isBookmarked,
-            bookmarkCount: post.isBookmarked
-              ? (post.bookmarkCount || 1) - 1
-              : (post.bookmarkCount || 0) + 1,
-          };
-        }
-        return post;
-      })
-    );
+    updatePostInCache(postId, (post) => ({
+      ...post,
+      isBookmarked: !post.isBookmarked,
+      bookmarkCount: post.isBookmarked
+        ? Math.max((post.bookmarkCount || 1) - 1, 0)
+        : (post.bookmarkCount || 0) + 1,
+    }));
 
     try {
       await boardApi.toggleBookmark(postId);
     } catch (error) {
       console.error('북마크 처리 실패:', error);
       alert('북마크 처리에 실패했습니다.');
-      setPosts(snapshot);
+      setPostCacheByBoardId(snapshot);
     }
-  }, []);
+  }, [postCacheByBoardId, updatePostInCache]);
 
-  // 정렬 옵션 변경 핸들러 (페이지 리셋 포함)
   const handleSortChange = (option) => {
     setSortOption(option);
     setCurrentPage(1);
@@ -406,18 +635,16 @@ const Board = () => {
       return dateA - dateB;
     }
     if (sortOption === 'popular') {
-      return b.likeCount - a.likeCount;
+      return (b.likeCount || 0) - (a.likeCount || 0);
     }
     return 0;
   });
 
-  // 페이지네이션 계산
   const indexOfLastPost = currentPage * itemsPerPage;
   const indexOfFirstPost = indexOfLastPost - itemsPerPage;
   const currentPosts = sortedPosts.slice(indexOfFirstPost, indexOfLastPost);
   const totalPages = Math.ceil(sortedPosts.length / itemsPerPage);
 
-  // 페이지 변경 핸들러
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -437,9 +664,7 @@ const Board = () => {
         <header className={styles.boardHeader}>
           <h1 className={styles.boardTitle}>게시판</h1>
         </header>
-        <p className={styles.emptyMessage}>
-          게시판을 찾을 수 없습니다. (경로: {currentPath})
-        </p>
+        <p className={styles.emptyMessage}>게시판을 찾을 수 없습니다. (경로: {currentSegment})</p>
       </div>
     );
   }
@@ -452,19 +677,22 @@ const Board = () => {
 
       <SearchBar onSearch={handleSearch} />
 
-      {!Array.isArray(currentBoardId) && (
-        <CategoryTabs
-          activeTab={activeSubBoard}
-          onTabChange={handleTabChange}
-          tabs={subBoardTabs}
-          onCreateSubBoard={handleOpenSubBoardModal}
-        />
-      )}
+      <CategoryTabs
+        activeTab={activeSubBoard}
+        onTabChange={handleTabChange}
+        tabs={subBoardTabs}
+        onCreateSubBoard={handleOpenSubBoardModal}
+        canCreateSubBoard={canCreateSubBoard}
+        canDeleteSubBoard={canDeleteSubBoard}
+        deletingTabId={deletingSubBoardId}
+        onDeleteSubBoard={handleDeleteSubBoard}
+      />
 
       <BoardActions
         sortOption={sortOption}
         onSortChange={handleSortChange}
         onWrite={handleOpenModal}
+        resultCount={sortedPosts.length}
       />
 
       <div className={styles.postsContainer}>
@@ -473,7 +701,7 @@ const Board = () => {
         ) : currentPosts.length > 0 ? (
           currentPosts.map((post) => (
             <PostItem
-              key={post.postId || post.id}
+              key={getPostId(post)}
               post={post}
               onLike={handleLike}
               onBookmark={handleBookmark}
@@ -484,7 +712,6 @@ const Board = () => {
         )}
       </div>
 
-      {/* 페이지네이션 컨트롤 */}
       {!loading && sortedPosts.length > 0 && (
         <div className={styles.pagination}>
           <button
@@ -499,9 +726,7 @@ const Board = () => {
             <button
               key={page}
               onClick={() => handlePageChange(page)}
-              className={`${styles.pageButton} ${
-                currentPage === page ? styles.active : ''
-              }`}
+              className={`${styles.pageButton} ${currentPage === page ? styles.active : ''}`}
             >
               {page}
             </button>
@@ -523,11 +748,17 @@ const Board = () => {
           setTitle={setTitle}
           content={content}
           setContent={setContent}
+          isAnonymous={isAnonymousPost}
+          setIsAnonymous={setIsAnonymousPost}
+          boardOptions={subBoardTabs.filter((tab) => tab.id !== ALL_TAB_ID)}
+          selectedBoardId={writeBoardId}
+          onBoardChange={setWriteBoardId}
           selectedFiles={selectedFiles}
           onFileChange={handleFileChange}
           onRemoveFile={handleRemoveFile}
           onSave={handleSave}
           onClose={handleCloseModal}
+          isSaving={isSavingPost}
         />
       )}
 
@@ -537,6 +768,7 @@ const Board = () => {
           onChange={setSubBoardName}
           onSave={handleCreateSubBoard}
           onClose={handleCloseSubBoardModal}
+          isSaving={isCreatingSubBoard}
         />
       )}
     </div>

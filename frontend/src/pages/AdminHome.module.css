@@ -87,6 +87,12 @@
 	gap: 10px;
 }
 
+.activityList {
+	max-height: 360px;
+	overflow-y: auto;
+	padding-right: 4px;
+}
+
 .listItem {
 	display: flex;
 	justify-content: space-between;
@@ -131,6 +137,41 @@
 	font-size: 12px;
 }
 
+.rolePresident {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.roleManager {
+	background: #dcfce7;
+	color: #15803d;
+}
+
+.roleLeader {
+	background: #fef3c7;
+	color: #b45309;
+}
+
+.roleNormal {
+	background: #f3f4f6;
+	color: #4b5563;
+}
+
+.statusActive {
+	background: #dcfce7;
+	color: #15803d;
+}
+
+.statusInactive {
+	background: #f3f4f6;
+	color: #4b5563;
+}
+
+.statusPending {
+	background: #fef3c7;
+	color: #b45309;
+}
+
 .actionPrimary,
 .actionSecondary,
 .quickActionButton {
@@ -152,6 +193,38 @@
 .activityMessage {
 	margin: 0;
 	font-size: 14px;
+}
+
+.memberTableWrap {
+	max-height: 360px;
+	overflow-y: auto;
+	overflow-x: auto;
+	border: 1px solid #f3f4f6;
+	border-radius: 10px;
+}
+
+.memberTable {
+	width: 100%;
+	min-width: 420px;
+	border-collapse: collapse;
+}
+
+.memberTable th,
+.memberTable td {
+	padding: 10px 12px;
+	text-align: left;
+	border-bottom: 1px solid #f3f4f6;
+	font-size: 13px;
+}
+
+.memberTable th {
+	background: #f9fafb;
+	color: #6b7280;
+	font-weight: 600;
+}
+
+.memberTable tbody tr:last-child td {
+	border-bottom: none;
 }
 
 @media (min-width: 768px) {

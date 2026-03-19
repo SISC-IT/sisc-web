@@ -3,9 +3,11 @@ import styles from './BoardActions.module.css';
 import PlusIcon from '../../assets/board_plus.svg';
 import DropdownArrowIcon from '../../assets/boardSelectArrow.svg';
 
-const BoardActions = ({ sortOption, onSortChange, onWrite }) => {
+const BoardActions = ({ sortOption, onSortChange, onWrite, resultCount = 0 }) => {
   return (
     <div className={styles.boardActions}>
+      <div className={styles.resultCount}>{resultCount}건의 검색결과</div>
+
       <div className={styles.selectWrapper}>
         <select
           className={styles.sortSelect}

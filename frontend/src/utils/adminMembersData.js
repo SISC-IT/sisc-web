@@ -35,10 +35,12 @@ export const changeAdminMemberStatus = async ({ userId, status }) => {
   });
 };
 
-// 회원을 선배(SENIOR)로 전환
-export const promoteAdminMemberSenior = async ({ userId }) => {
+// 회원 신분(grade) 변경
+export const changeAdminMemberGrade = async ({ userId, grade }) => {
   ensureUserId(userId);
-  await api.patch(`/api/admin/users/${userId}/senior`);
+  await api.patch(`/api/admin/users/${userId}/grade`, null, {
+    params: { grade },
+  });
 };
 
 // 회원 강제 삭제

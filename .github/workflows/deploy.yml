@@ -157,7 +157,7 @@ jobs:
           
           # 필요하다면 풀 사이즈 변수도 추가
           # echo "DB_POOL_MAX=30" >> .env
-          # echo "STOCK_POOL_MAX=10" >> .envx
+          # echo "STOCK_POOL_MAX=10" >> .env
 
       - name: 파일 전송 (docker-compose, .env to EC2)
         uses: appleboy/scp-action@master
@@ -179,13 +179,18 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+            # 필수 폴더 생성 및 권한 설정 (최초 1회 혹은 누락 대비)
+            # sudo mkdir -p /mnt/storage/pg_ai_data /mnt/storage/logs /mnt/storage/uploads ./data/postgres
+            # sudo chown -R 70:70 /mnt/storage/pg_ai_data ./data/postgres # DB 전용
+            # sudo chmod -R 777 /mnt/storage/logs /mnt/storage/uploads    # 앱 공용
+            
             cd ~/app/sisc-web
 
             # GHCR 로그인 (백/프론트 둘 다 같은 레지스트리 사용)
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
             # 실행 
-            docker compose pull api web redis npm                    # 최신 이미지 받기 (AI 제외하고 backend, frontend만)
-            docker compose up -d --remove-orphans api web redis npm  # 컨테이너 재기동 (AI 제외하고 backend, frontend만)
+            docker compose pull api web redis npm                       # 최신 이미지 받기 (AI 제외하고 backend, frontend만)
+            docker compose up -d --remove-orphans api web redis npm db  # 컨테이너 재기동 (AI 제외하고 backend, frontend만)
             docker image prune -f
             
             # 백엔드 헬스체크 (서비스 이름이 api일 때)

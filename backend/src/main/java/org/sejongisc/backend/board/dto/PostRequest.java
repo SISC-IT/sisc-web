@@ -29,5 +29,8 @@ public class PostRequest {
   @NotBlank(message = "내용은 필수 항목입니다.")
   private String content;
 
+  @Builder.Default
+  private boolean anonymous = false;
+
   private List<MultipartFile> files;
 }
