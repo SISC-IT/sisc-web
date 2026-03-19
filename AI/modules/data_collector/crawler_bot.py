@@ -18,14 +18,14 @@ if project_root not in sys.path:
 # [모듈 임포트] 
 # -----------------------------------------------------------
 from AI.libs.database.ticker_loader import load_all_tickers_from_db
-from AI.modules.data_collector.market_data import MarketDataCollector
-from AI.modules.data_collector.stock_info_collector import StockInfoCollector
-from AI.modules.data_collector.company_fundamentals_data import FundamentalsDataCollector
-from AI.modules.data_collector.macro_data import MacroDataCollector
-from AI.modules.data_collector.crypto_data import CryptoDataCollector
-from AI.modules.data_collector.event_data import EventDataCollector
-from AI.modules.data_collector.market_breadth_data import MarketBreadthCollector
-from AI.modules.data_collector.market_breadth_stats import MarketBreadthStatsCollector
+from AI.modules.data_collector.components.market_data import MarketDataCollector
+from AI.modules.data_collector.components.stock_info_collector import StockInfoCollector
+from AI.modules.data_collector.components.company_fundamentals_data import FundamentalsDataCollector
+from AI.modules.data_collector.components.macro_data import MacroDataCollector
+from AI.modules.data_collector.components.crypto_data import CryptoDataCollector
+from AI.modules.data_collector.components.event_data import EventDataCollector
+from AI.modules.data_collector.components.market_breadth_data import MarketBreadthCollector
+from AI.modules.data_collector.components.market_breadth_stats import MarketBreadthStatsCollector
 
 def get_stock_tickers(db_name="db"):
     """

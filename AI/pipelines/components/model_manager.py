@@ -72,12 +72,17 @@ def initialize_models(loader: DataLoader, strategy_config: dict, feature_columns
                                 os.remove(temp_h5_path)
                     else:
                         raise load_e
-                
-                # 4) 스케일러 파일 로딩
+                # 4) 스케일러 파일 로딩 (방어적 코드 적용)
                 if os.path.exists(scaler_path):
-                    wrapper.load_scaler(scaler_path)
+                    # 💡 [핵심 수정] 래퍼 객체에 'load_scaler' 메서드가 구현되어 있는지 확인 (Duck Typing)
+                    if hasattr(wrapper, 'load_scaler') and callable(getattr(wrapper, 'load_scaler')):
+                        wrapper.load_scaler(scaler_path)
+                        print(f"✅ [{model_name.upper()}] 전용 스케일러 로드 완료")
+                    else:
+                        # 메서드가 없는 모델(예: PatchTST 등 내부 정규화를 쓰는 경우)은 안전하게 패스
+                        print(f"ℹ️ [{model_name.upper()}] load_scaler 메서드가 필요 없는 모델입니다. (생략)")
                 else:
-                    print(f"⚠️ [{model_name.upper()}] 스케일러 파일이 없습니다. 예측 시 오작동할 수 있습니다.")
+                    print(f"⚠️ [{model_name.upper()}] 스케일러 파일이 없습니다. 필요 시 오작동할 수 있습니다.")
 
                 # 정상 로드된 래퍼 객체를 딕셔너리에 보관
                 model_wrappers[f"{model_name}_v1"] = wrapper

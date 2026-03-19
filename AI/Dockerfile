@@ -13,4 +13,4 @@ COPY . /app/AI
 ENV PYTHONPATH=/app
 
 # 4. 실행 명령어 (데이터 수집 -> 분석 루틴 순차 실행)
-CMD ["/bin/sh", "-c", "python AI/modules/data_collector/run.py && python AI/pipelines/daily_routine.py"]
+CMD ["/bin/sh", "-c", "python AI/modules/data_collector/crawler_bot.py && python AI/pipelines/daily_routine.py"]

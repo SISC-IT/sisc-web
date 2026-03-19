@@ -132,6 +132,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
             repo.save_executions_to_db(pd.DataFrame(execution_results))
         except Exception as db_e:
             print(f"   [Error] 실행 내역 저장 실패: {db_e}")
+        return
             
     # [Step 7] 포트폴리오 자산 마감 및 정산 (Delegated)
     settle_portfolio(repo, target_tickers, data_map, exec_date_str)
