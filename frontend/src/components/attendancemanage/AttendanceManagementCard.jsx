@@ -42,6 +42,25 @@ const ATTENDANCE_MENU_ORDER = [
   'PENDING',
 ];
 
+const getRoleDisplayLabel = (role) => {
+  const roleText = String(role || '').trim();
+  const normalized = roleText.toUpperCase();
+
+  if (normalized.includes('OWNER') || roleText.includes('세션 생성자')) {
+    return '소유자';
+  }
+
+  if (normalized.includes('MANAGE') || normalized.includes('ADMIN')) {
+    return '관리자';
+  }
+
+  if (normalized.includes('MEMBER') || normalized.includes('USER')) {
+    return '팀원';
+  }
+
+  return roleText || '팀원';
+};
+
 const EMPTY_ATTENDANCE_DATA = {
   sessionTitle: '',
   rounds: [],
@@ -387,7 +406,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center' }}>
+              <th className={styles.checkboxHeader}>
                 <input
                   type="checkbox"
                   onChange={toggleAllUsers}
@@ -397,20 +416,11 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
                   }
                 />
               </th>
-              <th style={{ width: '100px' }}>이름</th>
-              <th style={{ width: '100px' }}>역할</th>
-              <th style={{ width: '140px' }}>학번</th>
-              {attendanceData.rounds.map((round, index) => (
-                <th
-                  key={round.roundId}
-                  style={{
-                    minWidth: '110px',
-                    width:
-                      index === attendanceData.rounds.length - 1
-                        ? 'auto'
-                        : '110px',
-                  }}
-                >
+              <th className={styles.nameHeader}>이름</th>
+              <th className={styles.roleHeader}>역할</th>
+              <th className={styles.studentIdHeader}>학번</th>
+              {attendanceData.rounds.map((round) => (
+                <th key={round.roundId} className={styles.roundHeader}>
                   {round.roundNumber}회차
                 </th>
               ))}
@@ -425,7 +435,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
                     selectedUserIds.has(user.userId) ? styles.selectedRow : ''
                   }
                 >
-                  <td style={{ textAlign: 'center' }}>
+                  <td className={styles.checkboxCell}>
                     <input
                       type="checkbox"
                       checked={selectedUserIds.has(user.userId)}
@@ -433,7 +443,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
                     />
                   </td>
                   <td>{user.userName}</td>
-                  <td>{user.role}</td>
+                  <td>{getRoleDisplayLabel(user.role)}</td>
                   <td>{user.studentId}</td>
                   {user.attendances.map((att) => {
                     const statusClass =

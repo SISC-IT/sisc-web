@@ -2,6 +2,7 @@
   color: #171717;
   padding: 16px;
   width: 100%;
+  min-width: 0;
   max-width: 1600px;
   margin: 0 auto;
   box-sizing: border-box;
@@ -20,6 +21,7 @@
 .cardLayout {
   display: grid;
   width: 100%;
+  min-width: 0;
   align-items: start;
   padding: 24px 0px;
   gap: 18px;
@@ -34,16 +36,20 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  min-width: 0;
 }
 
 .settings {
   grid-area: settings;
+  min-width: 0;
 }
 .roster {
   grid-area: roster;
+  min-width: 0;
 }
 .session {
   grid-area: session;
+  min-width: 0;
 }
 
 /* 공통 컴포넌트 디자인 */
@@ -402,6 +408,7 @@ input:focus {
   max-width: 1500px;
   padding: 20px 10px;
   padding-bottom: 220px;
+  overflow-x: hidden;
 }
 
 .mainTitle {

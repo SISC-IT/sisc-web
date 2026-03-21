@@ -115,12 +115,12 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
 
   return (
     <div className={styles.sessionManagementCardContainer}>
-      <div className={commonStyles.header}>
+      <div className={`${commonStyles.header} ${styles.sessionHeader}`}>
         <div className={styles.titleArea}>
           <img src={fileIcon} alt="세션 아이콘" className={styles.titleIcon} />
           <h1>세션 관리</h1>
         </div>
-        <div className={commonStyles.buttonGroup}>
+        <div className={`${commonStyles.buttonGroup} ${styles.headerControls}`}>
           <div className={styles.selectGroup}>
             <select
               className={styles.sessionSelect}
