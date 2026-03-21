@@ -249,6 +249,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     const toastId = toast(
       ({ closeToast }) => (
         <ConfirmationToast
+          closeToast={closeToast}
           onConfirm={async () => {
             const result = await onConfirm(selectedSessionId, Array.from(selectedUserIds));
             
@@ -297,6 +298,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     const toastId = toast(
       ({ closeToast }) => (
         <ConfirmationToast
+          closeToast={closeToast}
           onConfirm={async () => {
             const result = await onConfirm(selectedSessionId, Array.from(selectedUserIds));
             
