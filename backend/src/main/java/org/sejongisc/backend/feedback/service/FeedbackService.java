@@ -21,7 +21,7 @@ public class FeedbackService {
   private final FeedbackRepository feedbackRepository;
 
   @Transactional
-  public void createFeedback(FeedbackCreateRequest request) {
+  public void createFeedback(UUID userId, FeedbackCreateRequest request) {
     String content = request.content();
     if (content == null || content.isBlank()) {
       throw new CustomException(ErrorCode.FEEDBACK_CONTENT_REQUIRED);
