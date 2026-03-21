@@ -634,6 +634,32 @@
   overflow-y: auto;
 }
 
+.paginationBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pageButton {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid #d4d7de;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.activePageButton {
+  border-color: #5a8fd8;
+  background: #eaf3ff;
+  color: #2f6fc1;
+}
+
 .table {
   width: 100%;
   min-width: max(640px, 100%);

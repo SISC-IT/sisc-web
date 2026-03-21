@@ -1,7 +1,7 @@
 import styles from './AttendanceManagementCard.module.css';
 import { toast } from 'react-toastify';
 import { useAttendance } from '../../contexts/AttendanceContext';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getUsers } from '../../utils/attendanceManage';
 import fileIcon from '../../assets/file-icon.svg';
 import addUserIcon from '../../assets/add-user-icon.svg';
@@ -69,6 +69,20 @@ const EMPTY_ATTENDANCE_DATA = {
   userRows: [],
 };
 
+const getRoleSortPriority = (role) => {
+  const normalized = String(role || '').trim().toUpperCase();
+
+  if (normalized.includes('OWNER') || String(role || '').includes('세션 생성자')) {
+    return 0;
+  }
+
+  if (normalized.includes('MANAGE')) {
+    return 1;
+  }
+
+  return 2;
+};
+
 const AttendanceStatusDropdown = ({
   value,
   statusClass,
@@ -116,6 +130,7 @@ const AttendanceStatusDropdown = ({
 };
 
 const AttendanceManagementCard = ({ styles: commonStyles }) => {
+  const USERS_PER_PAGE = 10;
   const {
     selectedSessionId,
     handleAttendanceChange,
@@ -135,8 +150,29 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
   const [activeToastId, setActiveToastId] = useState(null);
   const [openDropdownKey, setOpenDropdownKey] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const cardRef = useRef(null);
   const fetchRequestIdRef = useRef(0);
+
+  const sortedUserRows = useMemo(() => {
+    return attendanceData.userRows
+      .map((user, index) => ({ user, index }))
+      .sort((a, b) => {
+        const priorityDiff =
+          getRoleSortPriority(a.user.role) - getRoleSortPriority(b.user.role);
+        if (priorityDiff !== 0) return priorityDiff;
+        return a.index - b.index;
+      })
+      .map((item) => item.user);
+  }, [attendanceData.userRows]);
+
+  const totalUsers = sortedUserRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalUsers / USERS_PER_PAGE));
+  const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+  const paginatedUserRows = sortedUserRows.slice(
+    startIndex,
+    startIndex + USERS_PER_PAGE
+  );
 
   const getSelectedUsers = () =>
     attendanceData.userRows.filter((user) => selectedUserIds.has(user.userId));
@@ -162,6 +198,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
 
     setAttendanceData(EMPTY_ATTENDANCE_DATA);
     setSelectedUserIds(new Set());
+    setCurrentPage(1);
 
     const fetchAttendanceSheet = async () => {
       if (!selectedSessionId) {
@@ -198,6 +235,12 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const confirmAction = (message, onConfirm) => {
     if (selectedUserIds.size === 0) return alert('대상을 선택해주세요.');
@@ -429,8 +472,8 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
             </tr>
           </thead>
           <tbody>
-            {attendanceData.userRows.length > 0 ? (
-              attendanceData.userRows.map((user) => (
+            {paginatedUserRows.length > 0 ? (
+              paginatedUserRows.map((user) => (
                 <tr
                   key={user.userId}
                   className={
@@ -501,6 +544,26 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
           </tbody>
         </table>
       </div>
+
+      {attendanceData.userRows.length > 0 && totalPages > 1 && (
+        <div className={styles.paginationBar}>
+          {Array.from({ length: totalPages }, (_, index) => {
+            const pageNumber = index + 1;
+            return (
+              <button
+                key={pageNumber}
+                type="button"
+                className={`${styles.pageButton} ${
+                  currentPage === pageNumber ? styles.activePageButton : ''
+                }`}
+                onClick={() => setCurrentPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
