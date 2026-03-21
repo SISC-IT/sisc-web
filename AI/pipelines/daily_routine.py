@@ -45,7 +45,8 @@ from AI.pipelines.components.portfolio_settler import settle_portfolio
 
 
 def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation", 
-                       enable_xai: bool = True, target_date: str = None, active_models: list = None):
+                       enable_xai: bool = True, target_date: str = None, active_models: list = None,
+                       repo: PortfolioRepository = None):
     """
     메인 루틴: 스크리너 -> 모델 초기화 -> 전처리 -> 앙상블 비중 산출 -> 주문 집행 -> 정산
     """
@@ -55,7 +56,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
     exec_date_str = target_date if target_date else datetime.now().strftime("%Y-%m-%d")
     print(f"\n[{exec_date_str}] === AI Daily Portfolio Routine (Mode: {mode.upper()}) ===")
     
-    repo = PortfolioRepository(db_name="db")
+    repo = repo if repo is not None else PortfolioRepository(db_name="db")
 
     # [Step 0] 스크리닝 (특정 종목이 주어지지 않은 경우 동적 스크리닝 진행)
     if not target_tickers:
@@ -67,19 +68,20 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
 
     # [Step 1] 전략 및 피처 설정
     strategy_config = {"seq_len": 60, "top_k": 3, "buy_threshold": 0.70}
-    feature_columns = [
-        'log_return', 'open_ratio', 'high_ratio', 'low_ratio', 'vol_change',
-        'ma5_ratio', 'ma20_ratio', 'ma60_ratio', 'rsi', 'macd_ratio', 'bb_position',
-        'week_ma20_ratio', 'week_rsi', 'week_bb_pos', 'week_vol_change',
-        'month_ma12_ratio', 'month_rsi'
-    ]
+    feature_columns = []
 
     # [Step 2] 다중 모델 객체 로드 및 초기화
     loader = DataLoader()
     model_wrappers = initialize_models(loader, strategy_config, feature_columns, active_models)
 
     # [Step 3] 데이터 조회 및 전처리 수행
-    data_map = load_and_preprocess_data(loader, target_tickers, exec_date_str, strategy_config)
+    data_map = load_and_preprocess_data(
+        loader,
+        target_tickers,
+        exec_date_str,
+        strategy_config,
+        model_wrappers,
+    )
     if not data_map:
         print("⚠️ 오늘(해당일) 처리할 수 있는 정상 데이터가 없습니다. 루틴을 종료합니다.")
         return

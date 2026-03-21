@@ -14,6 +14,8 @@ from .architecture import build_transformer_model
 
 
 class TransformerSignalModel(BaseSignalModel):
+    supports_model_load_before_build = True
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.model_name = "transformer"
@@ -26,7 +28,16 @@ class TransformerSignalModel(BaseSignalModel):
             raise FileNotFoundError(f"Scaler file not found: {filepath}")
         with open(filepath, "rb") as f:
             self.scaler = pickle.load(f)
-        print(f"[Transformer] Scaler loaded: {filepath}")
+
+        scaler_features = getattr(self.scaler, "feature_names_in_", None)
+        if scaler_features is not None and len(scaler_features) > 0:
+            self.features = list(scaler_features)
+            #print(f"[Transformer] Feature schema restored from scaler: {self.features}")
+        elif hasattr(self.scaler, "n_features_in_") and len(self.features) != int(self.scaler.n_features_in_):
+            self.features = list(self.features[: int(self.scaler.n_features_in_)])
+            #print("[Transformer] Feature schema inferred from scaler width: "f"{len(self.features)} columns")
+
+        #print(f"[Transformer] Scaler loaded: {filepath}")
 
     def build(self, input_shape: tuple):
         if len(input_shape) != 2:
@@ -104,6 +115,12 @@ class TransformerSignalModel(BaseSignalModel):
             raise ValueError("features is empty.")
         if self.scaler is None:
             raise ValueError("Scaler is not loaded. Call load_scaler() first.")
+        missing_features = [col for col in self.features if col not in df.columns]
+        if missing_features:
+            raise ValueError(
+                "Missing required features for transformer inference: "
+                + ", ".join(missing_features)
+            )
 
         data = df[self.features].iloc[-self.seq_len:].values
         scaled_data = self.scaler.transform(data)
@@ -128,20 +145,37 @@ class TransformerSignalModel(BaseSignalModel):
     def load(self, filepath: str):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Model file not found: {filepath}")
-        if self.model is None:
-            raise ValueError("load() requires build() to be called first.")
+        if zipfile.is_zipfile(filepath):
+            self.model = tf.keras.models.load_model(filepath, compile=False)
+            print(f"[Transformer] Model loaded from Keras archive: {filepath}")
+            return
 
         # Some legacy checkpoints were saved as HDF5 but named with a .keras extension.
-        if zipfile.is_zipfile(filepath):
-            self.model = tf.keras.models.load_model(filepath)
-        else:
-            with tempfile.NamedTemporaryFile(suffix=".weights.h5", delete=False) as temp_file:
-                temp_path = temp_file.name
-            try:
-                shutil.copyfile(filepath, temp_path)
-                self.model.load_weights(temp_path)
-            finally:
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
+        with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as temp_file:
+            temp_path = temp_file.name
 
-        print(f"[Transformer] Model loaded: {filepath}")
+        try:
+            shutil.copyfile(filepath, temp_path)
+
+            try:
+                self.model = tf.keras.models.load_model(temp_path, compile=False)
+                print(f"[Transformer] Model loaded from legacy HDF5 checkpoint: {filepath}")
+                return
+            except Exception as full_model_error:
+                if self.model is None:
+                    raise ValueError(
+                        "load() requires build() before loading a weights-only checkpoint."
+                    ) from full_model_error
+
+                try:
+                    self.model.load_weights(temp_path)
+                    print(f"[Transformer] Weights loaded from legacy checkpoint: {filepath}")
+                    return
+                except Exception as weights_error:
+                    raise ValueError(
+                        "Failed to load transformer checkpoint as either a full Keras model "
+                        "or a weights-only checkpoint."
+                    ) from weights_error
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
