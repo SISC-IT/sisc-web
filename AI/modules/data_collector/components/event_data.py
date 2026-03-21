@@ -53,7 +53,7 @@ class EventDataCollector:
             "PCE": {
                 "release_id": 54,
                 "series_id": "PCEPI",
-                "description": "Personal Income and Outlays",
+                "description": "Personal Consumption Expenditures (PCE)",
             },
         }
 
@@ -211,6 +211,7 @@ class EventDataCollector:
                 events.append(
                     {
                         "date": event_date.isoformat(),
+                        "event_type": "FOMC",
                         "event": "FOMC Rate Decision",
                         "country": "US",
                         "estimate": None,
@@ -232,6 +233,7 @@ class EventDataCollector:
                 events.append(
                     {
                         "date": release_date,
+                        "event_type": event_type,
                         "event": config["description"],
                         "country": "US",
                         "estimate": None,
@@ -271,8 +273,14 @@ class EventDataCollector:
 
         api_key = self._get_fmp_api_key()
         if not api_key:
-            print("   [Error] FMP_API_KEY가 설정되지 않았습니다.")
-            return []
+            print("   [Error] FMP_API_KEY가 설정되지 않았습니다. 공식 대체 소스를 사용합니다.")
+            fallback_events = self.fetch_macro_from_official_fallback(start_date, end_date)
+            if fallback_events:
+                print(
+                    f"   [Fallback] FRED/Federal Reserve 공식 소스로 "
+                    f"{len(fallback_events)}건 수집했습니다."
+                )
+            return fallback_events
 
         last_status = None
         for base_url in self.macro_urls:
@@ -353,11 +361,12 @@ class EventDataCollector:
             estimate_val = item.get("estimate")
             actual_val = item.get("actual")
 
-            detected_type = None
-            for key, keywords in target_keywords.items():
-                if any(keyword in evt_name for keyword in keywords):
-                    detected_type = key
-                    break
+            detected_type = item.get("event_type")
+            if not detected_type:
+                for key, keywords in target_keywords.items():
+                    if any(keyword in evt_name for keyword in keywords):
+                        detected_type = key
+                        break
 
             if detected_type and (evt_date, detected_type) not in seen:
                 data_to_insert.append(
