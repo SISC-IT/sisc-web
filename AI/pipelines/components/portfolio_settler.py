@@ -57,4 +57,4 @@ def settle_portfolio(repo: PortfolioRepository, target_tickers: list, data_map: 
     if daily_positions:
         repo.save_portfolio_positions(exec_date_str, daily_positions)
         
-    print(f"   => [마감 완료] 총자산: ₩{total_asset:,.0f} | 총 수익률: {return_rate*100:.2f}%")
+    print(f"   => [마감 완료] 총자산: ${total_asset:,.0f} | 총 수익률: {return_rate*100:.2f}%")

@@ -25,7 +25,7 @@ def execute_trades(repo: PortfolioRepository, target_tickers: list, data_map: di
     TOTAL_BUDGET = repo.get_latest_total_asset(target_date=exec_date_str, default_asset=10000)
     MAX_WEIGHT = 0.10  # 종목당 최대 투자 비중 (10%)
     
-    print(f"   -> [동적 예산] 전일 기준 총자산: ₩{TOTAL_BUDGET:,.0f} | 종목당 최대 한도: ₩{TOTAL_BUDGET * MAX_WEIGHT:,.0f}")
+    print(f"   -> [동적 예산] 전일 기준 총자산: ${TOTAL_BUDGET:,.0f} | 종목당 최대 한도: ${TOTAL_BUDGET * MAX_WEIGHT:,.0f}")
     
     for ticker in target_tickers:
         try:

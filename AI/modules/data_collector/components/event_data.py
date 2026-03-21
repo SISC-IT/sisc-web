@@ -10,6 +10,7 @@ from typing import List, Optional
 import pandas as pd
 import requests
 import yfinance as yf
+from bs4 import BeautifulSoup
 from psycopg2.extras import execute_values
 
 # 프로젝트 루트 경로 설정
@@ -22,6 +23,7 @@ from AI.libs.database.connection import get_db_conn
 
 
 FMP_API_KEY = os.getenv("FMP_API_KEY", "your_fmp_api_key_here")
+FRED_API_KEY = os.getenv("FRED_API_KEY", "").strip()
 
 
 class EventDataCollector:
@@ -37,6 +39,23 @@ class EventDataCollector:
             "https://financialmodelingprep.com/stable/economic-calendar",
             "https://financialmodelingprep.com/api/v3/economic_calendar",
         ]
+        self.fred_release_map = {
+            "CPI": {
+                "release_id": 10,
+                "series_id": "CPIAUCSL",
+                "description": "Consumer Price Index",
+            },
+            "GDP": {
+                "release_id": 53,
+                "series_id": "GDP",
+                "description": "Gross Domestic Product",
+            },
+            "PCE": {
+                "release_id": 54,
+                "series_id": "PCEPI",
+                "description": "Personal Income and Outlays",
+            },
+        }
 
     def _get_fmp_api_key(self) -> Optional[str]:
         """실행 시점 기준으로 FMP API 키를 재확인합니다."""
@@ -62,6 +81,168 @@ class EventDataCollector:
             return json.dumps(payload[:2], ensure_ascii=False)
 
         return response.text[:300].strip()
+
+    def _get_fred_api_key(self) -> Optional[str]:
+        api_key = os.getenv("FRED_API_KEY", FRED_API_KEY).strip()
+        return api_key or None
+
+    def _fetch_fred_release_dates(
+        self, release_id: int, start_date: str, end_date: str
+    ) -> List[str]:
+        api_key = self._get_fred_api_key()
+        if not api_key:
+            return []
+
+        try:
+            response = requests.get(
+                "https://api.stlouisfed.org/fred/release/dates",
+                params={
+                    "api_key": api_key,
+                    "file_type": "json",
+                    "release_id": release_id,
+                    "realtime_start": start_date,
+                    "realtime_end": end_date,
+                    "include_release_dates_with_no_data": "true",
+                    "sort_order": "asc",
+                    "limit": 1000,
+                },
+                timeout=15,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except Exception as e:
+            print(f"   [Warning] FRED release dates 조회 실패 (release_id={release_id}): {e}")
+            return []
+
+        return [item["date"] for item in payload.get("release_dates", [])]
+
+    def _fetch_fred_actual_value(self, series_id: str, release_date: str) -> Optional[float]:
+        if release_date > date.today().isoformat():
+            return None
+
+        api_key = self._get_fred_api_key()
+        if not api_key:
+            return None
+
+        try:
+            response = requests.get(
+                "https://api.stlouisfed.org/fred/series/observations",
+                params={
+                    "api_key": api_key,
+                    "file_type": "json",
+                    "series_id": series_id,
+                    "realtime_start": release_date,
+                    "realtime_end": release_date,
+                    "sort_order": "desc",
+                    "limit": 5,
+                },
+                timeout=15,
+            )
+            response.raise_for_status()
+            observations = response.json().get("observations", [])
+        except Exception as e:
+            print(f"   [Warning] FRED actual 조회 실패 ({series_id}, {release_date}): {e}")
+            return None
+
+        for item in observations:
+            value = item.get("value")
+            if value not in (None, ".", ""):
+                try:
+                    return float(value)
+                except ValueError:
+                    return None
+        return None
+
+    def _fetch_fomc_events(self, start_date: str, end_date: str) -> List[dict]:
+        try:
+            response = requests.get(
+                "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                timeout=15,
+            )
+            response.raise_for_status()
+        except Exception as e:
+            print(f"   [Warning] FOMC 일정 조회 실패: {e}")
+            return []
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+        events = []
+
+        for heading in soup.find_all("h4"):
+            heading_text = " ".join(heading.get_text(" ", strip=True).split())
+            if "FOMC Meetings" not in heading_text:
+                continue
+
+            try:
+                year = int(heading_text.split()[0])
+            except (ValueError, IndexError):
+                continue
+
+            panel = heading.find_parent(class_="panel")
+            if panel is None:
+                continue
+
+            for row in panel.find_all("div", class_="fomc-meeting"):
+                row_text = " ".join(row.get_text(" ", strip=True).split())
+                parts = row_text.split()
+                if len(parts) < 2:
+                    continue
+
+                month_label = parts[0]
+                date_token = parts[1].replace("*", "")
+                if "-" not in date_token:
+                    continue
+
+                _, end_day = date_token.split("-", 1)
+                month_abbr = month_label.split("/")[0][:3]
+
+                try:
+                    event_date = datetime.strptime(
+                        f"{year}-{month_abbr}-{end_day}", "%Y-%b-%d"
+                    ).date()
+                except ValueError:
+                    continue
+
+                if not (start_dt <= event_date <= end_dt):
+                    continue
+
+                actual = self._fetch_fred_actual_value("DFEDTARU", event_date.isoformat())
+                events.append(
+                    {
+                        "date": event_date.isoformat(),
+                        "event": "FOMC Rate Decision",
+                        "country": "US",
+                        "estimate": None,
+                        "actual": actual,
+                    }
+                )
+
+        return events
+
+    def fetch_macro_from_official_fallback(self, start_date: str, end_date: str) -> List[dict]:
+        """FMP 사용 불가 시 FRED와 Federal Reserve 공식 소스로 대체 수집합니다."""
+        events = []
+
+        for event_type, config in self.fred_release_map.items():
+            release_dates = self._fetch_fred_release_dates(
+                config["release_id"], start_date, end_date
+            )
+            for release_date in release_dates:
+                events.append(
+                    {
+                        "date": release_date,
+                        "event": config["description"],
+                        "country": "US",
+                        "estimate": None,
+                        "actual": self._fetch_fred_actual_value(
+                            config["series_id"], release_date
+                        ),
+                    }
+                )
+
+        events.extend(self._fetch_fomc_events(start_date, end_date))
+        return events
 
     def _has_sufficient_macro_data(self) -> bool:
         """DB에 미래 macro 이벤트가 충분하면 불필요한 호출을 줄입니다."""
@@ -120,6 +301,14 @@ class EventDataCollector:
                 "   [Hint] 현재 FMP 구독 플랜 또는 엔드포인트 권한으로 "
                 "economic calendar 접근이 불가합니다."
             )
+            fallback_events = self.fetch_macro_from_official_fallback(start_date, end_date)
+            if fallback_events:
+                print(
+                    f"   [Fallback] FRED/Federal Reserve 공식 소스로 "
+                    f"{len(fallback_events)}건 수집했습니다."
+                )
+                return fallback_events
+            print("   [Fallback] 공식 대체 소스에서도 이벤트를 가져오지 못했습니다.")
         return []
 
     def update_macro_events(self, force_update: bool = False):
