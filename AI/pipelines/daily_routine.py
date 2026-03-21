@@ -143,7 +143,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
             print(f"   [Error] 실행 내역 저장 실패: {db_e}")
             return
 
-    settle_portfolio(repo, target_tickers, data_map, exec_date_str, mode=mode)
+    settle_portfolio(repo, target_tickers, data_map, exec_date_str)
     
     print("=== Daily Routine Finished ===\n")
 

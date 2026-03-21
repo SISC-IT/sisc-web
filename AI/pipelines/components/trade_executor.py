@@ -44,7 +44,8 @@ def execute_trades(repo: PortfolioRepository, target_tickers: list, data_map: di
             pos_info = repo.get_current_position(ticker, target_date=exec_date_str, initial_cash=0)
             
             # 💡 [수정3] 고정 예산(1000)을 지우고, 총자산 기반 동적 예산 할당
-            allocation_cash = TOTAL_BUDGET * MAX_WEIGHT 
+            capped_target_weight = max(0.0, min(MAX_WEIGHT, target_weight))
+            allocation_cash = TOTAL_BUDGET * capped_target_weight
             
             my_qty = pos_info['qty']
             my_avg_price = pos_info['avg_price']
@@ -55,6 +56,11 @@ def execute_trades(repo: PortfolioRepository, target_tickers: list, data_map: di
                 action, qty, reason = decide_order(
                     ticker, score, current_price, allocation_cash, my_qty, my_avg_price, current_val
                 )
+                if action == "BUY":
+                    max_affordable_qty = int(max(0, current_portfolio_cash) // current_price)
+                    qty = min(qty, max_affordable_qty)
+                    if qty == 0:
+                        action, qty, reason = "HOLD", 0, "가용 현금 부족"
             else:
                 action, qty, reason = "HOLD", 0, "대상 아님 (관망)"
 
