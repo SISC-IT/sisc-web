@@ -460,7 +460,7 @@ h1 {
 .roundAddModal {
   width: 620px;
   max-width: calc(100vw - 24px);
-  max-height: calc(100dvh - 40px);
+  max-height: calc(100dvh - 40px - env(safe-area-inset-bottom));
   overflow-y: auto;
   border-radius: 16px;
   padding: 28px 28px 22px;
@@ -604,12 +604,12 @@ h1 {
   .overlay {
     align-items: flex-start;
     padding-top: max(12px, env(safe-area-inset-top));
-    padding-bottom: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
 
   .roundAddModal {
     width: calc(100vw - 16px);
-    max-height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-bottom));
     padding: 18px 16px;
   }
 
