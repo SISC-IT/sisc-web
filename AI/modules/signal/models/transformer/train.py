@@ -34,7 +34,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.core.data_loader import DataLoader
-from AI.modules.signal.models.PatchTST.architecture import build_transformer_model
+from AI.modules.signal.models.transformer.architecture import build_transformer_model
 
 def train_single_pipeline():
     print("==================================================")
@@ -111,9 +111,9 @@ def train_single_pipeline():
     # --------------------------------------------------------------------------
     # 6. 콜백 설정 (학습 전략의 핵심)
     # --------------------------------------------------------------------------
-    save_dir = os.path.join(project_root, "AI/data/weights/transformer")
+    save_dir = os.path.join(project_root, "AI/data/weights/transformer/tests")
     os.makedirs(save_dir, exist_ok=True)
-    model_save_path = os.path.join(save_dir, "multi_horizon_model.keras")
+    model_save_path = os.path.join(save_dir, "multi_horizon_model_test.keras")
 
     # (1) 최고 성능 모델 저장 (전성기 캡처)
     chk_point = ModelCheckpoint(
@@ -157,7 +157,7 @@ def train_single_pipeline():
     # 8. 스케일러 저장 (필수)
     # --------------------------------------------------------------------------
     # 모델은 chk_point가 이미 저장했으므로, 스케일러만 따로 저장합니다.
-    scaler_save_path = os.path.join(save_dir, "multi_horizon_scaler.pkl")
+    scaler_save_path = os.path.join(save_dir, "multi_horizon_scaler_test.pkl")
     with open(scaler_save_path, "wb") as f:
         pickle.dump(info['scaler'], f)
         
