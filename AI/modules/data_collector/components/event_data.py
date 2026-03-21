@@ -1,12 +1,15 @@
-import sys
+import io
+import json
 import os
+import sys
 import time
-import requests
-import pandas as pd
-import numpy as np
-import yfinance as yf
-from datetime import datetime, timedelta, date
+from contextlib import redirect_stderr, redirect_stdout
+from datetime import date, datetime, timedelta
 from typing import List, Optional
+
+import pandas as pd
+import requests
+import yfinance as yf
 from psycopg2.extras import execute_values
 
 # 프로젝트 루트 경로 설정
@@ -17,34 +20,61 @@ if project_root not in sys.path:
 
 from AI.libs.database.connection import get_db_conn
 
-# FMP API 키
+
 FMP_API_KEY = os.getenv("FMP_API_KEY", "your_fmp_api_key_here")
+
 
 class EventDataCollector:
     """
-    [이벤트 일정 및 서프라이즈 수집기]
-    - Macro: FMP API를 통해 Forecast/Actual 수집
-    - Earnings: yfinance를 통해 EPS Estimate/Reported 수집
-    - Schema: event_date, event_type, ticker, description, forecast, actual
+    이벤트 일정과 서프라이즈 데이터를 수집합니다.
+    - Macro: FMP API에서 forecast/actual 수집
+    - Earnings: yfinance에서 EPS estimate/reported 수집
     """
 
     def __init__(self, db_name: str = "db"):
         self.db_name = db_name
-        self.base_url = "https://financialmodelingprep.com/api/v3/economic_calendar"
+        self.macro_urls = [
+            "https://financialmodelingprep.com/stable/economic-calendar",
+            "https://financialmodelingprep.com/api/v3/economic_calendar",
+        ]
+
+    def _get_fmp_api_key(self) -> Optional[str]:
+        """실행 시점 기준으로 FMP API 키를 재확인합니다."""
+        api_key = os.getenv("FMP_API_KEY", FMP_API_KEY).strip()
+        if not api_key or api_key == "your_fmp_api_key_here":
+            return None
+        return api_key
+
+    def _parse_fmp_error_message(self, response: requests.Response) -> str:
+        """FMP 응답 본문에서 사람이 읽기 쉬운 오류 메시지를 추출합니다."""
+        try:
+            payload = response.json()
+        except ValueError:
+            return response.text[:300].strip()
+
+        if isinstance(payload, dict):
+            for key in ("Error Message", "error", "message"):
+                value = payload.get(key)
+                if value:
+                    return str(value)
+
+        if isinstance(payload, list) and payload:
+            return json.dumps(payload[:2], ensure_ascii=False)
+
+        return response.text[:300].strip()
 
     def _has_sufficient_macro_data(self) -> bool:
-        """DB에 미래 데이터가 충분한지 확인"""
+        """DB에 미래 macro 이벤트가 충분하면 불필요한 호출을 줄입니다."""
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
         try:
             query = """
-                SELECT COUNT(*) 
-                FROM public.event_calendar 
+                SELECT COUNT(*)
+                FROM public.event_calendar
                 WHERE ticker = 'MACRO' AND event_date > CURRENT_DATE
             """
             cursor.execute(query)
             count = cursor.fetchone()[0]
-            # 미래 데이터가 5개 이상이면 Skip (단, Actual 업데이트를 위해 force_update 필요할 수 있음)
             return count >= 5
         except Exception:
             return False
@@ -53,100 +83,113 @@ class EventDataCollector:
             conn.close()
 
     def fetch_macro_from_api(self):
-        """FMP API 호출"""
+        """FMP economic calendar API를 호출합니다."""
         print("[Event] FMP API로 경제 지표(Surprise) 수집 중...")
-        # 과거 데이터 업데이트(Actual 채우기)를 위해 시작일을 30일 전으로 설정
         start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
         end_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
-        
-        url = f"{self.base_url}?from={start_date}&to={end_date}&apikey={FMP_API_KEY}"
-        try:
-            response = requests.get(url, timeout=10)
-            if response.status_code != 200:
-                print(f"   [Error] API 호출 실패: {response.status_code}")
-                return []
-            return response.json()
-        except Exception as e:
-            print(f"   [Error] API 연동 오류: {e}")
+
+        api_key = self._get_fmp_api_key()
+        if not api_key:
+            print("   [Error] FMP_API_KEY가 설정되지 않았습니다.")
             return []
 
+        last_status = None
+        for base_url in self.macro_urls:
+            try:
+                response = requests.get(
+                    base_url,
+                    params={"from": start_date, "to": end_date, "apikey": api_key},
+                    timeout=10,
+                )
+            except Exception as e:
+                print(f"   [Error] API 연동 오류 [{base_url}]: {e}")
+                continue
+
+            if response.status_code == 200:
+                return response.json()
+
+            last_status = response.status_code
+            error_message = self._parse_fmp_error_message(response)
+            print(
+                f"   [Error] FMP 호출 실패 ({response.status_code}) "
+                f"[{base_url}]: {error_message}"
+            )
+
+        if last_status in (402, 403):
+            print(
+                "   [Hint] 현재 FMP 구독 플랜 또는 엔드포인트 권한으로 "
+                "economic calendar 접근이 불가합니다."
+            )
+        return []
+
     def update_macro_events(self, force_update: bool = False):
-        """거시경제 일정 및 수치 저장"""
-        # force_update가 False여도, 지난달의 Actual 값이 비어있을 수 있으므로 
-        # API 호출을 아예 막기보다, API 호출 부담이 적다면 주기적으로 실행하는 것이 좋습니다.
-        # 여기서는 '미래 일정'만 체크하는 로직 유지하되, 필요시 force_update=True로 실행 권장.
+        """거시경제 이벤트 일정을 저장합니다."""
         if not force_update and self._has_sufficient_macro_data():
-            # print("   >> Macro 일정 충분함 (Skip). Actual 업데이트 필요시 --repair 사용.")
             return
 
-        if "your_fmp_api_key_here" in FMP_API_KEY and not os.getenv("FMP_API_KEY"):
-             print("[Error] FMP_API_KEY 미설정.")
-             return
-
         events = self.fetch_macro_from_api()
-        if not events: return
+        if not events:
+            return
 
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
 
-        # [SQL 수정] actual, forecast 추가
         insert_query = """
-            INSERT INTO public.event_calendar 
+            INSERT INTO public.event_calendar
             (event_date, event_type, ticker, description, forecast, actual)
             VALUES %s
-            ON CONFLICT (event_date, event_type, ticker) 
-            DO UPDATE SET 
+            ON CONFLICT (event_date, event_type, ticker)
+            DO UPDATE SET
                 description = EXCLUDED.description,
                 forecast = EXCLUDED.forecast,
                 actual = EXCLUDED.actual;
         """
 
         target_keywords = {
-            'FOMC': ['FOMC', 'Fed Interest Rate Decision'],
-            'CPI': ['CPI', 'Consumer Price Index'],
-            'GDP': ['GDP Growth Rate', 'Gross Domestic Product'],
-            'PCE': ['PCE', 'Personal Consumption Expenditures']
+            "FOMC": ["FOMC", "Fed Interest Rate Decision"],
+            "CPI": ["CPI", "Consumer Price Index"],
+            "GDP": ["GDP Growth Rate", "Gross Domestic Product"],
+            "PCE": ["PCE", "Personal Consumption Expenditures"],
         }
 
         data_to_insert = []
         seen = set()
 
         for item in events:
-            if item.get('country') != 'US': continue
-            
-            evt_date = item.get('date', '')[:10]
-            evt_name = item.get('event', '')
-            
-            # 수치 파싱 (None 처리)
-            estimate_val = item.get('estimate')
-            actual_val = item.get('actual')
-            
+            if item.get("country") != "US":
+                continue
+
+            evt_date = item.get("date", "")[:10]
+            evt_name = item.get("event", "")
+            estimate_val = item.get("estimate")
+            actual_val = item.get("actual")
+
             detected_type = None
             for key, keywords in target_keywords.items():
-                if any(k in evt_name for k in keywords):
+                if any(keyword in evt_name for keyword in keywords):
                     detected_type = key
                     break
-            
-            if detected_type:
-                # 키: 날짜+타입
-                if (evt_date, detected_type) not in seen:
-                    data_to_insert.append((
-                        evt_date, 
-                        detected_type, 
-                        'MACRO', 
+
+            if detected_type and (evt_date, detected_type) not in seen:
+                data_to_insert.append(
+                    (
+                        evt_date,
+                        detected_type,
+                        "MACRO",
                         evt_name,
-                        estimate_val, # forecast
-                        actual_val    # actual
-                    ))
-                    seen.add((evt_date, detected_type))
+                        estimate_val,
+                        actual_val,
+                    )
+                )
+                seen.add((evt_date, detected_type))
 
         try:
             if data_to_insert:
                 execute_values(cursor, insert_query, data_to_insert)
                 conn.commit()
-                print(f"   >> Macro 일정 및 서프라이즈 {len(data_to_insert)}건 저장 완료.")
+                print(f"   >> Macro 일정/서프라이즈 {len(data_to_insert)}건 저장 완료.")
             else:
-                print("   >> 저장할 주요 이벤트가 없습니다.")
+                print("   >> 저장할 주요 매크로 이벤트가 없습니다.")
         except Exception as e:
             conn.rollback()
             print(f"   [Error] DB 저장 실패: {e}")
@@ -155,97 +198,90 @@ class EventDataCollector:
             conn.close()
 
     def update_earnings_dates(self, tickers: List[str]):
-        """
-        기업 실적 발표일 및 EPS 예측치/실제치 저장
-        yfinance의 get_earnings_dates() 사용
-        """
-        if not tickers: return
+        """기업 실적 발표 일정과 EPS 추정/실적 값을 저장합니다."""
+        if not tickers:
+            return
         print(f"[Event] 기업 {len(tickers)}개 실적 서프라이즈 데이터 수집 중...")
-        
+
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
-        
+
         insert_query = """
-            INSERT INTO public.event_calendar 
+            INSERT INTO public.event_calendar
             (event_date, event_type, ticker, description, forecast, actual)
             VALUES %s
-            ON CONFLICT (event_date, event_type, ticker) 
+            ON CONFLICT (event_date, event_type, ticker)
             DO UPDATE SET
                 forecast = EXCLUDED.forecast,
                 actual = EXCLUDED.actual;
         """
-        
+
         data_buffer = []
-        
-        for i, ticker in enumerate(tickers):
+
+        for ticker in tickers:
             try:
                 yf_ticker = yf.Ticker(ticker)
-                
-                # [변경] calendar 대신 get_earnings_dates 사용 (과거+미래 데이터 포함)
-                # limit=12 (최근 1년 ~ 미래 1년 정도)
-                df_earnings = yf_ticker.get_earnings_dates(limit=8)
-                
+                # 일부 티커는 yfinance가 경고/잡음을 stderr로 출력하므로 해당 호출만 조용히 감쌉니다.
+                with io.StringIO() as buffer, redirect_stdout(buffer), redirect_stderr(buffer):
+                    df_earnings = yf_ticker.get_earnings_dates(limit=8)
+
                 if df_earnings is None or df_earnings.empty:
                     continue
 
-                # 인덱스가 날짜임. 컬럼: 'EPS Estimate', 'Reported EPS', 'Surprise(%)'
-                # 미래 데이터는 Reported EPS가 NaN임.
-                
                 for dt_idx, row in df_earnings.iterrows():
                     evt_date = dt_idx.date()
-                    
-                    # 너무 먼 과거 데이터는 스킵 (최근 6개월 ~ 미래 1년만 저장)
                     if evt_date < (date.today() - timedelta(days=180)):
                         continue
                     if evt_date > (date.today() + timedelta(days=365)):
                         continue
 
-                    estimate = row.get('EPS Estimate')
-                    reported = row.get('Reported EPS')
-                    
-                    # NaN -> None 변환 (DB 저장을 위해)
-                    if pd.isna(estimate): estimate = None
-                    else: estimate = float(estimate)
-                    
-                    if pd.isna(reported): reported = None
-                    else: reported = float(reported)
-                    
-                    description = f"{ticker} Earnings Release"
-                    
-                    data_buffer.append((
-                        evt_date,
-                        'EARNINGS',
-                        ticker,
-                        description,
-                        estimate, # forecast
-                        reported  # actual
-                    ))
+                    estimate = row.get("EPS Estimate")
+                    reported = row.get("Reported EPS")
 
-                # API 호출 속도 조절
+                    if pd.isna(estimate):
+                        estimate = None
+                    else:
+                        estimate = float(estimate)
+
+                    if pd.isna(reported):
+                        reported = None
+                    else:
+                        reported = float(reported)
+
+                    data_buffer.append(
+                        (
+                            evt_date,
+                            "EARNINGS",
+                            ticker,
+                            f"{ticker} Earnings Release",
+                            estimate,
+                            reported,
+                        )
+                    )
+
                 time.sleep(0.1)
-                
+
                 if len(data_buffer) >= 50:
                     execute_values(cursor, insert_query, data_buffer)
                     conn.commit()
                     data_buffer = []
 
             except Exception:
-                # yfinance 에러 발생 시 조용히 넘어감 (데이터 없는 경우 다수)
                 continue
 
         if data_buffer:
             execute_values(cursor, insert_query, data_buffer)
             conn.commit()
-            
+
         cursor.close()
         conn.close()
-        print(f"   >> 실적 데이터 업데이트 완료.")
+        print("   >> 실적 데이터 업데이트 완료.")
 
     def run(self, tickers: List[str] = None):
-        # 기본적으로 Macro는 업데이트
         self.update_macro_events(force_update=False)
         if tickers:
             self.update_earnings_dates(tickers)
+
 
 if __name__ == "__main__":
     import argparse
@@ -258,9 +294,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     collector = EventDataCollector(db_name=args.db)
-    
+
     if args.force:
         collector.update_macro_events(force_update=True)
-    
+
     targets = load_all_tickers_from_db() if args.all else None
     collector.run(tickers=targets)
