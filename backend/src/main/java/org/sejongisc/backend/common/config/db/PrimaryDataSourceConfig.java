@@ -86,7 +86,8 @@ public class PrimaryDataSourceConfig {
                         "org.sejongisc.backend.board.entity",
                         "org.sejongisc.backend.common.entity.postgres",
                         "org.sejongisc.backend.point.entity",
-                        "org.sejongisc.backend.user.entity"
+                        "org.sejongisc.backend.user.entity",
+                        "org.sejongisc.backend.feedback.entity"
                 )
                 .persistenceUnit("primary")
                 .properties(jpaProps)
