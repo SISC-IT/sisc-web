@@ -164,7 +164,7 @@ class FundamentalsDataCollector:
             conn.commit()
         except Exception as e:
             conn.rollback()
-            tqdm.print(f"   [{ticker}][Error] DB 저장 실패: {e}")
+            tqdm.write(f"   [{ticker}][Error] DB 저장 실패: {e}")
         finally:
             cursor.close()
             conn.close()
@@ -203,7 +203,7 @@ class FundamentalsDataCollector:
             conn.commit()
         except Exception as e:
             conn.rollback()
-            tqdm.print(f"   [{ticker}][Error] 완료 상태 업데이트 실패: {e}")
+            tqdm.write(f"   [{ticker}][Error] 완료 상태 업데이트 실패: {e}")
         finally:
             cursor.close()
             conn.close()
