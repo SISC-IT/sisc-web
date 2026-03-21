@@ -11,6 +11,7 @@ psycopg2-binary
 requests
 beautifulsoup4
 groq
+google-generativeai
 fredapi
 yfinance
 
