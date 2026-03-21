@@ -103,7 +103,7 @@ const Board = () => {
   const [deletingSubBoardId, setDeletingSubBoardId] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4;
+  const itemsPerPage = 10;
 
   const subBoardLoadRequestIdRef = useRef(0);
   const requestedSubBoardId = useMemo(() => {
