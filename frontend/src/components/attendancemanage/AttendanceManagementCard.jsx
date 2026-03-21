@@ -46,15 +46,17 @@ const getRoleDisplayLabel = (role) => {
   const roleText = String(role || '').trim();
   const normalized = roleText.toUpperCase();
 
-  if (normalized.includes('OWNER') || roleText.includes('세션 생성자')) {
+  if (normalized.includes('OWNER')) {
     return '소유자';
   }
 
-  if (normalized.includes('MANAGE') || normalized.includes('ADMIN')) {
+  if (normalized.includes('MANAGE')) {
     return '관리자';
   }
 
-  if (normalized.includes('MEMBER') || normalized.includes('USER')) {
+  if (
+    normalized.includes('PARTICIPANT')
+  ) {
     return '팀원';
   }
 

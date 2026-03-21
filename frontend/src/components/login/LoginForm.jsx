@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate, NavLink, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 
@@ -18,6 +19,7 @@ const LoginForm = () => {
 
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [modalStep, setModalStep] = useState('closed');
   const { login: authLogin } = useAuth();
 
@@ -88,14 +90,24 @@ const LoginForm = () => {
 
           <div className={styles.inputGroup}>
             <label htmlFor="password">비밀번호</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호를 입력하세요"
-              autoComplete="current-password"
-            />
+            <div className={styles.inputWithToggle}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호를 입력하세요"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className={styles.passwordToggleButton}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <button

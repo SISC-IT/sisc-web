@@ -267,11 +267,11 @@
 .statusCell {
   overflow: visible !important;
   position: relative;
-  z-index: 80;
+  z-index: 1;
 }
 
 .openStatusCell {
-  z-index: 200;
+  z-index: 2;
 }
 
 .table tbody td.statusCell {
@@ -311,11 +311,14 @@
 .table thead {
   position: sticky;
   top: 0;
-  background-color: transparent;
-  z-index: 10;
+  background-color: #f8f9fb;
+  z-index: 30;
 }
 
 .table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   text-align: left;
   color: #1e293b;
   padding: 10px 6px;
@@ -325,7 +328,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
-  background-color: transparent;
+  background-color: #f8f9fb;
   letter-spacing: 0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -537,6 +540,10 @@
   overflow: hidden;
   position: relative;
   z-index: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .dropdownOpenContainer {
@@ -621,6 +628,8 @@
 .tableGroup {
   margin-top: 4px;
   max-height: none;
+  min-height: 0;
+  flex: 1;
   overflow-x: auto;
   overflow-y: auto;
 }

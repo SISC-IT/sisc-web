@@ -8,7 +8,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  padding: 20px 12px;
+  overflow-y: auto;
+  z-index: 3000;
 }
 
 .modal {
@@ -458,6 +460,8 @@ h1 {
 .roundAddModal {
   width: 620px;
   max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
   border-radius: 16px;
   padding: 28px 28px 22px;
   font-family: Pretendard, Inter, sans-serif;
@@ -597,8 +601,15 @@ h1 {
 }
 
 @media (max-width: 768px) {
+  .overlay {
+    align-items: flex-start;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: 12px;
+  }
+
   .roundAddModal {
     width: calc(100vw - 16px);
+    max-height: calc(100dvh - 24px);
     padding: 18px 16px;
   }
 

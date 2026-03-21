@@ -489,6 +489,7 @@
 
 .titleArea h1 {
   white-space: nowrap;
+  word-break: keep-all;
 }
 
 .sessionHeader {
@@ -671,5 +672,21 @@
 @media (min-width: 1024px) {
   .sessionHeader {
     gap: 12px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .sessionHeader {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .headerControls {
+    width: auto;
+    max-width: 100%;
+    overflow-x: visible;
+    padding-bottom: 0;
+    justify-content: flex-end;
   }
 }
