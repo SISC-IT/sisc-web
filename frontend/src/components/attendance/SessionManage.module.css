@@ -1,6 +1,7 @@
 .card {
   width: 100%;
   max-width: 955px;
+  min-width: 0;
   min-height: 280px;
   box-sizing: border-box;
   border: 1px solid #d9d9d9;
@@ -22,18 +23,36 @@
   color: #000000;
 }
 
-.table {
+.tableWrap {
   width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
+  max-width: 100%;
   overflow-x: auto;
-  display: block;
+  overflow-y: hidden;
 }
 
-.table thead,
-.table tbody {
-  display: table;
+.tableWrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.tableWrap::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+
+.tableWrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
+}
+
+.tableWrap::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.table {
   width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
   table-layout: fixed;
 }
 
@@ -60,11 +79,6 @@
 
   .title {
     font-size: 20px;
-  }
-
-  .table {
-    display: table;
-    overflow-x: visible;
   }
 
   .table thead th,
