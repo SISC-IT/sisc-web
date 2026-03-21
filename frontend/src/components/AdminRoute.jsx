@@ -4,7 +4,11 @@ import { api } from '../utils/axios';
 
 const isAdminRole = (role) => {
   const normalizedRole = String(role || '').trim().toUpperCase();
-  return normalizedRole === 'PRESIDENT' || normalizedRole === 'SYSTEM_ADMIN';
+  return (
+    normalizedRole === 'PRESIDENT' ||
+    normalizedRole === 'SYSTEM_ADMIN' ||
+    normalizedRole === 'VICE_PRESIDENT'
+  );
 };
 
 const AdminRoute = () => {

@@ -9,7 +9,7 @@ import { getParentBoards } from '../utils/boardApi';
 import { isAllBoardName, normalizeBoardPath, toBoardPath } from '../utils/boardRoute';
 import DropdownArrowIcon from '../assets/boardSelectArrow.svg';
 
-const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT'];
+const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT', 'VICE_PRESIDENT'];
 const ATTENDANCE_MANAGE_VISIBLE_ROLES = [
   'SYSTEM_ADMIN',
   'PRESIDENT',
