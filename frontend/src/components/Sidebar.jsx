@@ -10,6 +10,12 @@ import { isAllBoardName, normalizeBoardPath, toBoardPath } from '../utils/boardR
 import DropdownArrowIcon from '../assets/boardSelectArrow.svg';
 
 const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT'];
+const ATTENDANCE_MANAGE_VISIBLE_ROLES = [
+  'SYSTEM_ADMIN',
+  'PRESIDENT',
+  'VICE_PRESIDENT',
+  'TEAM_LEADER',
+];
 
 const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const nav = useNavigate();
@@ -19,6 +25,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const [isBoardMenuOpen, setIsBoardMenuOpen] = useState(false);
   const { isLoggedIn, logout } = useAuth();
   const [canSeeAdminMenu, setCanSeeAdminMenu] = useState(false);
+  const [canSeeAttendanceManageMenu, setCanSeeAttendanceManageMenu] = useState(false);
 
   useEffect(() => {
     const loadParentBoards = async () => {
@@ -64,6 +71,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     const checkAdminRole = async () => {
       if (!isLoggedIn) {
         setCanSeeAdminMenu(false);
+        setCanSeeAttendanceManageMenu(false);
         return;
       }
 
@@ -71,8 +79,12 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
         const { data } = await api.get('/api/user/details');
         const normalizedRole = String(data?.role || '').trim().toUpperCase();
         setCanSeeAdminMenu(ADMIN_VISIBLE_ROLES.includes(normalizedRole));
+        setCanSeeAttendanceManageMenu(
+          ATTENDANCE_MANAGE_VISIBLE_ROLES.includes(normalizedRole)
+        );
       } catch {
         setCanSeeAdminMenu(false);
+        setCanSeeAttendanceManageMenu(false);
       }
     };
 
@@ -188,17 +200,19 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                   출석조회
                 </NavLink>
               </li>
-              <li>
-                <NavLink
-                  to="/attendance-manage"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                  onClick={handleNavLinkClick}
-                >
-                  출석관리(담당자)
-                </NavLink>
-              </li>
+              {isLoggedIn && canSeeAttendanceManageMenu && (
+                <li>
+                  <NavLink
+                    to="/attendance-manage"
+                    className={({ isActive }) =>
+                      isActive ? styles['active-link'] : styles['inactive-link']
+                    }
+                    onClick={handleNavLinkClick}
+                  >
+                    출석관리(담당자)
+                  </NavLink>
+                </li>
+              )}
             </ul>
           </div>
 

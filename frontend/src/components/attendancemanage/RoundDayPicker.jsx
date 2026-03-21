@@ -5,6 +5,7 @@ import 'react-day-picker/style.css';
 import { useAttendance } from '../../contexts/AttendanceContext';
 
 const DEFAULT_TIME = '18:00';
+const DEFAULT_END_TIME_MINUTES = 60;
 
 const formatDatePart = (date) => {
   const year = date.getFullYear();
@@ -89,19 +90,17 @@ const RoundDayPicker = () => {
   }, [closeAddRoundsModal]);
 
   useEffect(() => {
-    if (!startTime || allowedMinutes <= 0) return;
-    const calculated = calculateEndTime(startTime, allowedMinutes);
+    if (!startTime) return;
+    const calculated = calculateEndTime(startTime, DEFAULT_END_TIME_MINUTES);
     setEndTime(calculated.time);
-  }, [startTime, allowedMinutes]);
+  }, [startTime]);
 
   const handleStartTimeChange = (e) => {
     const nextStartTime = e.target.value;
     setStartTime(nextStartTime);
 
-    if (allowedMinutes > 0) {
-      const calculated = calculateEndTime(nextStartTime, allowedMinutes);
-      setEndTime(calculated.time);
-    }
+    const calculated = calculateEndTime(nextStartTime, DEFAULT_END_TIME_MINUTES);
+    setEndTime(calculated.time);
   };
 
   const handleComplete = async () => {

@@ -8,7 +8,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  padding: 20px 12px;
+  overflow-y: auto;
+  z-index: 3000;
 }
 
 .modal {
@@ -188,6 +190,29 @@ h1 {
   padding: 10px 10px 30px;
 }
 
+.teamHeaderWithFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.teamFilterInlineSelect {
+  min-width: 90px;
+  height: 28px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.teamFilterInlineSelect:focus {
+  outline: none;
+  border-color: #1d80f4;
+  box-shadow: 0 0 0 2px rgba(29, 128, 244, 0.15);
+}
+
 .inputGroup {
   display: flex;
   flex-direction: column;
@@ -331,6 +356,11 @@ h1 {
     padding: 18px 16px;
   }
 
+  .teamFilterInlineSelect {
+    min-width: 84px;
+    font-size: 11px;
+  }
+
   .titleDiv {
     gap: 8px;
     flex-wrap: wrap;
@@ -458,6 +488,8 @@ h1 {
 .roundAddModal {
   width: 620px;
   max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 40px - env(safe-area-inset-bottom));
+  overflow-y: auto;
   border-radius: 16px;
   padding: 28px 28px 22px;
   font-family: Pretendard, Inter, sans-serif;
@@ -597,8 +629,15 @@ h1 {
 }
 
 @media (max-width: 768px) {
+  .overlay {
+    align-items: flex-start;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
   .roundAddModal {
     width: calc(100vw - 16px);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-bottom));
     padding: 18px 16px;
   }
 

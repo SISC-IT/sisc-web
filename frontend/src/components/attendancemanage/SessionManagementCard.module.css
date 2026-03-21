@@ -4,6 +4,8 @@
   background: #fafbfc;
   border: 1.5px solid #d1d5db;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s;
@@ -472,6 +474,7 @@
   background: #f8f9fb;
   padding: 20px 16px;
   box-shadow: none;
+  overflow: hidden;
 }
 
 .sessionManagementCardContainer:hover {
@@ -484,6 +487,19 @@
   gap: 8px;
 }
 
+.titleArea h1 {
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.sessionHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
 .titleIcon {
   width: 18px;
   height: 18px;
@@ -492,6 +508,16 @@
 
 .selectGroup {
   margin-bottom: 0;
+}
+
+.headerControls {
+  flex-wrap: nowrap !important;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  margin-left: 0;
 }
 
 .sessionSelect {
@@ -508,10 +534,13 @@
 .tableGroup {
   max-height: none;
   margin-top: 2px;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 .table {
-  min-width: 720px;
+  width: max-content;
+  min-width: 100%;
 }
 
 .table thead th {
@@ -528,6 +557,44 @@
   font-size: 15px;
   font-weight: 400;
   padding: 12px 10px;
+}
+
+.table thead th:nth-child(1),
+.table tbody td:nth-child(1) {
+  width: 96px;
+  min-width: 96px;
+}
+
+.table thead th:nth-child(2),
+.table tbody td:nth-child(2) {
+  width: 96px;
+  min-width: 96px;
+}
+
+.table thead th:nth-child(3),
+.table tbody td:nth-child(3) {
+  width: 90px;
+  min-width: 90px;
+}
+
+.table thead th:nth-child(4),
+.table tbody td:nth-child(4) {
+  width: 78px;
+  min-width: 78px;
+}
+
+.table thead th:nth-child(5),
+.table tbody td:nth-child(5) {
+  width: 112px;
+  min-width: 112px;
+  text-align: center;
+}
+
+.table thead th:nth-child(6),
+.table tbody td:nth-child(6) {
+  width: 64px;
+  min-width: 64px;
+  text-align: center;
 }
 
 .qrButton {
@@ -577,8 +644,13 @@
     padding: 16px 14px;
   }
 
+  .headerControls {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
   .sessionSelect {
-    min-width: 220px;
+    min-width: 200px;
     font-size: 14px;
   }
 
@@ -590,5 +662,31 @@
   .table tbody td {
     font-size: 13px;
     padding: 10px 8px;
+  }
+
+  .table {
+    min-width: 600px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sessionHeader {
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .sessionHeader {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .headerControls {
+    width: auto;
+    max-width: 100%;
+    overflow-x: visible;
+    padding-bottom: 0;
+    justify-content: flex-end;
   }
 }
