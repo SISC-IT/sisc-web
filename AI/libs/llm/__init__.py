@@ -7,4 +7,5 @@ __all__ = [
     "BaseLLMClient",
     "GroqClient",
     "OllamaClient",
+    "GeminiClient"
 ]

@@ -8,7 +8,7 @@ def settle_portfolio(repo: PortfolioRepository, target_tickers: list, data_map: 
     전체 보유 종목의 평가액을 계산하고 포트폴리오 스냅샷(총자산, 현금, 미실현/실현 손익 등)을 DB에 저장합니다.
     """
     print("7. 포트폴리오 일일 마감 및 스냅샷 저장 중...")
-    INITIAL_CAPITAL = 100_000_000  # 기준 원금 (설정값으로 분리 가능)
+    INITIAL_CAPITAL = 10_000  # 기준 원금 (설정값으로 분리 가능)
     
     total_market_value = 0.0
     total_pnl_unrealized = 0.0

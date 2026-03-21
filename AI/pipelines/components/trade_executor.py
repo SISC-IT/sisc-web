@@ -1,5 +1,4 @@
-# AI/pipelines/components/trade_executor.py
-
+#AI/pipelines/components/trade_executor.py
 import traceback
 import pandas as pd
 from datetime import datetime
@@ -9,7 +8,7 @@ from AI.modules.analysis.generator import ReportGenerator
 
 def execute_trades(repo: PortfolioRepository, target_tickers: list, data_map: dict, 
                    target_weights: dict, scores: dict, exec_date_str: str, 
-                   enable_xai: bool, xai_generator: ReportGenerator) -> tuple:
+                   mode: str, enable_xai: bool, xai_generator: ReportGenerator) -> tuple:
     """
     [매매 주문 및 리스크 관리 집행 담당]
     산출된 포트폴리오 비중(target_weights)을 기반으로 매수/매도/홀드 주문을 결정하고, 
@@ -19,8 +18,14 @@ def execute_trades(repo: PortfolioRepository, target_tickers: list, data_map: di
     execution_results = []
     report_results = []
     
-    # 기준일 이전의 현재 포트폴리오 잔고(현금)를 가져옴
+    # 💡 [수정1] 초기 자본금 통일 (10_000 -> 100_000_000)
     current_portfolio_cash = repo.get_current_cash(target_date=exec_date_str, initial_cash=100_000_000)
+    
+    # 💡 [수정2] 동적 자산 배분을 위한 전일 마감 총자산 조회 (DB 연동)
+    TOTAL_BUDGET = repo.get_latest_total_asset(target_date=exec_date_str, default_asset=100_000_000)
+    MAX_WEIGHT = 0.10  # 종목당 최대 투자 비중 (10%)
+    
+    print(f"   -> [동적 예산] 전일 기준 총자산: ₩{TOTAL_BUDGET:,.0f} | 종목당 최대 한도: ₩{TOTAL_BUDGET * MAX_WEIGHT:,.0f}")
     
     for ticker in target_tickers:
         try:
@@ -37,7 +42,9 @@ def execute_trades(repo: PortfolioRepository, target_tickers: list, data_map: di
 
             # DB에서 해당 종목의 현재 보유 정보(Position) 조회
             pos_info = repo.get_current_position(ticker, target_date=exec_date_str, initial_cash=0)
-            allocation_cash = 10_000_000  # 종목당 1회 최대 할당 가능 예산 (고정값 또는 동적 로직 적용 가능)
+            
+            # 💡 [수정3] 고정 예산(1000)을 지우고, 총자산 기반 동적 예산 할당
+            allocation_cash = TOTAL_BUDGET * MAX_WEIGHT 
             
             my_qty = pos_info['qty']
             my_avg_price = pos_info['avg_price']

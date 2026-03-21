@@ -31,6 +31,39 @@ class PortfolioRepository:
         """
         self.db_name = db_name
 
+    def get_latest_total_asset(self, target_date: str, default_asset: float = 100_000_000) -> float:
+        """
+        [동적 자산 배분용] 특정 날짜 이전의 가장 최근 마감 총자산을 조회합니다.
+        """
+        from AI.libs.database.connection import get_db_conn # 필요시 상단에 임포트
+        
+        conn = self._get_connection()
+        if conn is None:
+            return default_asset
+        try:
+            with conn.cursor() as cur:
+                # target_date 이전의 날짜 중 가장 최근 하루의 total_asset을 가져옵니다.
+                query = """
+                    SELECT total_asset 
+                    FROM public.portfolio_summary 
+                    WHERE date < %s 
+                    ORDER BY date DESC 
+                    LIMIT 1
+                """
+                cur.execute(query, (target_date,))
+                result = cur.fetchone()
+                
+                if result and result[0] is not None:
+                    return float(result[0])
+        except Exception as e:
+            print(f"[Repository Error] 전일 총자산 조회 실패: {e}")
+        finally:
+            if conn:
+                conn.close()
+                
+        # 과거 데이터가 없거나 에러가 나면 기본 자본금 반환
+        return default_asset
+
     def _get_connection(self):
         """
         [내부 헬퍼 메서드]
@@ -41,7 +74,7 @@ class PortfolioRepository:
         """
         return get_db_conn(self.db_name)
 
-    def get_current_position(self, ticker: str, target_date: str = None, initial_cash: float = 10000000) -> Dict[str, Any]:
+    def get_current_position(self, ticker: str, target_date: str = None, initial_cash: float = 10000) -> Dict[str, Any]:
         """
         [현재 포지션 조회] 
         특정 날짜(target_date) 이전까지의 체결 내역만 계산하여 정확한 과거 스냅샷(보유 수량, 평단가, 잔고 등)을 만듭니다.
@@ -49,7 +82,7 @@ class PortfolioRepository:
         Args:
             ticker (str): 조회할 주식의 티커 심볼 (예: 'AAPL')
             target_date (str, optional): 미래 데이터 훔쳐보기(Look-ahead bias)를 방지하기 위한 기준 날짜 (YYYY-MM-DD)
-            initial_cash (float): 초기 자본금 (기본값: 1천만 원)
+            initial_cash (float): 초기 자본금 (기본값: 만 달러)
             
         Returns:
             dict: 현금 잔고(cash), 보유 수량(qty), 평균 단가(avg_price), 누적 실현 손익(pnl_realized_cum) 정보를 담은 딕셔너리

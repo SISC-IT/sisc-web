@@ -15,7 +15,7 @@ project_root = os.path.abspath(os.path.join(current_dir, "../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from AI.libs.llm import GroqClient, OllamaClient
+from AI.libs.llm import OllamaClient, GeminiClient
 from AI.modules.analysis.prompt import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from AI.modules.analysis.report_builder import ReportBuilder
 
@@ -23,7 +23,7 @@ class ReportGenerator:
     def __init__(self, use_api_llm: bool = True):
         # Groq(빠름/고성능) 또는 Ollama(로컬) 선택
         if use_api_llm:
-            self.llm = GroqClient(model_name="llama-3.3-70b-versatile")
+            self.llm = GeminiClient(model_name="gemini-1.5-flash")
         else:
             self.llm = OllamaClient(model_name="llama3")
 

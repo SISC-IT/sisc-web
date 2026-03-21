@@ -1,5 +1,4 @@
-# AI/pipelines/daily_routine.py
-
+#AI/pipelines/daily_routine.py
 """
 [일일 자동화 파이프라인 메인 오케스트레이터]
 - 다중 모델 앙상블 시스템의 제어를 담당합니다.
@@ -39,7 +38,6 @@ from AI.modules.finder.screener import DynamicScreener
 from AI.pipelines.components.portfolio_logic import calculate_portfolio_allocation
 from AI.modules.analysis.generator import ReportGenerator
 
-# 💡 [구조 변경] 리팩토링된 하위 컴포넌트 Import
 from AI.pipelines.components.model_manager import initialize_models
 from AI.pipelines.components.data_processor import load_and_preprocess_data
 from AI.pipelines.components.trade_executor import execute_trades
@@ -55,7 +53,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
         active_models = ["transformer"]
 
     exec_date_str = target_date if target_date else datetime.now().strftime("%Y-%m-%d")
-    print(f"\n[{exec_date_str}] === AI Daily Portfolio Routine (Mode: {mode}) ===")
+    print(f"\n[{exec_date_str}] === AI Daily Portfolio Routine (Mode: {mode.upper()}) ===")
     
     repo = PortfolioRepository(db_name="db")
 
@@ -67,8 +65,8 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
             print("⚠️ 스크리닝 결과가 없어 루틴을 종료합니다.")
             return
 
-    # [Step 1] 전략 및 피처 설정 (하드코딩된 전략 셋팅 -> 향후 Config 파일 분리 가능)
-    strategy_config = {"seq_len": 60, "top_k": 3, "buy_threshold": 0.60}
+    # [Step 1] 전략 및 피처 설정
+    strategy_config = {"seq_len": 60, "top_k": 3, "buy_threshold": 0.70}
     feature_columns = [
         'log_return', 'open_ratio', 'high_ratio', 'low_ratio', 'vol_change',
         'ma5_ratio', 'ma20_ratio', 'ma60_ratio', 'rsi', 'macd_ratio', 'bb_position',
@@ -76,26 +74,31 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
         'month_ma12_ratio', 'month_rsi'
     ]
 
-    # [Step 2] 다중 모델 객체 로드 및 초기화 (Delegated)
+    # [Step 2] 다중 모델 객체 로드 및 초기화
     loader = DataLoader()
     model_wrappers = initialize_models(loader, strategy_config, feature_columns, active_models)
 
-    # [Step 3] 데이터 조회 및 전처리 수행 (Delegated)
+    # [Step 3] 데이터 조회 및 전처리 수행
     data_map = load_and_preprocess_data(loader, target_tickers, exec_date_str, strategy_config)
     if not data_map:
         print("⚠️ 오늘(해당일) 처리할 수 있는 정상 데이터가 없습니다. 루틴을 종료합니다.")
         return
 
-    # XAI 객체 초기화 (LLM 연동 여부 결정)
-    xai_generator = ReportGenerator(use_api_llm=True) if enable_xai else None
+    # LLM 호출 실패(API 키 없음 등)가 전체 매매 파이프라인을 중단시키지 않도록 격리합니다.
+    xai_generator = None
+    if enable_xai:
+        try:
+            xai_generator = ReportGenerator(use_api_llm=True)
+        except Exception as xai_e:
+            print(f"⚠️ [경고] XAI 초기화 실패 (API 연동 에러 등). XAI 없이 매매 루틴을 계속 진행합니다. 사유: {xai_e}")
+            xai_generator = None
 
-    # [Step 4] 포트폴리오 비중 계산 (Meta-Ensemble 호출)
+    # [Step 4] 포트폴리오 비중 계산
     print("4. AI 앙상블 포트폴리오 전략 산출 중...")
     dummy_macro_data = pd.DataFrame([{"vix_z_score": 0.0, "mkt_breadth_nh_nl": 0.0, "ma_trend_score": 0.5}])
     
     try:
-        # 다중 모델 앙상블 예측값을 조합하여 최적의 종목 비중 도출
-        target_weights, scores, all_signals_map = calculate_portfolio_allocation(
+        target_weights, scores, all_signals_map = calculate_portfolio_(
             data_map=data_map, macro_data=dummy_macro_data, model_wrappers=model_wrappers,
             ticker_ids=loader.ticker_to_id, ticker_to_sector_id=loader.ticker_to_sector_id, 
             gating_model=None, config=strategy_config
@@ -105,9 +108,16 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
         traceback.print_exc()
         return
     
-    # [Step 5] 종목별 매매/주문 집행 및 체결 시뮬레이션 (Delegated)
     execution_results, report_results = execute_trades(
-        repo, target_tickers, data_map, target_weights, scores, exec_date_str, enable_xai, xai_generator
+        repo=repo, 
+        target_tickers=target_tickers, 
+        data_map=data_map, 
+        target_weights=target_weights, 
+        scores=scores, 
+        exec_date_str=exec_date_str, 
+        mode=mode,  # <-- CLI에서 받은 실행 모드를 하위 컴포넌트로 전달
+        enable_xai=enable_xai, 
+        xai_generator=xai_generator
     )
 
     # [Step 6] 결과 데이터베이스 일괄 저장 (DB Transaction)
@@ -121,7 +131,6 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
         except Exception as db_e:
             print(f"   [Error] 리포트 저장 실패: {db_e}")
 
-    # 실행 이력(Execution)에 생성된 리포트 ID 매핑
     for exe in execution_results:
         if exe['ticker'] in saved_report_map:
             exe['xai_report_id'] = saved_report_map[exe['ticker']]
@@ -133,9 +142,8 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
         except Exception as db_e:
             print(f"   [Error] 실행 내역 저장 실패: {db_e}")
             return
-            
-    # [Step 7] 포트폴리오 자산 마감 및 정산 (Delegated)
-    settle_portfolio(repo, target_tickers, data_map, exec_date_str)
+
+    settle_portfolio(repo, target_tickers, data_map, exec_date_str, mode=mode)
     
     print("=== Daily Routine Finished ===\n")
 
@@ -150,8 +158,12 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    ticker_list = [t.strip() for t in args.tickers.split(",")] if args.tickers else []
-    model_list = [m.strip().lower() for m in args.models.split(",")]
+    ticker_list = [t.strip() for t in args.tickers.split(",") if t.strip()] if args.tickers else []
+    model_list = [m.strip().lower() for m in args.models.split(",") if m.strip()]
+    
+    # 모델 리스트가 아예 비어있으면 실행 전 차단
+    if not model_list:
+        parser.error("유효한 모델 이름이 입력되지 않았습니다. (예: --models transformer)")
     
     run_daily_pipeline(
         target_tickers=ticker_list, 

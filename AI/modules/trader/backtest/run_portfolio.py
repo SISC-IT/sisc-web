@@ -235,7 +235,7 @@ def run_backtest():
         rebalance_days=1
     )
 
-    initial_cash = 100_000_000
+    initial_cash = 10_000
     cerebro.broker.setcash(initial_cash)
     cerebro.broker.setcommission(commission=0.0015)
 
