@@ -3,8 +3,8 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # 1. 라이브러리 설치
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt /app/AI/requirements.txt
+RUN pip install --no-cache-dir -r AI/requirements.txt
 
 # 2. 소스 코드 복사
 COPY . /app/AI

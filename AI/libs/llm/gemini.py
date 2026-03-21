@@ -6,8 +6,11 @@
 """
 
 import os
-import google.generativeai as genai
 from typing import Optional
+
+from google import genai
+from google.genai import types
+
 from .base_client import BaseLLMClient
 
 class GeminiClient(BaseLLMClient):
@@ -16,43 +19,66 @@ class GeminiClient(BaseLLMClient):
         key = api_key or os.environ.get("GEMINI_API_KEY")
         if not key:
             raise ValueError("Gemini API Key가 설정되지 않았습니다. 'GEMINI_API_KEY' 환경변수를 등록해주세요.")
-            
+        
         super().__init__(api_key=key, model_name=model_name)
         
-        # Gemini API 초기화
-        genai.configure(api_key=key)
-        self.model = genai.GenerativeModel(self.model_name)
+        # 최신 Google GenAI SDK는 명시적인 Client 진입점을 사용합니다.
+        self.client = genai.Client(api_key=key)
+
+    def _extract_text(self, response) -> str:
+        text = getattr(response, "text", None)
+        if text:
+            return text.strip()
+
+        candidates = getattr(response, "candidates", None) or []
+        for candidate in candidates:
+            content = getattr(candidate, "content", None)
+            parts = getattr(content, "parts", None) or []
+            chunks = []
+            for part in parts:
+                part_text = getattr(part, "text", None)
+                if part_text:
+                    chunks.append(part_text)
+            if chunks:
+                return "".join(chunks).strip()
+
+        prompt_feedback = getattr(response, "prompt_feedback", None)
+        block_reason = getattr(prompt_feedback, "block_reason", None)
+        if block_reason:
+            raise RuntimeError(f"Gemini 응답이 차단되었습니다: {block_reason}")
+
+        raise RuntimeError("Gemini 응답에서 텍스트를 찾을 수 없습니다.")
 
     def generate_text(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
         try:
-            # system_prompt가 있을 경우 본문 프롬프트와 합치거나, 
-            # 모델 초기화 시 system_instruction으로 전달할 수 있습니다.
-            # 여기서는 범용성을 위해 프롬프트 텍스트에 조합하는 방식을 사용합니다.
-            full_prompt = prompt
-            if system_prompt:
-                full_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
-
-            # 추가 설정 파라미터 (temperature 등)
-            generation_config = genai.GenerationConfig(
+            config = types.GenerateContentConfig(
                 temperature=kwargs.get("temperature", 0.7),
                 max_output_tokens=kwargs.get("max_tokens", 1024),
                 top_p=kwargs.get("top_p", 1.0),
             )
+            if system_prompt:
+                config.system_instruction = system_prompt
 
-            response = self.model.generate_content(
-                full_prompt,
-                generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=config,
             )
-            return response.text
+            return self._extract_text(response)
             
         except Exception as e:
             print(f"[GeminiClient][Error] 텍스트 생성 실패: {e}")
-            return "리포트 생성 중 오류가 발생했습니다."
+            return ""
 
     def get_health(self) -> bool:
-        # 간단한 모델 목록 조회를 통해 API 키 및 서비스 상태 체크
+        # 모델 목록 조회를 통해 API 키 및 모델 접근 가능 여부를 점검합니다.
         try:
-            models = genai.list_models()
-            return any(self.model_name in m.name for m in models)
-        except:
+            models = self.client.models.list()
+            target_names = {self.model_name, f"models/{self.model_name}"}
+            for model in models:
+                model_name = getattr(model, "name", "")
+                if model_name in target_names:
+                    return True
+            return False
+        except Exception:
             return False

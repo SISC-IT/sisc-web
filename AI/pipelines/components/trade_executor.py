@@ -18,11 +18,11 @@ def execute_trades(repo: PortfolioRepository, target_tickers: list, data_map: di
     execution_results = []
     report_results = []
     
-    # 💡 [수정1] 초기 자본금 통일 (10_000 -> 100_000_000)
-    current_portfolio_cash = repo.get_current_cash(target_date=exec_date_str, initial_cash=100_000_000)
+   
+    current_portfolio_cash = repo.get_current_cash(target_date=exec_date_str, initial_cash=10000)
     
-    # 💡 [수정2] 동적 자산 배분을 위한 전일 마감 총자산 조회 (DB 연동)
-    TOTAL_BUDGET = repo.get_latest_total_asset(target_date=exec_date_str, default_asset=100_000_000)
+   
+    TOTAL_BUDGET = repo.get_latest_total_asset(target_date=exec_date_str, default_asset=10000)
     MAX_WEIGHT = 0.10  # 종목당 최대 투자 비중 (10%)
     
     print(f"   -> [동적 예산] 전일 기준 총자산: ₩{TOTAL_BUDGET:,.0f} | 종목당 최대 한도: ₩{TOTAL_BUDGET * MAX_WEIGHT:,.0f}")

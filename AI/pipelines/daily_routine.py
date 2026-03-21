@@ -98,7 +98,7 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
     dummy_macro_data = pd.DataFrame([{"vix_z_score": 0.0, "mkt_breadth_nh_nl": 0.0, "ma_trend_score": 0.5}])
     
     try:
-        target_weights, scores, all_signals_map = calculate_portfolio_(
+        target_weights, scores, all_signals_map = calculate_portfolio_allocation(
             data_map=data_map, macro_data=dummy_macro_data, model_wrappers=model_wrappers,
             ticker_ids=loader.ticker_to_id, ticker_to_sector_id=loader.ticker_to_sector_id, 
             gating_model=None, config=strategy_config
