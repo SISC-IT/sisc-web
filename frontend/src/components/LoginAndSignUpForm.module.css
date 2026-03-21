@@ -207,6 +207,20 @@
   color: #28a745;
 }
 
+.passwordMatchMessage {
+  margin: 8px 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.passwordMatchMessageSuccess {
+  color: #28a745;
+}
+
+.passwordMatchMessageError {
+  color: #e03131;
+}
+
 .radioGroup {
   margin-bottom: 12px;
   text-align: left;

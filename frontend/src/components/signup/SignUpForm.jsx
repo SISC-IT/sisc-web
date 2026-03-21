@@ -92,6 +92,8 @@ const SignUpForm = () => {
     password !== '';
 
   const isPasswordValid = passwordValid.every(Boolean);
+  const hasConfirmPasswordInput = confirmPassword.length > 0;
+  const isPasswordMatch = hasConfirmPasswordInput && password === confirmPassword;
 
   const isFormValid =
     areRequiredFieldsFilled &&
@@ -291,6 +293,19 @@ const SignUpForm = () => {
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {hasConfirmPasswordInput && (
+              <p
+                className={`${styles.passwordMatchMessage} ${
+                  isPasswordMatch
+                    ? styles.passwordMatchMessageSuccess
+                    : styles.passwordMatchMessageError
+                }`}
+              >
+                {isPasswordMatch
+                  ? '비밀번호가 일치합니다.'
+                  : '비밀번호가 일치하지 않습니다.'}
+              </p>
+            )}
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>
