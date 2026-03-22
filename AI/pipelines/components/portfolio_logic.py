@@ -1,4 +1,4 @@
-# AI/modules/trader/strategies/portfolio_logic.py
+# AI/modules/pipelines/components/portfolio_logic.py
 """
 [SISC AI 전략 코어 모듈] - Meta-Gating & Risk Overlay 반영 버전
 - Data Flow Specification에 정의된 파이프라인(Phase 3 ~ 6)을 수행합니다.

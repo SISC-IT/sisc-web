@@ -1,6 +1,7 @@
 # AI/modules/data_collector/market_data.py
 import sys
 import os
+from tqdm import tqdm
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -10,7 +11,7 @@ from psycopg2.extras import execute_values
 
 # 프로젝트 루트 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../.."))
+project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
@@ -220,13 +221,14 @@ class MarketDataCollector:
             if data_to_insert:
                 execute_values(cursor, insert_query, data_to_insert)
                 conn.commit()
-                print(f"   [{ticker}] {len(data_to_insert)}건 저장 완료.")
+                # ★ 수정됨: 너무 많은 성공 로그를 숨기고 싶다면 이 줄을 주석 처리하셔도 됩니다.
+                # tqdm.write(f"   [{ticker}] {len(data_to_insert)}건 저장 완료.") 
             else:
-                print(f"   [{ticker}] 저장할 데이터가 없습니다.")
+                tqdm.write(f"   [{ticker}] 저장할 데이터가 없습니다.")
 
         except Exception as e:
             conn.rollback()
-            print(f"   [{ticker}][Error] DB 저장 실패: {e}")
+            tqdm.write(f"   [{ticker}][Error] DB 저장 실패: {e}")
         finally:
             cursor.close()
             conn.close()
@@ -240,21 +242,20 @@ class MarketDataCollector:
 
         today = datetime.now().strftime("%Y-%m-%d")
 
-        for ticker in tickers:
+        for ticker in tqdm(tickers, desc="OHLCV 수집 진행률", unit="종목"):
             start_date = self.get_start_date(ticker, repair_mode)
 
             if not repair_mode and start_date > today:
-                print(f"   [{ticker}] 이미 최신 데이터입니다.")
+                # 이미 최신이면 조용히 넘어감 (로그 축소)
                 continue
-
-            print(f"   [{ticker}] 수집 시작 ({start_date} ~ )...")
             
             df = self.fetch_ohlcv(ticker, start_date)
             
             if not df.empty:
                 self.save_to_db(ticker, df)
+            # 수집된 데이터가 없거나 에러난 경우만 콘솔에 남김
             else:
-                print(f"   [{ticker}] 수집된 데이터가 없습니다.")
+                tqdm.write(f"   [{ticker}] 수집된 데이터가 없습니다.")
 
 # ----------------------------------------------------------------------
 # [실행 모드]

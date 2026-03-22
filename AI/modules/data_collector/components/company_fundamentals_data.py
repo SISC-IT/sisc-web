@@ -5,13 +5,14 @@ import time
 import requests
 import yfinance as yf
 import pandas as pd
+from tqdm import tqdm
 from typing import List
 from datetime import datetime
 from psycopg2.extras import execute_values
 
 # 프로젝트 루트 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../.."))
+project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
@@ -163,7 +164,7 @@ class FundamentalsDataCollector:
             conn.commit()
         except Exception as e:
             conn.rollback()
-            print(f"   [{ticker}][Error] DB 저장 실패: {e}")
+            tqdm.write(f"   [{ticker}][Error] DB 저장 실패: {e}")
         finally:
             cursor.close()
             conn.close()
@@ -202,7 +203,7 @@ class FundamentalsDataCollector:
             conn.commit()
         except Exception as e:
             conn.rollback()
-            print(f"   [{ticker}][Error] 완료 상태 업데이트 실패: {e}")
+            tqdm.write(f"   [{ticker}][Error] 완료 상태 업데이트 실패: {e}")
         finally:
             cursor.close()
             conn.close()
@@ -213,28 +214,24 @@ class FundamentalsDataCollector:
     def update_tickers(self, tickers: List[str]):
         print(f"\n[Fundamentals] 총 {len(tickers)}개 종목 하이브리드 수집 시작...")
 
-        # 1. DB에 이미 데이터가 있는 종목 확인 (yfinance 중복 방지)
         conn = get_db_conn(self.db_name)
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT ticker FROM public.company_fundamentals;")
         db_filled_tickers = set(row[0] for row in cursor.fetchall())
         conn.close()
 
-        # [단계 1] 아예 데이터가 없는 종목은 YFinance로 빠르게 베이스라인 채우기
         yf_targets = [t for t in tickers if t not in db_filled_tickers]
         if yf_targets:
             print(f" >> [Phase 1] DB에 없는 {len(yf_targets)}개 종목을 yfinance(4년 치)로 우선 채웁니다.")
-            for i, ticker in enumerate(yf_targets):
+            for ticker in tqdm(yf_targets, desc="YFinance 수집", unit="종목"):
                 try:
                     data = self.fetch_yf_metrics(ticker)
                     if data: self.save_to_db(ticker, data)
-                    if i % 10 == 0 and i > 0: print(f"    ... {i}개 yf 수집 완료")
-                    time.sleep(0.5) # yf 과부하 방지
+                    time.sleep(0.5)
                 except Exception as e:
-                    print(f"   [{ticker}] yf 수집 에러: {e}")
+                    tqdm.write(f"   [{ticker}] yf 수집 에러: {e}")
             print(" >> [Phase 1] yfinance 베이스라인 수집 완료!\n")
 
-        # [단계 2] 매일 80개씩 FMP API 10년 치 업그레이드
         if not self.api_key:
             print("🚨 FMP_API_KEY가 없어 10년 치 업그레이드는 건너뜁니다.")
             return
@@ -247,17 +244,17 @@ class FundamentalsDataCollector:
 
         print(f" >> [Phase 2] {len(fmp_targets)}개 종목을 FMP API(10년 치)로 업그레이드합니다.")
         success_count = 0
-        for ticker in fmp_targets:
+        
+        for ticker in tqdm(fmp_targets, desc="FMP API 수집", unit="종목"):
             try:
                 data = self.fetch_fmp_metrics(ticker)
                 if data:
                     self.save_to_db(ticker, data)
                 
-                # 수집을 시도했으므로 무조건 완료 도장 찍기 (신규 상장주 무한루프 방지)
                 self.mark_fmp_completed(ticker)
                 success_count += 1
             except Exception as e:
-                print(f"   [{ticker}] FMP 수집 에러: {e}")
+                tqdm.write(f"   [{ticker}] FMP 수집 에러: {e}")
 
         print(f" >> [Phase 2] 오늘 할당량 끝! ({success_count}개 종목 FMP 업그레이드 및 상태 저장 완료)")
 

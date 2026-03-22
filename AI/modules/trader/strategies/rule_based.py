@@ -7,7 +7,7 @@
 
 class RuleBasedStrategy:
     """[백테스트 전용] 단일 종목 점수 기반 매매 전략"""
-    def __init__(self, buy_threshold=0.65, sell_threshold=0.40):
+    def __init__(self, buy_threshold=0.70, sell_threshold=0.40):
         self.buy_threshold = buy_threshold
         self.sell_threshold = sell_threshold
 
@@ -46,7 +46,7 @@ def decide_order(
     """
     
     # AI 스코어 기준점 (사용자 설정에 따라 튜닝 가능)
-    STRONG_BUY_SCORE = 0.75  # 75% 이상이면 초강력 매수 (풀베팅)
+    STRONG_BUY_SCORE = 0.8  # 80% 이상이면 초강력 매수 (풀베팅)
     SELL_SCORE = 0.50        # 50% 밑으로 떨어지면 모멘텀 소멸 (전량 매도)
 
     # ---------------------------------------------------------
@@ -69,15 +69,15 @@ def decide_order(
     # ---------------------------------------------------------
     # 점수에 따라 예산(비중)을 다르게 씁니다.
     if score >= STRONG_BUY_SCORE:
-        # 75% 이상: 할당된 예산 100% 사용 (강한 확신)
+        # 80% 이상: 할당된 예산 100% 사용 (강한 확신)
         conviction_weight = 1.0 
-    elif score >= 0.60:
-        # 60~75% 사이: 확신도에 비례해서 30% ~ 90% 예산만 사용
-        # 계산식: (score - 0.60) / (0.75 - 0.60) 로 비율 산출 후 0.3~1.0 사이로 매핑
-        base_weight = 0.3 + ((score - 0.60) / 0.15) * 0.7
+    elif score >= 0.70:
+        # 70~80% 사이: 확신도에 비례해서 30% ~ 90% 예산만 사용
+        # 계산식: (score - 0.70) / (0.80 - 0.70) 로 비율 산출 후 0.3~1.0 사이로 매핑
+        base_weight = 0.3 + ((score - 0.70) / 0.10) * 0.7
         conviction_weight = min(max(base_weight, 0.3), 1.0)
     else:
-        # 60% 미만: 신규 매수 안 함
+        # 70% 미만: 신규 매수 안 함
         conviction_weight = 0.0
 
     # 최종 목표 보유 금액 계산

@@ -4,6 +4,6 @@
 """
 
 from .rule_based import RuleBasedStrategy
-from .portfolio_logic import calculate_portfolio_allocation
 
-__all__ = ['RuleBasedStrategy', 'calculate_portfolio_allocation']
+
+__all__ = ['RuleBasedStrategy']

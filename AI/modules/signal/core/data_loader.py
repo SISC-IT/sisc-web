@@ -29,7 +29,7 @@ from AI.libs.database.fetcher import (
     fetch_news_sentiment, 
     fetch_fundamentals
 )
-from AI.modules.features.legacy.technical_features import add_technical_indicators
+from AI.modules.features.legacy.technical_features import add_multi_timeframe_features, add_technical_indicators
 
 class DataLoader:
     def __init__(self, db_name="db", lookback=60, horizons: List[int] = None):
@@ -141,7 +141,7 @@ class DataLoader:
         print(f"[DataLoader] 주가 데이터 로드 완료: {len(df_price)} rows")
         return df_price
 
-    def create_dataset(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict]:
+    def create_dataset(self, df: pd.DataFrame, feature_columns: Optional[List[str]] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict]:
         """
         로드된 주가 데이터(df)를 순회하며:
         1. 공통 데이터(Macro, Breadth) 병합
@@ -201,6 +201,7 @@ class DataLoader:
             # [Feature Engineering] 기술적 지표 생성
             try:
                 sub_df = add_technical_indicators(sub_df)
+                sub_df = add_multi_timeframe_features(sub_df)
             except Exception:
                 continue
             
@@ -230,6 +231,9 @@ class DataLoader:
             'per', 'pbr', 'roe'
         ]
         
+        if feature_columns:
+            potential_features = list(feature_columns)
+
         available_cols = [c for c in potential_features if c in full_df.columns]
         full_df = full_df.dropna(subset=available_cols)
         
