@@ -9,6 +9,7 @@ import FileAttachmentList from './FileAttachmentList';
 const PostView = ({
   post,
   boardName,
+  canManagePost,
   showMenu,
   setShowMenu,
   onEdit,
@@ -37,30 +38,32 @@ const PostView = ({
 
       <div className={styles.titleWrapper}>
         <h1 className={styles.title}>{post.title}</h1>
-        <div className={styles.menuContainer}>
-          <button
-            className={styles.menuButton}
-            onClick={() => setShowMenu(!showMenu)}
-          >
-            ⋮
-          </button>
-          {showMenu && (
-            <div className={styles.menuDropdown}>
-              <button onClick={onEdit}>
-                <img src={EditIcon} className={styles.EditIcon} alt="수정" />
-                수정하기
-              </button>
-              <button onClick={onDelete}>
-                <img
-                  src={DeleteIcon}
-                  className={styles.DeleteIcon}
-                  alt="삭제"
-                />
-                삭제하기
-              </button>
-            </div>
-          )}
-        </div>
+        {canManagePost && (
+          <div className={styles.menuContainer}>
+            <button
+              className={styles.menuButton}
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              ⋮
+            </button>
+            {showMenu && (
+              <div className={styles.menuDropdown}>
+                <button onClick={onEdit}>
+                  <img src={EditIcon} className={styles.EditIcon} alt="수정" />
+                  수정하기
+                </button>
+                <button onClick={onDelete}>
+                  <img
+                    src={DeleteIcon}
+                    className={styles.DeleteIcon}
+                    alt="삭제"
+                  />
+                  삭제하기
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.divider} />

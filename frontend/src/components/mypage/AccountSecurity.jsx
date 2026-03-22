@@ -3,7 +3,7 @@ import styles from './AccountSecurity.module.css';
 import settingIcon from '../../assets/setting_icon.svg';
 import EditProfileModal from './EditProfileModal';
 
-const AccountSecurity = () => {
+const AccountSecurity = ({ onProfileUpdated }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -20,7 +20,10 @@ const AccountSecurity = () => {
       </div>
 
       {isModalOpen && (
-        <EditProfileModal onClose={() => setIsModalOpen(false)} />
+        <EditProfileModal
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={onProfileUpdated}
+        />
       )}
     </>
   );

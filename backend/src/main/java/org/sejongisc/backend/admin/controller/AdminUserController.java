@@ -39,7 +39,7 @@ public class AdminUserController {
         """
     )
     @PostMapping(value = "/upload-excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')") // 회장, 개발자만 가능
+    @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')") // 운영진, 회장, 개발자 가능
     public ResponseEntity<ExcelSyncResponse> uploadMemberExcel(@RequestPart("file") MultipartFile file) {
         return ResponseEntity.ok(adminUserService.syncUsersFromExcel(file));
     }
@@ -55,7 +55,7 @@ public class AdminUserController {
         """
     )
     @GetMapping
-    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
     public ResponseEntity<List<AdminUserResponse>> getAllUsers(@ModelAttribute AdminUserRequest request) {
         // TODO: 페이징 추후 고려
         return ResponseEntity.ok(adminUserService.findAllUsers(request));
@@ -63,7 +63,7 @@ public class AdminUserController {
 
     @Operation(summary = "회원 활동 상태 변경", description = "ACTIVE, INACTIVE, OUT으로 상태를 변경합니다. (시스템 관리자용)")
     @PatchMapping("/{userId}/status")
-    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
     public ResponseEntity<?> updateUserStatus(
             @PathVariable UUID userId,
             @RequestParam UserStatus status) {
@@ -75,7 +75,7 @@ public class AdminUserController {
     // TODO : 회장 권한 논의 필요
     @Operation(summary = "회원 권한 변경", description = "특정 유저의 Role(PRESIDENT, VICE_PRESIDENT, TEAM_LEADER)을 변경합니다. (시스템 관리자용)")
     @PatchMapping("/{userId}/role")
-    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
     public ResponseEntity<?> updateUserRole(
             @PathVariable UUID userId,
             @RequestParam Role role) {
@@ -95,7 +95,7 @@ public class AdminUserController {
         - REGULAR_MEMBER, // 정회원
     """)
     @PatchMapping("/{userId}/grade")
-    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
     public ResponseEntity<Void> promoteToSenior(@PathVariable UUID userId,
                                                 @RequestParam Grade grade) {
         adminUserService.updateUserGrade(userId, grade);
@@ -104,7 +104,7 @@ public class AdminUserController {
 
     @Operation(summary = "회원 강제 탈퇴", description = "시스템에서 유저를 탈퇴 처리합니다. (시스템 관리자용)")
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
     public ResponseEntity<?> forceDeleteUser(@PathVariable UUID userId) {
         adminUserService.deleteUser(userId);
         return ResponseEntity.noContent().build();

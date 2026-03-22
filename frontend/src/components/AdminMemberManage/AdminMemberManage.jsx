@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Star } from 'lucide-react';
+import { MoreVertical, Search, Star } from 'lucide-react';
 import styles from './AdminMemberManage.module.css';
 import {
+  changeAdminMemberGrade,
   changeAdminMemberRole,
   changeAdminMemberStatus,
   deleteAdminMember,
   getAdminMembersData,
-  promoteAdminMemberSenior,
 } from '../../utils/adminMembersData';
 
 const ROLE_LABELS = {
+  SYSTEM_ADMIN: '관리자',
   PRESIDENT: '회장',
   VICE_PRESIDENT: '부회장',
   TEAM_LEADER: '팀장',
@@ -18,6 +19,7 @@ const ROLE_LABELS = {
 };
 
 const ROLE_OPTIONS = [
+  'SYSTEM_ADMIN',
   'PRESIDENT',
   'VICE_PRESIDENT',
   'TEAM_LEADER',
@@ -32,12 +34,20 @@ const STATUS_LABELS = {
 };
 
 const STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'GRADUATED'];
+const STATUS_CHANGE_OPTIONS = ['ACTIVE', 'INACTIVE'];
+
+const GRADE_LABELS = {
+  NEW_MEMBER: '신입부원',
+  ASSOCIATE_MEMBER: '준회원',
+  REGULAR_MEMBER: '정회원',
+};
+
+const GRADE_OPTIONS = ['NEW_MEMBER', 'ASSOCIATE_MEMBER', 'REGULAR_MEMBER'];
 
 const getRoleClassName = (role) => {
-  if (role === '회장') return styles.rolePresident;
-  if (role === '부회장') return styles.roleManager;
-  if (role === '팀장') return styles.roleLeader;
-  if (role === '대기회원') return styles.roleLeader;
+  if (role === 'PRESIDENT') return styles.rolePresident;
+  if (role === 'SYSTEM_ADMIN' || role === 'VICE_PRESIDENT') return styles.roleManager;
+  if (role === 'TEAM_LEADER' || role === 'PENDING_MEMBER') return styles.roleLeader;
   return styles.roleNormal;
 };
 
@@ -55,9 +65,9 @@ const AdminMemberManage = () => {
 
   // 회원 목록 데이터 상태
   const [members, setMembers] = useState([]);
-  const [isPromotingById, setIsPromotingById] = useState({});
   const [isDeletingById, setIsDeletingById] = useState({});
   const [isChangingById, setIsChangingById] = useState({});
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [changeDialog, setChangeDialog] = useState({
     open: false,
     type: 'role',
@@ -106,11 +116,25 @@ const AdminMemberManage = () => {
     };
   }, [roleFilter, searchQuery, statusFilter]);
 
+  useEffect(() => {
+    const closeActionMenuOnOutsideClick = (event) => {
+      if (!event.target.closest('[data-member-action-menu]')) {
+        setOpenActionMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', closeActionMenuOnOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', closeActionMenuOnOutsideClick);
+    };
+  }, []);
+
   const filteredMembers = useMemo(() => {
     return members.map((member) => ({
       ...member,
       displayRole: ROLE_LABELS[member.role] || member.role,
       displayStatus: STATUS_LABELS[member.status] || member.status,
+      displayGrade: GRADE_LABELS[member.grade] || member.grade || '-',
     }));
   }, [members]);
 
@@ -124,11 +148,24 @@ const AdminMemberManage = () => {
   };
 
   const openStatusDialog = (member) => {
+    const initialStatus = STATUS_CHANGE_OPTIONS.includes(member.status)
+      ? member.status
+      : STATUS_CHANGE_OPTIONS[0];
+
     setChangeDialog({
       open: true,
       type: 'status',
       member,
-      value: member.status,
+      value: initialStatus,
+    });
+  };
+
+  const openGradeDialog = (member) => {
+    setChangeDialog({
+      open: true,
+      type: 'grade',
+      member,
+      value: member.grade || GRADE_OPTIONS[0],
     });
   };
 
@@ -156,12 +193,18 @@ const AdminMemberManage = () => {
           return;
         }
         await changeAdminMemberRole({ userId: member.id, role: value });
-      } else {
-        if (!STATUS_OPTIONS.includes(value)) {
+      } else if (type === 'status') {
+        if (!STATUS_CHANGE_OPTIONS.includes(value)) {
           window.alert('유효하지 않은 상태입니다.');
           return;
         }
         await changeAdminMemberStatus({ userId: member.id, status: value });
+      } else {
+        if (!GRADE_OPTIONS.includes(value)) {
+          window.alert('유효하지 않은 신분입니다.');
+          return;
+        }
+        await changeAdminMemberGrade({ userId: member.id, grade: value });
       }
 
       closeChangeDialog();
@@ -173,42 +216,14 @@ const AdminMemberManage = () => {
     } catch (error) {
       window.alert(
         error?.message ||
-          (type === 'role' ? '권한 변경에 실패했습니다.' : '상태 변경에 실패했습니다.')
+          (type === 'role'
+            ? '권한 변경에 실패했습니다.'
+            : type === 'status'
+              ? '상태 변경에 실패했습니다.'
+              : '신분 변경에 실패했습니다.')
       );
     } finally {
       setIsChangingById((prev) => ({
-        ...prev,
-        [member.id]: false,
-      }));
-    }
-  };
-
-  // 단일 회원 선배 전환
-  const handlePromoteSenior = async (member) => {
-    if (isPromotingById[member.id]) {
-      return;
-    }
-
-    if (!window.confirm(`${member.name}님을 선배(SENIOR)로 전환하시겠습니까?`)) {
-      return;
-    }
-
-    setIsPromotingById((prev) => ({
-      ...prev,
-      [member.id]: true,
-    }));
-
-    try {
-      await promoteAdminMemberSenior({ userId: member.id });
-      await loadMembers({
-        keyword: searchQuery.trim() || undefined,
-        role: roleFilter === 'all' ? undefined : roleFilter,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-      });
-    } catch (error) {
-      window.alert(error?.message || '선배 전환에 실패했습니다.');
-    } finally {
-      setIsPromotingById((prev) => ({
         ...prev,
         [member.id]: false,
       }));
@@ -266,11 +281,11 @@ const AdminMemberManage = () => {
           onChange={(event) => setRoleFilter(event.target.value)}
         >
           <option value="all">모든 권한</option>
-          <option value="PRESIDENT">회장</option>
-          <option value="VICE_PRESIDENT">부회장</option>
-          <option value="TEAM_LEADER">팀장</option>
-          <option value="TEAM_MEMBER">일반</option>
-          <option value="PENDING_MEMBER">대기회원</option>
+          {ROLE_OPTIONS.map((role) => (
+            <option key={role} value={role}>
+              {ROLE_LABELS[role] || role}
+            </option>
+          ))}
         </select>
 
         <select
@@ -295,6 +310,7 @@ const AdminMemberManage = () => {
               <th>권한</th>
               <th>포인트</th>
               <th>상태</th>
+              <th>신분</th>
               <th>기수</th>
               <th className={styles.rightAlign}>작업</th>
             </tr>
@@ -315,7 +331,7 @@ const AdminMemberManage = () => {
                 <td>{member.teamName || '-'}</td>
                 <td>
                   <span
-                    className={`${styles.badge} ${getRoleClassName(member.displayRole)}`}
+                    className={`${styles.badge} ${getRoleClassName(member.role)}`}
                   >
                     {member.displayRole}
                   </span>
@@ -333,39 +349,68 @@ const AdminMemberManage = () => {
                     {member.displayStatus}
                   </span>
                 </td>
+                <td>{member.displayGrade}</td>
                 <td>{member.generation ? `${member.generation}기` : '-'}</td>
                 <td className={styles.rightAlign}>
-                  <div className={styles.rowActions}>
+                  <div className={styles.rowActionMenu} data-member-action-menu>
                     <button
                       type="button"
-                      className={styles.actionButton}
-                      onClick={() => openRoleDialog(member)}
+                      className={styles.kebabButton}
+                      onClick={() =>
+                        setOpenActionMenuId((prev) =>
+                          prev === member.id ? null : member.id
+                        )
+                      }
+                      aria-label="회원 관리 메뉴"
+                      aria-expanded={openActionMenuId === member.id}
                     >
-                      권한 변경
+                      <MoreVertical size={16} />
                     </button>
-                    <button
-                      type="button"
-                      className={styles.actionButton}
-                      onClick={() => openStatusDialog(member)}
-                    >
-                      상태 변경
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.actionButton}
-                      onClick={() => handlePromoteSenior(member)}
-                      disabled={Boolean(isPromotingById[member.id])}
-                    >
-                      {isPromotingById[member.id] ? '처리 중...' : '선배 전환'}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.actionButton}
-                      onClick={() => handleDelete(member)}
-                      disabled={Boolean(isDeletingById[member.id])}
-                    >
-                      {isDeletingById[member.id] ? '처리 중...' : '회원 삭제'}
-                    </button>
+                    {openActionMenuId === member.id && (
+                      <div className={styles.actionMenu}>
+                        <button
+                          type="button"
+                          className={styles.actionMenuItem}
+                          onClick={() => {
+                            openRoleDialog(member);
+                            setOpenActionMenuId(null);
+                          }}
+                        >
+                          권한 변경
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.actionMenuItem}
+                          onClick={() => {
+                            openStatusDialog(member);
+                            setOpenActionMenuId(null);
+                          }}
+                        >
+                          상태 변경
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.actionMenuItem}
+                          onClick={() => {
+                            openGradeDialog(member);
+                            setOpenActionMenuId(null);
+                          }}
+                        >
+                          신분 변경
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.actionMenuItem}
+                          onClick={() => {
+                            handleDelete(member);
+                            setOpenActionMenuId(null);
+                          }}
+                          disabled={Boolean(isDeletingById[member.id])}
+                        >
+                          {isDeletingById[member.id] ? '처리 중...' : '회원 삭제'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -390,11 +435,19 @@ const AdminMemberManage = () => {
         <div className={styles.modalOverlay}>
           <div className={styles.modalCard}>
             <h3>
-              {changeDialog.type === 'role' ? '권한 변경' : '상태 변경'}
+              {changeDialog.type === 'role'
+                ? '권한 변경'
+                : changeDialog.type === 'status'
+                  ? '상태 변경'
+                  : '신분 변경'}
             </h3>
             <p>
               {changeDialog.member.name}님의
-              {changeDialog.type === 'role' ? ' 권한' : ' 상태'}을 선택하세요.
+              {changeDialog.type === 'role'
+                ? ' 권한'
+                : changeDialog.type === 'status'
+                  ? ' 상태'
+                  : ' 신분'}을 선택하세요.
             </p>
             <select
               className={styles.filterSelect}
@@ -406,15 +459,20 @@ const AdminMemberManage = () => {
                 }))
               }
             >
-              {(changeDialog.type === 'role' ? ROLE_OPTIONS : STATUS_OPTIONS).map(
-                (option) => (
-                  <option key={option} value={option}>
-                    {(changeDialog.type === 'role'
-                      ? ROLE_LABELS[option]
-                      : STATUS_LABELS[option]) || option}
-                  </option>
-                )
-              )}
+              {(changeDialog.type === 'role'
+                ? ROLE_OPTIONS
+                : changeDialog.type === 'status'
+                  ? STATUS_CHANGE_OPTIONS
+                  : GRADE_OPTIONS
+              ).map((option) => (
+                <option key={option} value={option}>
+                  {(changeDialog.type === 'role'
+                    ? ROLE_LABELS[option]
+                    : changeDialog.type === 'status'
+                      ? STATUS_LABELS[option]
+                      : GRADE_LABELS[option]) || option}
+                </option>
+              ))}
             </select>
             <div className={styles.modalActions}>
               <button

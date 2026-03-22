@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styles from './ActivityModal.module.css';
 import PointIcon from '../../assets/coin4.svg';
 import { getUserPoints } from '../../utils/myPageMenu';
+import { formatPointReason } from '../../utils/pointReason';
 
 const PointsSection = () => {
   const [items, setItems] = useState([]);
@@ -11,11 +12,11 @@ const PointsSection = () => {
 
   const fetchPoints = async (pageNumber) => {
     try {
-      const res = await getUserPoints(pageNumber, pageSize);
+      const res = await getUserPoints({ pageNumber: pageNumber - 1, pageSize });
       setItems(
         res.content.map((it) => ({
           id: it.entryId,
-          content: it.reason,
+          content: formatPointReason(it.reason),
           point: it.amount,
           time: new Date(it.createdDate).toLocaleString(),
         }))

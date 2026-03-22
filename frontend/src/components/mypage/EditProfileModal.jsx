@@ -6,7 +6,7 @@ import rightArrow from '../../assets/right-arrow.svg';
 import { toast } from 'react-toastify';
 import { updateUserDetails } from '../../utils/userApi';
 
-export default function EditProfileModal({ onClose }) {
+export default function EditProfileModal({ onClose, onSuccess }) {
   const [mode, setMode] = useState('menu');
   const [step, setStep] = useState('verify');
 
@@ -18,7 +18,7 @@ export default function EditProfileModal({ onClose }) {
 
   const handleMenuSelect = (nextMode) => {
     setMode(nextMode);
-    setStep('verify');
+    setStep(nextMode === 'password' ? 'form' : 'verify');
     setVerifiedEmail(null);
     setPasswordData(null);
     setFormValid(false);
@@ -53,7 +53,7 @@ export default function EditProfileModal({ onClose }) {
       );
     }
 
-    if (step === 'verify') {
+    if (mode === 'email' && step === 'verify') {
       return (
         <EmailVerify
           type={mode === 'email' ? 'newEmail' : 'currentEmail'}
@@ -67,7 +67,7 @@ export default function EditProfileModal({ onClose }) {
         <ChangeInfoForm
           onValidChange={(data) => {
             setPasswordData(data);
-            setFormValid(true);
+            setFormValid(Boolean(data));
           }}
         />
       );
@@ -75,35 +75,29 @@ export default function EditProfileModal({ onClose }) {
   };
 
   const getButtonText = () => {
-    if (mode === 'password' && step === 'verify') return '계속하기';
-    if (mode === 'password' && step === 'form') return '비밀번호 변경하기';
+    if (mode === 'password') return '비밀번호 변경하기';
     if (mode === 'email') return '이메일 변경하기';
     return null;
   };
 
   const isButtonEnabled = () => {
-    if (mode === 'password' && step === 'verify') return !!verifiedEmail;
-    if (mode === 'password' && step === 'form') return formValid;
+    if (mode === 'password') return formValid;
     if (mode === 'email') return !!verifiedEmail;
     return false;
   };
 
   const handleSubmit = async () => {
-    if (mode === 'password' && step === 'verify') {
-      setStep('form');
-      return;
-    }
-
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      if (mode === 'password' && step === 'form') {
+      if (mode === 'password') {
         await updateUserDetails({
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
         });
 
         toast.success('비밀번호가 변경되었습니다.');
+        onSuccess?.();
         onClose();
         return;
       }
@@ -114,6 +108,7 @@ export default function EditProfileModal({ onClose }) {
         });
 
         toast.success('이메일이 변경되었습니다.');
+        onSuccess?.();
         onClose();
       }
     } catch (error) {
@@ -151,7 +146,7 @@ export default function EditProfileModal({ onClose }) {
             취소
           </button>
           {buttonText && (
-            <button // 계속하기 or 비밀번호 변경하기 or 이메일 변경하기 button
+            <button
               className={`${styles.primaryButton} ${styles.halfButton}`}
               disabled={!isButtonEnabled() || isSubmitting}
               onClick={handleSubmit}

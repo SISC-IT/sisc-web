@@ -2,6 +2,8 @@ services:
   db:
     image: postgres:16-alpine
     container_name: db
+    ports:
+      - "127.0.0.1:5432:5432"  # 외부 인터넷은 차단되고 서버 내부에서만 접속 가능
     environment:
       POSTGRES_DB: sisc_db
       POSTGRES_USER: ${DB_USERNAME}
@@ -76,20 +78,20 @@ services:
           memory: 512M
 
   # 3. AI
-  ai:
-    image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
-    container_name: ai
-    restart: always
-    ports:
-      - "5000:5000"
-    networks:
-      - sisc-net
-    deploy:
-      resources:
-        limits:
-          memory: 2G                 # AI 모델 로드 시 필요한 메모리 확보
-        reservations:
-          memory: 512M
+  #ai:
+  #  image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
+  #  container_name: ai
+  #  restart: always
+  #  ports:
+  #    - "5000:5000"
+  #  networks:
+  #    - sisc-net
+  #  deploy:
+  #    resources:
+  #      limits:
+  #        memory: 2G                 # AI 모델 로드 시 필요한 메모리 확보
+  #      reservations:
+  #        memory: 512M
   npm:
     image: 'jc21/nginx-proxy-manager:latest'
     container_name: npm

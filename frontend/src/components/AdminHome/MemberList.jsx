@@ -1,5 +1,5 @@
 const ROLE_LABELS = {
-	SYSTEM_ADMIN: '시스템 관리자',
+	SYSTEM_ADMIN: '관리자',
 	PRESIDENT: '회장',
 	VICE_PRESIDENT: '부회장',
 	TEAM_LEADER: '팀장',
@@ -16,7 +16,7 @@ const STATUS_LABELS = {
 
 const getRoleClassName = (roleLabel, styles) => {
 	if (roleLabel === '회장') return styles.rolePresident;
-	if (roleLabel === '부회장') return styles.roleManager;
+	if (roleLabel === '관리자' || roleLabel === '부회장') return styles.roleManager;
 	if (roleLabel === '팀장' || roleLabel === '대기회원') return styles.roleLeader;
 	return styles.roleNormal;
 };

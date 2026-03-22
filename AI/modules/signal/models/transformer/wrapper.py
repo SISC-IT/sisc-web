@@ -1,50 +1,72 @@
-# AI/modules/signal/models/transformer/wrapper.py
-"""
-[Transformer 모델 래퍼]
-- BaseSignalModel 인터페이스를 구현한 실제 실행 클래스입니다.
-- architecture.py에서 정의한 모델을 빌드하고, 학습/예측/저장 로직을 수행합니다.
-"""
-
 import os
+import pickle
+import shutil
+import tempfile
+import zipfile
+from typing import Any, Dict, Optional
+
 import numpy as np
+import pandas as pd
 import tensorflow as tf
-from typing import Dict, Any, Optional
+
 from AI.modules.signal.core.base_model import BaseSignalModel
-from .architecture import build_transformer_model 
+from .architecture import build_transformer_model
+
 
 class TransformerSignalModel(BaseSignalModel):
+    supports_model_load_before_build = True
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.model_name = "transformer"
-        
+        self.seq_len = config.get("seq_len", 60)
+        self.features = config.get("features", [])
+        self.scaler = None
+
+    def load_scaler(self, filepath: str):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Scaler file not found: {filepath}")
+        with open(filepath, "rb") as f:
+            self.scaler = pickle.load(f)
+
+        scaler_features = getattr(self.scaler, "feature_names_in_", None)
+        if scaler_features is not None and len(scaler_features) > 0:
+            self.features = list(scaler_features)
+            #print(f"[Transformer] Feature schema restored from scaler: {self.features}")
+        elif hasattr(self.scaler, "n_features_in_") and len(self.features) != int(self.scaler.n_features_in_):
+            self.features = list(self.features[: int(self.scaler.n_features_in_)])
+            #print("[Transformer] Feature schema inferred from scaler width: "f"{len(self.features)} columns")
+
+        #print(f"[Transformer] Scaler loaded: {filepath}")
+
     def build(self, input_shape: tuple):
-        """설정(config)에 따라 모델 아키텍처 생성"""
-        # 차원 검증
         if len(input_shape) != 2:
-             # input_shape가 (timesteps, features) 2차원이 아니라면 경고 또는 에러
-             # 일부 환경에서 (None, timesteps, features)로 올 수 있으므로 유연하게 처리
             if len(input_shape) == 3 and input_shape[0] is None:
-                 input_shape = input_shape[1:]
+                input_shape = input_shape[1:]
             else:
-                raise ValueError(f"입력 차원은 (timesteps, features) 2차원이어야 합니다. 현재: {input_shape}")
+                raise ValueError(
+                    f"Expected input shape (timesteps, features), got: {input_shape}"
+                )
 
         self.model = build_transformer_model(
             input_shape=input_shape,
+            n_tickers=self.config.get("n_tickers", 1000),
+            n_sectors=self.config.get("n_sectors", 50),
+            n_outputs=4,
             head_size=self.config.get("head_size", 256),
             num_heads=self.config.get("num_heads", 4),
             ff_dim=self.config.get("ff_dim", 4),
             num_transformer_blocks=self.config.get("num_blocks", 4),
             mlp_units=self.config.get("mlp_units", [128]),
             dropout=self.config.get("dropout", 0.4),
-            mlp_dropout=self.config.get("mlp_dropout", 0.25)
+            mlp_dropout=self.config.get("mlp_dropout", 0.25),
         )
-        
-        # 컴파일
+
         learning_rate = self.config.get("learning_rate", 1e-4)
         self.model.compile(
             loss="binary_crossentropy",
             optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-            metrics=["accuracy", "AUC"]
+            metrics=["accuracy", "AUC"],
         )
 
     def train(
@@ -53,61 +75,113 @@ class TransformerSignalModel(BaseSignalModel):
         y_train: np.ndarray,
         X_val: Optional[np.ndarray] = None,
         y_val: Optional[np.ndarray] = None,
-        **kwargs
+        **kwargs,
     ):
-        """모델 학습 수행"""
         if self.model is None:
-            raise ValueError("모델이 빌드되지 않았습니다. build()를 먼저 호출하세요.")
+            raise ValueError("Model is not built. Call build() first.")
 
-        # ✅ 호출자가 주면 우선, 없으면 config, 없으면 default
         epochs = int(kwargs.pop("epochs", self.config.get("epochs", 50)))
         batch_size = int(kwargs.pop("batch_size", self.config.get("batch_size", 32)))
         verbose = int(kwargs.pop("verbose", 1))
-
-        # callbacks는 pop으로 빼서 중복 전달 방지
         callbacks = kwargs.pop("callbacks", [])
-
-        # validation_data는 (X_val, y_val)이 둘 다 있을 때만
         validation_data = (X_val, y_val) if (X_val is not None and y_val is not None) else None
 
-        history = self.model.fit(
-            X_train, y_train,
+        return self.model.fit(
+            X_train,
+            y_train,
             validation_data=validation_data,
             epochs=epochs,
             batch_size=batch_size,
             callbacks=callbacks,
             verbose=verbose,
-            **kwargs 
+            **kwargs,
         )
-        return history
 
-
-
-
-    def predict(self, X_input: np.ndarray, **kwargs) -> np.ndarray:
-        """추론 수행"""
+    def predict(
+        self, X_input: np.ndarray, ticker_id: int = 0, sector_id: int = 0, **kwargs
+    ) -> np.ndarray:
         if self.model is None:
-            raise ValueError("모델이 없습니다. load()하거나 build() 하세요.")
-            
-        # Keras 모델은 (batch, time, feat) 형태를 기대하므로 차원 확인
+            raise ValueError("Model is not loaded. Call build() and load() first.")
+
         if len(X_input.shape) == 2:
             X_input = np.expand_dims(X_input, axis=0)
-            
-        return self.model.predict(X_input,  **kwargs)
+
+        t_id_tensor = np.array([[ticker_id]])
+        s_id_tensor = np.array([[sector_id]])
+        return self.model.predict([X_input, t_id_tensor, s_id_tensor], **kwargs)
+
+    def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
+        if not self.features:
+            raise ValueError("features is empty.")
+        if self.scaler is None:
+            raise ValueError("Scaler is not loaded. Call load_scaler() first.")
+        missing_features = [col for col in self.features if col not in df.columns]
+        if missing_features:
+            raise ValueError(
+                "Missing required features for transformer inference: "
+                + ", ".join(missing_features)
+            )
+        if len(df) < self.seq_len:
+            raise ValueError(
+                f"Insufficient rows for transformer inference: required {self.seq_len}, got {len(df)}"
+            )
+
+        data = df[self.features].iloc[-self.seq_len:].values
+        scaled_data = self.scaler.transform(data)
+        pred_array = self.predict(scaled_data, ticker_id=ticker_id, sector_id=sector_id, verbose=0)
+        probs = pred_array[0]
+
+        return {
+            f"{self.model_name}_1d": float(probs[0]),
+            f"{self.model_name}_3d": float(probs[1]),
+            f"{self.model_name}_5d": float(probs[2]),
+            f"{self.model_name}_7d": float(probs[3]),
+        }
 
     def save(self, filepath: str):
-        """모델 저장"""
         if self.model is None:
-            print("저장할 모델이 없습니다.")
+            print("No model to save.")
             return
-        
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        parent_dir = os.path.dirname(filepath)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
         self.model.save(filepath)
-        print(f"모델 저장 완료: {filepath}")
+        print(f"[Transformer] Model saved: {filepath}")
 
     def load(self, filepath: str):
-        """모델 로드"""
         if not os.path.exists(filepath):
-            raise FileNotFoundError(f"모델 파일이 없습니다: {filepath}")
-            
-        self.model = tf.keras.models.load_model(filepath)
+            raise FileNotFoundError(f"Model file not found: {filepath}")
+        if zipfile.is_zipfile(filepath):
+            self.model = tf.keras.models.load_model(filepath, compile=False)
+            print(f"[Transformer] Model loaded from Keras archive: {filepath}")
+            return
+
+        # Some legacy checkpoints were saved as HDF5 but named with a .keras extension.
+        with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as temp_file:
+            temp_path = temp_file.name
+
+        try:
+            shutil.copyfile(filepath, temp_path)
+
+            try:
+                self.model = tf.keras.models.load_model(temp_path, compile=False)
+                print(f"[Transformer] Model loaded from legacy HDF5 checkpoint: {filepath}")
+                return
+            except Exception as full_model_error:
+                if self.model is None:
+                    raise ValueError(
+                        "load() requires build() before loading a weights-only checkpoint."
+                    ) from full_model_error
+
+                try:
+                    self.model.load_weights(temp_path)
+                    print(f"[Transformer] Weights loaded from legacy checkpoint: {filepath}")
+                    return
+                except Exception as weights_error:
+                    raise ValueError(
+                        "Failed to load transformer checkpoint as either a full Keras model "
+                        "or a weights-only checkpoint."
+                    ) from weights_error
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)

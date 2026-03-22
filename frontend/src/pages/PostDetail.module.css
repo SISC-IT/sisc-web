@@ -198,6 +198,36 @@
   cursor: not-allowed;
 }
 
+.commentSubmitRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.commentSubmitRow .submitButton {
+  margin-left: 0;
+  margin-bottom: 0;
+}
+
+.anonymousOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  user-select: none;
+}
+
+.replySubmitRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
 .commentsList {
   width: 100%;
   display: flex;
@@ -825,6 +855,17 @@
 
 .replyButton:hover {
   color: #555;
+}
+
+/* 모바일(폰) */
+@media (max-width: 767px) {
+  :root {
+    --width-content: 100%;
+  }
+
+  .postDetail {
+    padding: 36px 12px 24px;
+  }
 }
 
 /* 태블릿 이상 */

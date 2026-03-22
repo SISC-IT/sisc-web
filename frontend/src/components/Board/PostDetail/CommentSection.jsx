@@ -27,13 +27,18 @@ const CommentItem = ({
   const date = comment.createdDate || comment.createdAt || comment.date;
 
   const [localReplyText, setLocalReplyText] = useState('');
+  const [isAnonymousReply, setIsAnonymousReply] = useState(false);
 
   React.useEffect(() => {
-    if (!isReplying) setLocalReplyText('');
+    if (!isReplying) {
+      setLocalReplyText('');
+      setIsAnonymousReply(false);
+    }
   }, [isReplying]);
 
   const handleLocalSubmit = () => {
-    onSubmitReply(commentId, localReplyText);
+    onSubmitReply(commentId, localReplyText, isAnonymousReply);
+    setIsAnonymousReply(false);
   };
 
   return (
@@ -53,7 +58,9 @@ const CommentItem = ({
           <div className={styles.menuContainer}>
             <button
               className={styles.menuButton}
-              onClick={() => setShowCommentMenu(commentId)}
+              onClick={() =>
+                setShowCommentMenu((prev) => (prev === commentId ? null : commentId))
+              }
               aria-label="댓글 메뉴"
             >
               ⋮
@@ -97,14 +104,24 @@ const CommentItem = ({
             value={localReplyText}
             onChange={(e) => setLocalReplyText(e.target.value)}
           />
-          <button
-            type="button"
-            className={styles.replySubmitButton}
-            onClick={handleLocalSubmit}
-            disabled={!localReplyText.trim()}
-          >
-            대댓글 등록
-          </button>
+          <div className={styles.replySubmitRow}>
+            <label className={styles.anonymousOption}>
+              <input
+                type="checkbox"
+                checked={isAnonymousReply}
+                onChange={(e) => setIsAnonymousReply(e.target.checked)}
+              />
+              익명
+            </label>
+            <button
+              type="button"
+              className={styles.replySubmitButton}
+              onClick={handleLocalSubmit}
+              disabled={!localReplyText.trim()}
+            >
+              대댓글 등록
+            </button>
+          </div>
         </div>
       )}
 
@@ -146,10 +163,12 @@ const CommentSection = ({
   setShowCommentMenu,
 }) => {
   const [commentText, setCommentText] = useState('');
+  const [isAnonymousComment, setIsAnonymousComment] = useState(false);
 
   const handleAdd = () => {
-    onAddComment(commentText);
+    onAddComment(commentText, isAnonymousComment);
     setCommentText('');
+    setIsAnonymousComment(false);
   };
 
   const handleKeyDown = (e) => {
@@ -195,13 +214,23 @@ const CommentSection = ({
           onKeyDown={handleKeyDown}
         />
       </div>
-      <button
-        className={styles.submitButton}
-        onClick={handleAdd}
-        disabled={!commentText.trim()}
-      >
-        댓글 남기기
-      </button>
+      <div className={styles.commentSubmitRow}>
+        <label className={styles.anonymousOption}>
+          <input
+            type="checkbox"
+            checked={isAnonymousComment}
+            onChange={(e) => setIsAnonymousComment(e.target.checked)}
+          />
+          익명
+        </label>
+        <button
+          className={styles.submitButton}
+          onClick={handleAdd}
+          disabled={!commentText.trim()}
+        >
+          댓글 남기기
+        </button>
+      </div>
 
       <div className={styles.commentsList}>
         {comments.length > 0 ? (

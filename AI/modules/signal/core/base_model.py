@@ -22,6 +22,18 @@ class BaseSignalModel(ABC):
         self.config = config
         self.model = None
 
+    def get_required_features(self) -> list:
+        """Return the feature schema this model expects for inference."""
+        if hasattr(self, "features") and getattr(self, "features"):
+            return list(getattr(self, "features"))
+        if hasattr(self, "feature_columns") and getattr(self, "feature_columns"):
+            return list(getattr(self, "feature_columns"))
+        if self.config.get("features"):
+            return list(self.config["features"])
+        if self.config.get("feature_columns"):
+            return list(self.config["feature_columns"])
+        return []
+
     @abstractmethod
     def build(self, input_shape: tuple):
         """
@@ -51,6 +63,19 @@ class BaseSignalModel(ABC):
             X_input (np.ndarray): 입력 데이터
         Returns:
             np.ndarray: 예측 결과 (확률 또는 값)
+        """
+        pass
+
+    @abstractmethod
+    def get_signals(self, df: pd.DataFrame, ticker_id: int, sector_id: int) -> Dict[str, float]:
+        """
+        모델별 시그널을 딕셔너리 형태로 반환하는 메서드
+        Args:
+            df (pd.DataFrame): 종목별 시계열 데이터
+            ticker_id (int): 종목 ID
+            sector_id (int): 섹터 ID
+        Returns:
+            Dict[str, float]: 모델 이름을 키로 하고 예측 확률을 값으로 하는 딕셔너리
         """
         pass
 

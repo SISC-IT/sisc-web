@@ -1,0 +1,59 @@
+{
+  "pipeline": {
+    "db_name": "db",
+    "default_mode": "simulation",
+    "enable_xai": true,
+    "data_start_date": "2023-01-01",
+    "initial_capital": 10000,
+    "active_models": [
+      "transformer"
+    ],
+    "macro_fallback": {
+      "vix_z_score": 0.0,
+      "mkt_breadth_nh_nl": 0.0,
+      "ma_trend_score": 0.5
+    }
+  },
+  "screener": {
+    "top_n": 30,
+    "lookback_days": 10,
+    "min_market_cap": 10000000000,
+    "watchlist_path": "AI/config/watchlist.json"
+  },
+  "data": {
+    "seq_len": 60,
+    "minimum_history_length": 60,
+    "feature_columns": [],
+    "prediction_horizons": [
+      1,
+      3,
+      5,
+      7
+    ]
+  },
+  "model": {
+    "weights_dir": "AI/data/weights",
+    "weights_file": "tests/multi_horizon_model_test{ext}",
+    "scaler_file": "tests/multi_horizon_scaler_test.pkl"
+  },
+  "portfolio": {
+    "top_k": 3,
+    "buy_threshold": 0.7,
+    "default_score": 0.5,
+    "risk_overlay": {
+      "vix_reduce_exposure_threshold": 2.0,
+      "vix_exit_threshold": 3.0,
+      "reduced_exposure_ratio": 0.5,
+      "full_exit_ratio": 0.0
+    }
+  },
+  "execution": {
+    "strong_buy_score": 0.8,
+    "buy_score_floor": 0.7,
+    "sell_score": 0.5,
+    "stop_loss_ratio": 0.07,
+    "min_conviction_weight": 0.3,
+    "max_conviction_weight": 1.0,
+    "commission": 0.0
+  }
+}

@@ -98,6 +98,8 @@ public enum ErrorCode {
 
   INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
 
+  FEEDBACK_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "피드백 내용은 필수입니다."),
+
   USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 회원은 로그인할 수 없습니다."),
 
   NEED_PENDING_APPROVAL(HttpStatus.FORBIDDEN, "가입 승인 대기 중입니다. 관리자의 확인 후 이용 가능합니다"),
@@ -133,8 +135,6 @@ public enum ErrorCode {
   // BOARD
 
   POST_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 게시물을 찾을 수 없습니다."),
-
-  BOARD_ACCESS_DENIED(HttpStatus.FORBIDDEN, "게시판 수정/삭제 권한이 없습니다."),
 
   INVALID_POST_OWNER(HttpStatus.FORBIDDEN, "게시물 수정/삭제 권한이 없습니다."),
 
@@ -184,7 +184,7 @@ public enum ErrorCode {
 
   TARGET_NOT_SESSION_MEMBER(HttpStatus.BAD_REQUEST, "대상 사용자가 출석 세션의 멤버가 아닙니다."),
 
-  CANNOT_DEMOTE_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 강등할 수 없습니다."),
+  CANNOT_MODIFY_OWNER(HttpStatus.BAD_REQUEST, "출석 세션 소유자는 변경하거나 제거할 수 없습니다."),
 
   UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
 

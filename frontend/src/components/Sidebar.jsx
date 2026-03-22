@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/axios';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +9,13 @@ import { getParentBoards } from '../utils/boardApi';
 import { isAllBoardName, normalizeBoardPath, toBoardPath } from '../utils/boardRoute';
 import DropdownArrowIcon from '../assets/boardSelectArrow.svg';
 
-const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT'];
+const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT', 'VICE_PRESIDENT'];
+const ATTENDANCE_MANAGE_VISIBLE_ROLES = [
+  'SYSTEM_ADMIN',
+  'PRESIDENT',
+  'VICE_PRESIDENT',
+  'TEAM_LEADER',
+];
 
 const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const nav = useNavigate();
@@ -19,6 +25,12 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const [isBoardMenuOpen, setIsBoardMenuOpen] = useState(false);
   const { isLoggedIn, logout } = useAuth();
   const [canSeeAdminMenu, setCanSeeAdminMenu] = useState(false);
+  const [canSeeAttendanceManageMenu, setCanSeeAttendanceManageMenu] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const feedbackTriggerButtonRef = useRef(null);
+  const feedbackTextareaRef = useRef(null);
 
   useEffect(() => {
     const loadParentBoards = async () => {
@@ -64,6 +76,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     const checkAdminRole = async () => {
       if (!isLoggedIn) {
         setCanSeeAdminMenu(false);
+        setCanSeeAttendanceManageMenu(false);
         return;
       }
 
@@ -71,8 +84,12 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
         const { data } = await api.get('/api/user/details');
         const normalizedRole = String(data?.role || '').trim().toUpperCase();
         setCanSeeAdminMenu(ADMIN_VISIBLE_ROLES.includes(normalizedRole));
+        setCanSeeAttendanceManageMenu(
+          ATTENDANCE_MANAGE_VISIBLE_ROLES.includes(normalizedRole)
+        );
       } catch {
         setCanSeeAdminMenu(false);
+        setCanSeeAttendanceManageMenu(false);
       }
     };
 
@@ -114,6 +131,68 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     handleNavLinkClick();
   };
 
+  const openFeedbackModal = () => {
+    setIsFeedbackModalOpen(true);
+  };
+
+  const closeFeedbackModal = () => {
+    setIsFeedbackModalOpen(false);
+    setFeedbackContent('');
+  };
+
+  useEffect(() => {
+    if (!isFeedbackModalOpen) {
+      return;
+    }
+
+    const previousActiveElement = document.activeElement;
+    feedbackTextareaRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeFeedbackModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+
+      if (
+        previousActiveElement &&
+        typeof previousActiveElement.focus === 'function'
+      ) {
+        previousActiveElement.focus();
+      } else {
+        feedbackTriggerButtonRef.current?.focus();
+      }
+    };
+  }, [isFeedbackModalOpen]);
+
+  const handleFeedbackSubmit = async () => {
+    const content = feedbackContent.trim();
+    if (!content) {
+      toast.error('피드백 내용을 입력해주세요.');
+      return;
+    }
+
+    if (isSubmittingFeedback) {
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    try {
+      await api.post('/api/user/feedbacks', { content });
+      toast.success('피드백이 접수되었습니다. 감사합니다.');
+      closeFeedbackModal();
+    } catch (error) {
+      toast.error(error?.message || '피드백 등록에 실패했습니다.');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   return (
     <>
       {/* 모바일 오버레이 */}
@@ -128,9 +207,14 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
         }`}
         aria-hidden={!isOpen}
       >
-        <nav aria-label="사이드바">
-          <div className={styles['menu-section']}>
-            <span className={styles['menu-title']}>Main</span>
+        <div
+          className={styles.sidebarContent}
+          aria-hidden={isFeedbackModalOpen}
+          inert={isFeedbackModalOpen ? '' : undefined}
+        >
+          <nav aria-label="사이드바">
+            <div className={styles['menu-section']}>
+              <span className={styles['menu-title']}>Main</span>
 
             <button
               type="button"
@@ -174,151 +258,219 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
             )}
           </div>
 
-          <div className={styles['menu-section']}>
-            <span className={styles['menu-title']}>출석체크</span>
-            <ul>
-              <li>
-                <NavLink
-                  to="/attendance"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                  onClick={handleNavLinkClick}
-                >
-                  출석조회
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/attendance-manage"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                  onClick={handleNavLinkClick}
-                >
-                  출석관리(담당자)
-                </NavLink>
-              </li>
-            </ul>
-          </div>
-
-          <div className={styles['menu-section']}>
-            <span className={styles['menu-title']}>트레이딩</span>
-            <ul>
-              <li>
-                <NavLink
-                  to="/quant-bot"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                  onClick={handleNavLinkClick}
-                >
-                  퀀트봇
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/stock-game"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                  onClick={handleNavLinkClick}
-                >
-                  주식베팅
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/backtest"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                  onClick={handleNavLinkClick}
-                >
-                  백테스팅
-                </NavLink>
-              </li>
-            </ul>
-          </div>
-
-          <div className={styles['menu-section']}>
-            <span className={styles['menu-title']}>계정</span>
-            <ul>
-              <li>
-                <NavLink
-                  to="/mypage"
-                  className={({ isActive }) =>
-                    isActive ? styles['active-link'] : styles['inactive-link']
-                  }
-                  onClick={handleNavLinkClick}
-                >
-                  마이페이지
-                </NavLink>
-              </li>
-
-              {isLoggedIn && canSeeAdminMenu && (
+            <div className={styles['menu-section']}>
+              <span className={styles['menu-title']}>출석체크</span>
+              <ul>
                 <li>
                   <NavLink
-                    to="/admin"
+                    to="/attendance"
                     className={({ isActive }) =>
                       isActive ? styles['active-link'] : styles['inactive-link']
                     }
                     onClick={handleNavLinkClick}
                   >
-                    관리자
+                    출석조회
                   </NavLink>
                 </li>
-              )}
+                {isLoggedIn && canSeeAttendanceManageMenu && (
+                  <li>
+                    <NavLink
+                      to="/attendance-manage"
+                      className={({ isActive }) =>
+                        isActive ? styles['active-link'] : styles['inactive-link']
+                      }
+                      onClick={handleNavLinkClick}
+                    >
+                      출석관리(담당자)
+                    </NavLink>
+                  </li>
+                )}
+              </ul>
+            </div>
 
-              {isLoggedIn ? (
+            <div className={styles['menu-section']}>
+              <span className={styles['menu-title']}>트레이딩</span>
+              <ul>
                 <li>
                   <NavLink
-                    to="/"
-                    className={styles['inactive-link']}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleLogout();
-                      handleNavLinkClick();
-                    }}
+                    to="/quant-bot"
+                    className={({ isActive }) =>
+                      isActive ? styles['active-link'] : styles['inactive-link']
+                    }
+                    onClick={handleNavLinkClick}
                   >
-                    로그아웃
+                    퀀트봇
                   </NavLink>
                 </li>
-              ) : (
-                <>
-                  <li>
-                    <NavLink
-                      to="/login"
-                      className={({ isActive }) =>
-                        isActive
-                          ? styles['active-link']
-                          : styles['inactive-link']
-                      }
-                      onClick={handleNavLinkClick}
-                    >
-                      로그인
-                    </NavLink>
-                  </li>
+                <li>
+                  <NavLink
+                    to="/stock-game"
+                    className={({ isActive }) =>
+                      isActive ? styles['active-link'] : styles['inactive-link']
+                    }
+                    onClick={handleNavLinkClick}
+                  >
+                    주식베팅
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/backtest"
+                    className={({ isActive }) =>
+                      isActive ? styles['active-link'] : styles['inactive-link']
+                    }
+                    onClick={handleNavLinkClick}
+                  >
+                    백테스팅
+                  </NavLink>
+                </li>
+              </ul>
+            </div>
 
+            <div className={styles['menu-section']}>
+              <span className={styles['menu-title']}>계정</span>
+              <ul>
+                <li>
+                  <NavLink
+                    to="/mypage"
+                    className={({ isActive }) =>
+                      isActive ? styles['active-link'] : styles['inactive-link']
+                    }
+                    onClick={handleNavLinkClick}
+                  >
+                    마이페이지
+                  </NavLink>
+                </li>
+
+                {isLoggedIn && canSeeAdminMenu && (
                   <li>
                     <NavLink
-                      to="/signup"
+                      to="/admin"
                       className={({ isActive }) =>
-                        isActive
-                          ? styles['active-link']
-                          : styles['inactive-link']
+                        isActive ? styles['active-link'] : styles['inactive-link']
                       }
                       onClick={handleNavLinkClick}
                     >
-                      회원가입
+                      관리자
                     </NavLink>
                   </li>
-                </>
-              )}
-            </ul>
+                )}
+
+                {isLoggedIn ? (
+                  <li>
+                    <NavLink
+                      to="/"
+                      className={styles['inactive-link']}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleLogout();
+                        handleNavLinkClick();
+                      }}
+                    >
+                      로그아웃
+                    </NavLink>
+                  </li>
+                ) : (
+                  <>
+                    <li>
+                      <NavLink
+                        to="/login"
+                        className={({ isActive }) =>
+                          isActive
+                            ? styles['active-link']
+                            : styles['inactive-link']
+                        }
+                        onClick={handleNavLinkClick}
+                      >
+                        로그인
+                      </NavLink>
+                    </li>
+
+                    <li>
+                      <NavLink
+                        to="/signup"
+                        className={({ isActive }) =>
+                          isActive
+                            ? styles['active-link']
+                            : styles['inactive-link']
+                        }
+                        onClick={handleNavLinkClick}
+                      >
+                        회원가입
+                      </NavLink>
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+          </nav>
+
+          <div className={styles.feedbackTriggerWrap}>
+            <button
+              type="button"
+              className={styles.feedbackTriggerButton}
+              onClick={openFeedbackModal}
+              ref={feedbackTriggerButtonRef}
+            >
+              피드백 작성하기
+            </button>
           </div>
-        </nav>
+        </div>
       </div>
+
+      {isFeedbackModalOpen && (
+        <div className={styles.feedbackModalOverlay} onClick={closeFeedbackModal}>
+          <div
+            className={styles.feedbackModal}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-modal-title"
+            aria-describedby="feedback-modal-description"
+          >
+            <div className={styles.feedbackModalHeader}>
+              <div>
+                <h2 id="feedback-modal-title">피드백 작성</h2>
+                <p id="feedback-modal-description">
+                  솔직한 피드백은 금융IT팀에게 큰 도움이 됩니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.feedbackModalCloseButton}
+                onClick={closeFeedbackModal}
+                aria-label="피드백 모달 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <label className={styles.feedbackModalLabel} htmlFor="feedback-content">
+              내용
+            </label>
+            <textarea
+              id="feedback-content"
+              className={styles.feedbackModalTextarea}
+              placeholder="피드백 내용을 입력해주세요."
+              value={feedbackContent}
+              onChange={(event) => setFeedbackContent(event.target.value)}
+              maxLength={1000}
+              ref={feedbackTextareaRef}
+            />
+
+            <div className={styles.feedbackModalActions}>
+              <button
+                type="button"
+                className={styles.feedbackSubmitButton}
+                onClick={handleFeedbackSubmit}
+                disabled={isSubmittingFeedback}
+              >
+                {isSubmittingFeedback ? '작성 중...' : '피드백 작성하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

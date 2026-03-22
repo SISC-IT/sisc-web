@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 import { toast } from 'react-toastify';
@@ -32,15 +33,21 @@ const SignUpForm = () => {
   const [remark, setRemark] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordValid, setPasswordValid] = useState(
     Array(passwordPolicy.length).fill(false)
   );
 
   const [isSending, setIsSending] = useState(false);
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [isVerificationSent, setVerificationSent] = useState(false);
   const [isVerificationChecked, setVerificationChecked] = useState(false);
 
-  const abortRef = useRef(null);
+  const abortRefSend = useRef(null);
+  const abortRefCheck = useRef(null);
+  const abortRefSignUp = useRef(null);
   const nav = useNavigate();
 
   const handlePasswordChange = (e) => {
@@ -85,6 +92,8 @@ const SignUpForm = () => {
     password !== '';
 
   const isPasswordValid = passwordValid.every(Boolean);
+  const hasConfirmPasswordInput = confirmPassword.length > 0;
+  const isPasswordMatch = hasConfirmPasswordInput && password === confirmPassword;
 
   const isFormValid =
     areRequiredFieldsFilled &&
@@ -118,13 +127,13 @@ const SignUpForm = () => {
   const handleSendVerificationNumber = async (e) => {
     e.preventDefault();
 
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    abortRefSend.current?.abort();
+    abortRefSend.current = new AbortController();
 
     setIsSending(true);
 
     try {
-      await sendVerificationNumber({ email }, abortRef.current.signal);
+      await sendVerificationNumber({ email }, abortRefSend.current.signal);
       setVerificationSent(true);
       toast.success('인증번호가 발송되었습니다.');
     } catch (error) {
@@ -136,27 +145,41 @@ const SignUpForm = () => {
   };
 
   const handleCheckVerificationNumber = async () => {
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    if (isCheckingVerification) {
+      return;
+    }
+
+    abortRefCheck.current?.abort();
+    abortRefCheck.current = new AbortController();
+
+    setIsCheckingVerification(true);
 
     try {
       await checkVerificationNumber(
         { email, verificationNumber },
-        abortRef.current.signal
+        abortRefCheck.current.signal
       );
       setVerificationChecked(true);
       toast.success('인증되었습니다.');
     } catch (error) {
       console.log(error);
       toast.error('인증에 실패했습니다.');
+    } finally {
+      setIsCheckingVerification(false);
     }
   };
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    if (isSigningUp) {
+      return;
+    }
+
+    abortRefSignUp.current?.abort();
+    abortRefSignUp.current = new AbortController();
+
+    setIsSigningUp(true);
 
     try {
       await signUp(
@@ -173,13 +196,15 @@ const SignUpForm = () => {
           teamName,
           remark,
         },
-        abortRef.current.signal
+        abortRefSignUp.current.signal
       );
       toast.success('회원가입이 완료되었습니다.');
       nav('/login');
     } catch (error) {
       console.log(error);
       toast.error('회원가입에 실패하였습니다.');
+    } finally {
+      setIsSigningUp(false);
     }
   };
 
@@ -220,14 +245,24 @@ const SignUpForm = () => {
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="password">비밀번호</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={handlePasswordChange}
-              placeholder="비밀번호를 입력해주세요"
-              autoComplete="new-password"
-            />
+            <div className={styles.inputWithToggle}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={handlePasswordChange}
+                placeholder="비밀번호를 입력해주세요"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className={styles.passwordToggleButton}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <ul className={styles.passwordPolicy}>
               {passwordPolicy.map((rule, index) => (
                 <li
@@ -241,13 +276,36 @@ const SignUpForm = () => {
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="confirm-password">비밀번호 확인</label>
-            <input
-              type="password"
-              id="confirm-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="비밀번호를 한번 더 입력해주세요"
-            />
+            <div className={styles.inputWithToggle}>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirm-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="비밀번호를 한번 더 입력해주세요"
+              />
+              <button
+                type="button"
+                className={styles.passwordToggleButton}
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                aria-label={showConfirmPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {hasConfirmPasswordInput && (
+              <p
+                className={`${styles.passwordMatchMessage} ${
+                  isPasswordMatch
+                    ? styles.passwordMatchMessageSuccess
+                    : styles.passwordMatchMessageError
+                }`}
+              >
+                {isPasswordMatch
+                  ? '비밀번호가 일치합니다.'
+                  : '비밀번호가 일치하지 않습니다.'}
+              </p>
+            )}
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>
@@ -288,9 +346,9 @@ const SignUpForm = () => {
                 type="button"
                 className={styles.verifyButton}
                 onClick={handleCheckVerificationNumber}
-                disabled={!isVerificationSent}
+                disabled={!isVerificationSent || isCheckingVerification}
               >
-                인증번호 확인
+                {isCheckingVerification ? '확인 중...' : '인증번호 확인'}
               </button>
             </div>
           </div>
@@ -382,9 +440,9 @@ const SignUpForm = () => {
           <button
             type="submit"
             className={styles.signUpButton}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSigningUp}
           >
-            회원가입
+            {isSigningUp ? '회원가입 중...' : '회원가입'}
           </button>
         </form>
       </div>

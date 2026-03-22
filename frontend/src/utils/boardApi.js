@@ -77,6 +77,20 @@ export const createBoard = async (boardName, parentBoardId = null) => {
   return createSubBoard(boardName, parentBoardId);
 };
 
+/*
+ * 하위 게시판 삭제 (회장/시스템 관리자 권한)
+ * DELETE /api/admin/board/{boardId}
+ * @param {string} boardId - 삭제할 게시판 ID
+ */
+export const deleteBoard = async (boardId) => {
+  if (!boardId) {
+    throw new Error('boardId is required');
+  }
+
+  const response = await api.delete(`/api/admin/board/${boardId}`);
+  return response.data;
+};
+
 // ==================== 게시글 API ====================
 
 /*
@@ -133,6 +147,7 @@ export const createPost = async (boardId, postData) => {
   formData.append('boardId', boardId);
   formData.append('title', postData.title);
   formData.append('content', postData.content);
+  formData.append('anonymous', String(Boolean(postData.anonymous)));
 
   if (postData.files && postData.files.length > 0) {
     postData.files.forEach((file) => {
@@ -237,6 +252,7 @@ export const createComment = async (commentData) => {
   const requestBody = {
     postId: commentData.postId,
     content: commentData.content,
+    anonymous: Boolean(commentData.anonymous),
   };
 
   if (commentData.parentCommentId) {

@@ -106,6 +106,9 @@ public class SessionUserService {
     attendanceSessionRepository.findById(sessionId)
         .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
+    SessionUser targetSessionUser = getSessionUser(sessionId, targetUserId);
+    ensureTargetIsNotOwner(targetSessionUser);
+
     // SessionUser 삭제
     sessionUserRepository.deleteByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId);
 
@@ -165,6 +168,18 @@ public class SessionUserService {
     return new SessionAttendanceTableResponse(session.getTitle(), roundHeaders, userRows);
   }
 
+  @Transactional(readOnly = true)
+  public List<AvailableSessionUserResponse> getAvailableUsers(UUID sessionId, UUID actorUserId) {
+    authorizationService.ensureOwner(sessionId, actorUserId);
+
+    attendanceSessionRepository.findById(sessionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+    return userRepository.findUsersByStatusNotInSession(UserStatus.ACTIVE, sessionId).stream()
+        .map(AvailableSessionUserResponse::from)
+        .toList();
+  }
+
   private void createAbsentForPastRounds(UUID sessionId, User user) {
     List<AttendanceRound> pastRounds = attendanceRoundRepository
         .findByAttendanceSession_AttendanceSessionIdAndRoundDateBefore(sessionId, LocalDate.now());
@@ -193,23 +208,28 @@ public class SessionUserService {
   @Transactional
   public void addAdmin(UUID sessionId, UUID targetUserId, UUID actorUserId) {
     authorizationService.ensureOwner(sessionId, actorUserId);
-    SessionUser su = sessionUserRepository
-        .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
-        .orElseThrow(() -> new CustomException(ErrorCode.TARGET_NOT_SESSION_MEMBER));
+    SessionUser su = getSessionUser(sessionId, targetUserId);
+    ensureTargetIsNotOwner(su);
     su.changeRole(SessionRole.MANAGER);
   }
 
   @Transactional
   public void removeAdmin(UUID sessionId, UUID targetUserId, UUID actorUserId) {
     authorizationService.ensureOwner(sessionId, actorUserId);
-    SessionUser su = sessionUserRepository
+    SessionUser su = getSessionUser(sessionId, targetUserId);
+    ensureTargetIsNotOwner(su);
+    su.changeRole(SessionRole.PARTICIPANT);
+  }
+
+  private SessionUser getSessionUser(UUID sessionId, UUID targetUserId) {
+    return sessionUserRepository
         .findByAttendanceSession_AttendanceSessionIdAndUser_UserId(sessionId, targetUserId)
         .orElseThrow(() -> new CustomException(ErrorCode.TARGET_NOT_SESSION_MEMBER));
+  }
 
-    // OWNER를 강제로 내릴지 여부는 정책
-    if (su.getSessionRole() == SessionRole.OWNER) {
-      throw new CustomException(ErrorCode.CANNOT_DEMOTE_OWNER);
+  private void ensureTargetIsNotOwner(SessionUser sessionUser) {
+    if (sessionUser.getSessionRole() == SessionRole.OWNER) {
+      throw new CustomException(ErrorCode.CANNOT_MODIFY_OWNER);
     }
-    su.changeRole(SessionRole.PARTICIPANT);
   }
 }
