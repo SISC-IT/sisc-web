@@ -598,21 +598,28 @@
 }
 
 .qrButton {
-  width: 86px;
+  background: linear-gradient(99.86deg, #b3ebff -15.44%, #91c3ff 39.86%, #d3edff 94.81%);
+  width: 89px;
   height: 40px;
-  border-radius: 10px;
-  padding: 0;
+  border-radius: 8px;
+  padding: 12px 26px;
+  gap: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   border: none;
-  background: linear-gradient(180deg, #b8ddff 0%, #9dc9f9 100%);
-  color: #2a3340;
-  font-size: 15px;
-  font-weight: 700;
-  box-shadow: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: Inter, Pretendard, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+  transition: opacity 0.2s, transform 0.2s;
 }
 
 .qrButton:hover {
-  opacity: 0.95;
-  transform: none;
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .menuButton {
@@ -685,8 +692,23 @@
   .headerControls {
     width: auto;
     max-width: 100%;
-    overflow-x: visible;
+    overflow: visible;
     padding-bottom: 0;
     justify-content: flex-end;
   }
+}
+
+/* Keep dropdown menu visible above table and card clipping */
+.sessionManagementCardContainer {
+  overflow: visible;
+}
+
+.menuWrapper {
+  position: relative;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.dropdownMenu {
+  z-index: 1000;
 }

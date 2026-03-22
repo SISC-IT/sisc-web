@@ -20,6 +20,18 @@ const formatDate = (dateStr) => {
   return `${month}/${day}`;
 };
 
+const isSessionOwnerPermissionError = (error) => {
+  const status = error?.status ?? error?.response?.status;
+  const errorCode = error?.data?.errorCode ?? error?.response?.data?.errorCode;
+  const message =
+    error?.message ?? error?.data?.message ?? error?.response?.data?.message ?? '';
+  return (
+    status === 403 &&
+    (errorCode === 'NOT_SESSION_OWNER' ||
+      String(message).includes('세션 소유자 권한이 없습니다'))
+  );
+};
+
 const SessionManagementCard = ({ styles: commonStyles }) => {
   const {
     sessions,
@@ -97,6 +109,10 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
                 toast.success('세션이 삭제되었습니다.');
               }
             } catch (error) {
+              if (isSessionOwnerPermissionError(error)) {
+                alert('세션 소유자 권한이 없어 삭제할 수 없습니다.');
+                return;
+              }
               toast.error('세션 삭제에 실패했습니다.');
             }
           }}
@@ -190,8 +206,8 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
           <thead>
             <tr>
               <th>일자</th>
-              <th>시간</th>
-              <th>가능(분)</th>
+              <th>시작시간</th>
+              <th>종료시간</th>
               <th>회차</th>
               <th>QR 코드</th>
               <th></th>
@@ -202,7 +218,6 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               currentDisplayedRounds.map((round, index) => {
                 const startTime = new Date(round.startAt);
                 const closeTime = new Date(round.closeAt);
-                const minutes = Math.floor((closeTime - startTime) / 60000);
 
                 return (
                   <tr key={round.roundId}>
@@ -213,7 +228,12 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
                         minute: '2-digit',
                       })}
                     </td>
-                    <td>{minutes}</td>
+                    <td>
+                      {closeTime.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
                     <td>{index + 1}</td>
                     <td>
                       <button
