@@ -47,7 +47,7 @@ def initialize_models(
 
     real_n_tickers = len(loader.ticker_to_id)
     real_n_sectors = len(loader.sector_to_id)
-    fallback_features = list(feature_columns or [])
+    fallback_features = list(feature_columns or data_config.feature_columns or [])
 
     print(f"[ModelManager] Initializing models... targets: {active_models}")
 

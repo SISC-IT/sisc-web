@@ -118,7 +118,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 def _build_config(raw: dict[str, Any]) -> TradingConfig:
     risk_overlay = RiskOverlayConfig(**raw["portfolio"]["risk_overlay"])
     macro_fallback = MacroFallbackConfig(**raw["pipeline"]["macro_fallback"])
-    return TradingConfig(
+    config = TradingConfig(
         pipeline=PipelineConfig(
             db_name=raw["pipeline"]["db_name"],
             default_mode=raw["pipeline"]["default_mode"],
@@ -153,6 +153,9 @@ def _build_config(raw: dict[str, Any]) -> TradingConfig:
         ),
         execution=ExecutionConfig(**raw["execution"]),
     )
+    if config.pipeline.initial_capital <= 0:
+        raise ValueError("pipeline.initial_capital must be greater than 0")
+    return config
 
 
 @lru_cache(maxsize=None)

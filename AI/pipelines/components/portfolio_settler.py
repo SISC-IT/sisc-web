@@ -57,6 +57,8 @@ def settle_portfolio(
 
     # 최종 현금 및 자산 계산
     total_asset = current_cash + total_market_value
+    if pipeline_config.initial_capital <= 0:
+        raise ValueError("pipeline.initial_capital must be greater than 0")
     return_rate = (total_asset / pipeline_config.initial_capital) - 1.0
 
     # 1) 포트폴리오 요약(Summary) 테이블 저장
