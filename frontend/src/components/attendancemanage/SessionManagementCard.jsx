@@ -206,8 +206,8 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
           <thead>
             <tr>
               <th>일자</th>
-              <th>시간</th>
-              <th>가능(분)</th>
+              <th>시작시간</th>
+              <th>종료시간</th>
               <th>회차</th>
               <th>QR 코드</th>
               <th></th>
@@ -218,7 +218,6 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
               currentDisplayedRounds.map((round, index) => {
                 const startTime = new Date(round.startAt);
                 const closeTime = new Date(round.closeAt);
-                const minutes = Math.floor((closeTime - startTime) / 60000);
 
                 return (
                   <tr key={round.roundId}>
@@ -229,7 +228,12 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
                         minute: '2-digit',
                       })}
                     </td>
-                    <td>{minutes}</td>
+                    <td>
+                      {closeTime.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
                     <td>{index + 1}</td>
                     <td>
                       <button
