@@ -16,18 +16,17 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", message=".*InconsistentVersionWarning.*")
 warnings.filterwarnings("ignore", message=".*SQLAlchemy.*")
 
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-
+from AI.config import TradingConfig, load_trading_config
 from AI.pipelines.daily_routine import run_daily_pipeline
 
 
 class DryRunPortfolioRepository:
-    def __init__(self, initial_capital: float = 10000):
+    def __init__(self, initial_capital: float):
         self.initial_capital = float(initial_capital)
         self.executions: List[Dict[str, Any]] = []
         self.reports: List[Dict[str, Any]] = []
@@ -38,7 +37,7 @@ class DryRunPortfolioRepository:
         return [row for row in self.executions if str(row["fill_date"]) <= target_date]
 
     def get_latest_total_asset(self, target_date: str, default_asset: float = 10000) -> float:
-        past_dates = sorted(d for d in self.portfolio_summaries.keys() if d < target_date)
+        past_dates = sorted(date for date in self.portfolio_summaries.keys() if date < target_date)
         if not past_dates:
             return float(default_asset)
         return float(self.portfolio_summaries[past_dates[-1]]["total_asset"])
@@ -46,7 +45,7 @@ class DryRunPortfolioRepository:
     def get_current_cash(self, target_date: str = None, initial_cash: float = 10000) -> float:
         if not target_date:
             return float(initial_cash)
-        past_dates = sorted(d for d in self.portfolio_summaries.keys() if d < target_date)
+        past_dates = sorted(date for date in self.portfolio_summaries.keys() if date < target_date)
         if not past_dates:
             return float(initial_cash)
         return float(self.portfolio_summaries[past_dates[-1]]["cash"])
@@ -139,11 +138,12 @@ class DryRunPortfolioRepository:
 def run_dryrun_backfill(
     end_date: str,
     days: int,
-    tickers: list,
+    tickers: list[str],
     enable_xai: bool,
     sleep_seconds: float,
-):
-    repo = DryRunPortfolioRepository(initial_capital=10000)
+    trading_config: TradingConfig,
+) -> None:
+    repo = DryRunPortfolioRepository(initial_capital=trading_config.pipeline.initial_capital)
     dates = pd.date_range(end=end_date, periods=days, freq="B")
 
     print("== Dry Run Backfill ==")
@@ -153,10 +153,10 @@ def run_dryrun_backfill(
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}")
     print("- DB writes: skipped (in-memory repository)\n")
 
-    for i, d in enumerate(dates, 1):
-        target_date_str = d.strftime("%Y-%m-%d")
+    for index, target_date in enumerate(dates, start=1):
+        target_date_str = target_date.strftime("%Y-%m-%d")
         print("\n==================================================")
-        print(f"▶ [DryRun: {i}/{len(dates)}] target date: {target_date_str}")
+        print(f"[DryRun: {index}/{len(dates)}] target date: {target_date_str}")
         print("==================================================")
 
         try:
@@ -166,6 +166,7 @@ def run_dryrun_backfill(
                 enable_xai=enable_xai,
                 target_date=target_date_str,
                 repo=repo,
+                trading_config=trading_config,
             )
         except Exception as e:
             print(f"[DryRun] {target_date_str} failed: {e}")
@@ -190,15 +191,31 @@ def run_dryrun_backfill(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run a DB-free dry-run backfill over recent business days.")
+    bootstrap_parser = argparse.ArgumentParser(add_help=False)
+    bootstrap_parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Optional path to a trading config override JSON file.",
+    )
+    bootstrap_args, _ = bootstrap_parser.parse_known_args()
+    trading_config = load_trading_config(bootstrap_args.config)
+
+    parser = argparse.ArgumentParser(
+        parents=[bootstrap_parser],
+        description="Run a DB-free dry-run backfill over recent business days.",
+    )
     parser.add_argument("--end_date", type=str, default="2026-03-21", help="End date (YYYY-MM-DD)")
     parser.add_argument("--days", type=int, default=280, help="Number of business days to simulate")
     parser.add_argument("--tickers", type=str, default="", help="Comma-separated tickers. Empty uses screener.")
-    parser.add_argument("--enable_xai", action="store_true", help="Enable XAI generation")
+    xai_group = parser.add_mutually_exclusive_group()
+    xai_group.add_argument("--xai", dest="enable_xai", action="store_true", help="Enable XAI generation")
+    xai_group.add_argument("--no-xai", dest="enable_xai", action="store_false", help="Disable XAI generation")
+    parser.set_defaults(enable_xai=trading_config.pipeline.enable_xai)
     parser.add_argument("--sleep", type=float, default=0.0, help="Sleep seconds between days")
 
     args = parser.parse_args()
-    ticker_list = [t.strip() for t in args.tickers.split(",") if t.strip()]
+    ticker_list = [ticker.strip() for ticker in args.tickers.split(",") if ticker.strip()]
 
     run_dryrun_backfill(
         end_date=args.end_date,
@@ -206,4 +223,5 @@ if __name__ == "__main__":
         tickers=ticker_list,
         enable_xai=args.enable_xai,
         sleep_seconds=args.sleep,
+        trading_config=trading_config,
     )
