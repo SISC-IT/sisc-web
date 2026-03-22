@@ -13,8 +13,10 @@ from google.genai import types
 
 from .base_client import BaseLLMClient
 
+DEFAULT_GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+
 class GeminiClient(BaseLLMClient):
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, api_key: Optional[str] = None, model_name: str = DEFAULT_GEMINI_MODEL):
         # 환경변수 우선, 없으면 인자값 사용
         key = api_key or os.environ.get("GEMINI_API_KEY")
         if not key:
@@ -80,5 +82,6 @@ class GeminiClient(BaseLLMClient):
                 if model_name in target_names:
                     return True
             return False
-        except Exception:
+        except Exception as e:
+            print(f"[GeminiClient][Warning] health check 실패: {e}")
             return False
