@@ -68,7 +68,7 @@ public class SecurityConfig {
         http
             .securityMatcher(request -> {
               String requestUri = request.getRequestURI();
-              boolean isAdminRequest = requestUri.startsWith("/admin");
+              boolean isAdminRequest = requestUri.startsWith("/admin/dev");
               boolean isActuatorRequest = requestUri.startsWith("/actuator");
               return !isAdminRequest && !isActuatorRequest;
             })
