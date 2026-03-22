@@ -37,7 +37,7 @@ public class AdminBoardController {
                     + "회장만 생성할 수 있습니다."
   )
   @PostMapping
-  @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+  @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
   public ResponseEntity<Void> createBoard(
       @RequestBody @Valid BoardRequest request,
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
@@ -54,7 +54,7 @@ public class AdminBoardController {
                     + "관련 첨부파일 및 댓글 등도 함께 삭제됩니다."
   )
   @DeleteMapping("/{boardId}")
-  @PreAuthorize("hasAnyRole('PRESIDENT', 'SYSTEM_ADMIN')")
+  @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
   public ResponseEntity<?> deleteBoard(@PathVariable UUID boardId) {
     adminBoardService.deleteBoard(boardId);
     return ResponseEntity.ok("게시판 삭제가 완료되었습니다.");

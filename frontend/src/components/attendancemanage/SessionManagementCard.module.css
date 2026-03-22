@@ -4,6 +4,8 @@
   background: #fafbfc;
   border: 1.5px solid #d1d5db;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.2s;
@@ -53,10 +55,11 @@
 
 .tableGroup {
   border-radius: 8px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   max-height: 500px;
-  border: 1px solid #e5e7eb;
-  background: white;
+  border: none;
+  background: transparent;
   width: 100%;
 }
 
@@ -82,6 +85,7 @@
 
 .table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   border-spacing: 0;
   table-layout: fixed;
@@ -90,13 +94,13 @@
 .table thead {
   position: sticky;
   top: 0;
-  background-color: #f8fafc;
+  background-color: transparent;
   z-index: 10;
 }
 
 .table thead th {
   text-align: left;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 0.4px solid #6a6a6a;
   color: #1e293b;
   padding: 10px 6px;
   white-space: nowrap;
@@ -104,7 +108,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
-  background-color: #f8fafc;
+  background-color: transparent;
   letter-spacing: 0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,11 +120,11 @@
 }
 
 .row:hover {
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
 .table tbody td {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 0.4px solid #6a6a6a;
   padding: 10px 6px;
   font-size: 12px;
   text-align: left;
@@ -163,24 +167,36 @@
 /* 컬럼 너비 - 비율 기반 */
 .table thead th:nth-child(1),
 .table tbody td:nth-child(1) {
-  width: 26%;
+  width: 22%;
 }
 .table thead th:nth-child(2),
 .table tbody td:nth-child(2) {
-  width: 24%;
+  width: 20%;
 }
 .table thead th:nth-child(3),
 .table tbody td:nth-child(3) {
-  width: 22%;
+  width: 18%;
 }
 .table thead th:nth-child(4),
 .table tbody td:nth-child(4) {
-  width: 18%;
+  width: 15%;
 }
 .table thead th:nth-child(5),
 .table tbody td:nth-child(5) {
+  width: 15%;
+  text-align: center;
+}
+.table thead th:nth-child(6),
+.table tbody td:nth-child(6) {
   width: 10%;
   text-align: center;
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .menuButton {
@@ -218,6 +234,82 @@
   color: #94a3b8;
   font-size: 13px;
   font-weight: 500;
+}
+.menuWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  overflow: hidden;
+}
+
+.dropdownMenu button {
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 15px;
+  color: #111827;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdownMenu button:hover {
+  background-color: #f4f6fa;
+}
+
+.dropdownMenu button img {
+  width: 18px;
+  height: 18px;
+  opacity: 0.92;
+}
+
+.dropdownMenu .deleteBtn {
+  color: #111827;
+  border-top: 1px solid #f0f0f0;
+}
+
+.deleteRoundButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.deleteRoundButton:hover {
+  background-color: #fee2e2;
+}
+
+.deleteRoundButton img {
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.deleteRoundButton:hover img {
+  opacity: 1;
 }
 
 /* 태블릿 이상 */
@@ -343,5 +435,258 @@
   .table tbody td {
     padding: 15px 12px;
     font-size: 15px;
+  }
+}
+
+.qrButton {
+  background: linear-gradient(99.86deg, #b3ebff -15.44%, #91c3ff 39.86%, #d3edff 94.81%);
+  width: 89px;
+  height: 40px;
+  border-radius: 8px;
+  padding: 12px 26px;
+  gap: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: Inter, Pretendard, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.qrButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.qrButton:active {
+  transform: translateY(0);
+}
+
+/* Session Management Design Alignment */
+.sessionManagementCardContainer {
+  border: 1px solid #d7dbe3;
+  border-radius: 12px;
+  background: #f8f9fb;
+  padding: 20px 16px;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.sessionManagementCardContainer:hover {
+  box-shadow: none;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleArea h1 {
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.sessionHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.titleIcon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
+}
+
+.selectGroup {
+  margin-bottom: 0;
+}
+
+.headerControls {
+  flex-wrap: nowrap !important;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  margin-left: 0;
+}
+
+.sessionSelect {
+  min-width: 260px;
+  height: 40px;
+  border: 1px solid #ced3dc;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #fff;
+  color: #475569;
+  font-size: 15px;
+}
+
+.tableGroup {
+  max-height: none;
+  margin-top: 2px;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.table thead th {
+  border-bottom: 1px solid #cfd4dd;
+  color: #3b4250;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 10px;
+}
+
+.table tbody td {
+  border-bottom: 1px solid #e2e6ee;
+  color: #3f4754;
+  font-size: 15px;
+  font-weight: 400;
+  padding: 12px 10px;
+}
+
+.table thead th:nth-child(1),
+.table tbody td:nth-child(1) {
+  width: 96px;
+  min-width: 96px;
+}
+
+.table thead th:nth-child(2),
+.table tbody td:nth-child(2) {
+  width: 96px;
+  min-width: 96px;
+}
+
+.table thead th:nth-child(3),
+.table tbody td:nth-child(3) {
+  width: 90px;
+  min-width: 90px;
+}
+
+.table thead th:nth-child(4),
+.table tbody td:nth-child(4) {
+  width: 78px;
+  min-width: 78px;
+}
+
+.table thead th:nth-child(5),
+.table tbody td:nth-child(5) {
+  width: 112px;
+  min-width: 112px;
+  text-align: center;
+}
+
+.table thead th:nth-child(6),
+.table tbody td:nth-child(6) {
+  width: 64px;
+  min-width: 64px;
+  text-align: center;
+}
+
+.qrButton {
+  width: 86px;
+  height: 40px;
+  border-radius: 10px;
+  padding: 0;
+  border: none;
+  background: linear-gradient(180deg, #b8ddff 0%, #9dc9f9 100%);
+  color: #2a3340;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.qrButton:hover {
+  opacity: 0.95;
+  transform: none;
+}
+
+.menuButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid #d4d7de;
+  background: #f7f8fa;
+}
+
+.deleteRoundButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+@media (max-width: 1024px) {
+  .table thead th {
+    font-size: 16px;
+  }
+
+  .table tbody td {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sessionManagementCardContainer {
+    padding: 16px 14px;
+  }
+
+  .headerControls {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .sessionSelect {
+    min-width: 200px;
+    font-size: 14px;
+  }
+
+  .table thead th {
+    font-size: 13px;
+    padding: 9px 8px;
+  }
+
+  .table tbody td {
+    font-size: 13px;
+    padding: 10px 8px;
+  }
+
+  .table {
+    min-width: 600px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sessionHeader {
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .sessionHeader {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .headerControls {
+    width: auto;
+    max-width: 100%;
+    overflow-x: visible;
+    padding-bottom: 0;
+    justify-content: flex-end;
   }
 }

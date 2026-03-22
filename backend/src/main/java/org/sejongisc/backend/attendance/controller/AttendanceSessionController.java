@@ -65,6 +65,7 @@ public class AttendanceSessionController {
           
           """)
   @PostMapping
+  @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
   public ResponseEntity<Void> createSession(@AuthenticationPrincipal(expression = "userId") UUID userId,
       @RequestBody AttendanceSessionRequest request) {
     attendanceSessionService.createSession(userId, request);

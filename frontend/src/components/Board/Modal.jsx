@@ -69,7 +69,7 @@ const Modal = ({
           <h2 className={styles.title}>게시글 작성</h2>
           <div className={styles.headerRight}>
             <div className={styles.sessionFieldHeader}>
-              <span className={styles.sessionLabel}>하위 게시판 선택</span>
+              <span className={styles.sessionLabel}> </span>
               <div className={styles.selectWrapper}>
                 <select
                   className={styles.select}

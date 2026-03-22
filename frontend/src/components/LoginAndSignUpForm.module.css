@@ -76,6 +76,39 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
+.inputWithToggle {
+  position: relative;
+}
+
+.inputWithToggle input {
+  padding-right: 46px;
+}
+
+.passwordToggleButton {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.passwordToggleButton:hover {
+  color: #111827;
+}
+
+.passwordToggleButton svg {
+  pointer-events: none;
+}
+
 .loginButton {
   width: 100%;
   padding: 12px;
@@ -172,6 +205,20 @@
 
 .passwordPolicy li.valid {
   color: #28a745;
+}
+
+.passwordMatchMessage {
+  margin: 8px 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.passwordMatchMessageSuccess {
+  color: #28a745;
+}
+
+.passwordMatchMessageError {
+  color: #e03131;
 }
 
 .radioGroup {

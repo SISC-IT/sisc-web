@@ -1,6 +1,8 @@
 .attendanceManagementCardContainer {
   border-radius: 12px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background: #fafbfc;
   padding: 16px;
   border: 1.5px solid #d1d5db;
@@ -14,15 +16,96 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 
-.tableGroup {
-  border-radius: 8px;
-  overflow: auto;
-  max-height: 500px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  width: 100%;
+.headerLeft {
+  display: flex;
 }
 
+/* 헤더 왼쪽 타이틀 및 카운트 정렬 */
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selectedCount {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  display: block;
+}
+
+.selectedCount strong {
+  color: #2563eb;
+}
+
+/* 우측 액션 버튼들 그룹핑 */
+.headerActions {
+  display: flex;
+  align-items: center;
+}
+.addUserButton {
+  border: 0.4px solid #aaaaaa;
+  border-radius: 4px;
+  background: none;
+  color: #6a6a6a;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 136px;
+}
+.addUserButton img {
+  width: 24px;
+  height: 24px;
+}
+
+.buttonWithIcon {
+  padding: 0;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.handleRoleButton {
+  background: none;
+  border: none;
+}
+.handleRoleButton img {
+  width: 40px;
+  height: 40px;
+}
+
+.iconActionButton img {
+  width: 24px;
+  height: 24px;
+}
+.iconActionButton:last-child:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+/* 화면이 매우 작아질 때를 대비한 미디어 쿼리 */
+@media (max-width: 768px) {
+  .actionButtonGroup {
+    display: flex;
+  }
+}
+
+.tableGroup {
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 500px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  display: block;
+}
 .tableGroup::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -44,60 +127,208 @@
 }
 
 .table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
-  border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
+.checkboxHeader,
+.checkboxCell {
+  text-align: center !important;
+}
+
+.nameHeader {
+  width: 76px;
+}
+
+.roleHeader {
+  width: 72px;
+}
+
+.studentIdHeader {
+  width: 84px;
+}
+
+.roundHeader {
+  width: 92px;
+  min-width: 92px;
+}
 .attendanceSelect {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border-radius: 6px;
-  border: 1.5px solid #d1d5db;
-  padding: 5px 8px;
-  font-size: 11px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s;
   width: 100%;
-  max-width: 90px;
+  height: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 0 30px 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  max-width: 100%;
   white-space: nowrap;
-  font-family: Inter, sans-serif;
+  font-family: Pretendard, Inter, sans-serif;
   box-sizing: border-box;
+  text-align: left;
 }
 
 .attendanceSelect:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  background-color: transparent;
 }
 
 .attendanceSelect:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(143, 190, 255, 0.25);
+}
+
+.attendanceSelectWrap {
+  --status-color: #2f80ed;
+  --status-bg: #eaf4ff;
+  --status-bg-hover: #deeeff;
+
+  position: relative;
+  width: 100%;
+  max-width: 92px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.04);
+  background: var(--status-bg);
+  color: var(--status-color);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.attendanceSelectWrap.open {
+  overflow: visible;
+  z-index: 40;
+}
+
+.attendanceSelectWrap::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-60%) rotate(45deg);
+  pointer-events: none;
+  border-right: 3px solid var(--status-color);
+  border-bottom: 3px solid var(--status-color);
+}
+
+.attendanceSelectWrap:hover {
+  background: var(--status-bg-hover);
+}
+
+.attendanceDropdownMenu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: 100%;
+  min-width: 92px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 120;
+}
+
+.attendanceDropdownItem {
+  width: 100%;
+  height: 38px;
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.attendanceDropdownItem:first-child {
+  border-top: none;
+}
+
+.attendanceDropdownItem:hover {
+  background: #f8fafc;
+}
+
+.activeDropdownItem {
+  background: #b9def7;
+}
+
+.statusCell {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;
+}
+
+.openStatusCell {
+  z-index: 2;
+}
+
+.table tbody td.statusCell {
+  overflow: visible !important;
+}
+
+.statusPresent {
+  --status-color: #2f80ed;
+  --status-bg: #eaf4ff;
+  --status-bg-hover: #dff0ff;
+}
+
+.statusLate {
+  --status-color: #9b5cf4;
+  --status-bg: #f2eafe;
+  --status-bg-hover: #eadcff;
+}
+
+.statusAbsent {
+  --status-color: #ff4d2d;
+  --status-bg: #fdecea;
+  --status-bg-hover: #fadfdc;
+}
+
+.statusExcused {
+  --status-color: #22a06b;
+  --status-bg: #eaf9ef;
+  --status-bg-hover: #dcf4e4;
+}
+
+.statusPending {
+  --status-color: #64748b;
+  --status-bg: #eef2f6;
+  --status-bg-hover: #e7ecf2;
 }
 
 .table thead {
   position: sticky;
   top: 0;
-  background-color: #f8fafc;
-  z-index: 10;
+  background-color: #f8f9fb;
+  z-index: 30;
 }
 
 .table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   text-align: left;
   color: #1e293b;
   padding: 10px 6px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 0.4px solid #6a6a6a;
   white-space: nowrap;
   font-family: Inter, sans-serif;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
-  background-color: #f8fafc;
+  background-color: #f8f9fb;
   letter-spacing: 0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -108,14 +339,14 @@
 }
 
 .table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
 .table tbody td {
   text-align: left;
   color: #334155;
   padding: 10px 6px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 0.4px solid #6a6a6a;
   font-family: Inter, sans-serif;
   font-size: 12px;
   font-weight: 400;
@@ -127,37 +358,51 @@
 
 .table tbody td:nth-child(1) {
   font-weight: 500;
+  width: 40px;
   color: #1e293b;
 }
 
 .table tbody td:nth-child(2) {
   white-space: nowrap;
+  min-width: 120px;
 }
 
 .table tbody td:nth-child(3) {
   white-space: nowrap;
+  min-width: 96px;
 }
 
 .table tbody td:nth-child(4) {
   white-space: nowrap;
+  min-width: 110px;
 }
 
-/* 컬럼 너비 - 비율 기반 */
+/* 컬럼 너비 - 고정 기반 */
 .table thead th:nth-child(1),
 .table tbody td:nth-child(1) {
-  width: 24%;
+  width: 40px;
+  min-width: 40px;
 }
 .table thead th:nth-child(2),
 .table tbody td:nth-child(2) {
-  width: 18%;
+  width: 120px;
+  min-width: 120px;
 }
 .table thead th:nth-child(3),
 .table tbody td:nth-child(3) {
-  width: 20%;
+  width: 96px;
+  min-width: 96px;
 }
 .table thead th:nth-child(4),
 .table tbody td:nth-child(4) {
-  width: 38%;
+  width: 110px;
+  min-width: 110px;
+}
+
+.table thead th:nth-child(n + 5),
+.table tbody td:nth-child(n + 5) {
+  width: 92px;
+  min-width: 92px;
 }
 
 .row {
@@ -282,5 +527,251 @@
   .table tbody td {
     padding: 15px 12px;
     font-size: 15px;
+  }
+}
+
+/* Attendance User Management Design Alignment */
+.attendanceManagementCardContainer {
+  border: 1px solid #d7dbe3;
+  border-radius: 12px;
+  background: #f8f9fb;
+  padding: 20px 16px;
+  box-shadow: none;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdownOpenContainer {
+  z-index: 220;
+}
+
+.attendanceManagementCardContainer:hover {
+  box-shadow: none;
+}
+
+.titleArea {
+  align-items: center;
+  gap: 10px;
+}
+
+.sessionIcon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
+}
+
+.selectedCount {
+  font-size: 14px;
+  color: #7b8290;
+  margin-top: 2px;
+}
+
+.selectedCount span {
+  color: #5a8fd8;
+  font-weight: 700;
+}
+
+.actionButtonGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 2px;
+}
+
+.addUserButton {
+  width: 138px;
+  height: 40px;
+  border: 1px solid #d4d7de;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.addUserButton img {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+}
+
+.actionButtonGroup > .buttonWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.actionButtonGroup button.buttonWithIcon,
+.handleRoleButton {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d4d7de;
+  border-radius: 8px;
+  background: #f7f8fa;
+}
+
+.actionButtonGroup button.buttonWithIcon img,
+.handleRoleButton img {
+  width: 18px;
+  height: 18px;
+}
+
+.tableGroup {
+  margin-top: 4px;
+  max-height: none;
+  min-height: 0;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.paginationBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pageButton {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid #d4d7de;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.activePageButton {
+  border-color: #5a8fd8;
+  background: #eaf3ff;
+  color: #2f6fc1;
+}
+
+.table {
+  width: 100%;
+  min-width: max(640px, 100%);
+}
+
+.table thead th:nth-child(2),
+.table tbody td:nth-child(2) {
+  width: 76px;
+  min-width: 76px;
+}
+
+.table thead th:nth-child(3),
+.table tbody td:nth-child(3) {
+  width: 72px;
+  min-width: 72px;
+}
+
+.table thead th:nth-child(4),
+.table tbody td:nth-child(4) {
+  width: 84px;
+  min-width: 84px;
+}
+
+.table thead th {
+  border-bottom: 1px solid #cfd4dd;
+  color: #3b4250;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 8px;
+}
+
+.table tbody td {
+  border-bottom: 1px solid #e2e6ee;
+  color: #3f4754;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 10px 8px;
+}
+
+.selectedRow {
+  background: #f1f7ff;
+}
+
+.attendanceSelect {
+  font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+  .actionButtonGroup {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .attendanceManagementCardContainer {
+    padding: 16px 14px;
+  }
+
+  .selectedCount {
+    font-size: 12px;
+  }
+
+  .addUserButton {
+    width: 126px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .actionButtonGroup button.buttonWithIcon,
+  .handleRoleButton {
+    width: 38px;
+    height: 38px;
+  }
+
+  .table {
+    min-width: 760px;
+  }
+
+  .table thead th,
+  .table tbody td {
+    font-size: 13px;
+    padding: 9px 8px;
+  }
+
+  .attendanceSelect {
+    font-size: 13px;
+    padding: 0 34px 0 14px;
+  }
+
+  .attendanceSelectWrap {
+    height: 34px;
+    max-width: 86px;
+    border-radius: 10px;
+  }
+
+  .attendanceDropdownMenu {
+    min-width: 86px;
+  }
+
+  .attendanceDropdownItem {
+    height: 34px;
+    font-size: 13px;
+    padding: 0 12px;
+  }
+
+  .attendanceSelectWrap::after {
+    right: 9px;
+    width: 8px;
+    height: 8px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
   }
 }

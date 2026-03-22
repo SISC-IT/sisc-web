@@ -3,44 +3,118 @@
   flex-direction: column;
   align-items: center;
   justify-items: center;
-  margin-left: 40px;
+  width: min(92vw, 520px);
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 10px;
+  box-sizing: border-box;
 }
 
 .message {
-  font-size: 15px;
-  color: #333;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
   text-align: center;
-  margin-bottom: 12px;
+  margin: 0 0 8px;
+}
+
+.description {
+  font-size: 14px;
+  color: #4b5563;
+  text-align: center;
+  margin: 0 0 14px;
 }
 
 .buttonGroup {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: center;
+  width: 100%;
+  flex-wrap: nowrap;
 }
 
 .button {
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  padding: 10px 16px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 600;
+  min-width: 132px;
+  max-width: 100%;
+  white-space: nowrap;
+  flex: 1 1 0;
 }
 
 .confirmButton {
-  background-color: #d9534f;
+  background-color: #2563eb;
   color: white;
+  border-color: #2563eb;
 }
 
 .confirmButton:hover {
-  background-color: #c9302c;
+  background-color: #1d4ed8;
 }
 
 .cancelButton {
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: #f9fafb;
+  color: #374151;
 }
 
 .cancelButton:hover {
-  background-color: #e0e0e0;
+  background-color: #f3f4f6;
+}
+
+.roleChangeContainer {
+  width: min(92vw, 560px);
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 4px;
+}
+
+.roleChangeTitle {
+  font-size: clamp(18px, 2.5vw, 22px);
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 10px;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.description {
+  max-width: 100%;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .toastContainer,
+  .roleChangeContainer {
+    width: min(94vw, 420px);
+    padding: 6px 2px;
+  }
+
+  .button {
+    min-width: 110px;
+    width: auto;
+    flex: 1 1 0;
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  .roleConfirmButton {
+    min-width: 110px;
+  }
+}
+
+.roleConfirmButton {
+  background-color: #2f80ed;
+  color: #fff;
+  border-color: #2f80ed;
+  min-width: 148px;
+}
+
+.roleConfirmButton:hover {
+  background-color: #1f6fdc;
 }

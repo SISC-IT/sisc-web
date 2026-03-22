@@ -7,10 +7,7 @@ export const getUserDetails = async () => {
   return {
     id: data.id ?? null,
     name: data.name ?? '',
-    email:
-      typeof data.email === 'string' && data.email.trim() !== ''
-        ? data.email.trim()
-        : null,
+    email: data.email ?? '',
     phoneNumber: data.phoneNumber ?? null,
     point: Number.isFinite(data.point) ? data.point : 0,
     role: data.role ?? '',

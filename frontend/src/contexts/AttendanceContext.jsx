@@ -17,53 +17,12 @@ import {
   deleteSession,
   getAttendanceSessions,
   getRounds,
+  addManager,
+  deleteManager,
+  deleteUser,
 } from '../utils/attendanceManage';
 
 export const AttendanceContext = createContext(null);
-
-// 세션 목 데이터
-const sessionData = [
-  // {
-  //   id: 'session-1',
-  //   title: '금융 IT팀 세션',
-  //   // 세션의 기본 위치 정보
-  //   location: {
-  //     lat: 37.5499,
-  //     lng: 127.0751,
-  //   },
-  //   defaultStartTime: '18:30:00', // 세션의 기본 시간 설정
-  //   defaultAvailableMinutes: 30, // 출석 인정 시간 (분 단위)
-  //   rewardPoints: 100, // 세션의 리워드
-  //   isVisible: true, // 세션 공개 여부
-  //   // 세션 회차들
-  //   rounds: [
-  //     {
-  //       id: 'round-1',
-  //       date: '2025-11-06',
-  //       startTime: '10:00:00',
-  //       availableMinutes: 20,
-  //       status: 'opened',
-  //       participants: [
-  //         { memberId: 'member-1', name: '김민준', attendance: '출석' },
-  //         { memberId: 'member-2', name: '이서연', attendance: '결석' },
-  //         { memberId: 'member-3', name: '박도윤', attendance: '출석' },
-  //       ],
-  //     },
-  //     {
-  //       id: 'round-2',
-  //       date: '2025-11-06',
-  //       startTime: '11:00:00',
-  //       availableMinutes: 30,
-  //       status: 'opened',
-  //       participants: [
-  //         { memberId: 'member-1', name: '김민준', attendance: '출석' },
-  //         { memberId: 'member-2', name: '이서연', attendance: '출석' },
-  //         { memberId: 'member-3', name: '박도윤', attendance: '결석' },
-  //       ],
-  //     },
-  //   ],
-  // },
-];
 
 export const AttendanceProvider = ({ children }) => {
   const [sessions, setSessions] = useImmer([]);
@@ -95,28 +54,22 @@ export const AttendanceProvider = ({ children }) => {
     fetchSessions();
   }, [fetchSessions]);
 
-  const handleAttendanceChange = async (memberId, newAttendance) => {
-    // setSessions((draft) => {
-    //   const session = draft.find((s) => s.id === selectedSessionId);
-    //   if (!session) return;
-    //   const round = session.rounds.find((r) => r.id === selectedRound);
-    //   if (!round) return;
-    //   const participant = round.participants.find(
-    //     (p) => p.memberId === memberId
-    //   );
-    //   if (participant) {
-    //     participant.attendance = newAttendance;
-    //   }
-    // });
+  const handleAttendanceChange = async (userId, roundId, newStatus) => {
     try {
-      await changeUserAttendance(selectedRound, memberId, {
-        status: newAttendance,
+      // API 호출: 이제 selectedRound가 아닌 매개변수로 받은 roundId를 사용합니다.
+      await changeUserAttendance(roundId, userId, {
+        status: newStatus,
         reason: '관리자에 의한 출석 상태 변경',
       });
 
+      // 버전 업을 통해 AttendanceManagementCard의 useEffect가 다시 실행되어 목록을 갱신합니다.
       setRoundAttendanceVersion((prev) => prev + 1);
+
+      // 선택 사항: 성공 토스트
+      // toast.success('출석 상태가 변경되었습니다.');
     } catch (error) {
       console.error('유저 출석 상태 변경에 실패했습니다. ', error);
+      alert('출석 상태 변경에 실패했습니다.');
     }
   };
 
@@ -148,23 +101,29 @@ export const AttendanceProvider = ({ children }) => {
     }
   };
 
-  const handleSessionChange = async (updateSessionData) => {
-    // setSessions((draft) => {
-    //   const session = draft.find((s) => s.id === updateSessionData.id);
-    //   if (session) {
-    //     session.defaultStartTime = updateSessionData.defaultStartTime;
-    //     session.defaultAvailableMinutes =
-    //       updateSessionData.defaultAvailableMinutes;
-    //   }
-    // });
+  const handleSessionChange = async (sessionId, updateSessionData) => {
+    // 낙관적 업데이트
+    setSessions((draft) => {
+      const session = draft.find((s) => String(s.sessionId) === String(sessionId));
+      if (session && session.session) {
+        if (updateSessionData.title !== undefined) session.session.title = updateSessionData.title;
+        if (updateSessionData.description !== undefined) session.session.description = updateSessionData.description;
+        if (updateSessionData.allowedMinutes !== undefined) session.session.allowedMinutes = updateSessionData.allowedMinutes;
+        if (updateSessionData.status !== undefined) session.session.status = updateSessionData.status;
+      }
+    });
 
     try {
-      await changeSessionData(updateSessionData);
+      await changeSessionData(sessionId, updateSessionData);
 
       const updatedSessions = await getAttendanceSessions();
       setSessions(updatedSessions || []);
     } catch (error) {
       console.error('세션 수정에 실패했습니다. ', error);
+      // 실패 시 롤백 (전체 갱신)
+      const restoredSessions = await getAttendanceSessions();
+      setSessions(restoredSessions || []);
+      throw error;
     }
   };
 
@@ -222,14 +181,6 @@ export const AttendanceProvider = ({ children }) => {
     //     draft.splice(sessionIndex, 1);
     //   }
     // });
-
-    // 세션 삭제 시 먼저 해당 세션의 회차들 삭제
-    const roundsToDelete = await getRounds(sessionId);
-    if (roundsToDelete && roundsToDelete.length > 0) {
-      for (const round of roundsToDelete) {
-        await deleteRound(round.id);
-      }
-    }
     // 세션 삭제
     await deleteSession(sessionId);
 
@@ -275,7 +226,103 @@ export const AttendanceProvider = ({ children }) => {
       setRoundAttendanceVersion((prev) => prev + 1);
     } catch (error) {
       console.error('유저 추가에 실패했습니다. ', error);
+      throw error;
     }
+  };
+
+  const handleDeleteUsers = async (sessionId, userIds) => {
+    const results = await Promise.allSettled(
+      userIds.map((userId) => deleteUser(sessionId, userId))
+    );
+
+    setRoundAttendanceVersion((v) => v + 1);
+
+    // Extract failed IDs
+    const failedIds = results
+      .map((result, index) => ({ result, index }))
+      .filter((item) => item.result.status === 'rejected')
+      .map((item) => userIds[item.index]);
+
+    const failedCount = failedIds.length;
+
+    if (failedCount > 0) {
+      const successCount = userIds.length - failedCount;
+      console.error(
+        `유저 삭제 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
+        results
+          .map((result, index) => ({ result, userId: userIds[index] }))
+          .filter((item) => item.result.status === 'rejected')
+      );
+      alert(`유저 삭제 중 ${failedCount}명이 실패했습니다.`);
+    }
+
+    return { failedIds, successCount: userIds.length - failedCount };
+  };
+
+  const handleAddManager = async (sessionId, userIds) => {
+    const results = await Promise.allSettled(
+      userIds.map((userId) => addManager(sessionId, userId))
+    );
+
+    setRoundAttendanceVersion((v) => v + 1);
+
+    // Extract failed IDs
+    const failedIds = results
+      .map((result, index) => ({ result, index }))
+      .filter((item) => item.result.status === 'rejected')
+      .map((item) => userIds[item.index]);
+
+    const failedCount = failedIds.length;
+    const successCount = userIds.length - failedCount;
+
+    if (failedCount > 0) {
+      console.error(
+        `매니저 추가 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
+        results
+          .map((result, index) => ({ result, userId: userIds[index] }))
+          .filter((item) => item.result.status === 'rejected')
+      );
+      alert(`매니저 권한 부여 중 ${failedCount}명이 실패했습니다.`);
+    }
+
+    if (failedCount === 0) {
+      alert('선택한 유저가 매니저로 격상되었습니다.');
+    }
+
+    return { failedIds, successCount };
+  };
+
+  const handleRemoveManager = async (sessionId, userIds) => {
+    const results = await Promise.allSettled(
+      userIds.map((userId) => deleteManager(sessionId, userId))
+    );
+
+    setRoundAttendanceVersion((v) => v + 1);
+
+    // Extract failed IDs
+    const failedIds = results
+      .map((result, index) => ({ result, index }))
+      .filter((item) => item.result.status === 'rejected')
+      .map((item) => userIds[item.index]);
+
+    const failedCount = failedIds.length;
+    const successCount = userIds.length - failedCount;
+
+    if (failedCount > 0) {
+      console.error(
+        `매니저 제거 부분 실패: 성공 ${successCount}명, 실패 ${failedCount}명`,
+        results
+          .map((result, index) => ({ result, userId: userIds[index] }))
+          .filter((item) => item.result.status === 'rejected')
+      );
+      alert(`권한 제거 중 ${failedCount}명이 실패했습니다. (OWNER 여부 확인 필요)`);
+    }
+
+    if (failedCount === 0) {
+      alert('선택한 유저가 일반 참가자로 변경되었습니다.');
+    }
+
+    return { failedIds, successCount };
   };
 
   // 공유할 값들을 객체로 묶기
@@ -308,10 +355,14 @@ export const AttendanceProvider = ({ children }) => {
     closeAddRoundsModal,
     roundsVersion,
     roundAttendanceVersion,
+
     openAddUsersModal,
     closeAddUsersModal,
     isAddUsersModalOpen,
     handleAddUsers,
+    handleDeleteUsers,
+    handleAddManager,
+    handleRemoveManager,
   };
 
   return (
