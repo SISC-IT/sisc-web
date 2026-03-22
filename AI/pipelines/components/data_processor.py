@@ -1,9 +1,8 @@
-# AI/pipelines/components/data_processor.py
-
 from typing import Any, Dict
 
 import pandas as pd
 
+from AI.config import DataConfig, PipelineConfig
 from AI.modules.features.legacy.technical_features import (
     add_multi_timeframe_features,
     add_technical_indicators,
@@ -11,8 +10,8 @@ from AI.modules.features.legacy.technical_features import (
 from AI.modules.signal.core.data_loader import DataLoader
 
 
-def _collect_required_features(model_wrappers: Dict[str, Any]) -> set:
-    required_features = set()
+def _collect_required_features(model_wrappers: Dict[str, Any]) -> set[str]:
+    required_features: set[str] = set()
     for wrapper in model_wrappers.values():
         if hasattr(wrapper, "get_required_features"):
             required_features.update(wrapper.get_required_features())
@@ -32,21 +31,23 @@ def _merge_common_features(loader: DataLoader, df: pd.DataFrame) -> pd.DataFrame
 
 def load_and_preprocess_data(
     loader: DataLoader,
-    target_tickers: list,
+    target_tickers: list[str],
     exec_date_str: str,
-    strategy_config: dict,
+    pipeline_config: PipelineConfig,
+    data_config: DataConfig,
     model_wrappers: Dict[str, Any],
-) -> dict:
+) -> dict[str, pd.DataFrame]:
     """
     Load price data once, then enrich each ticker only with the features required
     by the currently loaded model wrappers.
     """
-    print(f"3. 데이터 로딩 및 전처리 중 ({len(target_tickers)}종목)...")
-    data_map = {}
+    print(f"3. Loading and preprocessing data for {len(target_tickers)} tickers...")
+    data_map: dict[str, pd.DataFrame] = {}
     required_features = _collect_required_features(model_wrappers)
+    minimum_history_length = max(data_config.seq_len, data_config.minimum_history_length)
 
     bulk_df = loader.load_data_from_db(
-        start_date="2023-01-01",
+        start_date=pipeline_config.data_start_date,
         end_date=exec_date_str,
         tickers=target_tickers,
     )
@@ -75,7 +76,7 @@ def load_and_preprocess_data(
                 print(f"   [Skip] {ticker} missing features: {missing_required}")
                 continue
 
-            if len(df) >= strategy_config["seq_len"]:
+            if len(df) >= minimum_history_length:
                 data_map[ticker] = df
         except Exception as e:
             print(f"   [Error] {ticker} preprocessing failed: {e}")
