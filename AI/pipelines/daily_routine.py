@@ -73,6 +73,9 @@ def run_daily_pipeline(target_tickers: list = None, mode: str = "simulation",
     # [Step 2] 다중 모델 객체 로드 및 초기화
     loader = DataLoader()
     model_wrappers = initialize_models(loader, strategy_config, feature_columns, active_models)
+    if not model_wrappers:
+        print("⚠️ 활성화된 모델이 없습니다. 루틴을 종료합니다.")
+        return
 
     # [Step 3] 데이터 조회 및 전처리 수행
     data_map = load_and_preprocess_data(

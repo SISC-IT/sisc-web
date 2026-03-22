@@ -121,6 +121,10 @@ class TransformerSignalModel(BaseSignalModel):
                 "Missing required features for transformer inference: "
                 + ", ".join(missing_features)
             )
+        if len(df) < self.seq_len:
+            raise ValueError(
+                f"Insufficient rows for transformer inference: required {self.seq_len}, got {len(df)}"
+            )
 
         data = df[self.features].iloc[-self.seq_len:].values
         scaled_data = self.scaler.transform(data)
@@ -138,7 +142,9 @@ class TransformerSignalModel(BaseSignalModel):
         if self.model is None:
             print("No model to save.")
             return
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        parent_dir = os.path.dirname(filepath)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
         self.model.save(filepath)
         print(f"[Transformer] Model saved: {filepath}")
 

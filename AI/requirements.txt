@@ -24,6 +24,7 @@ langchain-community
 #shimmy
 #matplotlib
 tqdm
+lxml
 
 # --- 동적 크롤링 (보류) ---
 # selenium
