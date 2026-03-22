@@ -5,6 +5,7 @@ numpy<2.0
 
 # [변경] GPU 바이너리가 포함되지 않은 가벼운 CPU 버전의 TensorFlow 사용
 tensorflow-cpu<2.11
+torch
 
 # --- DB 및 웹 ---
 psycopg2-binary
