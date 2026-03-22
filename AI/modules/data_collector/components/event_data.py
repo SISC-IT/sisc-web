@@ -86,6 +86,43 @@ class EventDataCollector:
         api_key = os.getenv("FRED_API_KEY", FRED_API_KEY).strip()
         return api_key or None
 
+    def _normalize_event_date(self, value) -> Optional[str]:
+        """DB 저장용 event_date를 YYYY-MM-DD 문자열로 정규화합니다."""
+        if value in (None, ""):
+            return None
+
+        if isinstance(value, datetime):
+            return value.date().isoformat()
+        if isinstance(value, date):
+            return value.isoformat()
+
+        text = str(value).strip()
+        if not text:
+            return None
+
+        try:
+            return pd.to_datetime(text).date().isoformat()
+        except Exception:
+            return None
+
+    def _normalize_numeric_value(self, value) -> Optional[float]:
+        """수치 컬럼을 float 또는 None으로 정규화합니다."""
+        if value is None:
+            return None
+        if pd.isna(value):
+            return None
+
+        if isinstance(value, str):
+            normalized = value.strip().replace(",", "").replace("%", "")
+            if normalized in ("", ".", "None", "null", "N/A", "NaN", "nan"):
+                return None
+            value = normalized
+
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
     def _fetch_fred_release_dates(
         self, release_id: int, start_date: str, end_date: str
     ) -> List[str]:
@@ -295,7 +332,20 @@ class EventDataCollector:
                 continue
 
             if response.status_code == 200:
-                return response.json()
+                try:
+                    payload = response.json()
+                except ValueError:
+                    print(f"   [Error] FMP 응답 JSON 파싱 실패 [{base_url}]")
+                    continue
+
+                if isinstance(payload, list):
+                    return payload
+
+                print(
+                    f"   [Error] FMP 응답 형식 오류 [{base_url}]: "
+                    f"expected list, got {type(payload).__name__}"
+                )
+                continue
 
             last_status = response.status_code
             error_message = self._parse_fmp_error_message(response)
@@ -356,10 +406,13 @@ class EventDataCollector:
             if item.get("country") != "US":
                 continue
 
-            evt_date = item.get("date", "")[:10]
+            evt_date = self._normalize_event_date(item.get("date"))
             evt_name = item.get("event", "")
-            estimate_val = item.get("estimate")
-            actual_val = item.get("actual")
+            estimate_val = self._normalize_numeric_value(item.get("estimate"))
+            actual_val = self._normalize_numeric_value(item.get("actual"))
+
+            if not evt_date or not evt_name:
+                continue
 
             detected_type = item.get("event_type")
             if not detected_type:
@@ -464,15 +517,21 @@ class EventDataCollector:
                     conn.commit()
                     data_buffer = []
 
-            except Exception:
+            except Exception as e:
+                conn.rollback()
+                print(f"   [Warn] {ticker} 실적 이벤트 저장 실패: {e}")
                 continue
 
-        if data_buffer:
-            execute_values(cursor, insert_query, data_buffer)
-            conn.commit()
-
-        cursor.close()
-        conn.close()
+        try:
+            if data_buffer:
+                execute_values(cursor, insert_query, data_buffer)
+                conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"   [Error] 실적 배치 최종 저장 실패: {e}")
+        finally:
+            cursor.close()
+            conn.close()
         print("   >> 실적 데이터 업데이트 완료.")
 
     def run(self, tickers: List[str] = None):
