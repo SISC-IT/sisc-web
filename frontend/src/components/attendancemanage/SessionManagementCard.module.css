@@ -692,7 +692,7 @@
   .headerControls {
     width: auto;
     max-width: 100%;
-    overflow-x: visible;
+    overflow: visible;
     padding-bottom: 0;
     justify-content: flex-end;
   }
@@ -700,10 +700,6 @@
 
 /* Keep dropdown menu visible above table and card clipping */
 .sessionManagementCardContainer {
-  overflow: visible;
-}
-
-.headerControls {
   overflow: visible;
 }
 

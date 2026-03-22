@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/axios';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +29,8 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const feedbackTriggerButtonRef = useRef(null);
+  const feedbackTextareaRef = useRef(null);
 
   useEffect(() => {
     const loadParentBoards = async () => {
@@ -138,6 +140,36 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
     setFeedbackContent('');
   };
 
+  useEffect(() => {
+    if (!isFeedbackModalOpen) {
+      return;
+    }
+
+    const previousActiveElement = document.activeElement;
+    feedbackTextareaRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeFeedbackModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+
+      if (
+        previousActiveElement &&
+        typeof previousActiveElement.focus === 'function'
+      ) {
+        previousActiveElement.focus();
+      } else {
+        feedbackTriggerButtonRef.current?.focus();
+      }
+    };
+  }, [isFeedbackModalOpen]);
+
   const handleFeedbackSubmit = async () => {
     const content = feedbackContent.trim();
     if (!content) {
@@ -175,7 +207,11 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
         }`}
         aria-hidden={!isOpen}
       >
-        <div className={styles.sidebarContent}>
+        <div
+          className={styles.sidebarContent}
+          aria-hidden={isFeedbackModalOpen}
+          inert={isFeedbackModalOpen ? '' : undefined}
+        >
           <nav aria-label="사이드바">
             <div className={styles['menu-section']}>
               <span className={styles['menu-title']}>Main</span>
@@ -374,6 +410,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
               type="button"
               className={styles.feedbackTriggerButton}
               onClick={openFeedbackModal}
+              ref={feedbackTriggerButtonRef}
             >
               피드백 작성하기
             </button>
@@ -382,22 +419,21 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
       </div>
 
       {isFeedbackModalOpen && (
-        <div
-          className={styles.feedbackModalOverlay}
-          onClick={closeFeedbackModal}
-          aria-hidden="true"
-        >
+        <div className={styles.feedbackModalOverlay} onClick={closeFeedbackModal}>
           <div
             className={styles.feedbackModal}
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="feedback-modal-title"
+            aria-describedby="feedback-modal-description"
           >
             <div className={styles.feedbackModalHeader}>
               <div>
                 <h2 id="feedback-modal-title">피드백 작성</h2>
-                <p>솔직한 피드백은 금융IT팀에게 큰 도움이 됩니다.</p>
+                <p id="feedback-modal-description">
+                  솔직한 피드백은 금융IT팀에게 큰 도움이 됩니다.
+                </p>
               </div>
               <button
                 type="button"
@@ -419,6 +455,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
               value={feedbackContent}
               onChange={(event) => setFeedbackContent(event.target.value)}
               maxLength={1000}
+              ref={feedbackTextareaRef}
             />
 
             <div className={styles.feedbackModalActions}>
