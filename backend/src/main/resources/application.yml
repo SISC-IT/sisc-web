@@ -19,7 +19,7 @@ spring:
       max-request-size: 100MB
   boot:
     admin:
-      context-path: /admin
+      context-path: /admin/dev
       notify:
         mail:
           enabled: false
