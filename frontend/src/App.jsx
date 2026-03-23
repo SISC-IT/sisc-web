@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import './App.css';
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -38,14 +39,19 @@ import ProtectedRoute from './components/protectedRoute.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 
 function App() {
-  let vh = window.innerHeight * 0.01;
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
 
-  document.documentElement.style.setProperty('--vh', `${vh}px`);
+    setVh();
+    window.addEventListener('resize', setVh);
 
-  window.addEventListener('resize', () => {
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-  });
+    return () => {
+      window.removeEventListener('resize', setVh);
+    };
+  }, []);
   return (
     <>
       <Routes>
