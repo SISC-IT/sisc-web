@@ -344,18 +344,24 @@ def build_itransformer_model(
     # 이제 변수 토큰들 전체를 하나의 벡터로 요약해야
     # 최종 분류 head로 보낼 수 있습니다.
     #
-    # GlobalAveragePooling1D는 F축 전체를 평균내어
-    #   (B, F, d_model) -> (B, d_model)
-    # 로 바꿔줍니다.
+    # GlobalAveragePooling1D는 전체적인 regime 정보를,
+    # GlobalMaxPooling1D는 특정 변수의 급격한 shock 정보를 잘 잡을 수 있어서
+    # 두 표현을 함께 concat해 macro/correlation 모델의 표현력을 보강합니다.
+    #
+    #   (B, F, d_model) -> (B, 2 * d_model)
     # -------------------------------------------------------------------------
     x = layers.LayerNormalization(
         epsilon=1e-6,
         name="final_ln"
     )(x)
 
-    x = layers.GlobalAveragePooling1D(
-        name="variate_pooling"
+    avg_pooled = layers.GlobalAveragePooling1D(
+        name="variate_avg_pooling"
     )(x)
+    max_pooled = layers.GlobalMaxPooling1D(
+        name="variate_max_pooling"
+    )(x)
+    x = layers.Concatenate(name="variate_pooling")([avg_pooled, max_pooled])
 
     # -------------------------------------------------------------------------
     # (7) 메타데이터 임베딩 concat
@@ -368,6 +374,10 @@ def build_itransformer_model(
         ticker_embedding,
         sector_embedding
     ])
+    x = layers.Dropout(
+        mlp_dropout,
+        name="concat_meta_dropout"
+    )(x)
 
     # -------------------------------------------------------------------------
     # (8) 최종 MLP Head

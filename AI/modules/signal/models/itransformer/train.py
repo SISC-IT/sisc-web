@@ -7,7 +7,6 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
@@ -22,6 +21,14 @@ from AI.modules.features.processor import FeatureProcessor
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models.itransformer.architecture import build_itransformer_model
 
+
+DEFAULT_SIGNAL_NAME = "signal_itrans"
+DEFAULT_SIGNAL_HORIZON_WEIGHTS = [0.1, 0.2, 0.3, 0.4]
+FEATURE_ALIASES = {
+    "mkt_breadth_ma200": "ma200_pct",
+    "mkt_breadth_nh_nl": "nh_nl_index",
+}
+DYNAMIC_FEATURE_PREFIXES = ("sector_return_",)
 
 DEFAULT_ITRANSFORMER_FEATURES = [
     "us10y",
@@ -41,6 +48,7 @@ DEFAULT_ITRANSFORMER_FEATURES = [
     "ret_1d",
     "intraday_vol",
     "log_return",
+    "surprise_cpi",
 ]
 
 OPTIONAL_CONTEXT_FEATURES = [
@@ -55,6 +63,7 @@ DEFAULT_CONFIG = {
     "horizons": [1, 3, 5, 7],
     "start_date": "2015-01-01",
     "train_end_date": "2023-12-31",
+    "val_start_date": None,
     "test_size": 0.2,
     "random_state": 42,
     "epochs": 50,
@@ -69,8 +78,36 @@ DEFAULT_CONFIG = {
     "mlp_dropout": 0.2,
     "feature_candidates": DEFAULT_ITRANSFORMER_FEATURES,
     "min_feature_count": 8,
+    "signal_name": DEFAULT_SIGNAL_NAME,
+    "signal_horizon_weights": DEFAULT_SIGNAL_HORIZON_WEIGHTS,
     "save_dir": os.path.join(project_root, "AI", "data", "weights", "itransformer"),
 }
+
+
+def canonicalize_feature_name(name: str) -> str:
+    return FEATURE_ALIASES.get(name, name)
+
+
+def normalize_feature_aliases(df: pd.DataFrame) -> pd.DataFrame:
+    normalized = df.copy()
+    for alias, canonical in FEATURE_ALIASES.items():
+        if alias in normalized.columns and canonical not in normalized.columns:
+            normalized[canonical] = normalized[alias]
+    return normalized
+
+
+def resolve_signal_horizon_weights(horizons: List[int], raw_weights=None) -> List[float]:
+    weights = raw_weights if raw_weights is not None else DEFAULT_SIGNAL_HORIZON_WEIGHTS
+    try:
+        weights_array = np.asarray(weights, dtype=np.float32).reshape(-1)
+    except Exception:
+        weights_array = np.asarray(DEFAULT_SIGNAL_HORIZON_WEIGHTS, dtype=np.float32)
+
+    if len(weights_array) != len(horizons) or np.any(weights_array < 0) or float(weights_array.sum()) <= 0.0:
+        weights_array = np.ones(len(horizons), dtype=np.float32)
+
+    weights_array = weights_array / weights_array.sum()
+    return weights_array.tolist()
 
 
 def configure_tensorflow():
@@ -101,7 +138,7 @@ def merge_common_context(sub_df: pd.DataFrame, loader: DataLoader) -> pd.DataFra
         merged = pd.merge(merged, loader.breadth_df, on="date", how="left")
 
     merged["date"] = pd.to_datetime(merged["date"])
-    return merged.sort_values("date").reset_index(drop=True)
+    return normalize_feature_aliases(merged.sort_values("date").reset_index(drop=True))
 
 
 def prepare_itransformer_frame(sub_df: pd.DataFrame) -> pd.DataFrame:
@@ -118,28 +155,35 @@ def prepare_itransformer_frame(sub_df: pd.DataFrame) -> pd.DataFrame:
     prepared = prepared.sort_values("date").reset_index(drop=True)
     prepared = prepared.replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0)
     prepared["raw_close"] = prepared.get("raw_close", prepared["close"]).astype(np.float32)
-    return prepared
+    return normalize_feature_aliases(prepared)
 
 
 def resolve_feature_columns(df: pd.DataFrame, config: Dict) -> List[str]:
     # 학습 피처 선택 규칙:
     # 1. feature_columns를 명시했다면 그대로 강제
     # 2. 아니면 기본 macro/correlation 후보 중 실제 존재하는 컬럼만 채택
-    # 3. btc/eth 같은 optional context 컬럼은 있으면 덧붙임
+    # 3. btc/eth, sector_return_* 같은 optional context 컬럼은 있으면 덧붙임
+    normalized_df = normalize_feature_aliases(df)
     explicit_features = config.get("feature_columns")
-    candidate_features = list(explicit_features or config.get("feature_candidates", DEFAULT_ITRANSFORMER_FEATURES))
+    raw_candidate_features = explicit_features or config.get("feature_candidates", DEFAULT_ITRANSFORMER_FEATURES)
+    candidate_features = list(dict.fromkeys(canonicalize_feature_name(column) for column in raw_candidate_features))
 
     if explicit_features:
-        missing = [column for column in candidate_features if column not in df.columns]
+        missing = [column for column in candidate_features if column not in normalized_df.columns]
         if missing:
             raise ValueError(f"학습 데이터에 필요한 컬럼이 없습니다: {missing}")
         return candidate_features
 
-    selected = [column for column in candidate_features if column in df.columns]
+    selected = [column for column in candidate_features if column in normalized_df.columns]
     selected.extend(
         column
         for column in OPTIONAL_CONTEXT_FEATURES
-        if column in df.columns and column not in selected
+        if column in normalized_df.columns and column not in selected
+    )
+    selected.extend(
+        column
+        for column in sorted(normalized_df.columns)
+        if any(column.startswith(prefix) for prefix in DYNAMIC_FEATURE_PREFIXES) and column not in selected
     )
 
     if len(selected) < int(config.get("min_feature_count", 1)):
@@ -151,14 +195,13 @@ def resolve_feature_columns(df: pd.DataFrame, config: Dict) -> List[str]:
     return selected
 
 
-def build_macro_correlation_dataset(
+def prepare_macro_correlation_frame(
     loader: DataLoader,
     raw_df: pd.DataFrame,
     config: Dict,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict]:
-    # train.py의 핵심:
+) -> Tuple[pd.DataFrame, List[str]]:
     # DataLoader의 raw price 결과를 그대로 쓰지 않고,
-    # iTransformer 전용 macro/correlation 시퀀스로 다시 조립합니다.
+    # iTransformer 전용 macro/correlation 프레임으로 다시 조립합니다.
     lookback = int(config["lookback"])
     horizons = list(config["horizons"])
     max_horizon = max(horizons)
@@ -178,51 +221,126 @@ def build_macro_correlation_dataset(
         raise ValueError("iTransformer 학습용으로 전처리된 데이터가 없습니다.")
 
     full_df = pd.concat(processed_frames, ignore_index=True)
+    full_df["date"] = pd.to_datetime(full_df["date"])
+    full_df = normalize_feature_aliases(full_df)
     feature_columns = resolve_feature_columns(full_df, config)
+    return full_df, feature_columns
 
-    # macro 류 피처는 절대값 스케일 편차가 커서
-    # MinMax보다 StandardScaler가 비교적 안정적입니다.
+
+def resolve_validation_start_date(full_df: pd.DataFrame, config: Dict) -> pd.Timestamp:
+    explicit_date = config.get("val_start_date")
+    if explicit_date:
+        val_start_date = pd.to_datetime(explicit_date)
+    else:
+        unique_dates = np.sort(pd.to_datetime(full_df["date"]).dt.normalize().unique())
+        if len(unique_dates) < 2:
+            raise ValueError("validation 분할을 위한 날짜가 충분하지 않습니다.")
+
+        split_idx = int(len(unique_dates) * (1.0 - float(config["test_size"])))
+        split_idx = min(max(split_idx, 1), len(unique_dates) - 1)
+        val_start_date = pd.Timestamp(unique_dates[split_idx])
+
+    min_date = pd.to_datetime(full_df["date"]).min()
+    max_date = pd.to_datetime(full_df["date"]).max()
+    if val_start_date <= min_date or val_start_date > max_date:
+        raise ValueError(
+            f"val_start_date가 데이터 범위를 벗어났습니다. "
+            f"val_start_date={val_start_date.date()}, data_range=({min_date.date()} ~ {max_date.date()})"
+        )
+
+    return val_start_date
+
+
+def build_time_split_dataset(
+    loader: DataLoader,
+    full_df: pd.DataFrame,
+    feature_columns: List[str],
+    config: Dict,
+):
+    # time-series leakage를 줄이기 위해 날짜 기준으로 train/validation을 분리하고,
+    # scaler는 train 기간 데이터에만 fit합니다.
+    lookback = int(config["lookback"])
+    horizons = list(config["horizons"])
+    max_horizon = max(horizons)
+    val_start_date = resolve_validation_start_date(full_df, config)
+
+    train_rows = full_df[pd.to_datetime(full_df["date"]) < val_start_date].copy()
+    if train_rows.empty:
+        raise ValueError("train 기간 데이터가 비어 있어 scaler를 학습할 수 없습니다.")
+
     scaler = StandardScaler()
-    feature_matrix = full_df[feature_columns].astype(np.float32)
-    full_df.loc[:, feature_columns] = scaler.fit_transform(feature_matrix).astype(np.float32)
+    scaler.fit(train_rows[feature_columns].astype(np.float32))
 
-    X_ts_list, X_ticker_list, X_sector_list, y_class_list = [], [], [], []
+    scaled_df = full_df.copy()
+    scaled_df.loc[:, feature_columns] = scaler.transform(
+        scaled_df[feature_columns].astype(np.float32)
+    ).astype(np.float32)
 
-    for ticker in full_df["ticker"].unique():
-        sub_df = full_df[full_df["ticker"] == ticker].copy().sort_values("date")
+    train_ts_list, train_ticker_list, train_sector_list, train_y_list = [], [], [], []
+    val_ts_list, val_ticker_list, val_sector_list, val_y_list = [], [], [], []
+
+    for ticker in scaled_df["ticker"].unique():
+        sub_df = scaled_df[scaled_df["ticker"] == ticker].copy().sort_values("date")
         if len(sub_df) <= lookback + max_horizon:
             continue
 
         feature_values = sub_df[feature_columns].to_numpy(dtype=np.float32)
         raw_closes = sub_df["raw_close"].to_numpy(dtype=np.float32)
+        dates = pd.to_datetime(sub_df["date"]).to_numpy()
         sample_count = len(sub_df) - lookback - max_horizon + 1
 
         ticker_id = loader.ticker_to_id.get(ticker, 0)
         sector_id = loader.ticker_to_sector_id.get(ticker, 0)
 
         for start_idx in range(sample_count):
-            # 각 샘플은 [과거 lookback일의 macro/correlation window] 하나와
-            # [1d, 3d, 5d, 7d 상승 여부] 라벨 묶음 하나로 구성됩니다.
-            window = feature_values[start_idx : start_idx + lookback]
-            current_price = raw_closes[start_idx + lookback - 1]
+            end_idx = start_idx + lookback
+            anchor_date = pd.Timestamp(dates[end_idx - 1])
+            future_end_date = pd.Timestamp(dates[end_idx + max_horizon - 1])
 
+            window = feature_values[start_idx:end_idx]
+            current_price = raw_closes[end_idx - 1]
             labels = []
             for horizon in horizons:
-                future_price = raw_closes[start_idx + lookback + horizon - 1]
-                labels.append(1 if future_price > current_price else 0)
+                future_price = raw_closes[end_idx + horizon - 1]
+                labels.append(1.0 if future_price > current_price else 0.0)
 
-            X_ts_list.append(window)
-            X_ticker_list.append(ticker_id)
-            X_sector_list.append(sector_id)
-            y_class_list.append(labels)
+            if future_end_date < val_start_date:
+                train_ts_list.append(window)
+                train_ticker_list.append(ticker_id)
+                train_sector_list.append(sector_id)
+                train_y_list.append(labels)
+            elif anchor_date >= val_start_date:
+                val_ts_list.append(window)
+                val_ticker_list.append(ticker_id)
+                val_sector_list.append(sector_id)
+                val_y_list.append(labels)
 
-    X_ts = np.asarray(X_ts_list, dtype=np.float32)
-    X_ticker = np.asarray(X_ticker_list, dtype=np.int32)
-    X_sector = np.asarray(X_sector_list, dtype=np.int32)
-    y_class = np.asarray(y_class_list, dtype=np.float32)
+    def to_arrays(ts_list, ticker_list, sector_list, y_list):
+        return (
+            np.asarray(ts_list, dtype=np.float32),
+            np.asarray(ticker_list, dtype=np.int32),
+            np.asarray(sector_list, dtype=np.int32),
+            np.asarray(y_list, dtype=np.float32),
+        )
 
-    if len(X_ts) == 0:
-        raise ValueError("시퀀스 생성 결과가 비어 있습니다. lookback/horizons 또는 데이터 기간을 확인하세요.")
+    X_ts_train, X_ticker_train, X_sector_train, y_train = to_arrays(
+        train_ts_list,
+        train_ticker_list,
+        train_sector_list,
+        train_y_list,
+    )
+    X_ts_val, X_ticker_val, X_sector_val, y_val = to_arrays(
+        val_ts_list,
+        val_ticker_list,
+        val_sector_list,
+        val_y_list,
+    )
+
+    if len(X_ts_train) == 0 or len(X_ts_val) == 0:
+        raise ValueError(
+            "time-based split 결과 train 또는 validation 시퀀스가 비어 있습니다. "
+            "val_start_date / test_size / 데이터 기간을 확인하세요."
+        )
 
     info = {
         "n_tickers": len(loader.ticker_to_id),
@@ -233,8 +351,26 @@ def build_macro_correlation_dataset(
         "scaler": scaler,
         "feature_focus": "macro_correlation",
         "scaler_type": scaler.__class__.__name__,
+        "val_start_date": val_start_date.strftime("%Y-%m-%d"),
+        "signal_name": str(config.get("signal_name", DEFAULT_SIGNAL_NAME)),
+        "signal_horizon_weights": resolve_signal_horizon_weights(
+            horizons,
+            config.get("signal_horizon_weights"),
+        ),
+        "train_samples": int(len(X_ts_train)),
+        "val_samples": int(len(X_ts_val)),
     }
-    return X_ts, X_ticker, X_sector, y_class, info
+    return (
+        X_ts_train,
+        X_ticker_train,
+        X_sector_train,
+        y_train,
+        X_ts_val,
+        X_ticker_val,
+        X_sector_val,
+        y_val,
+        info,
+    )
 
 
 def save_training_metadata(save_dir: str, info: Dict, config: Dict):
@@ -256,6 +392,9 @@ def save_training_metadata(save_dir: str, info: Dict, config: Dict):
         "dropout": float(config["dropout"]),
         "mlp_dropout": float(config["mlp_dropout"]),
         "scaler_type": info["scaler_type"],
+        "val_start_date": info["val_start_date"],
+        "signal_name": info["signal_name"],
+        "signal_horizon_weights": info["signal_horizon_weights"],
     }
 
     metadata_path = os.path.join(save_dir, "metadata.json")
@@ -289,39 +428,50 @@ def train_single_pipeline(config=None):
     print(f">> 학습 데이터 기간: {raw_df['date'].min()} ~ {raw_df['date'].max()}")
     print(f">> 총 데이터 행 수: {len(raw_df)} rows")
 
-    X_ts, X_ticker, X_sector, y_class, info = build_macro_correlation_dataset(loader, raw_df, config)
-    n_outputs = y_class.shape[1]
+    prepared_df, feature_columns = prepare_macro_correlation_frame(loader, raw_df, config)
+    (
+        X_ts_train,
+        X_ticker_train,
+        X_sector_train,
+        y_train,
+        X_ts_val,
+        X_ticker_val,
+        X_sector_val,
+        y_val,
+        info,
+    ) = build_time_split_dataset(loader, prepared_df, feature_columns, config)
+    n_outputs = y_train.shape[1]
 
     print("\n" + "=" * 56)
     print(" [DEBUG] Selected macro/correlation features")
     print("=" * 56)
     print(info["feature_names"])
     print("=" * 56)
+    print(
+        f">> time split: train < {info['val_start_date']} | "
+        f"validation >= {info['val_start_date']}"
+    )
+    print(f">> samples: train={info['train_samples']}, val={info['val_samples']}")
 
+    y_all = np.concatenate([y_train, y_val], axis=0)
     for idx, horizon in enumerate(info["horizons"]):
-        labels = y_class[:, idx]
+        labels = y_all[:, idx]
         unique, counts = np.unique(labels, return_counts=True)
         dist = {int(key): int(value) for key, value in zip(unique, counts)}
         positive_ratio = dist.get(1, 0) / max(sum(dist.values()), 1) * 100
         print(f" - {horizon}d positive ratio: {positive_ratio:.2f}% | dist={dist}")
 
-    X_tick = X_ticker.reshape(-1, 1)
-    X_sec = X_sector.reshape(-1, 1)
+    X_tick_train = X_ticker_train.reshape(-1, 1)
+    X_sec_train = X_sector_train.reshape(-1, 1)
+    X_tick_val = X_ticker_val.reshape(-1, 1)
+    X_sec_val = X_sector_val.reshape(-1, 1)
 
-    # 메타 입력(ticker / sector)도 시계열과 같은 샘플 축을 유지한 채 분리합니다.
-    X_ts_train, X_ts_val, X_tick_train, X_tick_val, X_sec_train, X_sec_val, y_train, y_val = train_test_split(
-        X_ts,
-        X_tick,
-        X_sec,
-        y_class,
-        test_size=float(config["test_size"]),
-        shuffle=True,
-        random_state=int(config["random_state"]),
+    print(
+        f">> 모델 빌드 중 (seq_len={X_ts_train.shape[1]}, "
+        f"features={X_ts_train.shape[2]}, outputs={n_outputs})..."
     )
-
-    print(f">> 모델 빌드 중 (seq_len={X_ts.shape[1]}, features={X_ts.shape[2]}, outputs={n_outputs})...")
     model = build_itransformer_model(
-        input_shape=(X_ts.shape[1], X_ts.shape[2]),
+        input_shape=(X_ts_train.shape[1], X_ts_train.shape[2]),
         n_tickers=info["n_tickers"],
         n_sectors=info["n_sectors"],
         n_outputs=n_outputs,
@@ -391,13 +541,15 @@ def train_single_pipeline(config=None):
 
     print("\n[완료] iTransformer 학습 종료")
     print(f" - feature focus: {info['feature_focus']}")
-    print(f" - model   : {model_path}")
-    print(f" - scaler  : {scaler_path}")
-    print(f" - metadata: {metadata_path}")
+    print(f" - signal name : {info['signal_name']}")
+    print(f" - model       : {model_path}")
+    print(f" - scaler      : {scaler_path}")
+    print(f" - metadata    : {metadata_path}")
 
     return {
         "history": history.history,
         "feature_names": info["feature_names"],
+        "signal_name": info["signal_name"],
         "model_path": model_path,
         "scaler_path": scaler_path,
         "metadata_path": metadata_path,

@@ -14,6 +14,13 @@ from .architecture import build_itransformer_model
 
 
 DEFAULT_HORIZONS = [1, 3, 5, 7]
+DEFAULT_SIGNAL_NAME = "signal_itrans"
+DEFAULT_SIGNAL_HORIZON_WEIGHTS = [0.1, 0.2, 0.3, 0.4]
+FEATURE_ALIASES = {
+    "mkt_breadth_ma200": "ma200_pct",
+    "mkt_breadth_nh_nl": "nh_nl_index",
+}
+DYNAMIC_FEATURE_PREFIXES = ("sector_return_",)
 
 # iTransformer는 시계열 변수 간 상관구조를 보는 모델이므로
 # 거시/상관관계 성격이 강한 컬럼들을 기본 우선순위로 둡니다.
@@ -35,6 +42,7 @@ DEFAULT_ITRANSFORMER_FEATURES = [
     "ret_1d",
     "intraday_vol",
     "log_return",
+    "surprise_cpi",
 ]
 
 OPTIONAL_CONTEXT_FEATURES = [
@@ -45,11 +53,38 @@ OPTIONAL_CONTEXT_FEATURES = [
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
 
 
+def canonicalize_feature_name(name: str) -> str:
+    return FEATURE_ALIASES.get(name, name)
+
+
+def normalize_feature_aliases(df: pd.DataFrame) -> pd.DataFrame:
+    normalized = df.copy()
+    for alias, canonical in FEATURE_ALIASES.items():
+        if alias in normalized.columns and canonical not in normalized.columns:
+            normalized[canonical] = normalized[alias]
+    return normalized
+
+
+def resolve_signal_horizon_weights(horizons, raw_weights=None) -> list[float]:
+    weights = raw_weights if raw_weights is not None else DEFAULT_SIGNAL_HORIZON_WEIGHTS
+    try:
+        weights_array = np.asarray(weights, dtype=np.float32).reshape(-1)
+    except Exception:
+        weights_array = np.asarray(DEFAULT_SIGNAL_HORIZON_WEIGHTS, dtype=np.float32)
+
+    if len(weights_array) != len(horizons) or np.any(weights_array < 0) or float(weights_array.sum()) <= 0.0:
+        weights_array = np.ones(len(horizons), dtype=np.float32)
+
+    weights_array = weights_array / weights_array.sum()
+    return weights_array.tolist()
+
+
 class ITransformerSignalModel(BaseSignalModel):
     """
     iTransformer 추론 어댑터.
     - 학습 시 저장한 모델/스케일러/메타데이터를 자동 복원합니다.
-    - predict(df) 호출 시 피처 선택 -> 스케일링 -> [B, T, F] 변환 -> 추론 -> dict 반환까지 처리합니다.
+    - predict(df) 호출 시 피처 선택 -> 스케일링 -> [B, T, F] 변환 -> 추론까지 처리합니다.
+    - get_signals(df)는 외부 계약용으로 signal_itrans 단일 점수를 반환합니다.
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -57,15 +92,21 @@ class ITransformerSignalModel(BaseSignalModel):
         # 추론 시 필요한 기본 메타 설정을 config에서 먼저 읽고,
         # metadata.json이 있으면 학습 당시 값으로 다시 덮어씁니다.
         self.model_name = "itransformer"
+        self.signal_name = str(config.get("signal_name", DEFAULT_SIGNAL_NAME))
         self.seq_len = int(config.get("seq_len", 60))
         self.horizons = list(config.get("horizons", DEFAULT_HORIZONS))
+        self.signal_horizon_weights = resolve_signal_horizon_weights(
+            self.horizons,
+            config.get("signal_horizon_weights"),
+        )
         self.auto_prepare = bool(config.get("auto_prepare", True))
         self.features_are_explicit = "features" in config or "feature_names" in config
+        raw_feature_candidates = config.get(
+            "features",
+            config.get("feature_names", DEFAULT_ITRANSFORMER_FEATURES),
+        )
         self.feature_candidates = list(
-            config.get(
-                "features",
-                config.get("feature_names", DEFAULT_ITRANSFORMER_FEATURES),
-            )
+            dict.fromkeys(canonicalize_feature_name(column) for column in raw_feature_candidates)
         )
         self.features = list(self.feature_candidates)
         self.metadata: Dict[str, Any] = {}
@@ -101,7 +142,17 @@ class ITransformerSignalModel(BaseSignalModel):
 
         self.seq_len = int(self.metadata.get("seq_len", self.seq_len))
         self.horizons = list(self.metadata.get("horizons", self.horizons))
-        self.features = list(self.metadata.get("feature_names", self.features))
+        self.signal_name = str(self.metadata.get("signal_name", self.signal_name))
+        self.signal_horizon_weights = resolve_signal_horizon_weights(
+            self.horizons,
+            self.metadata.get("signal_horizon_weights", self.signal_horizon_weights),
+        )
+        self.features = list(
+            dict.fromkeys(
+                canonicalize_feature_name(column)
+                for column in self.metadata.get("feature_names", self.features)
+            )
+        )
 
         config_fallbacks = {
             "n_tickers": self.metadata.get("n_tickers"),
@@ -114,6 +165,8 @@ class ITransformerSignalModel(BaseSignalModel):
             "dropout": self.metadata.get("dropout"),
             "mlp_dropout": self.metadata.get("mlp_dropout"),
             "n_outputs": len(self.horizons),
+            "signal_name": self.signal_name,
+            "signal_horizon_weights": self.signal_horizon_weights,
         }
         for key, value in config_fallbacks.items():
             if value is not None and key not in self.config:
@@ -227,7 +280,7 @@ class ITransformerSignalModel(BaseSignalModel):
 
         prepared["date"] = pd.to_datetime(prepared["date"])
         prepared = prepared.sort_values("date").reset_index(drop=True)
-        return prepared
+        return normalize_feature_aliases(prepared)
 
     def _engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
         # 원본 df에 iTransformer 전용 피처가 직접 없을 때의 보정 경로입니다.
@@ -238,30 +291,37 @@ class ITransformerSignalModel(BaseSignalModel):
         prepared = FeatureProcessor(prepared).execute_pipeline()
         prepared = prepared.replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0)
         prepared["date"] = pd.to_datetime(prepared["date"])
-        return prepared.sort_values("date").reset_index(drop=True)
+        return normalize_feature_aliases(prepared.sort_values("date").reset_index(drop=True))
 
     def _resolve_feature_columns(self, df: pd.DataFrame) -> list[str]:
-        # 1. metadata가 있으면 학습 당시 피처 순서를 무조건 우선합니다.
+        # 1. metadata가 있으면 학습 당시 피처 순서를 우선합니다.
         # 2. 사용자가 명시한 features가 있으면 그 집합을 그대로 강제합니다.
-        # 3. 아무 설정이 없으면 기본 macro/correlation 후보 중 실제 존재하는 컬럼만 고릅니다.
+        # 3. 아무 설정이 없으면 기본 macro/correlation 후보 + optional prefix 컬럼을 고릅니다.
+        normalized_df = normalize_feature_aliases(df)
+
         if self.metadata.get("feature_names"):
-            missing = [column for column in self.features if column not in df.columns]
+            missing = [column for column in self.features if column not in normalized_df.columns]
             if missing:
                 raise ValueError(f"입력 DataFrame에 필요한 컬럼이 없습니다: {missing}")
             return list(self.features)
 
         if self.features_are_explicit:
-            missing = [column for column in self.feature_candidates if column not in df.columns]
+            missing = [column for column in self.feature_candidates if column not in normalized_df.columns]
             if missing:
                 raise ValueError(f"입력 DataFrame에 필요한 컬럼이 없습니다: {missing}")
             self.features = list(self.feature_candidates)
             return list(self.features)
 
-        selected = [column for column in self.feature_candidates if column in df.columns]
+        selected = [column for column in self.feature_candidates if column in normalized_df.columns]
         selected.extend(
             column
             for column in OPTIONAL_CONTEXT_FEATURES
-            if column in df.columns and column not in selected
+            if column in normalized_df.columns and column not in selected
+        )
+        selected.extend(
+            column
+            for column in sorted(normalized_df.columns)
+            if any(column.startswith(prefix) for prefix in DYNAMIC_FEATURE_PREFIXES) and column not in selected
         )
 
         if not selected:
@@ -303,6 +363,16 @@ class ITransformerSignalModel(BaseSignalModel):
             # inference에서도 feature 분포가 동일하게 유지됩니다.
             window = self.scaler.transform(window).astype(np.float32)
         return window
+
+    def _resolve_signal_weights(self, prob_count: int) -> np.ndarray:
+        weights = np.asarray(self.signal_horizon_weights, dtype=np.float32).reshape(-1)
+        if len(weights) != prob_count or np.any(weights < 0) or float(weights.sum()) <= 0.0:
+            weights = np.ones(prob_count, dtype=np.float32)
+        return weights / weights.sum()
+
+    def _aggregate_signal(self, probs: np.ndarray) -> float:
+        weights = self._resolve_signal_weights(len(probs))
+        return float(np.dot(probs.astype(np.float32), weights))
 
     def _predict_array(self, X_input, ticker_id: int = 0, sector_id: int = 0, **kwargs) -> np.ndarray:
         # ndarray 경로는 학습/디버깅용 raw predict 함수입니다.
@@ -398,11 +468,10 @@ class ITransformerSignalModel(BaseSignalModel):
         **kwargs,
     ) -> Union[Dict[str, float], np.ndarray]:
         """
-        DataFrame 입력이면 dict 시그널을, ndarray 입력이면 raw probability array를 반환합니다.
+        DataFrame 입력이면 multi-horizon + signal_itrans dict를,
+        ndarray 입력이면 raw probability array를 반환합니다.
         """
         if isinstance(X_input, pd.DataFrame):
-            # 서비스 파이프라인이 기대하는 메인 경로:
-            # 큰 df를 받아 내부에서 필요한 윈도우만 잘라 dict로 되돌립니다.
             self._load_artifacts(require_scaler=True)
             window = self._prepare_feature_window(X_input)
             probs = np.asarray(
@@ -410,10 +479,12 @@ class ITransformerSignalModel(BaseSignalModel):
                 dtype=np.float32,
             ).reshape(-1)
             horizons = self.horizons if len(self.horizons) >= len(probs) else list(range(1, len(probs) + 1))
-            return {
+            result = {
                 f"{self.model_name}_{horizon}d": float(prob)
                 for horizon, prob in zip(horizons, probs)
             }
+            result[self.signal_name] = self._aggregate_signal(probs)
+            return result
 
         return self._predict_array(X_input, ticker_id=ticker_id, sector_id=sector_id, **kwargs)
 
@@ -421,7 +492,9 @@ class ITransformerSignalModel(BaseSignalModel):
         signals = self.predict(df, ticker_id=ticker_id, sector_id=sector_id, verbose=0)
         if not isinstance(signals, dict):
             raise ValueError("DataFrame 입력 추론은 dict 형태의 시그널을 반환해야 합니다.")
-        return signals
+        if self.signal_name not in signals:
+            raise ValueError(f"예상한 집계 시그널이 없습니다: {self.signal_name}")
+        return {self.signal_name: float(signals[self.signal_name])}
 
     def save(self, filepath: str):
         if self.model is None:
