@@ -44,7 +44,7 @@ function Layout() {
   }, [isMobile, isSidebarOpen]);
 
   return (
-    <div style={{ display: 'flex', position: 'relative', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', position: 'relative', minHeight: 'calc(var(--vh, 1vh) * 100)' }}>
       <Header
         isRoot={isRoot}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
