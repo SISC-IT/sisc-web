@@ -432,7 +432,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
               <div>
                 <h2 id="feedback-modal-title">피드백 작성</h2>
                 <p id="feedback-modal-description">
-                  솔직한 피드백은 금융IT팀에게 큰 도움이 됩니다.
+                  솔직한 피드백은 금융IT팀에게 큰 도움이 됩니다. 피드백은 익명으로 저장됩니다. 
                 </p>
               </div>
               <button
