@@ -51,7 +51,9 @@ html {
 }
 
 #root {
-  min-height: 100vh;
+  height: calc(100 * var(--vh));
+  margin: 0;
+  padding: 0;
   position: relative;
   background-color: #ffffff !important;
 }

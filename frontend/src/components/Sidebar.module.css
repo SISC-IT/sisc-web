@@ -4,7 +4,7 @@
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  height: calc(100 * var(--vh));
   background-color: transparent;
   z-index: 999;
   display: block;
@@ -79,7 +79,7 @@
     padding-top: 20px;
     transform: translateX(0);
   }
-  
+
   .closed {
     transform: translateX(0);
   }
