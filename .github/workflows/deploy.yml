@@ -204,3 +204,9 @@ jobs:
                 sleep 2
               done
             fi
+
+      # 도커 용량 최적화
+      - name: Cleanup Docker
+        run: |
+          docker builder prune -f
+          docker image prune -f

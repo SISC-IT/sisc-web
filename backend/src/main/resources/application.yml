@@ -44,8 +44,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"    # 파일 하나당 10MB로 제한
-        max-file: "3"      # 최대 3개까지만 보관 (총 30MB 고정)
+        max-size: "100m"    # 파일 하나당 10MB로 제한
+        max-file: "3"      # 최대 3개까지만 보관 (총 300MB 고정)
 
 logging:
   file:
