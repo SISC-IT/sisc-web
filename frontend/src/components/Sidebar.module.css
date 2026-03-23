@@ -4,7 +4,8 @@
   top: 0;
   left: 0;
   width: 100vw;
-  height: calc(100 * var(--vh));
+  height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
   background-color: transparent;
   z-index: 999;
   display: block;
@@ -23,6 +24,7 @@
   left: 0;
   width: 264px;
   height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
   padding-top: 110px;
   padding-left: 32px;
   padding-right: 32px;
@@ -76,6 +78,7 @@
   .homeSidebarMenu {
     top: 90px;
     height: calc(100vh - 90px);
+    height: calc(var(--vh, 1vh) * 100 - 90px);
     padding-top: 20px;
     transform: translateX(0);
   }
@@ -362,6 +365,7 @@
   padding: 24px 24px 18px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   max-height: calc(100vh - 40px);
+  max-height: calc(var(--vh, 1vh) * 100 - 40px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -475,6 +479,7 @@
     width: min(540px, calc(100vw - 24px));
     padding: 20px 16px 14px;
     max-height: calc(100vh - 24px);
+    max-height: calc(var(--vh, 1vh) * 100 - 24px);
   }
 
   .feedbackModalHeader h2 {
