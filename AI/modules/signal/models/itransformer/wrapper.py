@@ -174,12 +174,27 @@ class ITransformerSignalModel(BaseSignalModel):
 
         print(f"✅ iTransformer metadata loaded: {filepath}")
 
-    def _load_artifacts(self, require_scaler: bool = False):
+    def _has_explicit_dataframe_contract(self) -> bool:
+        # metadata가 없더라도 seq_len / horizons / features가 모두 명시되면
+        # DataFrame 추론 계약을 복원할 수 있습니다.
+        return (
+            "seq_len" in self.config
+            and "horizons" in self.config
+            and self.features_are_explicit
+        )
+
+    def _load_artifacts(self, require_scaler: bool = False, require_metadata: bool = False):
         # wrapper의 핵심 역할:
         # 서비스 코드가 단순히 predict(df)만 호출해도
         # model / scaler / metadata를 알아서 복원하도록 만듭니다.
         if not self.metadata and os.path.exists(self.metadata_path):
             self.load_metadata(self.metadata_path)
+
+        if require_metadata and not self.metadata and not self._has_explicit_dataframe_contract():
+            raise ValueError(
+                "DataFrame 추론에는 metadata.json 또는 동등한 명시 설정 "
+                "(seq_len, horizons, features)이 필요합니다."
+            )
 
         if require_scaler and self.scaler is None and os.path.exists(self.scaler_path):
             self.load_scaler(self.scaler_path)
@@ -278,6 +293,14 @@ class ITransformerSignalModel(BaseSignalModel):
             else:
                 raise ValueError("입력 DataFrame에는 'date' 컬럼 또는 DatetimeIndex가 필요합니다.")
 
+        if "ticker" in prepared.columns:
+            unique_tickers = prepared["ticker"].dropna().astype(str).unique()
+            if len(unique_tickers) > 1:
+                raise ValueError(
+                    "DataFrame 추론은 단일 ticker 입력만 허용합니다. "
+                    f"현재 여러 ticker가 섞여 있습니다: {unique_tickers.tolist()}"
+                )
+
         prepared["date"] = pd.to_datetime(prepared["date"])
         prepared = prepared.sort_values("date").reset_index(drop=True)
         return normalize_feature_aliases(prepared)
@@ -289,7 +312,7 @@ class ITransformerSignalModel(BaseSignalModel):
         prepared = add_market_changes(prepared)
         prepared = add_macro_changes(prepared)
         prepared = FeatureProcessor(prepared).execute_pipeline()
-        prepared = prepared.replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0)
+        prepared = prepared.replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
         prepared["date"] = pd.to_datetime(prepared["date"])
         return normalize_feature_aliases(prepared.sort_values("date").reset_index(drop=True))
 
@@ -350,7 +373,7 @@ class ITransformerSignalModel(BaseSignalModel):
                 ) from exc
 
         feature_columns = self._resolve_feature_columns(prepared)
-        feature_frame = prepared[feature_columns].replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0)
+        feature_frame = prepared[feature_columns].replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
 
         if len(feature_frame) < self.seq_len:
             raise ValueError(
@@ -435,9 +458,28 @@ class ITransformerSignalModel(BaseSignalModel):
             sector_values=kwargs.pop("sector_ids", None),
         )
         train_targets = self._prepare_targets(y_train)
+        target_width = int(train_targets.shape[1])
+
+        if len(self.horizons) != target_width:
+            if "horizons" in self.config or self.metadata.get("horizons"):
+                raise ValueError(
+                    f"y_train 열 수({target_width})와 horizons 길이({len(self.horizons)})가 다릅니다."
+                )
+            self.horizons = list(range(1, target_width + 1))
+            self.signal_horizon_weights = resolve_signal_horizon_weights(
+                self.horizons,
+                self.config.get("signal_horizon_weights"),
+            )
+
+        self.config["n_outputs"] = target_width
 
         if self.model is None:
             self.build(train_inputs[0].shape[1:])
+        elif int(self.model.output_shape[-1]) != target_width:
+            raise ValueError(
+                f"현재 모델 출력 수({int(self.model.output_shape[-1])})와 "
+                f"y_train 열 수({target_width})가 다릅니다."
+            )
 
         validation_data = None
         if X_val is not None and y_val is not None:
@@ -466,35 +508,21 @@ class ITransformerSignalModel(BaseSignalModel):
         ticker_id: int = 0,
         sector_id: int = 0,
         **kwargs,
-    ) -> Union[Dict[str, float], np.ndarray]:
+    ) -> np.ndarray:
         """
-        DataFrame 입력이면 multi-horizon + signal_itrans dict를,
-        ndarray 입력이면 raw probability array를 반환합니다.
+        BaseSignalModel 계약을 유지하기 위해 항상 raw probability array를 반환합니다.
         """
         if isinstance(X_input, pd.DataFrame):
-            self._load_artifacts(require_scaler=True)
+            self._load_artifacts(require_scaler=True, require_metadata=True)
             window = self._prepare_feature_window(X_input)
-            probs = np.asarray(
-                self._predict_array(window, ticker_id=ticker_id, sector_id=sector_id, **kwargs)[0],
-                dtype=np.float32,
-            ).reshape(-1)
-            horizons = self.horizons if len(self.horizons) >= len(probs) else list(range(1, len(probs) + 1))
-            result = {
-                f"{self.model_name}_{horizon}d": float(prob)
-                for horizon, prob in zip(horizons, probs)
-            }
-            result[self.signal_name] = self._aggregate_signal(probs)
-            return result
+            return self._predict_array(window, ticker_id=ticker_id, sector_id=sector_id, **kwargs)
 
         return self._predict_array(X_input, ticker_id=ticker_id, sector_id=sector_id, **kwargs)
 
     def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
-        signals = self.predict(df, ticker_id=ticker_id, sector_id=sector_id, verbose=0)
-        if not isinstance(signals, dict):
-            raise ValueError("DataFrame 입력 추론은 dict 형태의 시그널을 반환해야 합니다.")
-        if self.signal_name not in signals:
-            raise ValueError(f"예상한 집계 시그널이 없습니다: {self.signal_name}")
-        return {self.signal_name: float(signals[self.signal_name])}
+        pred_array = self.predict(df, ticker_id=ticker_id, sector_id=sector_id, verbose=0)
+        probs = np.asarray(pred_array[0], dtype=np.float32).reshape(-1)
+        return {self.signal_name: self._aggregate_signal(probs)}
 
     def save(self, filepath: str):
         if self.model is None:

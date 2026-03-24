@@ -153,7 +153,8 @@ def prepare_itransformer_frame(sub_df: pd.DataFrame) -> pd.DataFrame:
 
     prepared["date"] = pd.to_datetime(prepared["date"])
     prepared = prepared.sort_values("date").reset_index(drop=True)
-    prepared = prepared.replace([np.inf, -np.inf], np.nan).ffill().bfill().fillna(0)
+    # 학습 경로에서는 미래값 역류를 막기 위해 forward fill까지만 허용합니다.
+    prepared = prepared.replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
     prepared["raw_close"] = prepared.get("raw_close", prepared["close"]).astype(np.float32)
     return normalize_feature_aliases(prepared)
 

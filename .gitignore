@@ -30,6 +30,8 @@ __pycache__/
 /.venv/
 AI/.venv/
 AI/data/weights/tcn/
+AI/data/weights/itransformer/*
+!AI/data/weights/itransformer/.gitkeep
 
 # ===== Backend =====
 backend/src/main/java/org/sejongisc/backend/stock/TestController.java
