@@ -13,7 +13,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
   IMAGE_FRONT: ghcr.io/sisc-it/sisc-web-front   # 프론트 이미지 추가
-  IMAGE_XAI: ghcr.io/sisc-it/sisc-web-xai       # AI(XAI) 이미지 추가
 
 jobs:
   # -----------------------------
@@ -85,42 +84,10 @@ jobs:
           cache-to: type=gha,mode=max
 
   # -----------------------------
-  # 3) AI(XAI)
-  # -----------------------------
-  build-xai:
-    runs-on: ubuntu-latest
-    environment: production
-    permissions: { contents: read, packages: write }
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & Push (xai)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./AI
-          file: ./AI/Dockerfile
-          push: true
-          platforms: linux/amd64
-          tags: |
-            ${{ env.IMAGE_XAI }}:${{ github.ref_name }}
-            ${{ env.IMAGE_XAI }}:latest
-
-  # -----------------------------
-  # 4) 배포: 백엔드, 프론트, AI
+  # 3) 배포: 백엔드, 프론트
   # -----------------------------
   deploy:
-    needs: [build-back, build-front, build-xai]
+    needs: [build-back, build-front]
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -176,22 +143,6 @@ jobs:
             # 컨테이너 기동
             docker compose pull api web redis npm
             docker compose up -d --remove-orphans api web redis npm db
-
-            # XAI: 태그 이미지 pull 후 latest 로 동기화
-            XAI_RELEASE_IMAGE="${{ env.IMAGE_XAI }}:${{ github.ref_name }}"
-            XAI_LOCAL_IMAGE="${{ env.IMAGE_XAI }}:latest"
-            docker pull "$XAI_RELEASE_IMAGE"
-            docker tag "$XAI_RELEASE_IMAGE" "$XAI_LOCAL_IMAGE"
-
-            # latest가 가리키는 실제 이미지 ID 하나만 남기고 XAI 구버전 제거
-            CURRENT_XAI_IMAGE_ID="$(docker image inspect "$XAI_LOCAL_IMAGE" --format '{{.Id}}')"
-            docker image ls --no-trunc --format '{{.Repository}}:{{.Tag}} {{.ID}}' "${{ env.IMAGE_XAI }}" | while read -r image_ref image_id; do
-              [ -n "$image_ref" ] || continue
-              [ -n "$image_id" ] || continue
-              if [ "$image_id" != "$CURRENT_XAI_IMAGE_ID" ]; then
-                docker rmi -f "$image_id" >/dev/null 2>&1 || true
-              fi
-            done
 
             docker image prune -f
 

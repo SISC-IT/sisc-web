@@ -1,4 +1,4 @@
-name: Build & Deploy XAI (Dev)
+name: Build & Deploy XAI (Prod on Main)
 
 on:
   workflow_dispatch: {}
@@ -9,7 +9,7 @@ on:
       - ".github/workflows/xai-job.yml"
 
 concurrency:
-  group: deploy-xai-main
+  group: deploy-xai-main-prod
   cancel-in-progress: true
 
 env:
@@ -50,9 +50,9 @@ jobs:
     needs: [build-xai]
     if: ${{ github.event_name == 'workflow_dispatch' || needs.build-xai.result == 'success' }}
     runs-on: ubuntu-latest
-    environment: development
+    environment: production
     steps:
-      - name: SSH deploy (pull latest XAI image on development)
+      - name: SSH deploy (pull latest XAI image on production)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
