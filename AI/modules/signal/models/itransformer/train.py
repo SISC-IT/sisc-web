@@ -346,6 +346,11 @@ def build_time_split_dataset(
     info = {
         "n_tickers": len(loader.ticker_to_id),
         "n_sectors": len(loader.sector_to_id),
+        "ticker_to_id": {str(key): int(value) for key, value in loader.ticker_to_id.items()},
+        "sector_to_id": {str(key): int(value) for key, value in loader.sector_to_id.items()},
+        "ticker_to_sector_id": {
+            str(key): int(value) for key, value in loader.ticker_to_sector_id.items()
+        },
         "feature_names": feature_columns,
         "n_features": len(feature_columns),
         "horizons": horizons,
@@ -385,6 +390,9 @@ def save_training_metadata(save_dir: str, info: Dict, config: Dict):
         "horizons": info["horizons"],
         "n_tickers": int(info["n_tickers"]),
         "n_sectors": int(info["n_sectors"]),
+        "ticker_to_id": info["ticker_to_id"],
+        "sector_to_id": info["sector_to_id"],
+        "ticker_to_sector_id": info["ticker_to_sector_id"],
         "head_size": int(config["head_size"]),
         "num_heads": int(config["num_heads"]),
         "ff_dim": int(config["ff_dim"]),

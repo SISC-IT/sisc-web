@@ -84,7 +84,7 @@ class ITransformerSignalModel(BaseSignalModel):
     iTransformer 추론 어댑터.
     - 학습 시 저장한 모델/스케일러/메타데이터를 자동 복원합니다.
     - predict(df) 호출 시 피처 선택 -> 스케일링 -> [B, T, F] 변환 -> 추론까지 처리합니다.
-    - get_signals(df)는 외부 계약용으로 signal_itrans 단일 점수를 반환합니다.
+    - get_signals(df)는 horizon별 출력과 signal_itrans 집계 점수를 함께 반환합니다.
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -111,6 +111,9 @@ class ITransformerSignalModel(BaseSignalModel):
         self.features = list(self.feature_candidates)
         self.metadata: Dict[str, Any] = {}
         self.scaler = None
+        self.ticker_to_id: Dict[str, int] = {}
+        self.sector_to_id: Dict[str, int] = {}
+        self.ticker_to_sector_id: Dict[str, int] = {}
 
         base_dir = config.get(
             "weights_dir",
@@ -153,6 +156,18 @@ class ITransformerSignalModel(BaseSignalModel):
                 for column in self.metadata.get("feature_names", self.features)
             )
         )
+        self.ticker_to_id = {
+            str(key): int(value)
+            for key, value in self.metadata.get("ticker_to_id", {}).items()
+        }
+        self.sector_to_id = {
+            str(key): int(value)
+            for key, value in self.metadata.get("sector_to_id", {}).items()
+        }
+        self.ticker_to_sector_id = {
+            str(key): int(value)
+            for key, value in self.metadata.get("ticker_to_sector_id", {}).items()
+        }
 
         config_fallbacks = {
             "n_tickers": self.metadata.get("n_tickers"),
@@ -353,26 +368,55 @@ class ITransformerSignalModel(BaseSignalModel):
         self.features = selected
         return selected
 
+    def _resolve_dataframe_metadata_ids(
+        self,
+        df: pd.DataFrame,
+        ticker_id: Optional[int] = None,
+        sector_id: Optional[int] = None,
+    ) -> tuple[int, int]:
+        prepared = self._coerce_dataframe(df)
+
+        resolved_ticker_id = int(ticker_id) if ticker_id is not None else 0
+        resolved_sector_id = int(sector_id) if sector_id is not None else 0
+
+        ticker_value = None
+        if "ticker" in prepared.columns:
+            ticker_values = prepared["ticker"].dropna().astype(str).unique()
+            if len(ticker_values) == 1:
+                ticker_value = ticker_values[0]
+
+        if ticker_id is None and ticker_value is not None:
+            resolved_ticker_id = int(self.ticker_to_id.get(ticker_value, 0))
+
+        if sector_id is None:
+            if ticker_value is not None and ticker_value in self.ticker_to_sector_id:
+                resolved_sector_id = int(self.ticker_to_sector_id[ticker_value])
+            elif "sector" in prepared.columns:
+                sector_values = prepared["sector"].dropna().astype(str).unique()
+                if len(sector_values) == 1:
+                    resolved_sector_id = int(self.sector_to_id.get(sector_values[0], 0))
+
+        return resolved_ticker_id, resolved_sector_id
+
     def _prepare_feature_window(self, df: pd.DataFrame) -> np.ndarray:
         # 최종 목표:
         # DataFrame -> 필요한 피처만 선택 -> 결측치 보정 -> 최근 seq_len만 절단
         # -> scaler 적용 -> 모델 입력용 [seq_len, n_features] 배열 생성
         prepared = self._coerce_dataframe(df)
-        required_columns = self.features if self.metadata.get("feature_names") else self.feature_candidates
-
-        if not set(required_columns).issubset(prepared.columns):
+        try:
+            feature_columns = self._resolve_feature_columns(prepared)
+        except ValueError:
             if not self.auto_prepare:
-                missing = [column for column in required_columns if column not in prepared.columns]
-                raise ValueError(f"입력 DataFrame에 필요한 컬럼이 없습니다: {missing}")
+                raise
             try:
                 prepared = self._engineer_features(prepared)
+                feature_columns = self._resolve_feature_columns(prepared)
             except Exception as exc:
                 raise ValueError(
                     "iTransformer용 피처 자동 생성에 실패했습니다. "
                     "원본 df에 OHLCV와 거시 컬럼이 충분한지 확인하세요."
                 ) from exc
 
-        feature_columns = self._resolve_feature_columns(prepared)
         feature_frame = prepared[feature_columns].replace([np.inf, -np.inf], np.nan).ffill().fillna(0)
 
         if len(feature_frame) < self.seq_len:
@@ -396,6 +440,19 @@ class ITransformerSignalModel(BaseSignalModel):
     def _aggregate_signal(self, probs: np.ndarray) -> float:
         weights = self._resolve_signal_weights(len(probs))
         return float(np.dot(probs.astype(np.float32), weights))
+
+    def _format_signal_outputs(self, probs: np.ndarray) -> Dict[str, float]:
+        resolved_horizons = (
+            list(self.horizons[: len(probs)])
+            if len(self.horizons) >= len(probs)
+            else list(range(1, len(probs) + 1))
+        )
+        outputs = {
+            f"{self.model_name}_{horizon}d": float(prob)
+            for horizon, prob in zip(resolved_horizons, probs)
+        }
+        outputs[self.signal_name] = self._aggregate_signal(probs)
+        return outputs
 
     def _predict_array(self, X_input, ticker_id: int = 0, sector_id: int = 0, **kwargs) -> np.ndarray:
         # ndarray 경로는 학습/디버깅용 raw predict 함수입니다.
@@ -505,8 +562,8 @@ class ITransformerSignalModel(BaseSignalModel):
     def predict(
         self,
         X_input: Union[pd.DataFrame, np.ndarray],
-        ticker_id: int = 0,
-        sector_id: int = 0,
+        ticker_id: Optional[int] = None,
+        sector_id: Optional[int] = None,
         **kwargs,
     ) -> np.ndarray:
         """
@@ -515,14 +572,34 @@ class ITransformerSignalModel(BaseSignalModel):
         if isinstance(X_input, pd.DataFrame):
             self._load_artifacts(require_scaler=True, require_metadata=True)
             window = self._prepare_feature_window(X_input)
-            return self._predict_array(window, ticker_id=ticker_id, sector_id=sector_id, **kwargs)
+            resolved_ticker_id, resolved_sector_id = self._resolve_dataframe_metadata_ids(
+                X_input,
+                ticker_id=ticker_id,
+                sector_id=sector_id,
+            )
+            return self._predict_array(
+                window,
+                ticker_id=resolved_ticker_id,
+                sector_id=resolved_sector_id,
+                **kwargs,
+            )
 
-        return self._predict_array(X_input, ticker_id=ticker_id, sector_id=sector_id, **kwargs)
+        return self._predict_array(
+            X_input,
+            ticker_id=0 if ticker_id is None else ticker_id,
+            sector_id=0 if sector_id is None else sector_id,
+            **kwargs,
+        )
 
-    def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
+    def get_signals(
+        self,
+        df: pd.DataFrame,
+        ticker_id: Optional[int] = None,
+        sector_id: Optional[int] = None,
+    ) -> Dict[str, float]:
         pred_array = self.predict(df, ticker_id=ticker_id, sector_id=sector_id, verbose=0)
         probs = np.asarray(pred_array[0], dtype=np.float32).reshape(-1)
-        return {self.signal_name: self._aggregate_signal(probs)}
+        return self._format_signal_outputs(probs)
 
     def save(self, filepath: str):
         if self.model is None:
