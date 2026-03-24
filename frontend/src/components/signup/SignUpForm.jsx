@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
 import { toast } from 'react-toastify';
@@ -32,6 +33,8 @@ const SignUpForm = () => {
   const [remark, setRemark] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordValid, setPasswordValid] = useState(
     Array(passwordPolicy.length).fill(false)
   );
@@ -89,6 +92,8 @@ const SignUpForm = () => {
     password !== '';
 
   const isPasswordValid = passwordValid.every(Boolean);
+  const hasConfirmPasswordInput = confirmPassword.length > 0;
+  const isPasswordMatch = hasConfirmPasswordInput && password === confirmPassword;
 
   const isFormValid =
     areRequiredFieldsFilled &&
@@ -240,14 +245,24 @@ const SignUpForm = () => {
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="password">비밀번호</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={handlePasswordChange}
-              placeholder="비밀번호를 입력해주세요"
-              autoComplete="new-password"
-            />
+            <div className={styles.inputWithToggle}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={handlePasswordChange}
+                placeholder="비밀번호를 입력해주세요"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className={styles.passwordToggleButton}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <ul className={styles.passwordPolicy}>
               {passwordPolicy.map((rule, index) => (
                 <li
@@ -261,13 +276,36 @@ const SignUpForm = () => {
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="confirm-password">비밀번호 확인</label>
-            <input
-              type="password"
-              id="confirm-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="비밀번호를 한번 더 입력해주세요"
-            />
+            <div className={styles.inputWithToggle}>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirm-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="비밀번호를 한번 더 입력해주세요"
+              />
+              <button
+                type="button"
+                className={styles.passwordToggleButton}
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                aria-label={showConfirmPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {hasConfirmPasswordInput && (
+              <p
+                className={`${styles.passwordMatchMessage} ${
+                  isPasswordMatch
+                    ? styles.passwordMatchMessageSuccess
+                    : styles.passwordMatchMessageError
+                }`}
+              >
+                {isPasswordMatch
+                  ? '비밀번호가 일치합니다.'
+                  : '비밀번호가 일치하지 않습니다.'}
+              </p>
+            )}
           </div>
           <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>

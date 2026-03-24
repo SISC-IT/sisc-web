@@ -5,12 +5,14 @@ numpy<2.0
 
 # [변경] GPU 바이너리가 포함되지 않은 가벼운 CPU 버전의 TensorFlow 사용
 tensorflow-cpu<2.11
+torch
 
 # --- DB 및 웹 ---
 psycopg2-binary
 requests
 beautifulsoup4
 groq
+google-genai
 fredapi
 yfinance
 
@@ -18,11 +20,12 @@ yfinance
 scikit-learn
 langchain-community
 # [변경] 무거운 GUI/Vision 라이브러리를 제외하기 위해 [extra] 옵션 제거
-stable-baselines3
-gymnasium
-shimmy
-matplotlib
+#stable-baselines3
+#gymnasium
+#shimmy
+#matplotlib
 tqdm
+lxml
 
 # --- 동적 크롤링 (보류) ---
 # selenium

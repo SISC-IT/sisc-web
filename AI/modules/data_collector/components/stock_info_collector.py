@@ -1,4 +1,5 @@
-# AI/modules/collector/stock_info_collector.py
+# AI/modules/data_collector/components/stock_info_collector.py
+from tqdm import tqdm
 import sys
 import os
 import time
@@ -8,7 +9,7 @@ from datetime import datetime
 
 # 프로젝트 루트 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../.."))
+project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
@@ -71,27 +72,21 @@ class StockInfoCollector:
         fail_count = 0
         
         try:
-            for i, ticker in enumerate(tickers):
+            # ★ tqdm 적용
+            for ticker in tqdm(tickers, desc="Stock Info 업데이트", unit="종목"):
                 try:
-                    # 진행 상황 출력 (10개 단위)
-                    if i > 0 and i % 10 == 0:
-                        print(f"   >> 진행 중... ({i}/{len(tickers)})")
-
-                    # yfinance API 호출 (네트워크 통신 발생)
                     yf_ticker = yf.Ticker(ticker)
                     info = yf_ticker.info
                     
                     if self.save_to_db(ticker, info, cursor):
                         success_count += 1
                     else:
-                        # 정보가 없는 경우 (ETF나 상장폐지 등)
                         fail_count += 1
                     
-                    # API 과부하 방지 (0.2초 대기)
                     time.sleep(0.2)
                     
                 except Exception as e:
-                    print(f"   [{ticker}] 수집 실패: {e}")
+                    tqdm.write(f"   [{ticker}] 수집 실패: {e}")
                     fail_count += 1
                     continue
 

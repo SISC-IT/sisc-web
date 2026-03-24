@@ -22,6 +22,18 @@ class BaseSignalModel(ABC):
         self.config = config
         self.model = None
 
+    def get_required_features(self) -> list:
+        """Return the feature schema this model expects for inference."""
+        if hasattr(self, "features") and getattr(self, "features"):
+            return list(getattr(self, "features"))
+        if hasattr(self, "feature_columns") and getattr(self, "feature_columns"):
+            return list(getattr(self, "feature_columns"))
+        if self.config.get("features"):
+            return list(self.config["features"])
+        if self.config.get("feature_columns"):
+            return list(self.config["feature_columns"])
+        return []
+
     @abstractmethod
     def build(self, input_shape: tuple):
         """

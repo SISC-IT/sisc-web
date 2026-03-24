@@ -1,0 +1,12 @@
+.git
+frontend
+backend
+.vscode
+.idea
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.venv
+node_modules
+AI/tests

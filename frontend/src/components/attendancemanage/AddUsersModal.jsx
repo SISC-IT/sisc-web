@@ -8,6 +8,20 @@ const AddUsersModal = () => {
     useAttendance();
   const [users, setUsers] = useState([]);
   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [selectedTeam, setSelectedTeam] = useState('ALL');
+
+  const teamOptions = Array.from(
+    new Set(
+      users
+        .map((user) => user.teamName)
+        .filter((teamName) => typeof teamName === 'string' && teamName.trim())
+    )
+  ).sort((a, b) => a.localeCompare(b, 'ko'));
+
+  const filteredUsers =
+    selectedTeam === 'ALL'
+      ? users
+      : users.filter((user) => user.teamName === selectedTeam);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -29,6 +43,12 @@ const AddUsersModal = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedSessionId, closeAddUsersModal]);
 
+  useEffect(() => {
+    if (selectedTeam !== 'ALL' && !teamOptions.includes(selectedTeam)) {
+      setSelectedTeam('ALL');
+    }
+  }, [selectedTeam, teamOptions]);
+
   const toggleUser = (userId) => {
     const newSelection = new Set(selectedUserIds);
     if (newSelection.has(userId)) newSelection.delete(userId);
@@ -37,8 +57,21 @@ const AddUsersModal = () => {
   };
 
   const toggleAll = () => {
-    if (selectedUserIds.size === users.length) setSelectedUserIds(new Set());
-    else setSelectedUserIds(new Set(users.map((u) => u.userId)));
+    const visibleUserIds = filteredUsers.map((u) => u.userId);
+    const isAllVisibleSelected =
+      visibleUserIds.length > 0 &&
+      visibleUserIds.every((userId) => selectedUserIds.has(userId));
+
+    if (isAllVisibleSelected) {
+      const newSelection = new Set(selectedUserIds);
+      visibleUserIds.forEach((userId) => newSelection.delete(userId));
+      setSelectedUserIds(newSelection);
+      return;
+    }
+
+    const newSelection = new Set(selectedUserIds);
+    visibleUserIds.forEach((userId) => newSelection.add(userId));
+    setSelectedUserIds(newSelection);
   };
 
   const handleComplete = async () => {
@@ -116,19 +149,39 @@ const AddUsersModal = () => {
                       type="checkbox"
                       onChange={toggleAll}
                       checked={
-                        users.length > 0 &&
-                        selectedUserIds.size === users.length
+                        filteredUsers.length > 0 &&
+                        filteredUsers.every((user) =>
+                          selectedUserIds.has(user.userId)
+                        )
                       }
                     />
                   </th>
                   <th>이름</th>
-                  <th>팀</th>
+                  <th>
+                    <div className={styles.teamHeaderWithFilter}>
+                      <span>팀</span>
+                      <select
+                        id="teamFilter"
+                        aria-label="팀 필터"
+                        className={styles.teamFilterInlineSelect}
+                        value={selectedTeam}
+                        onChange={(event) => setSelectedTeam(event.target.value)}
+                      >
+                        <option value="ALL">전체</option>
+                        {teamOptions.map((teamName) => (
+                          <option key={teamName} value={teamName}>
+                            {teamName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </th>
                   <th>학번</th>
                 </tr>
               </thead>
               <tbody>
-                {users.length > 0 ? (
-                  users.map((user) => (
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
                     <tr
                       key={user.userId}
                       className={
@@ -151,7 +204,7 @@ const AddUsersModal = () => {
                 ) : (
                   <tr>
                     <td colSpan="4" className={styles.noData}>
-                      불러올 수 있는 유저가 없습니다.
+                      조건에 맞는 유저가 없습니다.
                     </td>
                   </tr>
                 )}

@@ -98,6 +98,8 @@ public enum ErrorCode {
 
   INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
 
+  FEEDBACK_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "피드백 내용은 필수입니다."),
+
   USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 회원은 로그인할 수 없습니다."),
 
   NEED_PENDING_APPROVAL(HttpStatus.FORBIDDEN, "가입 승인 대기 중입니다. 관리자의 확인 후 이용 가능합니다"),

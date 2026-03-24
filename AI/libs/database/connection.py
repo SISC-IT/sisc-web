@@ -69,7 +69,10 @@ def _load_db_env(prefix: str) -> Dict[str, Any]:
         if key.startswith(prefix):
             # DB_HOST → host
             sub = key.replace(prefix, "").lower()
-            cfg[sub] = os.environ[key]
+            value = os.environ[key]
+            if isinstance(value, str):
+                value = value.strip().strip('"').strip("'")
+            cfg[sub] = value
 
     # 필수값 검사
     missing = []
@@ -135,6 +138,7 @@ def get_db_conn(db_name: str = "DB_"):
         dbname=cfg["name"],
         port=int(cfg.get("port", 5432)),
         sslmode=cfg.get("sslmode"),
+        connect_timeout=int(cfg.get("connect_timeout", 5)),
     )
 
 

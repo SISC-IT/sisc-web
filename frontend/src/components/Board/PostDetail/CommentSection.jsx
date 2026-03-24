@@ -58,7 +58,9 @@ const CommentItem = ({
           <div className={styles.menuContainer}>
             <button
               className={styles.menuButton}
-              onClick={() => setShowCommentMenu(commentId)}
+              onClick={() =>
+                setShowCommentMenu((prev) => (prev === commentId ? null : commentId))
+              }
               aria-label="댓글 메뉴"
             >
               ⋮

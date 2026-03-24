@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import './App.css';
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -38,6 +39,19 @@ import ProtectedRoute from './components/protectedRoute.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 
 function App() {
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    setVh();
+    window.addEventListener('resize', setVh);
+
+    return () => {
+      window.removeEventListener('resize', setVh);
+    };
+  }, []);
   return (
     <>
       <Routes>
@@ -74,15 +88,19 @@ function App() {
             <Route path="/attendance/admin/qr" element={<QrRenderPage />} />
             {/* <Route path="/attendance/check-in" element={<CheckInPage />} /> */}
           </Route>
-            <Route element={<AdminRoute />}>
-              <Route path="/admin" element={<AdminHome />} />
-              <Route path="/admin/members" element={<AdminMemberManage />} />
-              <Route
-                path="/admin/members/approval" element={<AdminMemberApproval />}
-              />
-              <Route path="/admin/members/upload" element={<AdminExcelUpload />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            </Route>
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminHome />} />
+            <Route path="/admin/members" element={<AdminMemberManage />} />
+            <Route
+              path="/admin/members/approval"
+              element={<AdminMemberApproval />}
+            />
+            <Route
+              path="/admin/members/upload"
+              element={<AdminExcelUpload />}
+            />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          </Route>
         </Route>
       </Routes>
 

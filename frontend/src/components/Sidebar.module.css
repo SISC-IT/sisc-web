@@ -5,6 +5,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
   background-color: transparent;
   z-index: 999;
   display: block;
@@ -23,6 +24,7 @@
   left: 0;
   width: 264px;
   height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
   padding-top: 110px;
   padding-left: 32px;
   padding-right: 32px;
@@ -34,6 +36,33 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a #070910;
+}
+
+.homeSidebarMenu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.homeSidebarMenu::-webkit-scrollbar-track {
+  background: #070910;
+  border-radius: 8px;
+}
+
+.homeSidebarMenu::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 8px;
+  border: 1px solid #070910;
+}
+
+.homeSidebarMenu::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
+.sidebarContent {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .open {
@@ -49,10 +78,11 @@
   .homeSidebarMenu {
     top: 90px;
     height: calc(100vh - 90px);
+    height: calc(var(--vh, 1vh) * 100 - 90px);
     padding-top: 20px;
     transform: translateX(0);
   }
-  
+
   .closed {
     transform: translateX(0);
   }
@@ -292,4 +322,188 @@
   color: #8a94a8;
   font-size: 13px;
   padding: 8px 6px;
+}
+
+.feedbackTriggerWrap {
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.feedbackTriggerButton {
+  width: 100%;
+  padding: 8px 2px;
+  border: none;
+  background: transparent;
+  color: #8f96a6;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.feedbackTriggerButton:hover {
+  color: #b8becc;
+}
+
+.feedbackModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.feedbackModal {
+  width: min(620px, calc(100vw - 36px));
+  background: #f4f4f4;
+  border-radius: 18px;
+  padding: 24px 24px 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  max-height: calc(100vh - 40px);
+  max-height: calc(var(--vh, 1vh) * 100 - 40px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feedbackModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.feedbackModalHeader h2 {
+  margin: 0;
+  color: #1b1b1b;
+  font-size: 22px;
+  line-height: 1.18;
+  font-weight: 700;
+}
+
+.feedbackModalHeader p {
+  margin: 6px 0 0;
+  color: #6f6f6f;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.feedbackModalCloseButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #222;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feedbackModalLabel {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #1c1c1c;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.feedbackModalTextarea {
+  width: 100%;
+  min-height: 130px;
+  border: 1px solid #d7d7d7;
+  border-radius: 10px;
+  resize: vertical;
+  padding: 12px 12px;
+  font-size: 14px;
+  color: #111;
+  background: #f8f8f8;
+  box-sizing: border-box;
+}
+
+.feedbackModalTextarea::placeholder {
+  color: #a6a6a6;
+}
+
+.feedbackModalTextarea:focus {
+  outline: none;
+  border-color: #7eb1ff;
+  box-shadow: 0 0 0 3px rgba(126, 177, 255, 0.22);
+}
+
+.feedbackModalActions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.feedbackSubmitButton {
+  border: none;
+  border-radius: 10px;
+  background: #2f7de5;
+  color: #fff;
+  min-width: 120px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feedbackSubmitButton:hover {
+  background: #246bc9;
+}
+
+.feedbackSubmitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .feedbackModalOverlay {
+    padding: 12px;
+  }
+
+  .feedbackModal {
+    width: min(540px, calc(100vw - 24px));
+    padding: 20px 16px 14px;
+    max-height: calc(100vh - 24px);
+    max-height: calc(var(--vh, 1vh) * 100 - 24px);
+  }
+
+  .feedbackModalHeader h2 {
+    font-size: 20px;
+  }
+
+  .feedbackModalHeader p {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  .feedbackModalLabel {
+    font-size: 16px;
+  }
+
+  .feedbackModalTextarea {
+    min-height: 112px;
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  .feedbackSubmitButton {
+    min-width: 108px;
+    height: 34px;
+    font-size: 12px;
+  }
 }

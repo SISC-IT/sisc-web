@@ -857,6 +857,17 @@
   color: #555;
 }
 
+/* 모바일(폰) */
+@media (max-width: 767px) {
+  :root {
+    --width-content: 100%;
+  }
+
+  .postDetail {
+    padding: 36px 12px 24px;
+  }
+}
+
 /* 태블릿 이상 */
 @media (min-width: 768px) {
   .postDetail {

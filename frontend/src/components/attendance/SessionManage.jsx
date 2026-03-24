@@ -115,35 +115,37 @@ const SessionManage = ({ sessions = [], selectedSession = '', loading, error }) 
         출석 목록
       </div>
 
-      <table className={styles.table} role="grid">
-        <thead>
-          <tr>
-            <th>일자</th>
-            <th>출석시작시간</th>
-            <th>회차</th>
-            <th>이름</th>
-            <th>출석 상태</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {rows.map((s) => {
-            const sessionTitle = normalizeSessionTitle(s.sessionTitle);
-            const roundKey = getRoundKey(s);
-            const roundIndex = roundIndexMapBySession.get(sessionTitle)?.get(roundKey) ?? '-';
-
-            return (
-            <tr key={s.attendanceId}>
-              <td>{formatDate(s.roundDate)}</td>
-              <td>{formatTime(s.roundStartAt)}</td>
-              <td>{roundIndex}</td>
-              <td>{s.userName}</td>
-              <td>{formatAttendanceStatus(s.attendanceStatus)}</td>
+      <div className={styles.tableWrap}>
+        <table className={styles.table} role="grid">
+          <thead>
+            <tr>
+              <th>일자</th>
+              <th>출석시작시간</th>
+              <th>회차</th>
+              <th>이름</th>
+              <th>출석 상태</th>
             </tr>
-            );
-          })}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {rows.map((s) => {
+              const sessionTitle = normalizeSessionTitle(s.sessionTitle);
+              const roundKey = getRoundKey(s);
+              const roundIndex = roundIndexMapBySession.get(sessionTitle)?.get(roundKey) ?? '-';
+
+              return (
+              <tr key={s.attendanceId}>
+                <td>{formatDate(s.roundDate)}</td>
+                <td>{formatTime(s.roundStartAt)}</td>
+                <td>{roundIndex}</td>
+                <td>{s.userName}</td>
+                <td>{formatAttendanceStatus(s.attendanceStatus)}</td>
+              </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

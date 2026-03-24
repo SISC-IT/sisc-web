@@ -87,6 +87,25 @@ const PostDetail = () => {
   const [replyTargetId, setReplyTargetId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
+  useEffect(() => {
+    if (!showMenu && !showCommentMenu) return;
+
+    const handleOutsideClick = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      if (!target.closest(`.${styles.menuContainer}`)) {
+        setShowMenu(false);
+        setShowCommentMenu(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [showMenu, showCommentMenu]);
+
   const boardName =
     post?.boardName || post?.board?.boardName || post?.board?.name || '';
   const boardId = post?.boardId || post?.board?.boardId || '';
