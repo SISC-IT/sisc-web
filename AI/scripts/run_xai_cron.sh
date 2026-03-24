@@ -27,8 +27,16 @@ else
   fi
 fi
 
-# 이전 실행이 비정상 종료되어 이름이 남아 있을 수 있으므로 정리합니다.
-docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+# 이미 실행 중이면 이번 실행은 건너뜁니다.
+if docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+  echo "[INFO] XAI 작업이 이미 실행 중이므로 이번 실행은 건너뜁니다."
+  exit 0
+fi
+
+# 이전 실행이 비정상 종료되어 남은 stopped 컨테이너만 정리합니다.
+if docker ps -a --format '{{.Names}} {{.State}}' | grep -Eq "^${CONTAINER_NAME} (exited|created|dead)$"; then
+  docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+fi
 
 # 필요하면 아래 docker run 에 다음 옵션을 추가해서 사용하세요.
 #   --env-file /path/to/your.env
