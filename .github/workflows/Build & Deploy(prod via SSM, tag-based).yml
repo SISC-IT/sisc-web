@@ -3,7 +3,7 @@ name: Build & Deploy Prod (SSH & Tag-based)
 on:
   push:
     tags:
-      - "v*"
+      - "v*"            # ⬅ v1.0.0 이런 태그 push 시에만 빌드+배포
 
 concurrency:
   group: deploy-prod
@@ -12,14 +12,20 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_BACK: ghcr.io/sisc-it/sisc-web-back
-  IMAGE_FRONT: ghcr.io/sisc-it/sisc-web-front
-  IMAGE_XAI: ghcr.io/sisc-it/sisc-web-xai
+  IMAGE_FRONT: ghcr.io/sisc-it/sisc-web-front   # 프론트 이미지 추가
+  IMAGE_XAI: ghcr.io/sisc-it/sisc-web-xai       # AI(XAI) 이미지 추가
 
 jobs:
+  # -----------------------------
+  # 1) 백엔드 Docker 빌드 + GHCR 푸시 (S3 대신 Docker 이미지로 빌드)
+  # -----------------------------
   build-back:
     runs-on: ubuntu-latest
     environment: production
     permissions: { contents: read, packages: write }
+    #defaults:        # 직접 셸 명령어를 칠 때 기본 경로를 잡아주는 역할
+      #run:
+        #working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,24 +48,27 @@ jobs:
           tags: |
             ${{ env.IMAGE_BACK }}:${{ github.ref_name }}
             ${{ env.IMAGE_BACK }}:latest
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
 
+  # -----------------------------
+  # 2) 프론트
+  # -----------------------------
   build-front:
     runs-on: ubuntu-latest
     environment: production
     permissions: { contents: read, packages: write }
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Build & Push (frontend)
         uses: docker/build-push-action@v6
@@ -75,6 +84,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # -----------------------------
+  # 3) AI(XAI)
+  # -----------------------------
   build-xai:
     runs-on: ubuntu-latest
     environment: production
@@ -104,6 +116,9 @@ jobs:
             ${{ env.IMAGE_XAI }}:${{ github.ref_name }}
             ${{ env.IMAGE_XAI }}:latest
 
+  # -----------------------------
+  # 4) 배포: 백엔드, 프론트, AI
+  # -----------------------------
   deploy:
     needs: [build-back, build-front, build-xai]
     runs-on: ubuntu-latest
@@ -114,8 +129,9 @@ jobs:
       - name: Make .env file for Prod
         run: |
           echo "SPRING_PROFILES_ACTIVE=prod" > .env
-          echo "TAG=${{ github.ref_name }}" >> .env
+          echo "TAG=${{ github.ref_name }}" >> .env  # ⬅ docker-compose에서 사용할 태그 버전
 
+          # DB & 기타 시크릿 (production 환경에 등록된 값을 자동으로 불러옴)
           echo "DB_URL=${{ secrets.DB_URL }}" >> .env
           echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
@@ -148,25 +164,30 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+            # 필수 폴더 생성 및 DB 권한(UID 70) 부여. 운영 서버에 HDD가 마운트된 경로(/mnt/storage)가 있는지 확인 필요. (완료되어 주석처리)
+            # sudo mkdir -p /mnt/storage/pg_ai_data /mnt/storage/logs /mnt/storage/uploads ./data/postgres
+            # sudo chown -R 70:70 /mnt/storage/pg_ai_data ./data/postgres
+
             cd ~/app/sisc-web
 
+            # GHCR 로그인
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
 
+            # 컨테이너 기동
             docker compose pull api web redis npm
             docker compose up -d --remove-orphans api web redis npm db
 
+            # XAI: 태그 이미지 pull 후 latest 로 동기화
             XAI_RELEASE_IMAGE="${{ env.IMAGE_XAI }}:${{ github.ref_name }}"
             XAI_LOCAL_IMAGE="${{ env.IMAGE_XAI }}:latest"
-
             docker pull "$XAI_RELEASE_IMAGE"
             docker tag "$XAI_RELEASE_IMAGE" "$XAI_LOCAL_IMAGE"
 
+            # latest가 가리키는 실제 이미지 ID 하나만 남기고 XAI 구버전 제거
             CURRENT_XAI_IMAGE_ID="$(docker image inspect "$XAI_LOCAL_IMAGE" --format '{{.Id}}')"
-
             docker image ls --no-trunc --format '{{.Repository}}:{{.Tag}} {{.ID}}' "${{ env.IMAGE_XAI }}" | while read -r image_ref image_id; do
               [ -n "$image_ref" ] || continue
               [ -n "$image_id" ] || continue
-
               if [ "$image_id" != "$CURRENT_XAI_IMAGE_ID" ]; then
                 docker rmi -f "$image_id" >/dev/null 2>&1 || true
               fi
@@ -174,14 +195,22 @@ jobs:
 
             docker image prune -f
 
+            # 서버 헬스체크
             if docker ps --format '{{.Names}}' | grep -q "^api$"; then
               echo "Waiting for api to be healthy..."
               for i in {1..30}; do
                 status=$(docker inspect --format='{{json .State.Health.Status}}' api 2>/dev/null || echo '"none"')
                 if echo "$status" | grep -q healthy; then
-                  echo "=== Production server is healthy ==="
-                  break
+                  echo "=== 운영 서버 정상 작동 확인 ==="; break
                 fi
                 sleep 2
               done
             fi
+
+      # 도커 용량 최적화
+      - name: Cleanup Docker
+        run: |
+          # 빌드 과정에서 생긴 모든 캐시 삭제 (-a 옵션이 핵심)
+          docker builder prune -a -f
+          # 태그가 없어진 이미지 삭제
+          docker image prune -f
