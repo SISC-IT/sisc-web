@@ -37,7 +37,11 @@ def _normalize_mode(raw_mode: str | None) -> str:
 
 def resolve_artifact_root(config_weights_dir: str | None = None) -> str:
     env_root = os.getenv(ARTIFACT_ROOT_ENV_VAR)
-    selected_root = env_root or config_weights_dir or str(DEFAULT_ARTIFACT_ROOT)
+    selected_root = (
+        env_root.strip()
+        if env_root and env_root.strip()
+        else (config_weights_dir or str(DEFAULT_ARTIFACT_ROOT))
+    )
     return str(_resolve_absolute(selected_root))
 
 
@@ -97,7 +101,7 @@ def resolve_model_artifacts(
         )
 
     if normalized_model == "patchtst":
-        resolved_model_dir = _resolve_absolute(model_dir) if model_dir else root_dir
+        resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
         return ModelArtifactPaths(
             root_dir=str(root_dir),
             model_dir=str(resolved_model_dir),

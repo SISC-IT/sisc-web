@@ -2,7 +2,15 @@
 set -euo pipefail
 
 IMAGE="${XAI_IMAGE:-ghcr.io/sisc-it/sisc-web-xai:latest}"
-IMAGE_REPO="${XAI_IMAGE_REPO:-ghcr.io/sisc-it/sisc-web-xai}"
+if [[ -n "${XAI_IMAGE_REPO:-}" ]]; then
+  IMAGE_REPO="${XAI_IMAGE_REPO}"
+elif [[ "$IMAGE" == *@* ]]; then
+  IMAGE_REPO="${IMAGE%@*}"
+elif [[ "$IMAGE" == *:* ]]; then
+  IMAGE_REPO="${IMAGE%:*}"
+else
+  IMAGE_REPO="$IMAGE"
+fi
 CONTAINER_NAME="${XAI_CONTAINER_NAME:-quantbot-xai}"
 
 ARTIFACT_HOST_DIR="${AI_MODEL_WEIGHTS_HOST_DIR:-/mnt/storage/ai-artifacts}"
@@ -36,15 +44,16 @@ else
   fi
 fi
 
-# Skip if same job is already running.
-if docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-  echo "[INFO] $CONTAINER_NAME is already running. Skip this run."
-  exit 0
-fi
-
-# Clean stale container with same name.
-if docker ps -a --format '{{.Names}} {{.State}}' | grep -Eq "^${CONTAINER_NAME} (exited|created|dead)$"; then
-  docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+# Skip if same job is already running, or clean stale container with exact same name.
+if docker container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+  container_state="$(docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME")"
+  if [[ "$container_state" == "running" ]]; then
+    echo "[INFO] $CONTAINER_NAME is already running. Skip this run."
+    exit 0
+  fi
+  if [[ "$container_state" == "exited" || "$container_state" == "created" || "$container_state" == "dead" ]]; then
+    docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  fi
 fi
 
 run_args=(

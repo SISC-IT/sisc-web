@@ -117,7 +117,11 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _build_config(raw: dict[str, Any]) -> TradingConfig:
-    model_weights_dir = os.getenv(MODEL_WEIGHTS_DIR_ENV_VAR, raw["model"]["weights_dir"])
+    env_model_weights_dir = os.getenv(MODEL_WEIGHTS_DIR_ENV_VAR)
+    if env_model_weights_dir and env_model_weights_dir.strip():
+        model_weights_dir = env_model_weights_dir.strip()
+    else:
+        model_weights_dir = raw["model"]["weights_dir"]
     risk_overlay = RiskOverlayConfig(**raw["portfolio"]["risk_overlay"])
     macro_fallback = MacroFallbackConfig(**raw["pipeline"]["macro_fallback"])
     config = TradingConfig(
