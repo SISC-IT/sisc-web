@@ -144,7 +144,7 @@ jobs:
             docker compose pull api web redis npm
             docker compose up -d --remove-orphans api web redis npm db
 
-            docker image prune -f
+            docker image prune -a -f
 
             # 서버 헬스체크
             if docker ps --format '{{.Names}}' | grep -q "^api$"; then
@@ -164,4 +164,4 @@ jobs:
           # 빌드 과정에서 생긴 모든 캐시 삭제 (-a 옵션이 핵심)
           docker builder prune -a -f
           # 태그가 없어진 이미지 삭제
-          docker image prune -f
+          docker image prune -a -f
