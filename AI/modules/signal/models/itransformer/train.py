@@ -1,6 +1,5 @@
 import json
 import os
-import pickle
 import sys
 from typing import Dict, List, Tuple
 
@@ -108,6 +107,25 @@ def resolve_signal_horizon_weights(horizons: List[int], raw_weights=None) -> Lis
 
     weights_array = weights_array / weights_array.sum()
     return weights_array.tolist()
+
+
+def _serialize_optional_array(value, dtype=np.float64) -> np.ndarray:
+    if value is None:
+        return np.asarray([], dtype=dtype)
+    return np.asarray(value, dtype=dtype)
+
+
+def save_scaler_artifact(filepath: str, scaler: StandardScaler) -> None:
+    np.savez_compressed(
+        filepath,
+        mean_=_serialize_optional_array(getattr(scaler, "mean_", None)),
+        scale_=_serialize_optional_array(getattr(scaler, "scale_", None)),
+        var_=_serialize_optional_array(getattr(scaler, "var_", None)),
+        n_features_in_=np.asarray([int(getattr(scaler, "n_features_in_", 0))], dtype=np.int64),
+        n_samples_seen_=_serialize_optional_array(getattr(scaler, "n_samples_seen_", 0), dtype=np.float64),
+        with_mean=np.asarray([int(bool(getattr(scaler, "with_mean", True)))], dtype=np.int8),
+        with_scale=np.asarray([int(bool(getattr(scaler, "with_scale", True)))], dtype=np.int8),
+    )
 
 
 def configure_tensorflow():
@@ -505,10 +523,10 @@ def train_single_pipeline(config=None):
     save_dir = config["save_dir"]
     os.makedirs(save_dir, exist_ok=True)
 
-    # 모델 본체(.keras), 스케일러(.pkl), 메타데이터(.json)를 함께 남겨야
+    # 모델 본체(.keras), 스케일러(.npz), 메타데이터(.json)를 함께 남겨야
     # wrapper가 별도 추가 설정 없이 바로 서비스 추론에 들어갈 수 있습니다.
     model_path = os.path.join(save_dir, "multi_horizon_model.keras")
-    scaler_path = os.path.join(save_dir, "multi_horizon_scaler.pkl")
+    scaler_path = os.path.join(save_dir, "multi_horizon_scaler.npz")
 
     callbacks = [
         ModelCheckpoint(
@@ -543,8 +561,7 @@ def train_single_pipeline(config=None):
         verbose=1,
     )
 
-    with open(scaler_path, "wb") as f:
-        pickle.dump(info["scaler"], f)
+    save_scaler_artifact(scaler_path, info["scaler"])
 
     metadata_path = save_training_metadata(save_dir, info, config)
 

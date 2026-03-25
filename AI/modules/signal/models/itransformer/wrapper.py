@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Union
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
 
 from AI.modules.features.market_derived import add_macro_changes, add_market_changes
 from AI.modules.features.processor import FeatureProcessor
@@ -99,6 +100,7 @@ class ITransformerSignalModel(BaseSignalModel):
             self.horizons,
             config.get("signal_horizon_weights"),
         )
+        self.allow_unsafe_pickle_scaler = bool(config.get("allow_unsafe_pickle_scaler", False))
         self.auto_prepare = bool(config.get("auto_prepare", True))
         self.features_are_explicit = "features" in config or "feature_names" in config
         raw_feature_candidates = config.get(
@@ -121,7 +123,7 @@ class ITransformerSignalModel(BaseSignalModel):
         )
         self.weights_dir = base_dir
         self.model_path = config.get("model_path", os.path.join(base_dir, "multi_horizon_model.keras"))
-        self.scaler_path = config.get("scaler_path", os.path.join(base_dir, "multi_horizon_scaler.pkl"))
+        self.scaler_path = config.get("scaler_path", os.path.join(base_dir, "multi_horizon_scaler.npz"))
         self.metadata_path = config.get("metadata_path", os.path.join(base_dir, "metadata.json"))
 
         if os.path.exists(self.metadata_path):
@@ -131,8 +133,37 @@ class ITransformerSignalModel(BaseSignalModel):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"스케일러 파일이 없습니다: {filepath}")
 
-        with open(filepath, "rb") as f:
-            self.scaler = pickle.load(f)
+        if filepath.endswith(".pkl") and not self.allow_unsafe_pickle_scaler:
+            raise ValueError(
+                "pickle scaler 자동 로드는 보안상 비활성화되어 있습니다. "
+                "안전한 .npz scaler를 다시 생성하거나, 마이그레이션 목적일 때만 "
+                "allow_unsafe_pickle_scaler=True를 명시하세요."
+            )
+
+        if filepath.endswith(".pkl"):
+            with open(filepath, "rb") as f:
+                self.scaler = pickle.load(f)
+        else:
+            with np.load(filepath, allow_pickle=False) as data:
+                scaler = StandardScaler(
+                    with_mean=bool(int(data["with_mean"][0])),
+                    with_scale=bool(int(data["with_scale"][0])),
+                )
+                mean_ = data["mean_"].astype(np.float64) if data["mean_"].size else None
+                scale_ = data["scale_"].astype(np.float64) if data["scale_"].size else None
+                var_ = data["var_"].astype(np.float64) if data["var_"].size else None
+                n_samples_seen = data["n_samples_seen_"]
+
+                scaler.mean_ = mean_
+                scaler.scale_ = scale_
+                scaler.var_ = var_
+                scaler.n_features_in_ = int(data["n_features_in_"][0])
+                if n_samples_seen.size <= 1:
+                    scaler.n_samples_seen_ = int(n_samples_seen[0]) if n_samples_seen.size == 1 else 0
+                else:
+                    scaler.n_samples_seen_ = n_samples_seen.astype(np.float64)
+
+                self.scaler = scaler
 
         print(f"✅ iTransformer scaler loaded: {filepath}")
 
@@ -211,8 +242,16 @@ class ITransformerSignalModel(BaseSignalModel):
                 "(seq_len, horizons, features)이 필요합니다."
             )
 
-        if require_scaler and self.scaler is None and os.path.exists(self.scaler_path):
-            self.load_scaler(self.scaler_path)
+        if require_scaler and self.scaler is None:
+            if os.path.exists(self.scaler_path):
+                self.load_scaler(self.scaler_path)
+            elif self.allow_unsafe_pickle_scaler:
+                legacy_scaler_path = os.path.join(
+                    os.path.dirname(self.scaler_path),
+                    "multi_horizon_scaler.pkl",
+                )
+                if os.path.exists(legacy_scaler_path):
+                    self.load_scaler(legacy_scaler_path)
 
         if self.model is None:
             if os.path.exists(self.model_path):
@@ -376,8 +415,8 @@ class ITransformerSignalModel(BaseSignalModel):
     ) -> tuple[int, int]:
         prepared = self._coerce_dataframe(df)
 
-        resolved_ticker_id = int(ticker_id) if ticker_id is not None else 0
-        resolved_sector_id = int(sector_id) if sector_id is not None else 0
+        resolved_ticker_id = int(ticker_id) if ticker_id is not None else None
+        resolved_sector_id = int(sector_id) if sector_id is not None else None
 
         ticker_value = None
         if "ticker" in prepared.columns:
@@ -385,18 +424,53 @@ class ITransformerSignalModel(BaseSignalModel):
             if len(ticker_values) == 1:
                 ticker_value = ticker_values[0]
 
-        if ticker_id is None and ticker_value is not None:
-            resolved_ticker_id = int(self.ticker_to_id.get(ticker_value, 0))
+        if resolved_ticker_id is None:
+            if ticker_value is None:
+                raise ValueError(
+                    "DataFrame 추론에서 ticker_id를 명시하지 않았다면 "
+                    "입력 DataFrame에 단일 ticker 컬럼이 필요합니다."
+                )
+            if not self.ticker_to_id:
+                raise ValueError(
+                    "DataFrame 추론에서 ticker_id를 자동 복원하려면 "
+                    "metadata.json에 ticker_to_id 매핑이 필요합니다. "
+                    "매핑이 없다면 ticker_id를 명시적으로 넘겨주세요."
+                )
+            if ticker_value not in self.ticker_to_id:
+                raise ValueError(
+                    f"ticker '{ticker_value}'에 대한 ID 매핑이 metadata에 없습니다. "
+                    "새 metadata로 재학습하거나 ticker_id를 명시적으로 넘겨주세요."
+                )
+            resolved_ticker_id = int(self.ticker_to_id[ticker_value])
 
-        if sector_id is None:
+        if resolved_sector_id is None:
             if ticker_value is not None and ticker_value in self.ticker_to_sector_id:
                 resolved_sector_id = int(self.ticker_to_sector_id[ticker_value])
             elif "sector" in prepared.columns:
                 sector_values = prepared["sector"].dropna().astype(str).unique()
                 if len(sector_values) == 1:
-                    resolved_sector_id = int(self.sector_to_id.get(sector_values[0], 0))
+                    sector_value = sector_values[0]
+                    if not self.sector_to_id:
+                        raise ValueError(
+                            "DataFrame 추론에서 sector_id를 자동 복원하려면 "
+                            "metadata.json에 sector_to_id 매핑이 필요합니다. "
+                            "매핑이 없다면 sector_id를 명시적으로 넘겨주세요."
+                        )
+                    if sector_value not in self.sector_to_id:
+                        raise ValueError(
+                            f"sector '{sector_value}'에 대한 ID 매핑이 metadata에 없습니다. "
+                            "새 metadata로 재학습하거나 sector_id를 명시적으로 넘겨주세요."
+                        )
+                    resolved_sector_id = int(self.sector_to_id[sector_value])
 
-        return resolved_ticker_id, resolved_sector_id
+        if resolved_sector_id is None:
+            raise ValueError(
+                "DataFrame 추론에서 sector_id를 자동 복원하지 못했습니다. "
+                "metadata의 ticker_to_sector_id/sector_to_id 매핑을 사용하거나 "
+                "sector_id를 명시적으로 넘겨주세요."
+            )
+
+        return int(resolved_ticker_id), int(resolved_sector_id)
 
     def _prepare_feature_window(self, df: pd.DataFrame) -> np.ndarray:
         # 최종 목표:
