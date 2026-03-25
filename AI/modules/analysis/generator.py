@@ -1,8 +1,6 @@
 # AI/modules/analysis/generator.py
 """
-[리포트 생성기]
-- LLM 클라이언트를 사용하여 시장 데이터에 대한 분석 리포트를 생성합니다.
-- ReportBuilder를 통해 데이터를 해석하고 프롬프트를 구성합니다.
+XAI report generator built on top of an LLM client.
 """
 
 import os
@@ -15,8 +13,6 @@ project_root = os.path.abspath(os.path.join(current_dir, "../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from AI.libs.llm import GeminiClient, OllamaClient
-from AI.libs.llm.gemini import DEFAULT_GEMINI_MODEL
 from AI.modules.analysis.prompt import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from AI.modules.analysis.report_builder import ReportBuilder
 
@@ -24,9 +20,44 @@ from AI.modules.analysis.report_builder import ReportBuilder
 class ReportGenerator:
     def __init__(self, use_api_llm: bool = True):
         if use_api_llm:
+            from AI.libs.llm.gemini import DEFAULT_GEMINI_MODEL, GeminiClient
             self.llm = GeminiClient(model_name=DEFAULT_GEMINI_MODEL)
         else:
-            self.llm = OllamaClient(model_name="llama3")
+            from AI.libs.llm.ollama import OllamaClient
+            self.llm = OllamaClient()
+
+        self._xai_disabled = False
+        self._xai_disable_reason = ""
+        self.max_output_tokens = int(os.environ.get("XAI_MAX_OUTPUT_TOKENS", "384"))
+
+    @staticmethod
+    def _looks_like_quota_error(message: str) -> bool:
+        normalized = (message or "").lower()
+        quota_markers = (
+            "429",
+            "resource_exhausted",
+            "quota",
+            "rate limit",
+            "rate_limit",
+            "too many requests",
+            "insufficient_quota",
+            "tokens per minute",
+            "requests per minute",
+            "billing",
+            "exceeded",
+            "blocked",
+        )
+        return any(marker in normalized for marker in quota_markers)
+
+    def _disable_xai(self, reason: str) -> None:
+        if self._xai_disabled:
+            return
+        self._xai_disabled = True
+        self._xai_disable_reason = reason
+        print(
+            "[ReportGenerator][Warning] XAI disabled for this run due to quota/rate-limit issue: "
+            f"{reason}"
+        )
 
     def generate_report(
         self,
@@ -36,22 +67,19 @@ class ReportGenerator:
         ai_score: float,
         action: str,
     ) -> str:
-        """
-        단일 종목에 대한 분석 리포트 생성
-        """
-        if not self.llm.get_health():
-            print(f"[ReportGenerator][Warning] LLM health check 실패 (model={self.llm.model_name})")
+        if self._xai_disabled:
+            return ""
 
         try:
             analysis_context = ReportBuilder.analyze_indicators(row_data)
         except Exception as e:
             analysis_context = {
-                "trend": "분석불가",
-                "rsi_status": "알수없음",
-                "macd_status": "알수없음",
-                "bb_status": "알수없음",
+                "trend": "N/A",
+                "rsi_status": "N/A",
+                "macd_status": "N/A",
+                "bb_status": "N/A",
             }
-            print(f"[Warning] ReportBuilder 지표 분석 실패: {e}")
+            print(f"[ReportGenerator][Warning] indicator analysis failed: {e}")
 
         prompt_data = {
             "ticker": ticker,
@@ -72,32 +100,38 @@ class ReportGenerator:
             base_prompt = USER_PROMPT_TEMPLATE.format(**prompt_data)
         except KeyError:
             base_prompt = (
-                "다음 주식의 매매 신호를 분석해 주세요.\n"
-                f"종목: {ticker}, 날짜: {date}, 가격: {prompt_data['price']}, "
-                f"신호: {action}, AI 스코어: {prompt_data['score']:.1f}"
+                "Please explain this trade signal in simple language.\n"
+                f"Ticker: {ticker}, Date: {date}, Price: {prompt_data['price']}, "
+                f"Signal: {action}, AI Score: {prompt_data['score']:.1f}"
             )
 
         enhanced_prompt = f"""
-        {base_prompt}
+{base_prompt}
 
-        [참고: 기술적 지표 해석 가이드]
-        - 추세: {analysis_context.get('trend', '중립')}
-        - RSI 상태: {analysis_context.get('rsi_status', '중립')}
-        - MACD 상태: {analysis_context.get('macd_status', '중립')}
-        - 볼린저 밴드: {analysis_context.get('bb_status', '중립')}
-
-        위 해석 가이드를 참고하여, 초보 투자자도 이해하기 쉬운 논리적인 문장으로 작성해주세요.
-        """
+[Indicator Context]
+- Trend: {analysis_context.get('trend', 'neutral')}
+- RSI: {analysis_context.get('rsi_status', 'neutral')}
+- MACD: {analysis_context.get('macd_status', 'neutral')}
+- Bollinger Band: {analysis_context.get('bb_status', 'neutral')}
+"""
 
         report = self.llm.generate_text(
             prompt=enhanced_prompt,
             system_prompt=SYSTEM_PROMPT,
             temperature=0.7,
-            max_tokens=1024,
+            max_tokens=self.max_output_tokens,
         )
 
-        if not report:
-            print(f"[ReportGenerator][Warning] 빈 리포트 반환 (model={self.llm.model_name}, ticker={ticker})")
-            return ""
+        if report:
+            return report
 
-        return report
+        last_error = getattr(self.llm, "last_error", "") or ""
+        if last_error and self._looks_like_quota_error(last_error):
+            self._disable_xai(last_error)
+        else:
+            print(
+                f"[ReportGenerator][Warning] empty report (model={self.llm.model_name}, "
+                f"ticker={ticker}, error={last_error or 'unknown'})"
+            )
+
+        return ""

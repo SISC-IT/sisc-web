@@ -63,6 +63,7 @@ def run_daily_pipeline(
     target_tickers: list[str] | None = None,
     mode: str | None = None,
     enable_xai: bool | None = None,
+    xai_use_api_llm: bool = True,
     target_date: str | None = None,
     active_models: list[str] | None = None,
     repo: PortfolioRepository | None = None,
@@ -138,7 +139,7 @@ def run_daily_pipeline(
         try:
             from AI.modules.analysis.generator import ReportGenerator
 
-            xai_generator = ReportGenerator(use_api_llm=True)
+            xai_generator = ReportGenerator(use_api_llm=xai_use_api_llm)
         except Exception as xai_error:
             print(f"[Warning] XAI initialization failed. Continuing without reports: {xai_error}")
             xai_generator = None

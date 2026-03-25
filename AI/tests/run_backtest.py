@@ -284,18 +284,20 @@ def _run_dryrun_backfill_legacy(
         resolved_tickers = list(dict.fromkeys(resolved_tickers))
         print(f"[Legacy] Screener mode=once | base day: {base_day} | tickers: {len(resolved_tickers)}")
 
-    print("== Dry Run Backfill ==")
+    print("== Backtest Start ==")
     print("- Engine: legacy (daily pipeline rerun)")
     print(f"- Date range: {start_day} ~ {end_day}")
     print(f"- Business days: {len(dates)}")
     print(f"- Tickers: {resolved_tickers if resolved_tickers else 'dynamic screener (daily)'}")
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}")
+    if enable_xai:
+        print("- XAI LLM: local ollama (llama3-ko)")
     print("- DB writes: skipped (in-memory repository)\n")
 
     for index, target_date in enumerate(dates, start=1):
         target_date_str = target_date.strftime("%Y-%m-%d")
         print("\n==================================================")
-        print(f"[DryRun: {index}/{len(dates)}] target date: {target_date_str}")
+        print(f"[Backtest-Legacy: {index}/{len(dates)}] target date: {target_date_str}")
         print("==================================================")
 
         try:
@@ -303,12 +305,13 @@ def _run_dryrun_backfill_legacy(
                 target_tickers=resolved_tickers,
                 mode="simulation",
                 enable_xai=enable_xai,
+                xai_use_api_llm=False,
                 target_date=target_date_str,
                 repo=repo,
                 trading_config=trading_config,
             )
         except Exception as e:
-            print(f"[DryRun] {target_date_str} failed: {e}")
+            print(f"[Backtest-Legacy] {target_date_str} failed: {e}")
             continue
 
         if sleep_seconds > 0:
@@ -344,7 +347,7 @@ def _run_dryrun_backfill_backtest(
     first_business_day = dates[0].strftime("%Y-%m-%d")
     last_business_day = dates[-1].strftime("%Y-%m-%d")
 
-    print("== Dry Run Backfill ==")
+    print("== Backtest Start ==")
     print("- Engine: backtest (shared model/data cache)")
     print(f"- Date range: {first_business_day} ~ {last_business_day}")
     print(f"- Business days: {len(dates)}")
@@ -355,6 +358,8 @@ def _run_dryrun_backfill_backtest(
     print(f"- Tickers: {ticker_info}")
     print(f"- Models: {active_models}")
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}")
+    if enable_xai:
+        print("- XAI LLM: local ollama (llama3-ko)")
     print("- DB writes: skipped (in-memory repository)\n")
 
     day_ticker_plan, ticker_universe = _build_daily_ticker_plan(
@@ -402,7 +407,7 @@ def _run_dryrun_backfill_backtest(
         try:
             from AI.modules.analysis.generator import ReportGenerator
 
-            xai_generator = ReportGenerator(use_api_llm=True)
+            xai_generator = ReportGenerator(use_api_llm=False)
         except Exception as xai_error:
             print(f"[Warning] XAI initialization failed. Continuing without reports: {xai_error}")
             xai_generator = None
@@ -508,7 +513,7 @@ def _run_dryrun_backfill_backtest(
     return repo
 
 
-def run_dryrun_backfill(
+def run_backtest(
     start_day: str,
     end_day: str,
     tickers: list[str],
@@ -546,7 +551,7 @@ def run_dryrun_backfill(
     if repo.portfolio_summaries:
         last_date = sorted(repo.portfolio_summaries.keys())[-1]
         final_summary = repo.portfolio_summaries[last_date]
-        print("\n== Dry Run Result ==")
+        print("\n== Backtest Result ==")
         print(f"- Last date: {last_date}")
         print(f"- Total asset: ${final_summary['total_asset']:,.2f}")
         print(f"- Cash: ${final_summary['cash']:,.2f}")
@@ -554,11 +559,15 @@ def run_dryrun_backfill(
         print(f"- Executions: {len(repo.executions)}")
         print(f"- Reports: {len(repo.reports)}")
     else:
-        print("\n== Dry Run Result ==")
+        print("\n== Backtest Result ==")
         print("- No portfolio summaries were produced.")
 
 
-if __name__ == "__main__":
+# Backward-compat alias for existing imports.
+run_dryrun_backfill = run_backtest
+
+
+def main() -> None:
     bootstrap_parser = argparse.ArgumentParser(add_help=False)
     bootstrap_parser.add_argument(
         "--config",
@@ -571,7 +580,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         parents=[bootstrap_parser],
-        description="Run a DB-free dry-run backfill over business days.",
+        description="Run backtest over business days.",
     )
     parser.add_argument("--start_day", type=str, default="2025-03-03", help="Start day (YYYY-MM-DD)")
     parser.add_argument("--end_day", type=str, default="2026-03-23", help="End day (YYYY-MM-DD)")
@@ -615,7 +624,7 @@ if __name__ == "__main__":
     if parsed_start_day > parsed_end_day:
         parser.error("--start_day must be less than or equal to --end_day.")
 
-    run_dryrun_backfill(
+    run_backtest(
         start_day=args.start_day,
         end_day=args.end_day,
         tickers=ticker_list,
@@ -626,3 +635,7 @@ if __name__ == "__main__":
         active_models=model_list,
         screener_mode=args.screener_mode,
     )
+
+
+if __name__ == "__main__":
+    main()

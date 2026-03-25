@@ -1,3 +1,4 @@
+#AI/tests/run_backfill.py
 """
 Backfill runner for the daily trading pipeline.
 """
@@ -39,6 +40,8 @@ def run_backfill(
     print(f"- Date range: {start_date} ~ {end_date}")
     print(f"- Tickers: {tickers if tickers else 'dynamic screener'}")
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}\n")
+    if enable_xai:
+        print("- XAI LLM: local ollama (llama3-ko)")
 
     dates = pd.date_range(start=start_date, end=end_date, freq="B")
 
@@ -53,6 +56,7 @@ def run_backfill(
                 target_tickers=tickers,
                 mode="simulation",
                 enable_xai=enable_xai,
+                xai_use_api_llm=False,
                 target_date=target_date_str,
                 trading_config=trading_config,
             )
