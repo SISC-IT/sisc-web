@@ -102,10 +102,14 @@ def resolve_model_artifacts(
 
     if normalized_model == "patchtst":
 <<<<<<< HEAD
+<<<<<<< HEAD
         resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
 =======
         resolved_model_dir = _resolve_absolute(model_dir) if model_dir else root_dir
 >>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
+=======
+        resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
         return ModelArtifactPaths(
             root_dir=str(root_dir),
             model_dir=str(resolved_model_dir),

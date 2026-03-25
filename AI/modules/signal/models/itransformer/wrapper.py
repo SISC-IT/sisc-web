@@ -54,8 +54,24 @@ OPTIONAL_CONTEXT_FEATURES = [
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
 
 
+<<<<<<< HEAD
 def canonicalize_feature_name(name: str) -> str:
     return FEATURE_ALIASES.get(name, name)
+=======
+class iTransformer(nn.Module):
+    def __init__(self, num_variates: int, lookback_len: int, d_model: int, output_size: int):
+        super().__init__()
+        self.enc_embedding = nn.Linear(lookback_len, d_model)
+        self.encoder = nn.TransformerEncoderLayer(d_model=d_model, nhead=4, batch_first=True)
+        self.head = nn.Linear(d_model * num_variates, output_size)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.permute(0, 2, 1)
+        x = self.enc_embedding(x)
+        x = self.encoder(x)
+        x = x.reshape(x.shape[0], -1)
+        return self.head(x)
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 
 
 def normalize_feature_aliases(df: pd.DataFrame) -> pd.DataFrame:
@@ -95,6 +111,7 @@ class ITransformerSignalModel(BaseSignalModel):
         self.model_name = "itransformer"
         self.signal_name = str(config.get("signal_name", DEFAULT_SIGNAL_NAME))
         self.seq_len = int(config.get("seq_len", 60))
+<<<<<<< HEAD
         self.horizons = list(config.get("horizons", DEFAULT_HORIZONS))
         self.signal_horizon_weights = resolve_signal_horizon_weights(
             self.horizons,
@@ -132,6 +149,105 @@ class ITransformerSignalModel(BaseSignalModel):
     def load_scaler(self, filepath: str):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"스케일러 파일이 없습니다: {filepath}")
+=======
+        self.feature_columns = list(config.get("feature_columns") or config.get("features") or DEFAULT_FEATURE_COLUMNS)
+        self.horizons = list(config.get("horizons") or DEFAULT_HORIZONS)
+        self.scaler = None
+        self._explicit_scaler_path = bool(config.get("scaler_path"))
+        self._explicit_metadata_path = bool(config.get("metadata_path"))
+
+        artifact_paths = resolve_model_artifacts(
+            model_name="itransformer",
+            mode=config.get("mode"),
+            config_weights_dir=config.get("artifact_root"),
+            model_dir=config.get("weights_dir"),
+        )
+        self.weights_dir = os.path.abspath(config.get("weights_dir", artifact_paths.model_dir))
+        self.model_path = os.path.abspath(config.get("model_path", artifact_paths.model_path))
+        self.scaler_path = self._abspath_or_none(config.get("scaler_path", artifact_paths.scaler_path))
+        self.metadata_path = self._abspath_or_none(config.get("metadata_path", artifact_paths.metadata_path))
+        self._load_metadata()
+
+    @staticmethod
+    def _abspath_or_none(filepath: Optional[str]) -> Optional[str]:
+        if not filepath:
+            return None
+        return os.path.abspath(filepath)
+
+    def _is_within_weights_dir(self, filepath: str) -> bool:
+        try:
+            file_abs = os.path.abspath(filepath)
+            base_abs = os.path.abspath(self.weights_dir)
+            return os.path.commonpath([file_abs, base_abs]) == base_abs
+        except ValueError:
+            return False
+
+    def _align_horizons_with_output_dim(self, output_dim: int) -> None:
+        if output_dim <= 0:
+            return
+        if len(self.horizons) == output_dim:
+            return
+        if len(self.horizons) > output_dim:
+            self.horizons = self.horizons[:output_dim]
+            return
+
+        if not self.horizons:
+            self.horizons = list(range(1, output_dim + 1))
+            return
+
+        next_horizon = int(self.horizons[-1])
+        while len(self.horizons) < output_dim:
+            next_horizon += 1
+            self.horizons.append(next_horizon)
+
+    @staticmethod
+    def _infer_output_dim_from_state_dict(state_dict: Dict[str, Any]) -> Optional[int]:
+        head_weight = state_dict.get("head.weight")
+        if isinstance(head_weight, torch.Tensor) and head_weight.ndim >= 2:
+            return int(head_weight.shape[0])
+        return None
+
+    def _load_state_dict_safely(self, target_path: str) -> Dict[str, Any]:
+        try:
+            state_obj = torch.load(target_path, map_location=self.device, weights_only=True)
+        except TypeError:
+            state_obj = torch.load(target_path, map_location=self.device)
+
+        if isinstance(state_obj, dict) and isinstance(state_obj.get("state_dict"), dict):
+            state_obj = state_obj["state_dict"]
+        if not isinstance(state_obj, dict):
+            raise ValueError("Unsupported iTransformer checkpoint format.")
+        return state_obj
+
+    def _load_metadata(self) -> None:
+        if not self.metadata_path or not os.path.exists(self.metadata_path):
+            return
+        try:
+            with open(self.metadata_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            self.seq_len = int(metadata.get("seq_len", self.seq_len))
+            metadata_features = metadata.get("feature_columns")
+            if isinstance(metadata_features, list) and metadata_features:
+                self.feature_columns = list(metadata_features)
+            metadata_horizons = metadata.get("horizons")
+            if isinstance(metadata_horizons, list) and metadata_horizons:
+                self.horizons = list(metadata_horizons)
+        except Exception as metadata_error:
+            print(f"[ITRANSFORMER] failed to load metadata: {metadata_error}")
+
+    def load_scaler(self, filepath: str) -> None:
+        scaler_path = os.path.abspath(filepath)
+        if not os.path.exists(scaler_path):
+            raise FileNotFoundError(f"Scaler file not found: {scaler_path}")
+        if not self._explicit_scaler_path and not self._is_within_weights_dir(scaler_path):
+            raise ValueError(
+                f"Refusing to load scaler outside weights_dir: {scaler_path} (weights_dir={self.weights_dir})"
+            )
+
+        with open(scaler_path, "rb") as f:
+            self.scaler = pickle.load(f)
+        self.scaler_path = scaler_path
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 
         if filepath.endswith(".pkl") and not self.allow_unsafe_pickle_scaler:
             raise ValueError(
@@ -541,6 +657,7 @@ class ITransformerSignalModel(BaseSignalModel):
         return self.model.predict(inputs, verbose=verbose, **kwargs)
 
     def build(self, input_shape: tuple):
+<<<<<<< HEAD
         input_shape = self._normalize_input_shape(input_shape)
         self.seq_len = int(input_shape[0])
 
@@ -574,6 +691,14 @@ class ITransformerSignalModel(BaseSignalModel):
                 tf.keras.metrics.AUC(name="auc"),
             ],
         )
+=======
+        self.model = iTransformer(
+            num_variates=input_shape[1],
+            lookback_len=input_shape[0],
+            d_model=int(self.config.get("d_model", 64)),
+            output_size=max(1, len(self.horizons)),
+        ).to(self.device)
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 
     def train(
         self,
@@ -724,8 +849,16 @@ class ITransformerSignalModel(BaseSignalModel):
             window = self.scaler.transform(window).astype(np.float32)
 
         probs = self.predict(window).reshape(-1)
-        score = float(probs[0]) if probs.size else 0.5
-        return {f"itransformer_{horizon}d": score for horizon in self.horizons}
+        if probs.size == 0:
+            return {f"itransformer_{self.horizons[0] if self.horizons else 1}d": 0.5}
+
+        self._align_horizons_with_output_dim(int(probs.size))
+        signals: Dict[str, float] = {}
+        for idx, horizon in enumerate(self.horizons):
+            if idx >= probs.size:
+                break
+            signals[f"itransformer_{horizon}d"] = float(probs[idx])
+        return signals
 
     def save(self, filepath: str):
         if self.model is None:
@@ -757,19 +890,50 @@ ITransformerWrapper = ITransformerSignalModel
         torch.save(self.model.state_dict(), filepath)
 
     def load(self, filepath: Optional[str] = None):
-        target_path = filepath or self.model_path
+        target_path = os.path.abspath(filepath or self.model_path)
         if not os.path.exists(target_path):
             raise FileNotFoundError(f"iTransformer model file not found: {target_path}")
 
         target_dir = os.path.dirname(target_path)
         self.weights_dir = target_dir
         self.model_path = target_path
-        self.scaler_path = os.path.join(target_dir, "multi_horizon_scaler.pkl")
-        self.metadata_path = os.path.join(target_dir, "metadata.json")
+
+        if not self._explicit_scaler_path:
+            default_scaler_path = os.path.join(target_dir, "multi_horizon_scaler.pkl")
+            self.scaler_path = default_scaler_path if os.path.exists(default_scaler_path) else None
+        elif self.scaler_path:
+            self.scaler_path = os.path.abspath(self.scaler_path)
+
+        if not self._explicit_metadata_path:
+            default_metadata_path = os.path.join(target_dir, "metadata.json")
+            self.metadata_path = default_metadata_path if os.path.exists(default_metadata_path) else None
+        elif self.metadata_path:
+            self.metadata_path = os.path.abspath(self.metadata_path)
+
         self._load_metadata()
+        state_dict = self._load_state_dict_safely(target_path)
+        output_dim = self._infer_output_dim_from_state_dict(state_dict)
+        if output_dim is not None:
+            self._align_horizons_with_output_dim(output_dim)
 
         if self.model is None:
             self.build((self.seq_len, len(self.feature_columns)))
-        self.model.load_state_dict(torch.load(target_path, map_location=self.device))
+        elif output_dim is not None and self.model.head.out_features != output_dim:
+            self.build((self.seq_len, len(self.feature_columns)))
+
+        try:
+            self.model.load_state_dict(state_dict)
+        except RuntimeError:
+            self.build((self.seq_len, len(self.feature_columns)))
+            self.model.load_state_dict(state_dict)
         self.model.eval()
+<<<<<<< HEAD
 >>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
+=======
+
+        if self.scaler_path and os.path.exists(self.scaler_path):
+            try:
+                self.load_scaler(self.scaler_path)
+            except Exception as scaler_error:
+                print(f"[ITRANSFORMER] failed to load scaler: {scaler_error}")
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)

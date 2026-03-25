@@ -26,7 +26,8 @@ def _resolve_rl_save_dir() -> str:
     try:
         trading_config = load_trading_config()
         return resolve_artifact_root(trading_config.model.weights_dir)
-    except Exception:
+    except (FileNotFoundError, KeyError, ValueError, json.JSONDecodeError) as config_error:
+        print(f"[TrainPPO][Warn] Falling back to default artifact root: {config_error}")
         return resolve_artifact_root()
 
 def train_agent():

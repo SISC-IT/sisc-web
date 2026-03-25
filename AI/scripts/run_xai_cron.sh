@@ -3,6 +3,9 @@ set -euo pipefail
 
 IMAGE="${XAI_IMAGE:-ghcr.io/sisc-it/sisc-web-xai:latest}"
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 if [[ -n "${XAI_IMAGE_REPO:-}" ]]; then
   IMAGE_REPO="${XAI_IMAGE_REPO}"
 elif [[ "$IMAGE" == *@* ]]; then
@@ -12,9 +15,12 @@ elif [[ "$IMAGE" == *:* ]]; then
 else
   IMAGE_REPO="$IMAGE"
 fi
+<<<<<<< HEAD
 =======
 IMAGE_REPO="${XAI_IMAGE_REPO:-ghcr.io/sisc-it/sisc-web-xai}"
 >>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
+=======
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 CONTAINER_NAME="${XAI_CONTAINER_NAME:-quantbot-xai}"
 
 ARTIFACT_HOST_DIR="${AI_MODEL_WEIGHTS_HOST_DIR:-/mnt/storage/ai-artifacts}"
@@ -49,6 +55,9 @@ else
 fi
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 # Skip if same job is already running, or clean stale container with exact same name.
 if docker container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
   container_state="$(docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME")"
@@ -59,6 +68,7 @@ if docker container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
   if [[ "$container_state" == "exited" || "$container_state" == "created" || "$container_state" == "dead" ]]; then
     docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
   fi
+<<<<<<< HEAD
 fi
 
 run_args=(
@@ -82,6 +92,8 @@ fi
 # Clean stale container with same name.
 if docker ps -a --format '{{.Names}} {{.State}}' | grep -Eq "^${CONTAINER_NAME} (exited|created|dead)$"; then
   docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+=======
+>>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 fi
 
 run_args=(
