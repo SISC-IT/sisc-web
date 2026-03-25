@@ -22,8 +22,25 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
+<<<<<<< HEAD
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
+=======
+from .architecture import PatchTST_Model
+from AI.config import load_trading_config
+from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
+
+
+def _default_model_save_path() -> str:
+    try:
+        trading_config = load_trading_config()
+        return resolve_model_artifacts(
+            model_name="patchtst",
+            config_weights_dir=trading_config.model.weights_dir,
+        ).model_path
+    except Exception:
+        return resolve_model_artifacts(model_name="patchtst").model_path
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
 
 # 경로 설정 (다른 import보다 먼저)
 current_dir  = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +96,10 @@ CONFIG = {
     'epochs': 100,
     'patience': 10,
     'model_save_path': _default_model_save_path()
+<<<<<<< HEAD
 >>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
+=======
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -360,4 +380,7 @@ def run_training(X_train, y_train, X_val, y_val):
     
     trained_model = train_model(train_loader, val_loader, device)
     return trained_model
+<<<<<<< HEAD
 >>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
+=======
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79

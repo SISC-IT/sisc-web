@@ -103,6 +103,7 @@ def resolve_model_artifacts(
     if normalized_model == "patchtst":
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
 =======
         resolved_model_dir = _resolve_absolute(model_dir) if model_dir else root_dir
@@ -110,6 +111,9 @@ def resolve_model_artifacts(
 =======
         resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
 >>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
+=======
+        resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
         return ModelArtifactPaths(
             root_dir=str(root_dir),
             model_dir=str(resolved_model_dir),

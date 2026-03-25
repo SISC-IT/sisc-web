@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import json
 import os
 import pickle
@@ -58,6 +59,40 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..
 def canonicalize_feature_name(name: str) -> str:
     return FEATURE_ALIASES.get(name, name)
 =======
+=======
+from __future__ import annotations
+
+import json
+import os
+import pickle
+from typing import Any, Dict, Optional
+
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+
+from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
+from AI.modules.signal.core.base_model import BaseSignalModel
+
+
+DEFAULT_FEATURE_COLUMNS = [
+    "log_return",
+    "open_ratio",
+    "high_ratio",
+    "low_ratio",
+    "vol_change",
+    "ma5_ratio",
+    "ma20_ratio",
+    "ma60_ratio",
+    "rsi",
+    "macd_ratio",
+    "bb_position",
+]
+DEFAULT_HORIZONS = [1, 3, 5, 7]
+
+
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
 class iTransformer(nn.Module):
     def __init__(self, num_variates: int, lookback_len: int, d_model: int, output_size: int):
         super().__init__()
@@ -74,6 +109,7 @@ class iTransformer(nn.Module):
 >>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 
 
+<<<<<<< HEAD
 def normalize_feature_aliases(df: pd.DataFrame) -> pd.DataFrame:
     normalized = df.copy()
     for alias, canonical in FEATURE_ALIASES.items():
@@ -150,6 +186,15 @@ class ITransformerSignalModel(BaseSignalModel):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"스케일러 파일이 없습니다: {filepath}")
 =======
+=======
+class ITransformerWrapper(BaseSignalModel):
+    supports_model_load_before_build = True
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.seq_len = int(config.get("seq_len", 60))
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
         self.feature_columns = list(config.get("feature_columns") or config.get("features") or DEFAULT_FEATURE_COLUMNS)
         self.horizons = list(config.get("horizons") or DEFAULT_HORIZONS)
         self.scaler = None
@@ -247,6 +292,7 @@ class ITransformerSignalModel(BaseSignalModel):
         with open(scaler_path, "rb") as f:
             self.scaler = pickle.load(f)
         self.scaler_path = scaler_path
+<<<<<<< HEAD
 >>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
 
         if filepath.endswith(".pkl") and not self.allow_unsafe_pickle_scaler:
@@ -692,6 +738,14 @@ class ITransformerSignalModel(BaseSignalModel):
             ],
         )
 =======
+=======
+
+        scaler_features = getattr(self.scaler, "feature_names_in_", None)
+        if scaler_features is not None and len(scaler_features) > 0:
+            self.feature_columns = list(scaler_features)
+
+    def build(self, input_shape: tuple):
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
         self.model = iTransformer(
             num_variates=input_shape[1],
             lookback_len=input_shape[0],
@@ -708,6 +762,7 @@ class ITransformerSignalModel(BaseSignalModel):
         y_val: Optional[np.ndarray] = None,
         **kwargs,
     ):
+<<<<<<< HEAD
         train_inputs = self._prepare_model_inputs(
             X_train,
             ticker_values=kwargs.pop("ticker_ids", None),
@@ -859,9 +914,60 @@ class ITransformerSignalModel(BaseSignalModel):
                 break
             signals[f"itransformer_{horizon}d"] = float(probs[idx])
         return signals
+=======
+        if self.model is None:
+            self.build(X_train.shape[1:])
+        # Dedicated training pipeline for iTransformer is not implemented in this wrapper yet.
+        return None
+
+    def predict(self, X_input: np.ndarray) -> np.ndarray:
+        if self.model is None:
+            raise ValueError("Model not built. Call build()/load() first.")
+
+        array_x = np.asarray(X_input, dtype=np.float32)
+        if array_x.ndim == 2:
+            array_x = np.expand_dims(array_x, axis=0)
+
+        self.model.eval()
+        with torch.no_grad():
+            tensor_x = torch.from_numpy(array_x).to(self.device)
+            out = self.model(tensor_x)
+            return torch.sigmoid(out).cpu().numpy()
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
+
+    def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
+        if not self.feature_columns:
+            raise ValueError("feature_columns is empty.")
+        if len(df) < self.seq_len:
+            raise ValueError(
+                f"Insufficient rows for iTransformer inference: required {self.seq_len}, got {len(df)}"
+            )
+
+        missing_features = [col for col in self.feature_columns if col not in df.columns]
+        if missing_features:
+            raise ValueError(
+                "Missing required features for iTransformer inference: " + ", ".join(missing_features)
+            )
+
+        window = df[self.feature_columns].iloc[-self.seq_len :].to_numpy(dtype=np.float32)
+        if self.scaler is not None:
+            window = self.scaler.transform(window).astype(np.float32)
+
+        probs = self.predict(window).reshape(-1)
+        if probs.size == 0:
+            return {f"itransformer_{self.horizons[0] if self.horizons else 1}d": 0.5}
+
+        self._align_horizons_with_output_dim(int(probs.size))
+        signals: Dict[str, float] = {}
+        for idx, horizon in enumerate(self.horizons):
+            if idx >= probs.size:
+                break
+            signals[f"itransformer_{horizon}d"] = float(probs[idx])
+        return signals
 
     def save(self, filepath: str):
         if self.model is None:
+<<<<<<< HEAD
 <<<<<<< HEAD
             print("저장할 모델이 없습니다.")
             return
@@ -889,6 +995,14 @@ ITransformerWrapper = ITransformerSignalModel
             os.makedirs(save_dir, exist_ok=True)
         torch.save(self.model.state_dict(), filepath)
 
+=======
+            raise ValueError("No iTransformer model to save.")
+        save_dir = os.path.dirname(filepath)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        torch.save(self.model.state_dict(), filepath)
+
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
     def load(self, filepath: Optional[str] = None):
         target_path = os.path.abspath(filepath or self.model_path)
         if not os.path.exists(target_path):
@@ -928,12 +1042,18 @@ ITransformerWrapper = ITransformerSignalModel
             self.model.load_state_dict(state_dict)
         self.model.eval()
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
 =======
+=======
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
 
         if self.scaler_path and os.path.exists(self.scaler_path):
             try:
                 self.load_scaler(self.scaler_path)
             except Exception as scaler_error:
                 print(f"[ITRANSFORMER] failed to load scaler: {scaler_error}")
+<<<<<<< HEAD
 >>>>>>> 969fb59 ([AI] [FIX] 환경변수 정리)
+=======
+>>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
