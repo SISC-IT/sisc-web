@@ -84,6 +84,10 @@ services:
   #  restart: always
   #  ports:
   #    - "5000:5000"
+  #  environment:
+  #    - AI_MODEL_WEIGHTS_DIR=/mnt/ai-artifacts
+  #  volumes:
+  #    - /mnt/storage/ai-artifacts:/mnt/ai-artifacts
   #  networks:
   #    - sisc-net
   #  deploy:

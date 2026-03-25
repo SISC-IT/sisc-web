@@ -41,7 +41,7 @@ def run_backfill(
     print(f"- Tickers: {tickers if tickers else 'dynamic screener'}")
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}\n")
     if enable_xai:
-        print("- XAI LLM: local ollama (llama3-ko)")
+        print("- XAI LLM: local ollama (OLLAMA_MODEL or first installed model)")
 
     dates = pd.date_range(start=start_date, end=end_date, freq="B")
 

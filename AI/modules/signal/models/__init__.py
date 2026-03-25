@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from AI.modules.signal.core.base_model import BaseSignalModel
 
-AVAILABLE_MODELS = ("transformer", "patchtst")
+AVAILABLE_MODELS = ("transformer", "itransformer", "tcn", "patchtst")
 
 
 def _resolve_model_class(model_name: str):
@@ -15,6 +15,14 @@ def _resolve_model_class(model_name: str):
         from AI.modules.signal.models.PatchTST.wrapper import PatchTSTWrapper
 
         return PatchTSTWrapper
+    if normalized in {"itransformer", "i_transformer", "i-transformer"}:
+        from AI.modules.signal.models.itransformer.wrapper import ITransformerWrapper
+
+        return ITransformerWrapper
+    if normalized == "tcn":
+        from AI.modules.signal.models.TCN.wrapper import TCNWrapper
+
+        return TCNWrapper
     return None
 
 

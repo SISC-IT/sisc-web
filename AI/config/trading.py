@@ -11,6 +11,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = Path(__file__).resolve().parent
 CONFIG_ENV_VAR = "AI_TRADING_CONFIG_PATH"
+MODEL_WEIGHTS_DIR_ENV_VAR = "AI_MODEL_WEIGHTS_DIR"
 DEFAULT_CONFIG_PATH = CONFIG_DIR / "trading.default.json"
 DEFAULT_LOCAL_CONFIG_PATH = CONFIG_DIR / "trading.local.json"
 
@@ -116,6 +117,11 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _build_config(raw: dict[str, Any]) -> TradingConfig:
+    env_model_weights_dir = os.getenv(MODEL_WEIGHTS_DIR_ENV_VAR)
+    if env_model_weights_dir and env_model_weights_dir.strip():
+        model_weights_dir = env_model_weights_dir.strip()
+    else:
+        model_weights_dir = raw["model"]["weights_dir"]
     risk_overlay = RiskOverlayConfig(**raw["portfolio"]["risk_overlay"])
     macro_fallback = MacroFallbackConfig(**raw["pipeline"]["macro_fallback"])
     config = TradingConfig(
@@ -141,7 +147,7 @@ def _build_config(raw: dict[str, Any]) -> TradingConfig:
             prediction_horizons=tuple(raw["data"]["prediction_horizons"]),
         ),
         model=ModelConfig(
-            weights_dir=_resolve_path(raw["model"]["weights_dir"]),
+            weights_dir=_resolve_path(model_weights_dir),
             weights_file=raw["model"]["weights_file"],
             scaler_file=raw["model"]["scaler_file"],
         ),

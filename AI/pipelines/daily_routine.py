@@ -115,6 +115,7 @@ def run_daily_pipeline(
         model_config=trading_config.model,
         feature_columns=feature_columns,
         active_models=active_models,
+        run_mode=mode,
     )
     if not model_wrappers:
         print("[DailyRoutine] No active models were initialized. Stopping.")

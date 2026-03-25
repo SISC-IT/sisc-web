@@ -291,7 +291,7 @@ def _run_dryrun_backfill_legacy(
     print(f"- Tickers: {resolved_tickers if resolved_tickers else 'dynamic screener (daily)'}")
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}")
     if enable_xai:
-        print("- XAI LLM: local ollama (llama3-ko)")
+        print("- XAI LLM: local ollama (OLLAMA_MODEL or first installed model)")
     print("- DB writes: skipped (in-memory repository)\n")
 
     for index, target_date in enumerate(dates, start=1):
@@ -359,7 +359,7 @@ def _run_dryrun_backfill_backtest(
     print(f"- Models: {active_models}")
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}")
     if enable_xai:
-        print("- XAI LLM: local ollama (llama3-ko)")
+        print("- XAI LLM: local ollama (OLLAMA_MODEL or first installed model)")
     print("- DB writes: skipped (in-memory repository)\n")
 
     day_ticker_plan, ticker_universe = _build_daily_ticker_plan(
