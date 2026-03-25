@@ -11,6 +11,7 @@ import sys
 import traceback
 import warnings
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
@@ -33,7 +34,6 @@ if project_root not in sys.path:
 # 모듈 Import (비즈니스 로직 및 코어)
 from AI.config import TradingConfig, load_trading_config
 from AI.libs.database.repository import PortfolioRepository
-from AI.modules.analysis.generator import ReportGenerator
 from AI.modules.finder.screener import DynamicScreener
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.pipelines.components.data_processor import load_and_preprocess_data
@@ -41,6 +41,9 @@ from AI.pipelines.components.model_manager import initialize_models
 from AI.pipelines.components.portfolio_logic import calculate_portfolio_allocation
 from AI.pipelines.components.portfolio_settler import settle_portfolio
 from AI.pipelines.components.trade_executor import execute_trades
+
+if TYPE_CHECKING:
+    from AI.modules.analysis.generator import ReportGenerator
 
 
 def _build_default_macro_frame(trading_config: TradingConfig) -> pd.DataFrame:
@@ -60,6 +63,7 @@ def run_daily_pipeline(
     target_tickers: list[str] | None = None,
     mode: str | None = None,
     enable_xai: bool | None = None,
+    xai_use_api_llm: bool = True,
     target_date: str | None = None,
     active_models: list[str] | None = None,
     repo: PortfolioRepository | None = None,
@@ -77,9 +81,16 @@ def run_daily_pipeline(
         active_models = list(trading_config.pipeline.active_models)
 
     exec_date_str = target_date if target_date else datetime.now().strftime("%Y-%m-%d")
+    run_id = f"daily_{exec_date_str}"
     print(f"\n[{exec_date_str}] === AI Daily Portfolio Routine (Mode: {mode.upper()}) ===")
 
     repo = repo if repo is not None else PortfolioRepository(db_name=trading_config.pipeline.db_name)
+
+    if mode == "simulation" and hasattr(repo, "reset_run_data"):
+        try:
+            repo.reset_run_data(run_id=run_id, target_date=exec_date_str)
+        except Exception as reset_error:
+            print(f"[Warning] Failed to reset existing run data: {reset_error}")
 
     # [Step 0] 스크리닝 (특정 종목이 주어지지 않은 경우 동적 스크리닝 진행)
     if not target_tickers:
@@ -126,7 +137,9 @@ def run_daily_pipeline(
     xai_generator = None
     if enable_xai:
         try:
-            xai_generator = ReportGenerator(use_api_llm=True)
+            from AI.modules.analysis.generator import ReportGenerator
+
+            xai_generator = ReportGenerator(use_api_llm=xai_use_api_llm)
         except Exception as xai_error:
             print(f"[Warning] XAI initialization failed. Continuing without reports: {xai_error}")
             xai_generator = None
@@ -176,7 +189,8 @@ def run_daily_pipeline(
             for report in report_results
         ]
         try:
-            saved_report_ids = repo.save_reports_to_db(reports_tuple)
+            # run_id is used so reruns can replace same-day XAI artifacts.
+            saved_report_ids = repo.save_reports_to_db(reports_tuple, run_id=run_id)
             saved_report_map = {
                 report["ticker"]: saved_id
                 for report, saved_id in zip(report_results, saved_report_ids)

@@ -17,6 +17,14 @@ def _build_wrapper_if_needed(wrapper: Any, data_config: DataConfig, fallback_fea
 
     feature_count = len(required_features or fallback_features)
     if feature_count <= 0:
+        scaler = getattr(wrapper, "scaler", None)
+        if scaler is not None and hasattr(scaler, "n_features_in_"):
+            try:
+                feature_count = int(scaler.n_features_in_)
+            except (TypeError, ValueError):
+                feature_count = 0
+
+    if feature_count <= 0:
         raise ValueError("Unable to determine model input feature count for build().")
 
     wrapper.build(input_shape=(data_config.seq_len, feature_count))
@@ -63,10 +71,26 @@ def initialize_models(
         try:
             wrapper = get_model(model_name, wrapper_config)
             weights_path, scaler_path = _resolve_model_artifacts(model_name, model_config)
+            scaler_loaded = False
 
             if not os.path.exists(weights_path):
                 print(f"[Skip] [{model_name.upper()}] weights not found: {weights_path}")
                 continue
+
+            if os.path.exists(scaler_path):
+                if hasattr(wrapper, "load_scaler") and callable(getattr(wrapper, "load_scaler")):
+                    wrapper.load_scaler(scaler_path)
+                    scaler_loaded = True
+                    resolved_features = (
+                        wrapper.get_required_features() if hasattr(wrapper, "get_required_features") else []
+                    )
+                    if resolved_features:
+                        print(f"[{model_name.upper()}] inference features: {resolved_features}")
+                    print(f"[{model_name.upper()}] scaler loaded")
+                else:
+                    print(f"[Skip] [{model_name.upper()}] scaler loader not implemented")
+            else:
+                print(f"[Skip] [{model_name.upper()}] scaler not found")
 
             try:
                 if getattr(wrapper, "supports_model_load_before_build", False):
@@ -87,19 +111,20 @@ def initialize_models(
                 print(f"[{model_name.upper()}] initialization failed while loading weights: {load_error}")
                 raise
 
-            if os.path.exists(scaler_path):
-                if hasattr(wrapper, "load_scaler") and callable(getattr(wrapper, "load_scaler")):
-                    wrapper.load_scaler(scaler_path)
-                    resolved_features = (
-                        wrapper.get_required_features() if hasattr(wrapper, "get_required_features") else []
-                    )
-                    if resolved_features:
-                        print(f"[{model_name.upper()}] inference features: {resolved_features}")
-                    print(f"[{model_name.upper()}] scaler loaded")
+            if not scaler_loaded:
+                if os.path.exists(scaler_path):
+                    if hasattr(wrapper, "load_scaler") and callable(getattr(wrapper, "load_scaler")):
+                        wrapper.load_scaler(scaler_path)
+                        resolved_features = (
+                            wrapper.get_required_features() if hasattr(wrapper, "get_required_features") else []
+                        )
+                        if resolved_features:
+                            print(f"[{model_name.upper()}] inference features: {resolved_features}")
+                        print(f"[{model_name.upper()}] scaler loaded")
+                    else:
+                        print(f"[Skip] [{model_name.upper()}] scaler loader not implemented")
                 else:
-                    print(f"[Skip] [{model_name.upper()}] scaler loader not implemented")
-            else:
-                print(f"[Skip] [{model_name.upper()}] scaler not found")
+                    print(f"[Skip] [{model_name.upper()}] scaler not found")
 
             model_wrappers[f"{model_name}_v1"] = wrapper
         except Exception as e:
