@@ -19,7 +19,7 @@ spring:
       max-request-size: 100MB
   boot:
     admin:
-      context-path: /admin
+      context-path: /admin/dev
       notify:
         mail:
           enabled: false
@@ -37,9 +37,22 @@ management:
     mail:
       enabled: false
 
+# Docker 로그 제한 
+services:
+  api:
+    image: sisc-web-back:latest
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"    # 파일 하나당 10MB로 제한
+        max-file: "3"      # 최대 3개까지만 보관 (총 300MB 고정)
+
 logging:
   file:
     name: /app/logs/application.log
+
+server:
+  forward-headers-strategy: framework
 
 springdoc:
   swagger-ui:

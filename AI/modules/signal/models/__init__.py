@@ -1,23 +1,35 @@
-# AI/modules/signal/models/__init__.py
-from typing import Dict, Any
-from AI.modules.signal.core.base_model import BaseSignalModel
-# 절대 경로로 수정하여 모듈 찾기 에러 방지
-from AI.modules.signal.models.PatchTST.wrapper import PatchTSTWrapper
-from AI.modules.signal.models.transformer.wrapper import TransformerSignalModel
+from typing import Any, Dict
 
-# 모델 레지스트리
-MODEL_REGISTRY = {
-    "transformer": TransformerSignalModel,
-    "patchtst": PatchTSTWrapper
-}
+from AI.modules.signal.core.base_model import BaseSignalModel
+
+AVAILABLE_MODELS = ("transformer", "itransformer", "tcn", "patchtst")
+
+
+def _resolve_model_class(model_name: str):
+    normalized = model_name.lower()
+    if normalized == "transformer":
+        from AI.modules.signal.models.transformer.wrapper import TransformerSignalModel
+
+        return TransformerSignalModel
+    if normalized == "patchtst":
+        from AI.modules.signal.models.PatchTST.wrapper import PatchTSTWrapper
+
+        return PatchTSTWrapper
+    if normalized in {"itransformer", "i_transformer", "i-transformer"}:
+        from AI.modules.signal.models.itransformer.wrapper import ITransformerWrapper
+
+        return ITransformerWrapper
+    if normalized == "tcn":
+        from AI.modules.signal.models.TCN.wrapper import TCNWrapper
+
+        return TCNWrapper
+    return None
+
 
 def get_model(model_name: str, config: Dict[str, Any]) -> BaseSignalModel:
-    """
-    모델 이름과 설정값을 받아 해당 모델 인스턴스를 반환합니다.
-    """
-    model_class = MODEL_REGISTRY.get(model_name.lower())
-    
-    if not model_class:
-        raise ValueError(f"지원하지 않는 모델입니다: {model_name}. 가능한 모델: {list(MODEL_REGISTRY.keys())}")
-        
+    model_class = _resolve_model_class(model_name)
+    if model_class is None:
+        raise ValueError(
+            f"Unsupported model: {model_name}. Available models: {list(AVAILABLE_MODELS)}"
+        )
     return model_class(config)

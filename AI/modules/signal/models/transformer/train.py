@@ -1,3 +1,5 @@
+# AI/modules/signal/models/transformer/train.py
+import argparse
 import os
 import sys
 import pickle
@@ -29,14 +31,57 @@ print("="*50 + "\n")
 
 # 프로젝트 루트 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
+project_root = os.path.abspath(os.path.join(current_dir, "../../../../.."))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.core.data_loader import DataLoader
-from AI.modules.signal.models.PatchTST.architecture import build_transformer_model
+from AI.modules.signal.models.transformer.architecture import build_transformer_model
+from AI.config import load_trading_config
+from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 
-def train_single_pipeline():
+TRANSFORMER_TRAIN_FEATURES = [
+    "log_return",
+    "open_ratio",
+    "high_ratio",
+    "low_ratio",
+    "vol_change",
+    "ma5_ratio",
+    "ma20_ratio",
+    "ma60_ratio",
+    "rsi",
+    "macd_ratio",
+    "bb_position",
+    "week_ma20_ratio",
+    "week_rsi",
+    "week_bb_pos",
+    "week_vol_change",
+    "month_ma12_ratio",
+    "month_rsi",
+]
+
+def _resolve_transformer_artifacts(
+    save_dir: str | None,
+    artifact_mode: str,
+) -> tuple[str, str, str]:
+    if save_dir:
+        artifacts = resolve_model_artifacts(
+            model_name="transformer",
+            mode=artifact_mode,
+            model_dir=save_dir,
+        )
+    else:
+        trading_config = load_trading_config()
+        artifacts = resolve_model_artifacts(
+            model_name="transformer",
+            mode=artifact_mode,
+            config_weights_dir=trading_config.model.weights_dir,
+        )
+
+    return artifacts.model_dir, artifacts.model_path, artifacts.scaler_path
+
+
+def train_single_pipeline(save_dir: str | None = None, artifact_mode: str = "tests"):
     print("==================================================")
     print(" [Training] Multi-Horizon Model (1, 3, 5, 7 Days)")
     print("==================================================")
@@ -60,7 +105,10 @@ def train_single_pipeline():
     # 3. 데이터셋 생성 (Sequencing)
     # --------------------------------------------------------------------------
     # y_class는 (N, 4) 형태: [1일뒤, 3일뒤, 5일뒤, 7일뒤]
-    X_ts, X_ticker, X_sector, y_class, _, info = loader.create_dataset(raw_df)
+    X_ts, X_ticker, X_sector, y_class, _, info = loader.create_dataset(
+        raw_df,
+        feature_columns=TRANSFORMER_TRAIN_FEATURES,
+    )
     
     # [디버그] 정답 분포 확인
     horizons = info.get("horizons", [1])
@@ -111,9 +159,11 @@ def train_single_pipeline():
     # --------------------------------------------------------------------------
     # 6. 콜백 설정 (학습 전략의 핵심)
     # --------------------------------------------------------------------------
-    save_dir = os.path.join(project_root, "AI/data/weights/transformer")
+    save_dir, model_save_path, scaler_save_path = _resolve_transformer_artifacts(
+        save_dir=save_dir,
+        artifact_mode=artifact_mode,
+    )
     os.makedirs(save_dir, exist_ok=True)
-    model_save_path = os.path.join(save_dir, "multi_horizon_model.keras")
 
     # (1) 최고 성능 모델 저장 (전성기 캡처)
     chk_point = ModelCheckpoint(
@@ -157,7 +207,6 @@ def train_single_pipeline():
     # 8. 스케일러 저장 (필수)
     # --------------------------------------------------------------------------
     # 모델은 chk_point가 이미 저장했으므로, 스케일러만 따로 저장합니다.
-    scaler_save_path = os.path.join(save_dir, "multi_horizon_scaler.pkl")
     with open(scaler_save_path, "wb") as f:
         pickle.dump(info['scaler'], f)
         
@@ -166,4 +215,14 @@ def train_single_pipeline():
     print(f" - 스케일러: {scaler_save_path}")
 
 if __name__ == "__main__":
-    train_single_pipeline()
+    parser = argparse.ArgumentParser(description="Train transformer signal model.")
+    parser.add_argument("--save-dir", default=None, help="Optional artifact output directory override.")
+    parser.add_argument(
+        "--artifact-mode",
+        default="tests",
+        choices=["tests", "test", "prod", "production", "simulation", "live"],
+        help="Artifact mode used for default filename resolution.",
+    )
+    args = parser.parse_args()
+
+    train_single_pipeline(save_dir=args.save_dir, artifact_mode=args.artifact_mode)

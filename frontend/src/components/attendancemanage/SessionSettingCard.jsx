@@ -63,6 +63,7 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
           <input
             type="text"
             id="sessionTitle"
+            className={styles.compactTextInput}
             value={sessionTitle}
             onChange={(e) => setSessionTitle(e.target.value)}
             placeholder="세션 이름을 입력해주세요. (ex. 금융 IT팀)"
@@ -77,6 +78,7 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
           <input
             type="text"
             id="sessionDescription"
+            className={styles.compactTextInput}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="세션 설명을 입력해주세요."
@@ -92,6 +94,7 @@ const SessionSettingCard = ({ styles: commonStyles }) => {
             <input
               type="number"
               id="sessionAvailableTime"
+              className={styles.compactMinuteInput}
               value={allowedMinutes}
               maxLength="3"
               onChange={(e) => setAllowedMinutes(e.target.value)}

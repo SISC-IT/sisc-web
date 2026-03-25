@@ -12,6 +12,8 @@
   border-radius: 12px;
   background: #fafbfc;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1.5px solid #d1d5db;
   flex-shrink: 0;
   padding: 16px;
@@ -29,6 +31,11 @@
   grid-template-columns: 1fr;
   gap: 14px;
   width: 100%;
+  min-width: 0;
+}
+
+.form > div {
+  min-width: 0;
 }
 
 .timeInputGroup {
@@ -66,10 +73,11 @@
 
 .availableTimeInputGroup {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   width: 100%;
   align-items: center;
+  justify-items: start;
 }
 
 .availableTimeInputGroup>input {
@@ -84,6 +92,18 @@
   transition: all 0.2s;
   box-sizing: border-box;
   font-family: Inter, sans-serif;
+}
+
+.compactTextInput {
+  width: 100% !important;
+  min-width: 0;
+  max-width: clamp(220px, 24vw, 360px) !important;
+}
+
+.compactMinuteInput {
+  width: 100% !important;
+  min-width: 0;
+  max-width: clamp(120px, 14vw, 190px) !important;
 }
 
 .availableTimeInputGroup>input:focus {
@@ -306,6 +326,7 @@
   background: #f8f9fb;
   padding: 20px 16px;
   box-shadow: none;
+  overflow-x: hidden;
 }
 
 .SessionSettingCardContainer:hover {
@@ -329,6 +350,7 @@
   grid-template-columns: 1.3fr 1.3fr 0.7fr auto;
   gap: 14px;
   align-items: end;
+  min-width: 0;
 }
 
 .availableTimeInputGroup {
@@ -382,6 +404,14 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  .compactTextInput {
+    width: min(100%, 300px) !important;
+  }
+
+  .compactMinuteInput {
+    width: min(100%, 170px) !important;
+  }
+
   .createButtonGroup {
     justify-content: flex-start;
   }
@@ -395,6 +425,12 @@
   .form {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .compactTextInput,
+  .compactMinuteInput {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .availableTimeInputGroup > input {

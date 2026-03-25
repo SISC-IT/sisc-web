@@ -34,6 +34,7 @@ const STATUS_LABELS = {
 };
 
 const STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'GRADUATED'];
+const STATUS_CHANGE_OPTIONS = ['ACTIVE', 'INACTIVE'];
 
 const GRADE_LABELS = {
   NEW_MEMBER: '신입부원',
@@ -147,11 +148,15 @@ const AdminMemberManage = () => {
   };
 
   const openStatusDialog = (member) => {
+    const initialStatus = STATUS_CHANGE_OPTIONS.includes(member.status)
+      ? member.status
+      : STATUS_CHANGE_OPTIONS[0];
+
     setChangeDialog({
       open: true,
       type: 'status',
       member,
-      value: member.status,
+      value: initialStatus,
     });
   };
 
@@ -189,7 +194,7 @@ const AdminMemberManage = () => {
         }
         await changeAdminMemberRole({ userId: member.id, role: value });
       } else if (type === 'status') {
-        if (!STATUS_OPTIONS.includes(value)) {
+        if (!STATUS_CHANGE_OPTIONS.includes(value)) {
           window.alert('유효하지 않은 상태입니다.');
           return;
         }
@@ -457,7 +462,7 @@ const AdminMemberManage = () => {
               {(changeDialog.type === 'role'
                 ? ROLE_OPTIONS
                 : changeDialog.type === 'status'
-                  ? STATUS_OPTIONS
+                  ? STATUS_CHANGE_OPTIONS
                   : GRADE_OPTIONS
               ).map((option) => (
                 <option key={option} value={option}>

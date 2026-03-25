@@ -78,20 +78,24 @@ services:
           memory: 512M
 
   # 3. AI
-  ai:
-    image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
-    container_name: ai
-    restart: always
-    ports:
-      - "5000:5000"
-    networks:
-      - sisc-net
-    deploy:
-      resources:
-        limits:
-          memory: 2G                 # AI 모델 로드 시 필요한 메모리 확보
-        reservations:
-          memory: 512M
+  #ai:
+  #  image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
+  #  container_name: ai
+  #  restart: always
+  #  ports:
+  #    - "5000:5000"
+  #  environment:
+  #    - AI_MODEL_WEIGHTS_DIR=/mnt/ai-artifacts
+  #  volumes:
+  #    - /mnt/storage/ai-artifacts:/mnt/ai-artifacts
+  #  networks:
+  #    - sisc-net
+  #  deploy:
+  #    resources:
+  #      limits:
+  #        memory: 2G                 # AI 모델 로드 시 필요한 메모리 확보
+  #      reservations:
+  #        memory: 512M
   npm:
     image: 'jc21/nginx-proxy-manager:latest'
     container_name: npm

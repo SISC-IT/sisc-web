@@ -2,11 +2,12 @@
 """
 [PPO 학습 실행기]
 - rl_env.py 환경을 불러와 AI를 훈련시킵니다.
-- 학습된 모델(.zip)을 'AI/data/weights/rl_agent_ppo' 경로에 저장합니다.
+- 학습된 모델(.zip)을 아티팩트 루트(`AI_MODEL_WEIGHTS_DIR` 또는 config의 model.weights_dir)에 저장합니다.
 """
 
 import os
 import sys
+import json
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
@@ -17,6 +18,17 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.trader.train.rl_env import StockTradingEnv
+from AI.config import load_trading_config
+from AI.modules.signal.core.artifact_paths import resolve_artifact_root
+
+
+def _resolve_rl_save_dir() -> str:
+    try:
+        trading_config = load_trading_config()
+        return resolve_artifact_root(trading_config.model.weights_dir)
+    except (FileNotFoundError, KeyError, ValueError, json.JSONDecodeError) as config_error:
+        print(f"[TrainPPO][Warn] Falling back to default artifact root: {config_error}")
+        return resolve_artifact_root()
 
 def train_agent():
     print("🚀 [RL] PPO 트레이딩 에이전트 학습 시작")
@@ -47,7 +59,7 @@ def train_agent():
     model.learn(total_timesteps=total_timesteps)
     
     # 4. 저장
-    save_dir = os.path.join(project_root, "AI", "data", "weights")
+    save_dir = _resolve_rl_save_dir()
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, "rl_agent_ppo")
     

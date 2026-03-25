@@ -5,17 +5,28 @@
 - 백테스트(run_portfolio.py)나 실전 매매에서 이 클래스를 호출하여 사용합니다.
 """
 
+import json
 import os
+
 import numpy as np
 from stable_baselines3 import PPO
+
+from AI.config import load_trading_config
+from AI.modules.signal.core.artifact_paths import resolve_artifact_file
+
+
+def _default_rl_model_path() -> str:
+    try:
+        trading_config = load_trading_config()
+        return resolve_artifact_file("rl_agent_ppo.zip", config_weights_dir=trading_config.model.weights_dir)
+    except (FileNotFoundError, KeyError, ValueError, json.JSONDecodeError) as config_error:
+        print(f"[RLAgentStrategy][Warn] Falling back to default artifact root: {config_error}")
+        return resolve_artifact_file("rl_agent_ppo.zip")
 
 class RLAgentStrategy:
     def __init__(self, model_path=None):
         if model_path is None:
-            # 기본 경로 설정
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
-            model_path = os.path.join(project_root, "AI/data/weights/rl_agent_ppo.zip")
+            model_path = _default_rl_model_path()
             
         if os.path.exists(model_path):
             self.model = PPO.load(model_path)

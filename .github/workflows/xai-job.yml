@@ -1,4 +1,4 @@
-name: Build & Deploy XAI Job
+name: Build & Deploy XAI (Dev)
 
 on:
   workflow_dispatch: {}
@@ -7,6 +7,10 @@ on:
     paths:
       - "AI/**"                       # ⬅ xai만 말고 AI 전체 감시 (Dockerfile 포함)
       - ".github/workflows/xai-job.yml"
+
+concurrency:
+  group: deploy-xai-main
+  cancel-in-progress: true
 
 env:
   IMAGE_XAI: ghcr.io/sisc-it/sisc-web-xai
@@ -31,15 +35,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Meta (tags/labels) - xai
-        id: meta-xai
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_XAI }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-,format=short
-
       - name: Build & Push (xai)
         uses: docker/build-push-action@v6
         with:
@@ -47,8 +42,7 @@ jobs:
           file: ./AI/Dockerfile         # ⬅ Dockerfile 위치
           push: true
           platforms: linux/amd64
-          tags: ${{ steps.meta-xai.outputs.tags }}
-          labels: ${{ steps.meta-xai.outputs.labels }}
+          tags: ${{ env.IMAGE_XAI }}:latest
           #cache-from: type=gha
           #cache-to: type=gha,mode=max
 
@@ -56,9 +50,9 @@ jobs:
     needs: [build-xai]
     if: ${{ github.event_name == 'workflow_dispatch' || needs.build-xai.result == 'success' }}
     runs-on: ubuntu-latest
-    environment: production
+    environment: development
     steps:
-      - name: SSH deploy (pull XAI image only)
+      - name: SSH deploy (pull latest XAI image on development)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -70,9 +64,21 @@ jobs:
           script: |
             set -euo pipefail
 
+            IMAGE="ghcr.io/sisc-it/sisc-web-xai:latest"
+            IMAGE_REPO="ghcr.io/sisc-it/sisc-web-xai"
+
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_READ_USER }} --password-stdin
+            docker pull "$IMAGE"
 
-            # XAI 이미지 최신 버전만 받기
-            docker pull ghcr.io/sisc-it/sisc-web-xai:latest
+            CURRENT_IMAGE_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
 
-            echo "✅ Pulled latest XAI image: ghcr.io/sisc-it/sisc-web-xai:latest"
+            docker image ls --no-trunc --format '{{.Repository}}:{{.Tag}} {{.ID}}' "$IMAGE_REPO" | while read -r image_ref image_id; do
+              [ -n "$image_ref" ] || continue
+              [ -n "$image_id" ] || continue
+
+              if [ "$image_id" != "$CURRENT_IMAGE_ID" ]; then
+                docker rmi -f "$image_id" >/dev/null 2>&1 || true
+              fi
+            done
+
+            docker image prune -f >/dev/null 2>&1 || true

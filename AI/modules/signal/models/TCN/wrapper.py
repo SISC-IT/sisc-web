@@ -10,6 +10,7 @@ import torch.nn as nn
 
 from AI.modules.signal.core.dataset_builder import get_standard_training_data
 from AI.modules.signal.core.base_model import BaseSignalModel
+from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 from AI.modules.signal.models.TCN.architecture import TCNClassifier
 
 
@@ -49,20 +50,16 @@ class TCNWrapper(BaseSignalModel):
         self.metadata = {}
         self.is_loaded = False #중복로딩 방지 플래그
 
-        base_dir = config.get(
-            "weights_dir",
-            os.path.join(
-                os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../..")),
-                "AI",
-                "data",
-                "weights",
-                "tcn",
-            ),
+        artifact_paths = resolve_model_artifacts(
+            model_name="tcn",
+            mode=config.get("mode"),
+            config_weights_dir=config.get("artifact_root"),
+            model_dir=config.get("weights_dir"),
         )
-        self.weights_dir = base_dir
-        self.model_path = config.get("model_path", os.path.join(base_dir, "model.pt"))
-        self.scaler_path = config.get("scaler_path", os.path.join(base_dir, "scaler.pkl"))
-        self.metadata_path = config.get("metadata_path", os.path.join(base_dir, "metadata.json"))
+        self.weights_dir = os.path.abspath(config.get("weights_dir", artifact_paths.model_dir))
+        self.model_path = os.path.abspath(config.get("model_path", artifact_paths.model_path))
+        self.scaler_path = os.path.abspath(config.get("scaler_path", artifact_paths.scaler_path))
+        self.metadata_path = os.path.abspath(config.get("metadata_path", artifact_paths.metadata_path))
 
     def build(self, input_shape: tuple):
         # 학습 메타데이터 기준 shape로 TCN 본체를 복원합니다.
@@ -146,6 +143,13 @@ class TCNWrapper(BaseSignalModel):
 
         self.is_loaded = True
 
+    def load_scaler(self, filepath: str):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"TCN scaler file not found: {filepath}")
+        with open(filepath, "rb") as f:
+            self.scaler = pickle.load(f)
+        self.scaler_path = os.path.abspath(filepath)
+
     def _prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         # 서비스 파이프라인이 넘겨준 원본 df에서 TCN용 기술지표를 생성합니다.
         if df is None or df.empty:
@@ -201,6 +205,9 @@ class TCNWrapper(BaseSignalModel):
             f"tcn_{horizon}d": float(prob)
             for horizon, prob in zip(self.horizons, probs)
         }
+
+    def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
+        return self.predict(df)
     
     def predict_batch(self, ticker_data_map: Dict[str, pd.DataFrame]) -> Dict[str, Dict[str, float]]:
         """
@@ -276,6 +283,7 @@ class TCNWrapper(BaseSignalModel):
         """
         self.model_path = filepath
         target_dir = os.path.dirname(filepath)
+        self.weights_dir = target_dir
         self.scaler_path = os.path.join(target_dir, "scaler.pkl")
         self.metadata_path = os.path.join(target_dir, "metadata.json")
         

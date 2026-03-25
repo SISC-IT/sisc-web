@@ -1,6 +1,8 @@
 .attendanceManagementCardContainer {
   border-radius: 12px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background: #fafbfc;
   padding: 16px;
   border: 1.5px solid #d1d5db;
@@ -125,10 +127,32 @@
 }
 
 .table {
-  width: 100%;
-  min-width: 600px;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   table-layout: auto;
+}
+
+.checkboxHeader,
+.checkboxCell {
+  text-align: center !important;
+}
+
+.nameHeader {
+  width: 76px;
+}
+
+.roleHeader {
+  width: 72px;
+}
+
+.studentIdHeader {
+  width: 84px;
+}
+
+.roundHeader {
+  width: 92px;
+  min-width: 92px;
 }
 .attendanceSelect {
   width: 100%;
@@ -243,11 +267,11 @@
 .statusCell {
   overflow: visible !important;
   position: relative;
-  z-index: 80;
+  z-index: 1;
 }
 
 .openStatusCell {
-  z-index: 200;
+  z-index: 2;
 }
 
 .table tbody td.statusCell {
@@ -287,11 +311,14 @@
 .table thead {
   position: sticky;
   top: 0;
-  background-color: transparent;
-  z-index: 10;
+  background-color: #f8f9fb;
+  z-index: 30;
 }
 
 .table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   text-align: left;
   color: #1e293b;
   padding: 10px 6px;
@@ -301,7 +328,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
-  background-color: transparent;
+  background-color: #f8f9fb;
   letter-spacing: 0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -337,36 +364,45 @@
 
 .table tbody td:nth-child(2) {
   white-space: nowrap;
-  min-width: 100px;
-  padding-left: 10px;
-}
-
-.table tbody td:nth-child(3) {
-  white-space: nowrap;
   min-width: 120px;
 }
 
-.table tbody td:nth-child(4) {
+.table tbody td:nth-child(3) {
   white-space: nowrap;
-  min-width: 100px;
+  min-width: 96px;
 }
 
-/* 컬럼 너비 - 비율 기반 */
+.table tbody td:nth-child(4) {
+  white-space: nowrap;
+  min-width: 110px;
+}
+
+/* 컬럼 너비 - 고정 기반 */
 .table thead th:nth-child(1),
 .table tbody td:nth-child(1) {
-  width: 24%;
+  width: 40px;
+  min-width: 40px;
 }
 .table thead th:nth-child(2),
 .table tbody td:nth-child(2) {
-  width: 18%;
+  width: 120px;
+  min-width: 120px;
 }
 .table thead th:nth-child(3),
 .table tbody td:nth-child(3) {
-  width: 20%;
+  width: 96px;
+  min-width: 96px;
 }
 .table thead th:nth-child(4),
 .table tbody td:nth-child(4) {
-  width: 38%;
+  width: 110px;
+  min-width: 110px;
+}
+
+.table thead th:nth-child(n + 5),
+.table tbody td:nth-child(n + 5) {
+  width: 92px;
+  min-width: 92px;
 }
 
 .row {
@@ -501,9 +537,13 @@
   background: #f8f9fb;
   padding: 20px 16px;
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
   position: relative;
   z-index: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .dropdownOpenContainer {
@@ -541,6 +581,10 @@
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 2px;
 }
 
 .addUserButton {
@@ -584,11 +628,59 @@
 .tableGroup {
   margin-top: 4px;
   max-height: none;
-  overflow: auto;
+  min-height: 0;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.paginationBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pageButton {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid #d4d7de;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.activePageButton {
+  border-color: #5a8fd8;
+  background: #eaf3ff;
+  color: #2f6fc1;
 }
 
 .table {
-  min-width: 920px;
+  width: 100%;
+  min-width: max(640px, 100%);
+}
+
+.table thead th:nth-child(2),
+.table tbody td:nth-child(2) {
+  width: 76px;
+  min-width: 76px;
+}
+
+.table thead th:nth-child(3),
+.table tbody td:nth-child(3) {
+  width: 72px;
+  min-width: 72px;
+}
+
+.table thead th:nth-child(4),
+.table tbody td:nth-child(4) {
+  width: 84px;
+  min-width: 84px;
 }
 
 .table thead th {
@@ -596,7 +688,7 @@
   color: #3b4250;
   font-size: 14px;
   font-weight: 700;
-  padding: 10px 10px;
+  padding: 10px 8px;
 }
 
 .table tbody td {
@@ -604,7 +696,7 @@
   color: #3f4754;
   font-size: 14px;
   font-weight: 400;
-  padding: 10px 10px;
+  padding: 10px 8px;
 }
 
 .selectedRow {

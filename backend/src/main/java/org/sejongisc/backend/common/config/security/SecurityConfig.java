@@ -68,7 +68,7 @@ public class SecurityConfig {
         http
             .securityMatcher(request -> {
               String requestUri = request.getRequestURI();
-              boolean isAdminRequest = requestUri.startsWith("/admin");
+              boolean isAdminRequest = requestUri.equals("/admin/dev") || requestUri.startsWith("/admin/dev/");
               boolean isActuatorRequest = requestUri.startsWith("/actuator");
               return !isAdminRequest && !isActuatorRequest;
             })
@@ -106,7 +106,8 @@ public class SecurityConfig {
                     // 모두 접근 가능한 API
                     auth.requestMatchers(SecurityConstants.WHITELIST_URLS).permitAll();
                     // 관리자 전용 API
-                    auth.requestMatchers(SecurityConstants.ADMIN_ONLY_URLS).hasAnyRole(Role.PRESIDENT.name(), Role.SYSTEM_ADMIN.name());
+                    auth.requestMatchers(SecurityConstants.ADMIN_ONLY_URLS)
+                        .hasAnyRole(Role.VICE_PRESIDENT.name(), Role.PRESIDENT.name(), Role.SYSTEM_ADMIN.name());
                     // 일반 서비스 API (정회원 이상만 접근 가능, PENDING_MEMBER 자동 차단)
                     // RoleHierarchy 덕분에 TEAM_MEMBER만 적어도 상위 직급은 다 통과됨
                     auth.requestMatchers(SecurityConstants.MEMBER_ONLY_URLS).hasRole(Role.TEAM_MEMBER.name());
