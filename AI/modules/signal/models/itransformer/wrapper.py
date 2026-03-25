@@ -705,8 +705,31 @@ class ITransformerSignalModel(BaseSignalModel):
             signals[f"itransformer_{horizon}d"] = float(probs[idx])
         return signals
 
+    def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
+        if not self.feature_columns:
+            raise ValueError("feature_columns is empty.")
+        if len(df) < self.seq_len:
+            raise ValueError(
+                f"Insufficient rows for iTransformer inference: required {self.seq_len}, got {len(df)}"
+            )
+
+        missing_features = [col for col in self.feature_columns if col not in df.columns]
+        if missing_features:
+            raise ValueError(
+                "Missing required features for iTransformer inference: " + ", ".join(missing_features)
+            )
+
+        window = df[self.feature_columns].iloc[-self.seq_len :].to_numpy(dtype=np.float32)
+        if self.scaler is not None:
+            window = self.scaler.transform(window).astype(np.float32)
+
+        probs = self.predict(window).reshape(-1)
+        score = float(probs[0]) if probs.size else 0.5
+        return {f"itransformer_{horizon}d": score for horizon in self.horizons}
+
     def save(self, filepath: str):
         if self.model is None:
+<<<<<<< HEAD
             print("저장할 모델이 없습니다.")
             return
 
@@ -726,3 +749,27 @@ class ITransformerSignalModel(BaseSignalModel):
 
 
 ITransformerWrapper = ITransformerSignalModel
+=======
+            raise ValueError("No iTransformer model to save.")
+        save_dir = os.path.dirname(filepath)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        torch.save(self.model.state_dict(), filepath)
+
+    def load(self, filepath: Optional[str] = None):
+        target_path = filepath or self.model_path
+        if not os.path.exists(target_path):
+            raise FileNotFoundError(f"iTransformer model file not found: {target_path}")
+
+        target_dir = os.path.dirname(target_path)
+        self.weights_dir = target_dir
+        self.model_path = target_path
+        self.scaler_path = os.path.join(target_dir, "multi_horizon_scaler.pkl")
+        self.metadata_path = os.path.join(target_dir, "metadata.json")
+        self._load_metadata()
+
+        if self.model is None:
+            self.build((self.seq_len, len(self.feature_columns)))
+        self.model.load_state_dict(torch.load(target_path, map_location=self.device))
+        self.model.eval()
+>>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)

@@ -42,6 +42,7 @@ from AI.modules.features.legacy.technical_features import (
 # CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
 CONFIG = {
+<<<<<<< HEAD
     'start_date'     : '2015-01-01',
     'end_date'       : '2023-12-31',  # 미래 데이터 차단 (Look-ahead bias 방지)
     'seq_len'        : 120,
@@ -70,6 +71,15 @@ CONFIG = {
     'weights_dir'    : 'AI/data/weights/PatchTST',
     'model_name'     : 'patchtst_model.pt',
     'scaler_name'    : 'patchtst_scaler.pkl',
+=======
+    'seq_len': 120,
+    'input_features': 7,
+    'batch_size': 32,
+    'learning_rate': 0.0001,
+    'epochs': 100,
+    'patience': 10,
+    'model_save_path': _default_model_save_path()
+>>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -320,6 +330,7 @@ def train():
                 print(f"\n>> Early Stopping at epoch {epoch+1}")
                 break
 
+<<<<<<< HEAD
     # 7. 스케일러 저장
     with open(scaler_path, 'wb') as f:
         pickle.dump(scaler, f)
@@ -331,3 +342,22 @@ def train():
 
 if __name__ == '__main__':
     train()
+=======
+def run_training(X_train, y_train, X_val, y_val):
+    """
+    외부에서 호출 가능한 학습 진입점
+    X: [Samples, Seq_Len, Features] numpy array
+    y: [Samples] numpy array (0 or 1)
+    """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Tensor 변환
+    train_data = TensorDataset(torch.FloatTensor(X_train), torch.FloatTensor(y_train))
+    val_data = TensorDataset(torch.FloatTensor(X_val), torch.FloatTensor(y_val))
+    
+    train_loader = DataLoader(train_data, batch_size=CONFIG['batch_size'], shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=CONFIG['batch_size'], shuffle=False)
+    
+    trained_model = train_model(train_loader, val_loader, device)
+    return trained_model
+>>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
