@@ -6,6 +6,19 @@ import numpy as np
 import os
 from torch.utils.data import DataLoader, TensorDataset
 from .architecture import PatchTST_Model
+from AI.config import load_trading_config
+from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
+
+
+def _default_model_save_path() -> str:
+    try:
+        trading_config = load_trading_config()
+        return resolve_model_artifacts(
+            model_name="patchtst",
+            config_weights_dir=trading_config.model.weights_dir,
+        ).model_path
+    except Exception:
+        return resolve_model_artifacts(model_name="patchtst").model_path
 
 # 설정값
 CONFIG = {
@@ -15,7 +28,7 @@ CONFIG = {
     'learning_rate': 0.0001,
     'epochs': 100,
     'patience': 10,
-    'model_save_path': 'AI/data/weights/PatchTST_best.pt'
+    'model_save_path': _default_model_save_path()
 }
 
 def train_model(train_loader, val_loader, device):
