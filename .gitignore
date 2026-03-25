@@ -31,6 +31,7 @@ __pycache__/
 AI/.venv/
 AI/data/weights/tcn/
 AI/config/trading.local.json
+AI/tests/out/
 
 # ===== Backend =====
 backend/src/main/java/org/sejongisc/backend/stock/TestController.java

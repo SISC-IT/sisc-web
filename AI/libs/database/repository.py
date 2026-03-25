@@ -108,7 +108,8 @@ class PortfolioRepository:
             params.append(target_date)
             
         # 시간순으로 정렬하여 정확한 롤링 계산을 수행합니다.
-        query += " ORDER BY fill_date ASC, created_at ASC"
+        # Deterministic ordering is important for reproducible position/cost accounting.
+        query += " ORDER BY fill_date ASC, created_at ASC, id ASC"
         
         try:
             cursor.execute(query, tuple(params))
@@ -171,42 +172,127 @@ class PortfolioRepository:
 
     def get_current_cash(self, target_date: str = None, initial_cash: float = 10000000) -> float:
         """
-        [현재 포트폴리오 현금 조회] 
-        포트폴리오 요약 테이블에서 target_date 이전의 가장 최근 현금 잔고를 조회합니다.
-        
-        Args:
-            target_date (str, optional): 기준 날짜
-            initial_cash (float): 내역이 없을 경우 반환할 초기 자본금
-            
-        Returns:
-            float: 계산된 현재 현금 잔고
+        executions 테이블의 cash_after를 우선 사용해 기준 시점 현금을 조회합니다.
+        데이터가 없거나 조회에 실패하면 보수적으로 초기 현금(initial_cash)을 반환합니다.
         """
         conn = self._get_connection()
         if conn is None:
-            return initial_cash
-            
-        cursor = conn.cursor()
-        
-        # 기준일 이전의 가장 최근 마감 데이터를 가져오는 서브쿼리 활용
-        query = """
-            SELECT cash 
-            FROM public.portfolio_summary 
-            WHERE date = (SELECT MAX(date) FROM public.portfolio_summary WHERE date < %s)
-            LIMIT 1;
-        """
-        
+            return float(initial_cash)
+
         try:
-            cursor.execute(query, (target_date,))
-            result = cursor.fetchone()
-            if result:
-                return float(result[0])
-            else:
-                return initial_cash
+            with conn.cursor() as cursor:
+                if target_date:
+                    exec_cash_query = """
+                        SELECT cash_after
+                        FROM public.executions
+                        WHERE fill_date <= %s
+                        ORDER BY fill_date DESC, created_at DESC, id DESC
+                        LIMIT 1
+                    """
+                    cursor.execute(exec_cash_query, (target_date,))
+                    exec_cash = cursor.fetchone()
+                    if exec_cash and exec_cash[0] is not None:
+                        return float(exec_cash[0])
+
+                summary_cash_query = """
+                    SELECT cash
+                    FROM public.portfolio_summary
+                    WHERE date = (
+                        SELECT MAX(date)
+                        FROM public.portfolio_summary
+                        WHERE date < %s
+                    )
+                    LIMIT 1
+                """
+                cursor.execute(summary_cash_query, (target_date,))
+                summary_cash = cursor.fetchone()
+                if summary_cash and summary_cash[0] is not None:
+                    return float(summary_cash[0])
+                return float(initial_cash)
         except Exception as e:
-            print(f"[PortfolioRepository][Error] 포트폴리오 현금 조회 중 오류 발생: {e}")
-            return initial_cash
+            print(f"[PortfolioRepository][Error] 현재 현금 조회 실패: {e}")
+            return float(initial_cash)
         finally:
-            cursor.close()
+            conn.close()
+
+    def get_open_tickers(self, target_date: str) -> List[str]:
+        """
+        target_date 이전까지의 누적 순수량(net 포지션)이 0보다 큰 티커 목록을 반환합니다.
+        """
+        conn = self._get_connection()
+        if conn is None:
+            return []
+
+        query = """
+            SELECT ticker
+            FROM public.executions
+            WHERE fill_date <= %s
+            GROUP BY ticker
+            HAVING SUM(
+                CASE
+                    WHEN side = 'BUY' THEN qty
+                    WHEN side = 'SELL' THEN -qty
+                    ELSE 0
+                END
+            ) > 0
+            ORDER BY ticker
+        """
+
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(query, (target_date,))
+                rows = cursor.fetchall()
+            return [str(row[0]) for row in rows]
+        except Exception as e:
+            print(f"[PortfolioRepository][Error] Open 티커 목록 조회 실패: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def reset_run_data(self, run_id: str, target_date: Optional[str] = None) -> None:
+        """
+        Remove stale simulation artifacts before a rerun.
+
+        If target_date is provided, downstream dates are also removed so cash/position
+        chains are recalculated consistently from target_date forward.
+        """
+        if not run_id:
+            return
+
+        conn = self._get_connection()
+        if conn is None:
+            return
+
+        try:
+            with conn.cursor() as cursor:
+                if target_date:
+                    # Simulation data is date-chained. Re-running a past date without
+                    # clearing future rows leaves broken cash/position continuity.
+                    cursor.execute(
+                        "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%'",
+                        (target_date,),
+                    )
+                    cursor.execute(
+                        "DELETE FROM public.xai_reports WHERE date >= %s AND run_id LIKE 'daily_%%'",
+                        (target_date,),
+                    )
+                    cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
+                    cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
+                else:
+                    cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
+                    cursor.execute("DELETE FROM public.xai_reports WHERE run_id = %s", (run_id,))
+            conn.commit()
+            if target_date:
+                print(
+                    f"[PortfolioRepository] Reset simulation rows from {target_date} onward "
+                    f"(triggered by run_id={run_id})."
+                )
+            else:
+                print(f"[PortfolioRepository] Reset existing records for run_id={run_id}.")
+        except Exception as e:
+            conn.rollback()
+            print(f"[PortfolioRepository][Error] reset_run_data failed: {e}")
+        finally:
             conn.close()
 
     def save_executions_to_db(self, fills_df: pd.DataFrame) -> None:
@@ -242,6 +328,15 @@ class PortfolioRepository:
         cursor = conn.cursor()
 
         try:
+            run_ids = sorted(
+                {
+                    str(run_id).strip()
+                    for run_id in fills_df["run_id"].tolist()
+                    if pd.notna(run_id) and str(run_id).strip()
+                }
+            )
+            if run_ids:
+                cursor.execute("DELETE FROM public.executions WHERE run_id = ANY(%s)", (run_ids,))
             # 다량의 데이터를 빠르게 넣기 위한 INSERT 구문 준비
             insert_query = """
                 INSERT INTO public.executions (
@@ -296,7 +391,7 @@ class PortfolioRepository:
             cursor.close()
             conn.close()
 
-    def save_reports_to_db(self, reports_tuple_list: list) -> list:
+    def save_reports_to_db(self, reports_tuple_list: list, run_id: Optional[str] = None) -> list:
         """
         [XAI 리포트 일괄 저장]
         설명 가능한 AI(XAI) 분석 리포트들을 DB에 저장하고, 생성된 Primary Key(ID) 리스트를 반환합니다.
@@ -320,16 +415,26 @@ class PortfolioRepository:
             # RETURNING id 절을 사용하여 INSERT 후 자동 생성된 PK를 반환받습니다.
             insert_query = """
                 INSERT INTO public.xai_reports (
-                    ticker, signal, price, date, report
+                    ticker, signal, price, date, report, run_id
                 ) VALUES %s
+                ON CONFLICT (ticker, date, signal) DO UPDATE
+                SET price = EXCLUDED.price,
+                    report = EXCLUDED.report,
+                    run_id = EXCLUDED.run_id,
+                    created_at = NOW()
                 RETURNING id
             """
             
             # fetch=True 옵션으로 execute_values 실행 시 RETURNING 결과를 리스트 형태로 모아줍니다.
+            reports_with_run = []
+            for row in reports_tuple_list:
+                ticker, signal, price, date, report = row
+                reports_with_run.append((ticker, signal, price, date, report, run_id))
+
             result_ids = execute_values(
-                cursor, 
-                insert_query, 
-                reports_tuple_list,
+                cursor,
+                insert_query,
+                reports_with_run,
                 fetch=True
             )
             
