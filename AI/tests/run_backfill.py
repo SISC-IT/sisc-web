@@ -76,8 +76,8 @@ if __name__ == "__main__":
     trading_config = load_trading_config(bootstrap_args.config)
 
     parser = argparse.ArgumentParser(parents=[bootstrap_parser], description="Run backfill over business days.")
-    parser.add_argument("--start_date", type=str, default="2025-03-03", help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end_date", type=str, default="2026-03-19", help="End date (YYYY-MM-DD)")
+    parser.add_argument("--start_date", type=str, default="2026-03-20", help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--end_date", type=str, default="2026-03-24", help="End date (YYYY-MM-DD)")
     xai_group = parser.add_mutually_exclusive_group()
     xai_group.add_argument("--xai", dest="enable_xai", action="store_true", help="Enable XAI generation")
     xai_group.add_argument("--no-xai", dest="enable_xai", action="store_false", help="Disable XAI generation")
