@@ -136,6 +136,7 @@ def fetch_trade_logs(
             value,
             commission,
             cash_after,
+            position_qty,
             pnl_realized,
             pnl_unrealized,
             signal_date,
@@ -176,15 +177,15 @@ def save_csv(rows: list[dict], output_path: Path) -> None:
 
 def _try_day_permutation(
     day_rows: list[dict], tolerance: Decimal, max_permutations: int
-) -> tuple[tuple[int, ...], Decimal, Decimal] | None:
+) -> tuple[str, tuple[int, ...] | None, Decimal | None, Decimal | None, int]:
     if len(day_rows) <= 1:
         start_cash = _infer_pre_trade_cash(day_rows[0])
         end_cash = _apply_trade(start_cash, day_rows[0])
-        return (0,), start_cash, end_cash
+        return "feasible", (0,), start_cash, end_cash, 1
 
     count = math.factorial(len(day_rows))
     if count > max_permutations:
-        return None
+        return "capped", None, None, None, count
 
     for perm in itertools.permutations(range(len(day_rows))):
         cash = _infer_pre_trade_cash(day_rows[perm[0]])
@@ -196,8 +197,8 @@ def _try_day_permutation(
                 valid = False
                 break
         if valid:
-            return perm, _infer_pre_trade_cash(day_rows[perm[0]]), cash
-    return None
+            return "feasible", perm, _infer_pre_trade_cash(day_rows[perm[0]]), cash, count
+    return "infeasible", None, None, None, count
 
 
 def validate_trade_logs(
@@ -221,6 +222,7 @@ def validate_trade_logs(
         value = _to_decimal(row["value"])
         pnl_realized = _to_decimal(row["pnl_realized"])
         pnl_unrealized = _to_decimal(row["pnl_unrealized"])
+        position_qty = _to_decimal(row.get("position_qty"))
 
         if side not in {BUY, SELL}:
             issues.append(
@@ -274,14 +276,18 @@ def validate_trade_logs(
                     )
                 )
 
-        if side == BUY and abs(pnl_realized) > tolerance:
+        # In long-only mode, BUY should not realize PnL.
+        # In short-allowed mode, BUY can be a short-cover and may realize PnL.
+        if side == BUY and (not allow_short) and abs(pnl_realized) > tolerance:
             issues.append(
                 ValidationIssue("ERROR", "buy_with_realized_pnl", f"pnl_realized={_q2(pnl_realized)}", row_no, row_id)
             )
-        if side == SELL and abs(pnl_unrealized) > tolerance:
+
+        # Unrealized PnL is expected to be ~0 only when position is fully closed.
+        if side == SELL and position_qty == 0 and abs(pnl_unrealized) > tolerance:
             issues.append(
                 ValidationIssue(
-                    "ERROR", "sell_with_unrealized_pnl", f"pnl_unrealized={_q2(pnl_unrealized)}", row_no, row_id
+                    "ERROR", "sell_with_unrealized_pnl_closed_position", f"pnl_unrealized={_q2(pnl_unrealized)}", row_no, row_id
                 )
             )
         if _to_decimal(row["cash_after"]) < 0:
@@ -384,12 +390,31 @@ def validate_trade_logs(
                 break
 
         if not strict_ok:
-            perm_result = _try_day_permutation(day_rows, tolerance, max_day_permutations)
-            if perm_result is None:
-                issues.append(ValidationIssue("ERROR", "day_cash_infeasible", f"{day}: no feasible intraday cash path found."))
+            status, perm, day_start, day_end, perm_count = _try_day_permutation(
+                day_rows, tolerance, max_day_permutations
+            )
+            if status == "capped":
+                issues.append(
+                    ValidationIssue(
+                        "WARN",
+                        "day_cash_unverified_permutation_cap",
+                        f"{day}: skipped exhaustive search ({perm_count} permutations > cap {max_day_permutations}).",
+                    )
+                )
+                prev_day_end = None
                 continue
-            perm, day_start, day_end = perm_result
-            ordered_ids = [int(day_rows[i]["id"]) for i in perm]
+            if status == "infeasible":
+                issues.append(
+                    ValidationIssue(
+                        "ERROR",
+                        "day_cash_infeasible",
+                        f"{day}: no feasible intraday cash path found after checking {perm_count} permutations.",
+                    )
+                )
+                prev_day_end = None
+                continue
+
+            ordered_ids = [int(day_rows[i]["id"]) for i in perm or ()]
             issues.append(
                 ValidationIssue(
                     "WARN",
@@ -399,6 +424,10 @@ def validate_trade_logs(
             )
         else:
             day_start, day_end = first_cash, cash
+
+        if day_start is None or day_end is None:
+            prev_day_end = None
+            continue
 
         if prev_day_end is not None:
             gap = _q2(day_start - prev_day_end)

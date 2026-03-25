@@ -5,6 +5,7 @@
 - 기존의 개별 함수들을 PortfolioRepository 클래스로 통합하여 응집도를 높이고 DB 커넥션 관리를 최적화했습니다.
 """
 
+import os
 from typing import List, Tuple, Optional, Any, Dict
 import pandas as pd
 import psycopg2
@@ -266,27 +267,38 @@ class PortfolioRepository:
         try:
             with conn.cursor() as cursor:
                 if target_date:
-                    # Simulation data is date-chained. Re-running a past date without
-                    # clearing future rows leaves broken cash/position continuity.
-                    cursor.execute(
-                        "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%'",
-                        (target_date,),
-                    )
-                    cursor.execute(
-                        "DELETE FROM public.xai_reports WHERE date >= %s AND run_id LIKE 'daily_%%'",
-                        (target_date,),
-                    )
-                    cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
-                    cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
+                    # Safety-first default: only clear current run artifacts.
+                    # Global chain reset can remove unrelated simulations sharing the same DB.
+                    allow_global_chain_reset = os.environ.get("AI_ALLOW_GLOBAL_CHAIN_RESET", "0") == "1"
+                    if allow_global_chain_reset:
+                        cursor.execute(
+                            "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%'",
+                            (target_date,),
+                        )
+                        cursor.execute(
+                            "DELETE FROM public.xai_reports WHERE date >= %s AND run_id LIKE 'daily_%%'",
+                            (target_date,),
+                        )
+                        cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
+                        cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
+                    else:
+                        cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
+                        cursor.execute("DELETE FROM public.xai_reports WHERE run_id = %s", (run_id,))
                 else:
                     cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
                     cursor.execute("DELETE FROM public.xai_reports WHERE run_id = %s", (run_id,))
             conn.commit()
             if target_date:
-                print(
-                    f"[PortfolioRepository] Reset simulation rows from {target_date} onward "
-                    f"(triggered by run_id={run_id})."
-                )
+                if os.environ.get("AI_ALLOW_GLOBAL_CHAIN_RESET", "0") == "1":
+                    print(
+                        f"[PortfolioRepository] Reset simulation rows from {target_date} onward "
+                        f"(triggered by run_id={run_id})."
+                    )
+                else:
+                    print(
+                        f"[PortfolioRepository] Reset current run artifacts only "
+                        f"(run_id={run_id}, target_date={target_date})."
+                    )
             else:
                 print(f"[PortfolioRepository] Reset existing records for run_id={run_id}.")
         except Exception as e:
@@ -317,8 +329,30 @@ class PortfolioRepository:
         
         if not required_cols.issubset(fills_df.columns):
             missing = required_cols - set(fills_df.columns)
-            print(f"[PortfolioRepository][Error] 체결 내역 데이터에 필수 컬럼이 누락되었습니다: {missing}")
+            print(f"[PortfolioRepository][Error] Missing required execution columns: {missing}")
             return
+
+        def _normalize_run_id(value: Any) -> Optional[str]:
+            if pd.isna(value):
+                return None
+            normalized = str(value).strip()
+            if not normalized:
+                return None
+            if normalized.lower() in {"nan", "none", "null"}:
+                return None
+            return normalized
+
+        normalized_run_ids = fills_df["run_id"].apply(_normalize_run_id)
+        missing_mask = normalized_run_ids.isna()
+        if bool(missing_mask.any()):
+            sample_rows = fills_df.loc[missing_mask, ["ticker", "signal_date", "fill_date"]].head(5)
+            raise ValueError(
+                "[PortfolioRepository][Error] run_id must be non-empty for all execution rows. "
+                f"missing rows sample={sample_rows.to_dict(orient='records')}"
+            )
+
+        fills_df = fills_df.copy()
+        fills_df["run_id"] = normalized_run_ids
 
         conn = self._get_connection()
         if conn is None:
