@@ -7,13 +7,16 @@
 
 import traceback
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from AI.config import ExecutionConfig, PipelineConfig, PortfolioConfig
 from AI.libs.database.repository import PortfolioRepository
-from AI.modules.analysis.generator import ReportGenerator
 from AI.modules.trader.strategies.rule_based import decide_order
+
+if TYPE_CHECKING:
+    from AI.modules.analysis.generator import ReportGenerator
 
 
 def _execute_trade_plan(
@@ -21,7 +24,7 @@ def _execute_trade_plan(
     current_portfolio_cash: float,
     exec_date_str: str,
     enable_xai: bool,
-    xai_generator: ReportGenerator | None,
+    xai_generator: "ReportGenerator | None",
     report_results: list,
     commission_rate: float,
 ) -> tuple[dict, float]:
@@ -116,7 +119,7 @@ def execute_trades(
     exec_date_str: str,
     mode: str,
     enable_xai: bool,
-    xai_generator: ReportGenerator | None,
+    xai_generator: "ReportGenerator | None",
     pipeline_config: PipelineConfig,
     portfolio_config: PortfolioConfig,
     execution_config: ExecutionConfig,

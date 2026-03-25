@@ -35,6 +35,8 @@ AI/data/weights/itransformer/*
 !AI/data/weights/itransformer/.gitkeep
 
 AI/config/trading.local.json
+AI/tests/out/
+AI/docs/
 
 
 # ===== Backend =====

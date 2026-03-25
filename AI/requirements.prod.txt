@@ -1,0 +1,30 @@
+# 운영용 AI 이미지 기본 의존성입니다.
+# 현재 prod에서도 TCN, PatchTST를 실행할 수 있도록 CPU 전용 PyTorch를 포함합니다.
+
+# --- 공통 데이터 처리 ---
+python-dotenv
+pandas
+numpy<2.0
+
+# --- 현재 운영 모델 ---
+tensorflow-cpu<2.11
+
+# TCN / PatchTST용 CPU 전용 PyTorch
+# - Linux x86_64
+# - Python 3.10
+https://download.pytorch.org/whl/cpu/torch-2.3.1%2Bcpu-cp310-cp310-linux_x86_64.whl
+
+# --- DB / 외부 API ---
+psycopg2-binary
+requests
+beautifulsoup4
+groq
+google-genai
+fredapi
+yfinance
+
+# --- ML / 유틸리티 ---
+scikit-learn
+langchain-community
+tqdm
+lxml

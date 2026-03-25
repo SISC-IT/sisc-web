@@ -675,6 +675,36 @@ class ITransformerSignalModel(BaseSignalModel):
         probs = np.asarray(pred_array[0], dtype=np.float32).reshape(-1)
         return self._format_signal_outputs(probs)
 
+    def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
+        if not self.feature_columns:
+            raise ValueError("feature_columns is empty.")
+        if len(df) < self.seq_len:
+            raise ValueError(
+                f"Insufficient rows for iTransformer inference: required {self.seq_len}, got {len(df)}"
+            )
+
+        missing_features = [col for col in self.feature_columns if col not in df.columns]
+        if missing_features:
+            raise ValueError(
+                "Missing required features for iTransformer inference: " + ", ".join(missing_features)
+            )
+
+        window = df[self.feature_columns].iloc[-self.seq_len :].to_numpy(dtype=np.float32)
+        if self.scaler is not None:
+            window = self.scaler.transform(window).astype(np.float32)
+
+        probs = self.predict(window).reshape(-1)
+        if probs.size == 0:
+            return {f"itransformer_{self.horizons[0] if self.horizons else 1}d": 0.5}
+
+        self._align_horizons_with_output_dim(int(probs.size))
+        signals: Dict[str, float] = {}
+        for idx, horizon in enumerate(self.horizons):
+            if idx >= probs.size:
+                break
+            signals[f"itransformer_{horizon}d"] = float(probs[idx])
+        return signals
+
     def save(self, filepath: str):
         if self.model is None:
             print("저장할 모델이 없습니다.")
