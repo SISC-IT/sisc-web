@@ -213,4 +213,4 @@ jobs:
           # 빌드 과정에서 생긴 모든 캐시 삭제 (-a 옵션이 핵심)
           docker builder prune -a -f
           # 태그가 없어진 이미지 삭제
-          docker image prune -f
+          docker image prune -a -f
