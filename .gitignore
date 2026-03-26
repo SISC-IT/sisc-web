@@ -42,7 +42,6 @@ AI/config/trading.local.json
 AI/tests/out/
 AI/docs/
 
-
 # ===== Backend =====
 backend/src/main/java/org/sejongisc/backend/stock/TestController.java
 
