@@ -34,6 +34,7 @@ AI/data/weights/
 
 AI/.venv/
 AI/data/weights/tcn/
+AI/data/kaggle_data/
 
 AI/data/weights/itransformer/*
 !AI/data/weights/itransformer/.gitkeep
@@ -42,6 +43,16 @@ AI/config/trading.local.json
 AI/tests/out/
 AI/docs/
 
+SISC_*.md
+test_*.py
+AI/data/kaggle_data/
+*.parquet
+*.pt
+*.keras
+*.pkl
+# ===== Kaggle API 키 =====
+kaggle.json
+.kaggle/
 # ===== Backend =====
 backend/src/main/java/org/sejongisc/backend/stock/TestController.java
 

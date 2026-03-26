@@ -100,13 +100,14 @@ def resolve_model_artifacts(
             metadata_path=str(resolved_model_dir / "metadata.json"),
         )
 
+    # [수정] PatchTST: 실제 저장 파일명으로 통일 + scaler_path 추가
     if normalized_model == "patchtst":
         resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
         return ModelArtifactPaths(
             root_dir=str(root_dir),
             model_dir=str(resolved_model_dir),
-            model_path=str(resolved_model_dir / "PatchTST_best.pt"),
-            scaler_path=None,
+            model_path=str(resolved_model_dir / "patchtst_model.pt"),       # PatchTST_best.pt → patchtst_model.pt
+            scaler_path=str(resolved_model_dir / "patchtst_scaler.pkl"),    # 추가
             metadata_path=None,
         )
 

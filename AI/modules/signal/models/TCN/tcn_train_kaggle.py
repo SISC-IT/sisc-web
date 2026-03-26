@@ -1,0 +1,282 @@
+# AI/modules/signal/models/TCN/train_kaggle.py
+"""
+TCN 학습 스크립트 - Kaggle/GitHub Actions 버전
+-----------------------------------------------
+[train.py와의 차이점]
+- DB 연결 없음 (get_standard_training_data 사용 안 함)
+- parquet 파일에서 직접 로드 후 피처 계산
+- GitHub Actions 자동화 파이프라인에서 사용
+
+[train.py는 그대로 유지]
+- 로컬/서버에서 DB 연결로 학습할 때 사용
+-----------------------------------------------
+"""
+import argparse
+import json
+import os
+import pickle
+import sys
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import DataLoader as TorchDataLoader
+from torch.utils.data import TensorDataset
+from tqdm import tqdm
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 경로 설정
+# ─────────────────────────────────────────────────────────────────────────────
+current_dir  = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../../../../.."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+from AI.modules.signal.models.TCN.architecture import TCNClassifier
+from AI.modules.features.legacy.technical_features import (
+    add_technical_indicators,
+    add_multi_timeframe_features
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 피처 정의 (train.py와 동일)
+# ─────────────────────────────────────────────────────────────────────────────
+FEATURE_COLUMNS = [
+    "log_return",
+    "open_ratio",
+    "high_ratio",
+    "low_ratio",
+    "vol_change",
+    "ma5_ratio",
+    "ma20_ratio",
+    "ma60_ratio",
+    "rsi",
+    "macd_ratio",
+    "bb_position",
+]
+
+HORIZONS = [1, 3, 5, 7]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 시퀀스 생성 (train.py와 동일)
+# ─────────────────────────────────────────────────────────────────────────────
+def build_sequences(
+    df: pd.DataFrame,
+    seq_len: int,
+    feature_cols: List[str],
+    horizons: List[int],
+) -> Tuple[np.ndarray, np.ndarray]:
+    features   = []
+    labels     = []
+    max_horizon = max(horizons)
+
+    for _, sub_df in df.groupby("ticker"):
+        sub_df = sub_df.sort_values("date").copy()
+        sub_df = sub_df.dropna(subset=["close"])
+
+        if len(sub_df) < seq_len + max_horizon:
+            continue
+
+        feature_values = sub_df[feature_cols].to_numpy(dtype=np.float32)
+        closes         = sub_df["close"].to_numpy(dtype=np.float32)
+
+        for start in range(len(sub_df) - seq_len - max_horizon + 1):
+            end           = start + seq_len
+            current_close = closes[end - 1]
+            target        = [
+                1.0 if closes[end + h - 1] > current_close else 0.0
+                for h in horizons
+            ]
+            features.append(feature_values[start:end])
+            labels.append(target)
+
+    if not features:
+        return (
+            np.empty((0, seq_len, len(feature_cols)), dtype=np.float32),
+            np.empty((0, len(horizons)), dtype=np.float32)
+        )
+
+    return np.array(features, dtype=np.float32), np.array(labels, dtype=np.float32)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [핵심 변경] 데이터 로드
+# train.py: get_standard_training_data() → DB 연결 필요
+# train_kaggle.py: pd.read_parquet() → DB 연결 불필요
+# ─────────────────────────────────────────────────────────────────────────────
+def load_and_preprocess(parquet_dir: str, start_date: str, end_date: str) -> pd.DataFrame:
+    parquet_path = os.path.join(parquet_dir, 'price_data.parquet')
+    print(f">> parquet 로드 중: {parquet_path}")
+
+    raw_df = pd.read_parquet(parquet_path)
+    raw_df['date'] = pd.to_datetime(raw_df['date'])
+
+    raw_df = raw_df[
+        (raw_df['date'] >= start_date) &
+        (raw_df['date'] <= end_date)
+    ].copy()
+
+    print(f">> 로드 완료: {len(raw_df):,}행, {raw_df['ticker'].nunique()}개 종목")
+
+    # 피처 계산
+    print(">> 피처 계산 중...")
+    processed  = []
+    fail_count = 0
+
+    for ticker in tqdm(raw_df['ticker'].unique(), desc="피처 계산"):
+        df_t = raw_df[raw_df['ticker'] == ticker].copy()
+        try:
+            df_t = add_technical_indicators(df_t)
+            processed.append(df_t)
+        except Exception as e:
+            fail_count += 1
+            if fail_count >= 20:
+                raise RuntimeError("피처 계산 실패가 20개를 초과했습니다.")
+
+    full_df = pd.concat(processed).reset_index(drop=True)
+    print(f">> 피처 계산 완료: {len(full_df):,}행 (실패: {fail_count}개)")
+    return full_df
+
+
+def train_model(args: argparse.Namespace):
+    print("=" * 50)
+    print(" TCN 학습 시작 (Kaggle/Actions 버전)")
+    print("=" * 50)
+
+    # 1. 데이터 로드
+    raw_df = load_and_preprocess(args.parquet_dir, args.start_date, args.end_date)
+
+    # 2. Train/Val 날짜 기준 분리
+    dates          = raw_df['date'].sort_values().unique()
+    split_date_idx = int(len(dates) * 0.8)
+    split_date     = dates[split_date_idx]
+
+    train_df = raw_df[raw_df['date'] <= split_date].copy()
+    val_df   = raw_df[raw_df['date'] >  split_date].copy()
+    print(f">> Train: ~{split_date}, Val: {split_date}~")
+
+    # 3. 스케일링 (train만 fit)
+    scaler = StandardScaler()
+    scaler.fit(train_df[FEATURE_COLUMNS])
+    train_df[FEATURE_COLUMNS] = scaler.transform(train_df[FEATURE_COLUMNS])
+    val_df[FEATURE_COLUMNS]   = scaler.transform(val_df[FEATURE_COLUMNS])
+
+    # 4. 시퀀스 생성
+    X_train, y_train = build_sequences(train_df, args.seq_len, FEATURE_COLUMNS, HORIZONS)
+    X_val,   y_val   = build_sequences(val_df,   args.seq_len, FEATURE_COLUMNS, HORIZONS)
+
+    if len(X_train) == 0 or len(X_val) == 0:
+        raise ValueError("시퀀스 생성 결과가 비어있습니다.")
+
+    print(f">> Train: {X_train.shape}, Val: {X_val.shape}")
+
+    train_loader = TorchDataLoader(
+        TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train)),
+        batch_size=args.batch_size, shuffle=True
+    )
+    val_loader = TorchDataLoader(
+        TensorDataset(torch.from_numpy(X_val), torch.from_numpy(y_val)),
+        batch_size=args.batch_size, shuffle=False
+    )
+
+    # 5. 모델
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f">> Device: {device}")
+
+    model = TCNClassifier(
+        input_size  = len(FEATURE_COLUMNS),
+        output_size = len(HORIZONS),
+        num_channels = args.channels,
+        kernel_size  = args.kernel_size,
+        dropout      = args.dropout,
+    ).to(device)
+
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+
+    best_val_loss = float("inf")
+    best_state    = None
+
+    # 6. 학습 루프
+    print(f">> 학습 시작 (epochs={args.epochs})\n")
+    for epoch in range(args.epochs):
+        model.train()
+        train_loss = 0.0
+        for batch_x, batch_y in train_loader:
+            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+            optimizer.zero_grad()
+            loss = criterion(model(batch_x), batch_y)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item() * batch_x.size(0)
+
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for batch_x, batch_y in val_loader:
+                batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+                val_loss += criterion(model(batch_x), batch_y).item() * batch_x.size(0)
+
+        train_loss /= len(X_train)
+        val_loss   /= len(X_val)
+        print(f"Epoch [{epoch+1:3d}/{args.epochs}] Train: {train_loss:.4f} | Val: {val_loss:.4f}", end="")
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_state    = model.state_dict()
+            print("  ✓ saved")
+        else:
+            print()
+
+    # 7. 저장
+    os.makedirs(args.output_dir, exist_ok=True)
+    model_path    = os.path.join(args.output_dir, "model.pt")
+    scaler_path   = os.path.join(args.output_dir, "scaler.pkl")
+    metadata_path = os.path.join(args.output_dir, "metadata.json")
+
+    torch.save(best_state or model.state_dict(), model_path)
+
+    with open(scaler_path, "wb") as f:
+        pickle.dump(scaler, f)
+
+    metadata = {
+        "feature_columns": FEATURE_COLUMNS,
+        "horizons"       : HORIZONS,
+        "seq_len"        : args.seq_len,
+        "kernel_size"    : args.kernel_size,
+        "dropout"        : args.dropout,
+        "channels"       : args.channels,
+        "model_path"     : model_path,
+        "scaler_path"    : scaler_path,
+    }
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+    print(f"\n>> 완료")
+    print(f"   모델    : {model_path}")
+    print(f"   스케일러: {scaler_path}")
+    print(f"   메타데이터: {metadata_path}")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train TCN signal model (Kaggle/Actions 버전)")
+    parser.add_argument("--parquet-dir",   default=os.environ.get('PARQUET_DIR', '/kaggle/input/datasets/jihyeongkimm/sisc-ai-trading-dataset'))
+    parser.add_argument("--start-date",    default="2015-01-01")
+    parser.add_argument("--end-date",      default="2023-12-31")
+    parser.add_argument("--seq-len",       type=int,   default=60)
+    parser.add_argument("--epochs",        type=int,   default=20)
+    parser.add_argument("--batch-size",    type=int,   default=64)
+    parser.add_argument("--learning-rate", type=float, default=1e-3)
+    parser.add_argument("--kernel-size",   type=int,   default=3)
+    parser.add_argument("--dropout",       type=float, default=0.2)
+    parser.add_argument("--channels",      type=int, nargs="+", default=[32, 64, 64])
+    parser.add_argument("--output-dir",    default=os.environ.get('WEIGHTS_DIR', '/kaggle/working/tcn'))
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    train_model(parse_args())

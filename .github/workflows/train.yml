@@ -1,0 +1,92 @@
+name: Weekly Model Training Pipeline
+
+on:
+  # 매주 일요일 새벽 2시 (KST) 자동 실행
+  schedule:
+    - cron: '0 17 * * 0'
+  # GitHub Actions 탭에서 수동 실행 가능
+  workflow_dispatch:
+    inputs:
+      skip_extract:
+        description: 'DB 추출 스킵 (parquet 이미 있을 때)'
+        required: false
+        default: 'false'
+        type: boolean
+      skip_upload:
+        description: 'Kaggle 업로드 스킵 (데이터 변경 없을 때)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 780  # 최대 13시간
+
+    steps:
+      # ────────────────────────────────────────
+      # 1. 최신 코드 체크아웃
+      # ────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ────────────────────────────────────────
+      # 2. Python 환경 세팅
+      # ────────────────────────────────────────
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # ────────────────────────────────────────
+      # 3. 패키지 설치
+      # ────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          pip install \
+            kaggle \
+            pandas \
+            pyarrow \
+            psycopg2-binary \
+            paramiko \
+            sshtunnel \
+            scp
+
+      # ────────────────────────────────────────
+      # 4. Kaggle API 키 세팅
+      # ────────────────────────────────────────
+      - name: Setup Kaggle credentials
+        run: |
+          mkdir -p ~/.kaggle
+          echo '{"username":"${{ secrets.KAGGLE_USERNAME }}","key":"${{ secrets.KAGGLE_KEY }}"}' \
+            > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      # ────────────────────────────────────────
+      # 5. 주간 파이프라인 실행
+      #    weekly_routine.py가 내부적으로
+      #    extract → upload → train → download → deploy
+      #    순서대로 실행
+      # ────────────────────────────────────────
+      - name: Run weekly training pipeline
+        env:
+          # SSH 터널 (DB 접속용)
+          SSH_HOST:            ${{ secrets.SSH_HOST }}
+          SSH_USER:            ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY:     ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PORT:            ${{ secrets.SSH_PORT }}
+          # DB 접속 정보
+          DB_HOST:             ${{ secrets.DB_HOST }}
+          DB_PORT:             ${{ secrets.DB_PORT }}
+          DB_USER:             ${{ secrets.DB_USER }}
+          DB_PASSWORD:         ${{ secrets.DB_PASSWORD }}
+          DB_NAME:             ${{ secrets.DB_NAME }}
+          # Kaggle
+          KAGGLE_USERNAME:     ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY:          ${{ secrets.KAGGLE_KEY }}
+          # 서버 배포 경로
+          SERVER_WEIGHTS_PATH: ${{ secrets.SERVER_WEIGHTS_PATH }}
+        run: |
+          python AI/pipelines/weekly_routine.py \
+            ${{ github.event.inputs.skip_extract == 'true' && '--skip-extract' || '' }} \
+            ${{ github.event.inputs.skip_upload == 'true' && '--skip-upload' || '' }}

@@ -1,0 +1,16 @@
+{
+  "id": "jihyeongkimm/transformer-training",
+  "title": "Transformer Training",
+  "code_file": "notebook.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [
+    "jihyeongkimm/sisc-ai-trading-dataset"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}

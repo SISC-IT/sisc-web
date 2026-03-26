@@ -1,0 +1,15 @@
+{
+  "id": "jihyeongkimm/sisc-tcn-training",
+  "title": "SISC TCN Training",
+  "code_file": "notebook.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "jihyeongkimm/sisc-ai-trading-dataset"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}
