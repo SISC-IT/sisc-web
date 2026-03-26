@@ -397,6 +397,7 @@ def _run_dryrun_backfill_backtest(
         pipeline_config=trading_config.pipeline,
         data_config=trading_config.data,
         model_wrappers=model_wrappers,
+        allow_backward_fill=False,
     )
     if not preprocessed_data_map:
         print("[Backtest] No valid data available after preprocessing. Stopping.")

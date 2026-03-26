@@ -18,7 +18,11 @@ def _collect_required_features(model_wrappers: Dict[str, Any]) -> set[str]:
     return required_features
 
 
-def _merge_common_features(loader: DataLoader, df: pd.DataFrame) -> pd.DataFrame:
+def _merge_common_features(
+    loader: DataLoader,
+    df: pd.DataFrame,
+    allow_backward_fill: bool = True,
+) -> pd.DataFrame:
     merged = df.copy()
 
     if not loader.macro_df.empty:
@@ -26,7 +30,10 @@ def _merge_common_features(loader: DataLoader, df: pd.DataFrame) -> pd.DataFrame
     if not loader.breadth_df.empty:
         merged = pd.merge(merged, loader.breadth_df, on="date", how="left")
 
-    return merged.ffill().bfill()
+    merged = merged.ffill()
+    if allow_backward_fill:
+        merged = merged.bfill()
+    return merged
 
 
 def load_and_preprocess_data(
@@ -36,6 +43,7 @@ def load_and_preprocess_data(
     pipeline_config: PipelineConfig,
     data_config: DataConfig,
     model_wrappers: Dict[str, Any],
+    allow_backward_fill: bool = True,
 ) -> dict[str, pd.DataFrame]:
     """
     Load price data once, then enrich each ticker only with the features required
@@ -62,7 +70,11 @@ def load_and_preprocess_data(
             continue
 
         try:
-            df = _merge_common_features(loader, df)
+            df = _merge_common_features(
+                loader,
+                df,
+                allow_backward_fill=allow_backward_fill,
+            )
             df = add_technical_indicators(df)
             df = add_multi_timeframe_features(df)
             df.set_index("date", inplace=True)
