@@ -1,5 +1,7 @@
+import argparse
 import json
 import os
+import pickle
 import sys
 from typing import Dict, List, Tuple
 
@@ -17,6 +19,8 @@ if project_root not in sys.path:
 
 from AI.modules.features.market_derived import add_macro_changes, add_market_changes
 from AI.modules.features.processor import FeatureProcessor
+from AI.config import load_trading_config
+from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models.itransformer.architecture import build_itransformer_model
 
@@ -79,7 +83,6 @@ DEFAULT_CONFIG = {
     "min_feature_count": 8,
     "signal_name": DEFAULT_SIGNAL_NAME,
     "signal_horizon_weights": DEFAULT_SIGNAL_HORIZON_WEIGHTS,
-    "save_dir": os.path.join(project_root, "AI", "data", "weights", "itransformer"),
 }
 
 
@@ -109,22 +112,29 @@ def resolve_signal_horizon_weights(horizons: List[int], raw_weights=None) -> Lis
     return weights_array.tolist()
 
 
-def _serialize_optional_array(value, dtype=np.float64) -> np.ndarray:
-    if value is None:
-        return np.asarray([], dtype=dtype)
-    return np.asarray(value, dtype=dtype)
+def _resolve_itransformer_artifacts(
+    save_dir: str | None,
+    artifact_mode: str,
+) -> tuple[str, str, str, str]:
+    if save_dir:
+        artifacts = resolve_model_artifacts(
+            model_name="itransformer",
+            mode=artifact_mode,
+            model_dir=save_dir,
+        )
+    else:
+        trading_config = load_trading_config()
+        artifacts = resolve_model_artifacts(
+            model_name="itransformer",
+            mode=artifact_mode,
+            config_weights_dir=trading_config.model.weights_dir,
+        )
 
-
-def save_scaler_artifact(filepath: str, scaler: StandardScaler) -> None:
-    np.savez_compressed(
-        filepath,
-        mean_=_serialize_optional_array(getattr(scaler, "mean_", None)),
-        scale_=_serialize_optional_array(getattr(scaler, "scale_", None)),
-        var_=_serialize_optional_array(getattr(scaler, "var_", None)),
-        n_features_in_=np.asarray([int(getattr(scaler, "n_features_in_", 0))], dtype=np.int64),
-        n_samples_seen_=_serialize_optional_array(getattr(scaler, "n_samples_seen_", 0), dtype=np.float64),
-        with_mean=np.asarray([int(bool(getattr(scaler, "with_mean", True)))], dtype=np.int8),
-        with_scale=np.asarray([int(bool(getattr(scaler, "with_scale", True)))], dtype=np.int8),
+    return (
+        artifacts.model_dir,
+        artifacts.model_path,
+        artifacts.scaler_path,
+        artifacts.metadata_path,
     )
 
 
@@ -397,7 +407,7 @@ def build_time_split_dataset(
     )
 
 
-def save_training_metadata(save_dir: str, info: Dict, config: Dict):
+def save_training_metadata(metadata_path: str, info: Dict, config: Dict):
     # wrapper가 추론 시 똑같은 feature 순서와 seq_len을 재현할 수 있도록
     # 학습 메타데이터를 함께 저장합니다.
     metadata = {
@@ -424,14 +434,17 @@ def save_training_metadata(save_dir: str, info: Dict, config: Dict):
         "signal_horizon_weights": info["signal_horizon_weights"],
     }
 
-    metadata_path = os.path.join(save_dir, "metadata.json")
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
     return metadata_path
 
 
-def train_single_pipeline(config=None):
+def train_single_pipeline(
+    config: Dict | None = None,
+    save_dir: str | None = None,
+    artifact_mode: str = "prod",
+):
     config = {**DEFAULT_CONFIG, **(config or {})}
     configure_tensorflow()
 
@@ -520,13 +533,14 @@ def train_single_pipeline(config=None):
         ],
     )
 
-    save_dir = config["save_dir"]
-    os.makedirs(save_dir, exist_ok=True)
+    resolved_save_dir, model_path, scaler_path, metadata_path = _resolve_itransformer_artifacts(
+        save_dir=save_dir or config.get("save_dir"),
+        artifact_mode=artifact_mode,
+    )
+    os.makedirs(resolved_save_dir, exist_ok=True)
 
-    # 모델 본체(.keras), 스케일러(.npz), 메타데이터(.json)를 함께 남겨야
-    # wrapper가 별도 추가 설정 없이 바로 서비스 추론에 들어갈 수 있습니다.
-    model_path = os.path.join(save_dir, "multi_horizon_model.keras")
-    scaler_path = os.path.join(save_dir, "multi_horizon_scaler.npz")
+    # 모델 본체(.keras), 스케일러(.pkl), 메타데이터(.json)를 함께 저장합니다.
+    config["save_dir"] = resolved_save_dir
 
     callbacks = [
         ModelCheckpoint(
@@ -561,9 +575,10 @@ def train_single_pipeline(config=None):
         verbose=1,
     )
 
-    save_scaler_artifact(scaler_path, info["scaler"])
+    with open(scaler_path, "wb") as f:
+        pickle.dump(info["scaler"], f)
 
-    metadata_path = save_training_metadata(save_dir, info, config)
+    metadata_path = save_training_metadata(metadata_path, info, config)
 
     print("\n[완료] iTransformer 학습 종료")
     print(f" - feature focus: {info['feature_focus']}")
@@ -583,4 +598,14 @@ def train_single_pipeline(config=None):
 
 
 if __name__ == "__main__":
-    train_single_pipeline()
+    parser = argparse.ArgumentParser(description="Train iTransformer signal model.")
+    parser.add_argument("--save-dir", default=None, help="Optional artifact output directory override.")
+    parser.add_argument(
+        "--artifact-mode",
+        default="prod",
+        choices=["tests", "test", "prod", "production", "simulation", "live"],
+        help="Artifact mode used for default filename resolution.",
+    )
+    args = parser.parse_args()
+
+    train_single_pipeline(save_dir=args.save_dir, artifact_mode=args.artifact_mode)
