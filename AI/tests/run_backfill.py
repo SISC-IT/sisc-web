@@ -8,7 +8,6 @@ import os
 import sys
 import time
 import warnings
-
 import pandas as pd
 
 
@@ -26,6 +25,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.config import TradingConfig, load_trading_config
+from AI.modules.finder.screener import DynamicScreener
 from AI.pipelines.daily_routine import run_daily_pipeline
 
 
@@ -35,15 +35,27 @@ def run_backfill(
     tickers: list[str],
     enable_xai: bool,
     trading_config: TradingConfig,
+    screener_mode: str = "daily",
+    screener_base_date: str | None = None,
 ) -> None:
+    resolved_tickers = list(tickers)
     print("== Backfill Start ==")
     print(f"- Date range: {start_date} ~ {end_date}")
-    print(f"- Tickers: {tickers if tickers else 'dynamic screener'}")
+    dates = pd.date_range(start=start_date, end=end_date, freq="B")
+
+    if not resolved_tickers and screener_mode == "once" and len(dates) > 0:
+        base_day = screener_base_date or dates[0].strftime("%Y-%m-%d")
+        screener = DynamicScreener(config=trading_config)
+        resolved_tickers = [ticker.strip() for ticker in screener.update_watchlist(base_day) if ticker and ticker.strip()]
+        resolved_tickers = list(dict.fromkeys(resolved_tickers))
+        print(f"- Screener mode: once (base day: {base_day})")
+    else:
+        print(f"- Screener mode: {screener_mode}")
+
+    print(f"- Tickers: {resolved_tickers if resolved_tickers else 'dynamic screener'}")
     print(f"- XAI: {'ON' if enable_xai else 'OFF'}\n")
     if enable_xai:
         print("- XAI LLM: local ollama (OLLAMA_MODEL or first installed model)")
-
-    dates = pd.date_range(start=start_date, end=end_date, freq="B")
 
     for index, target_date in enumerate(dates, start=1):
         target_date_str = target_date.strftime("%Y-%m-%d")
@@ -53,7 +65,7 @@ def run_backfill(
 
         try:
             run_daily_pipeline(
-                target_tickers=tickers,
+                target_tickers=resolved_tickers,
                 mode="simulation",
                 enable_xai=enable_xai,
                 xai_use_api_llm=False,
@@ -80,8 +92,21 @@ if __name__ == "__main__":
     trading_config = load_trading_config(bootstrap_args.config)
 
     parser = argparse.ArgumentParser(parents=[bootstrap_parser], description="Run backfill over business days.")
-    parser.add_argument("--start_date", type=str, default="2026-03-24", help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--start_date", type=str, default="2025-03-03", help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end_date", type=str, default="2026-03-24", help="End date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--screener_mode",
+        type=str,
+        default="daily",
+        choices=["daily", "once"],
+        help="Applied when internal tickers are empty. once=fixed screener universe, daily=rebuild each day.",
+    )
+    parser.add_argument(
+        "--screener_base_date",
+        type=str,
+        default=None,
+        help="Base date for --screener_mode once. Example: 2025-03-03",
+    )
     xai_group = parser.add_mutually_exclusive_group()
     xai_group.add_argument("--xai", dest="enable_xai", action="store_true", help="Enable XAI generation")
     xai_group.add_argument("--no-xai", dest="enable_xai", action="store_false", help="Disable XAI generation")
@@ -95,4 +120,6 @@ if __name__ == "__main__":
         tickers=[],
         enable_xai=args.enable_xai,
         trading_config=trading_config,
+        screener_mode=args.screener_mode,
+        screener_base_date=args.screener_base_date,
     )

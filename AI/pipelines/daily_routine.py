@@ -100,6 +100,10 @@ def run_daily_pipeline(
             print("[DailyRoutine] Screener returned no target tickers. Stopping.")
             return
 
+    target_tickers = list(dict.fromkeys(target_tickers))
+    open_tickers = repo.get_open_tickers(exec_date_str)
+    managed_tickers = list(dict.fromkeys(target_tickers + open_tickers))
+
     # [Step 1] 전략 및 피처 설정
     feature_columns = list(trading_config.data.feature_columns)
 
@@ -124,7 +128,7 @@ def run_daily_pipeline(
     # [Step 3] 데이터 조회 및 전처리 수행
     data_map = load_and_preprocess_data(
         loader=loader,
-        target_tickers=target_tickers,
+        target_tickers=managed_tickers,
         exec_date_str=exec_date_str,
         pipeline_config=trading_config.pipeline,
         data_config=trading_config.data,
@@ -149,21 +153,26 @@ def run_daily_pipeline(
     print("4. Calculating target portfolio weights...")
     dummy_macro_data = _build_default_macro_frame(trading_config)
 
-    try:
-        target_weights, scores, _ = calculate_portfolio_allocation(
-            data_map=data_map,
-            macro_data=dummy_macro_data,
-            model_wrappers=model_wrappers,
-            ticker_ids=loader.ticker_to_id,
-            ticker_to_sector_id=loader.ticker_to_sector_id,
-            gating_model=None,
-            data_config=trading_config.data,
-            portfolio_config=trading_config.portfolio,
-        )
-    except Exception as e:
-        print(f"[DailyRoutine] Portfolio allocation failed: {e}")
-        traceback.print_exc()
-        return
+    alloc_data_map = {ticker: data_map[ticker] for ticker in target_tickers if ticker in data_map}
+    if alloc_data_map:
+        try:
+            target_weights, scores, _ = calculate_portfolio_allocation(
+                data_map=alloc_data_map,
+                macro_data=dummy_macro_data,
+                model_wrappers=model_wrappers,
+                ticker_ids=loader.ticker_to_id,
+                ticker_to_sector_id=loader.ticker_to_sector_id,
+                gating_model=None,
+                data_config=trading_config.data,
+                portfolio_config=trading_config.portfolio,
+            )
+        except Exception as e:
+            print(f"[DailyRoutine] Portfolio allocation failed: {e}")
+            traceback.print_exc()
+            return
+    else:
+        print("[DailyRoutine] No current screener tickers had valid data. Managing open positions only.")
+        target_weights, scores = {}, {}
 
     # [Step 5] 주문 실행 및 리포트 생성
     execution_results, report_results, current_cash = execute_trades(

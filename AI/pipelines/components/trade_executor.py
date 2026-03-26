@@ -154,8 +154,9 @@ def execute_trades(
 
     # 1) 각 종목별 주문 계획을 먼저 계산합니다.
     trade_plans = []
+    managed_tickers = list(dict.fromkeys(list(target_tickers) + repo.get_open_tickers(exec_date_str)))
 
-    for ticker in target_tickers:
+    for ticker in managed_tickers:
         try:
             if ticker not in data_map:
                 continue

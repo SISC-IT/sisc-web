@@ -429,14 +429,16 @@ def _run_dryrun_backfill_backtest(
         except Exception as reset_error:
             print(f"[Warning] Failed to reset existing run data: {reset_error}")
 
-        target_tickers = day_ticker_plan.get(target_date_str, tickers)
-        if not target_tickers:
+        target_tickers = list(dict.fromkeys(day_ticker_plan.get(target_date_str, tickers)))
+        open_tickers = repo.get_open_tickers(target_date_str)
+        managed_tickers = list(dict.fromkeys(target_tickers + open_tickers))
+        if not managed_tickers:
             print("[Backtest] No tickers for this date. Skipping.")
             continue
 
         data_map = _slice_data_for_date(
             preprocessed_data_map=preprocessed_data_map,
-            target_tickers=target_tickers,
+            target_tickers=managed_tickers,
             target_timestamp=target_date,
             minimum_history_length=minimum_history_length,
         )
@@ -444,20 +446,25 @@ def _run_dryrun_backfill_backtest(
             print("[Backtest] No valid preprocessed rows for this date. Skipping.")
             continue
 
-        try:
-            target_weights, scores, _ = calculate_portfolio_allocation(
-                data_map=data_map,
-                macro_data=dummy_macro_data,
-                model_wrappers=model_wrappers,
-                ticker_ids=loader.ticker_to_id,
-                ticker_to_sector_id=loader.ticker_to_sector_id,
-                gating_model=None,
-                data_config=trading_config.data,
-                portfolio_config=trading_config.portfolio,
-            )
-        except Exception as alloc_error:
-            print(f"[Backtest] Portfolio allocation failed: {alloc_error}")
-            continue
+        alloc_data_map = {ticker: data_map[ticker] for ticker in target_tickers if ticker in data_map}
+        if alloc_data_map:
+            try:
+                target_weights, scores, _ = calculate_portfolio_allocation(
+                    data_map=alloc_data_map,
+                    macro_data=dummy_macro_data,
+                    model_wrappers=model_wrappers,
+                    ticker_ids=loader.ticker_to_id,
+                    ticker_to_sector_id=loader.ticker_to_sector_id,
+                    gating_model=None,
+                    data_config=trading_config.data,
+                    portfolio_config=trading_config.portfolio,
+                )
+            except Exception as alloc_error:
+                print(f"[Backtest] Portfolio allocation failed: {alloc_error}")
+                continue
+        else:
+            print("[Backtest] No current screener tickers had valid data. Managing open positions only.")
+            target_weights, scores = {}, {}
 
         execution_results, report_results, current_cash = execute_trades(
             repo=repo,
@@ -584,7 +591,7 @@ def main() -> None:
         description="Run backtest over business days.",
     )
     parser.add_argument("--start_day", type=str, default="2025-03-03", help="Start day (YYYY-MM-DD)")
-    parser.add_argument("--end_day", type=str, default="2026-03-23", help="End day (YYYY-MM-DD)")
+    parser.add_argument("--end_day", type=str, default="2026-03-24", help="End day (YYYY-MM-DD)")
     parser.add_argument(
         "--engine",
         type=str,
