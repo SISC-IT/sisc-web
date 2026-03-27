@@ -22,25 +22,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-<<<<<<< HEAD
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
-=======
-from .architecture import PatchTST_Model
-from AI.config import load_trading_config
-from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
-
-
-def _default_model_save_path() -> str:
-    try:
-        trading_config = load_trading_config()
-        return resolve_model_artifacts(
-            model_name="patchtst",
-            config_weights_dir=trading_config.model.weights_dir,
-        ).model_path
-    except Exception:
-        return resolve_model_artifacts(model_name="patchtst").model_path
->>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
 
 # 경로 설정 (다른 import보다 먼저)
 current_dir  = os.path.dirname(os.path.abspath(__file__))
@@ -59,7 +42,6 @@ from AI.modules.features.legacy.technical_features import (
 # CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
 CONFIG = {
-<<<<<<< HEAD
     'start_date'     : '2015-01-01',
     'end_date'       : '2023-12-31',  # 미래 데이터 차단 (Look-ahead bias 방지)
     'seq_len'        : 120,
@@ -88,18 +70,6 @@ CONFIG = {
     'weights_dir'    : 'AI/data/weights/PatchTST',
     'model_name'     : 'patchtst_model.pt',
     'scaler_name'    : 'patchtst_scaler.pkl',
-=======
-    'seq_len': 120,
-    'input_features': 7,
-    'batch_size': 32,
-    'learning_rate': 0.0001,
-    'epochs': 100,
-    'patience': 10,
-    'model_save_path': _default_model_save_path()
-<<<<<<< HEAD
->>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
-=======
->>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -244,9 +214,9 @@ def train():
     # ── [수정] Train/Val 분리 먼저 → 그 다음 스케일링 ──────────────────────
     # 기존: 전체 스케일링 → 분리 (데이터 누수 발생)
     # 수정: 티커 기준으로 분리 → train만 fit → val은 transform
-    tickers      = full_df['ticker'].unique()
-    n_val        = max(1, int(len(tickers) * 0.2))
-    val_tickers  = tickers[-n_val:]   # 마지막 20% 티커를 val로 (시간 순서 보존)
+    tickers       = full_df['ticker'].unique()
+    n_val         = max(1, int(len(tickers) * 0.2))
+    val_tickers   = tickers[-n_val:]   # 마지막 20% 티커를 val로 (시간 순서 보존)
     train_tickers = tickers[:-n_val]
 
     train_df = full_df[full_df['ticker'].isin(train_tickers)].copy()
@@ -337,7 +307,7 @@ def train():
         if avg_val < best_val_loss:
             best_val_loss    = avg_val
             patience_counter = 0
-            # [수정] config + state_dict 같이 저장 (load 시 구조 재현 가능)
+            # config + state_dict 같이 저장 (load 시 구조 재현 가능)
             torch.save({
                 'config'    : CONFIG,
                 'state_dict': model.state_dict()
@@ -350,7 +320,6 @@ def train():
                 print(f"\n>> Early Stopping at epoch {epoch+1}")
                 break
 
-<<<<<<< HEAD
     # 7. 스케일러 저장
     with open(scaler_path, 'wb') as f:
         pickle.dump(scaler, f)
@@ -362,25 +331,3 @@ def train():
 
 if __name__ == '__main__':
     train()
-=======
-def run_training(X_train, y_train, X_val, y_val):
-    """
-    외부에서 호출 가능한 학습 진입점
-    X: [Samples, Seq_Len, Features] numpy array
-    y: [Samples] numpy array (0 or 1)
-    """
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
-    # Tensor 변환
-    train_data = TensorDataset(torch.FloatTensor(X_train), torch.FloatTensor(y_train))
-    val_data = TensorDataset(torch.FloatTensor(X_val), torch.FloatTensor(y_val))
-    
-    train_loader = DataLoader(train_data, batch_size=CONFIG['batch_size'], shuffle=True)
-    val_loader = DataLoader(val_data, batch_size=CONFIG['batch_size'], shuffle=False)
-    
-    trained_model = train_model(train_loader, val_loader, device)
-    return trained_model
-<<<<<<< HEAD
->>>>>>> e47fa9e ([AI] [FEAT] 볼륨 마운트를 통한 가중치 저장)
-=======
->>>>>>> 969fb59bb447edc8ffb66545ba0fdc1a4d190e79
