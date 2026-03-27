@@ -5,9 +5,9 @@ iTransformer Kaggle 학습 스크립트
 - DB 연결 없이 parquet 파일로 학습
 - train.py의 로직을 그대로 유지하되 DataLoader → parquet 로드로 교체
 - Kaggle 데이터셋: jihyeongkimm/sisc-ai-trading-dataset
-- 저장: "model_name"  : "multi_horizon_model.keras",   
-        "scaler_name" : "multi_horizon_scaler.pkl",     
-        "metadata_name": "metadata.json",  
+- 저장: /kaggle/working/itransformer_model.keras
+        /kaggle/working/itransformer_scaler.pkl
+        /kaggle/working/itransformer_metadata.json
 -----------------------------------------------
 """
 import os
@@ -46,9 +46,9 @@ CONFIG = {
     "dropout"         : 0.2,
     "mlp_dropout"     : 0.2,
     "test_size"       : 0.2,
-    "model_name"  : "multi_horizon_model.keras",   
-    "scaler_name" : "multi_horizon_scaler.pkl",     
-    "metadata_name": "metadata.json",  
+    "model_name"      : "itransformer_model.keras",
+    "scaler_name"     : "itransformer_scaler.pkl",
+    "metadata_name"   : "itransformer_metadata.json",
 }
 
 # iTransformer 피처 - 거시경제 + 상관관계 중심
@@ -155,6 +155,12 @@ def build_sequences(
     if len(available_feats) < 8:
         raise ValueError(f"피처가 너무 적습니다: {available_feats}")
 
+    # 스케일러는 루프 밖에서 전체 데이터로 한 번만 fit
+    # 루프 안에서 fit하면 마지막 티커 통계만 남아 스케일 불일치 발생
+    all_feat_vals = df[available_feats].values.astype(np.float32)
+    if fit_scaler:
+        scaler.fit(all_feat_vals)
+
     X_list, y_list = [], []
 
     for ticker, group in df.groupby("ticker"):
@@ -162,13 +168,8 @@ def build_sequences(
         if len(group) < lookback + max_horizon + 10:
             continue
 
-        feat_vals = group[available_feats].values.astype(np.float32)
+        feat_vals  = scaler.transform(group[available_feats].values.astype(np.float32))
         close_vals = group["close"].values
-
-        if fit_scaler:
-            feat_vals = scaler.fit_transform(feat_vals)
-        else:
-            feat_vals = scaler.transform(feat_vals)
 
         for i in range(lookback, len(group) - max_horizon):
             X_list.append(feat_vals[i - lookback : i])

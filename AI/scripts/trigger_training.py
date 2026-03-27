@@ -29,30 +29,28 @@ KAGGLE_USERNAME = os.environ.get("KAGGLE_USERNAME", "jihyeongkimm")
 # ─────────────────────────────────────────────────────────────────────────────
 # 학습할 노트북 목록
 # 순서대로 트리거 (병렬 실행 시 GPU 한도 초과할 수 있어서 순차 실행)
-# iTransformer, TCN은 머지 완료 후 추가
 # ─────────────────────────────────────────────────────────────────────────────
 NOTEBOOKS = [
     {
         "name"       : "PatchTST",
         "slug"       : "patchtst-training",
-        "notebook_dir": os.path.join(project_root, "kaggle_notebooks/patchtst"),
+        "notebook_dir": os.path.join(project_root, "AI/kaggle_notebooks/patchtst"),
     },
     {
         "name"       : "Transformer",
         "slug"       : "transformer-training",
-        "notebook_dir": os.path.join(project_root, "kaggle_notebooks/transformer"),
+        "notebook_dir": os.path.join(project_root, "AI/kaggle_notebooks/transformer"),
     },
-    # 머지 후 추가
-    # {
-    #     "name"       : "iTransformer",
-    #     "slug"       : "itransformer-training",
-    #     "notebook_dir": os.path.join(project_root, "kaggle_notebooks/itransformer"),
-    # },
-    # {
-    #     "name"       : "TCN",
-    #     "slug"       : "tcn-training",
-    #     "notebook_dir": os.path.join(project_root, "kaggle_notebooks/tcn"),
-    # },
+     {
+         "name"       : "iTransformer",
+         "slug"       : "itransformer-training",
+         "notebook_dir": os.path.join(project_root, "AI/kaggle_notebooks/itransformer"),
+     },
+     {
+         "name"       : "TCN",
+         "slug"       : "tcn-training",
+         "notebook_dir": os.path.join(project_root, "AI/kaggle_notebooks/tcn"),
+    },
 ]
 
 
@@ -100,10 +98,10 @@ def wait_for_notebook(notebook: dict, timeout_hours: int = 12) -> bool:
         output = result.stdout.lower()
 
         if "complete" in output:
-            print(f"   [{notebook['name']}] 학습 완료! ✅")
+            print(f"   [{notebook['name']}] 학습 완료!")
             return True
         elif "error" in output or "failed" in output:
-            print(f"   [{notebook['name']}] 학습 실패! ❌")
+            print(f"   [{notebook['name']}] 학습 실패!")
             print(result.stdout)
             return False
         elif "running" in output:
@@ -147,5 +145,5 @@ if failed:
     print(f">> 실패한 모델: {failed}")
     sys.exit(1)
 else:
-    print(">> 전체 학습 완료! ✅")
+    print(">> 전체 학습 완료!")
 print("=" * 50)

@@ -34,7 +34,7 @@ print(f"   대상: {KAGGLE_USERNAME}/{DATASET_SLUG}")
 result = subprocess.run(
     [
         "kaggle", "datasets", "version",
-        "-p", KAGGLE_DATA_DIR,
+        "-p", OUTPUT_DIR,
         "-m", "Auto update: latest code + data",
         "--dir-mode", "zip"
     ],

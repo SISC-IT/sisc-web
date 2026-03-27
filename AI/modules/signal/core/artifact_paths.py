@@ -102,7 +102,7 @@ def resolve_model_artifacts(
 
     # [수정] PatchTST: 실제 저장 파일명으로 통일 + scaler_path 추가
     if normalized_model == "patchtst":
-        resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
+        resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "PatchTST")
         return ModelArtifactPaths(
             root_dir=str(root_dir),
             model_dir=str(resolved_model_dir),

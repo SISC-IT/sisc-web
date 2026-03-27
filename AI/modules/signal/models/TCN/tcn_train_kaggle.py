@@ -12,6 +12,7 @@ TCN 학습 스크립트 - Kaggle/GitHub Actions 버전
 -----------------------------------------------
 """
 import argparse
+import copy
 import json
 import os
 import pickle
@@ -227,7 +228,7 @@ def train_model(args: argparse.Namespace):
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_state    = model.state_dict()
+            best_state    = copy.deepcopy(model.state_dict())
             print("  ✓ saved")
         else:
             print()
