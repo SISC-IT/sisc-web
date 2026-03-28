@@ -1,6 +1,6 @@
 {
-  "id": "jihyeongkimm/sisc-itransformer-training",
-  "title": "SISC iTransformer Training",
+  "id": "jihyeongkimm/itransformer-training",
+  "title": "iTransformer-Training",
   "code_file": "notebook.ipynb",
   "language": "python",
   "kernel_type": "notebook",

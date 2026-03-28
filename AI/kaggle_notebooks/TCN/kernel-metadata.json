@@ -1,6 +1,6 @@
 {
-  "id": "jihyeongkimm/sisc-tcn-training",
-  "title": "SISC TCN Training",
+  "id": "jihyeongkimm/tcn-training",
+  "title": "TCN Training",
   "code_file": "notebook.ipynb",
   "language": "python",
   "kernel_type": "notebook",

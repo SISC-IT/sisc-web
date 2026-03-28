@@ -40,12 +40,12 @@ MODELS = [
     },
     {
         "name"   : "iTransformer",
-        "slug"   : f"{KAGGLE_USERNAME}/sisc-itransformer-training",
+        "slug"   : f"{KAGGLE_USERNAME}/itransformer-training",
         "dst_dir": os.path.join(project_root, "AI/data/weights/itransformer"),
     },
     {
         "name"   : "TCN",
-        "slug"   : f"{KAGGLE_USERNAME}/sisc-tcn-training",
+        "slug"   : f"{KAGGLE_USERNAME}/tcn-training",
         "dst_dir": os.path.join(project_root, "AI/data/weights/tcn"),
     },
 ]
