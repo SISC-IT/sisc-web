@@ -214,8 +214,14 @@ def train():
     # ── [수정] Train/Val 분리 먼저 → 그 다음 스케일링 ──────────────────────
     # 기존: 전체 스케일링 → 분리 (데이터 누수 발생)
     # 수정: 티커 기준으로 분리 → train만 fit → val은 transform
-    tickers       = full_df['ticker'].unique()
-    n_val         = max(1, int(len(tickers) * 0.2))
+    tickers = full_df['ticker'].unique()
+
+    # 최소 2개 이상 있어야 train/val 분리 가능
+    if len(tickers) < 2:
+        raise ValueError(f"학습에 필요한 ticker가 부족합니다. (현재: {len(tickers)}개, 최소 2개 필요)")
+
+    # val 비율 20%, 단 train이 최소 1개는 남도록 상한 보정
+    n_val         = max(1, min(int(len(tickers) * 0.2), len(tickers) - 1))
     val_tickers   = tickers[-n_val:]   # 마지막 20% 티커를 val로 (시간 순서 보존)
     train_tickers = tickers[:-n_val]
 

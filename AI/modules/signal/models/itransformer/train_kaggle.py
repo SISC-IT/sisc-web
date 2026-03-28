@@ -5,9 +5,9 @@ iTransformer Kaggle 학습 스크립트
 - DB 연결 없이 parquet 파일로 학습
 - train.py의 로직을 그대로 유지하되 DataLoader → parquet 로드로 교체
 - Kaggle 데이터셋: jihyeongkimm/sisc-ai-trading-dataset
-- 저장: /kaggle/working/itransformer_model.keras
-        /kaggle/working/itransformer_scaler.pkl
-        /kaggle/working/itransformer_metadata.json
+- 저장: /kaggle/working/multi_horizon_model.keras
+        /kaggle/working/multi_horizon_scaler.pkl
+        /kaggle/working/metadata.json
 -----------------------------------------------
 """
 import os
@@ -46,9 +46,9 @@ CONFIG = {
     "dropout"         : 0.2,
     "mlp_dropout"     : 0.2,
     "test_size"       : 0.2,
-    "model_name"      : "itransformer_model.keras",
-    "scaler_name"     : "itransformer_scaler.pkl",
-    "metadata_name"   : "itransformer_metadata.json",
+    "model_name"      : "multi_horizon_model.keras",   # artifact_paths.py, wrapper.py와 일치
+    "scaler_name"     : "multi_horizon_scaler.pkl",    # artifact_paths.py, wrapper.py와 일치
+    "metadata_name"   : "metadata.json",               # artifact_paths.py, wrapper.py와 일치
 }
 
 # iTransformer 피처 - 거시경제 + 상관관계 중심
@@ -129,7 +129,11 @@ def load_parquet_data() -> pd.DataFrame:
 
     df = pd.merge(price_df, macro_df, on="date", how="left")
     df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
-    df = df.ffill().fillna(0)
+
+    # macro 컬럼만 티커별로 ffill (전역 ffill 시 티커 간 누수 발생)
+    macro_cols = [c for c in macro_df.columns if c != "date"]
+    df[macro_cols] = df.groupby("ticker")[macro_cols].transform(lambda x: x.ffill())
+    df = df.fillna(0)
 
     # 학습 기간 필터
     df = df[df["date"] <= CONFIG["train_end_date"]]

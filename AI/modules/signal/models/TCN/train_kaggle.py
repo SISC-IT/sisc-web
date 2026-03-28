@@ -135,8 +135,12 @@ def load_and_preprocess(parquet_dir: str, start_date: str, end_date: str) -> pd.
             processed.append(df_t)
         except Exception as e:
             fail_count += 1
+            print(f"\n[경고] {ticker} 피처 계산 실패 ({fail_count}/20): {e}")
             if fail_count >= 20:
                 raise RuntimeError("피처 계산 실패가 20개를 초과했습니다.")
+
+    if not processed:
+        raise ValueError("전처리된 데이터가 없습니다. 날짜 범위나 parquet 파일을 확인하세요.")
 
     full_df = pd.concat(processed).reset_index(drop=True)
     print(f">> 피처 계산 완료: {len(full_df):,}행 (실패: {fail_count}개)")
@@ -156,9 +160,10 @@ def train_model(args: argparse.Namespace):
     split_date_idx = int(len(dates) * 0.8)
     split_date     = dates[split_date_idx]
 
-    train_df = raw_df[raw_df['date'] <= split_date].copy()
-    val_df   = raw_df[raw_df['date'] >  split_date].copy()
-    print(f">> Train: ~{split_date}, Val: {split_date}~")
+    # split_date 미만을 train으로 → val이 비어지는 경계 케이스 방지
+    train_df = raw_df[raw_df['date'] <  split_date].copy()
+    val_df   = raw_df[raw_df['date'] >= split_date].copy()
+    print(f">> Train: ~{split_date} 미만, Val: {split_date}~")
 
     # 3. 스케일링 (train만 fit)
     scaler = StandardScaler()
@@ -257,15 +262,26 @@ def train_model(args: argparse.Namespace):
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-    print(f"\n>> 완료")
+    print("\n>> 완료")
     print(f"   모델    : {model_path}")
     print(f"   스케일러: {scaler_path}")
     print(f"   메타데이터: {metadata_path}")
 
 
+def _find_kaggle_dataset_path() -> str:
+    """Kaggle 입력 데이터셋 경로를 자동으로 탐색"""
+    base = "/kaggle/input"
+    if os.path.exists(base):
+        for entry in os.listdir(base):
+            full = os.path.join(base, entry)
+            if os.path.isdir(full) and any(f.endswith(".parquet") for f in os.listdir(full)):
+                return full
+    return os.environ.get("PARQUET_DIR", base)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train TCN signal model (Kaggle/Actions 버전)")
-    parser.add_argument("--parquet-dir",   default=os.environ.get('PARQUET_DIR', '/kaggle/input/datasets/jihyeongkimm/sisc-ai-trading-dataset'))
+    parser.add_argument("--parquet-dir",   default=os.environ.get("PARQUET_DIR", _find_kaggle_dataset_path()))
     parser.add_argument("--start-date",    default="2015-01-01")
     parser.add_argument("--end-date",      default="2023-12-31")
     parser.add_argument("--seq-len",       type=int,   default=60)

@@ -121,14 +121,20 @@ def get_conn():
 def read_sql_safe(query: str, desc: str = "") -> pd.DataFrame:
     """연결 끊김 시 최대 3회 재시도"""
     for attempt in range(1, 4):
+        conn = None
         try:
             conn = get_conn()
             df   = pd.read_sql(query, conn)
-            conn.close()
             return df
         except Exception as e:
             print(f"   [시도 {attempt}/3] 실패: {e}")
             time.sleep(3)
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
     raise RuntimeError(f"'{desc}' 쿼리 3회 모두 실패")
 
 
@@ -178,7 +184,8 @@ def main():
         df = read_sql_safe("""
             SELECT date, cpi, gdp, interest_rate, unemployment_rate,
                    us10y, us2y, yield_spread, vix_close, dxy_close,
-                   wti_price, gold_price, credit_spread_hy
+                   wti_price, gold_price, credit_spread_hy,
+                   core_cpi, pce, core_pce
             FROM macroeconomic_indicators
             ORDER BY date
         """, "macroeconomic_indicators")

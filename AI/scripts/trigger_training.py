@@ -95,6 +95,12 @@ def wait_for_notebook(notebook: dict, timeout_hours: int = 12) -> bool:
             text=True
         )
 
+        # CLI 자체 오류 (인증 실패, 네트워크, slug 오류 등) 즉시 실패 처리
+        if result.returncode != 0:
+            print(f"   [{notebook['name']}] CLI 오류 (returncode={result.returncode})")
+            print(result.stderr)
+            return False
+
         output = result.stdout.lower()
 
         if "complete" in output:
