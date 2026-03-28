@@ -1,7 +1,7 @@
 # AI/pipelines/weekly_routine.py
 """
 [주간 자동화 파이프라인]
-- 매주 일요일 새벽 2시 자동 실행 (GitHub Actions)
+- 매주 화요일 새벽 2시 자동 실행 (GitHub Actions)
 - 또는 수동 실행 가능
 
 [daily_routine.py와의 차이]

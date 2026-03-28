@@ -17,6 +17,7 @@
 """
 import os
 import sys
+import io
 
 import paramiko
 from scp import SCPClient
@@ -37,45 +38,45 @@ project_root = os.path.abspath(os.path.join(current_dir, "../.."))
 
 SERVER_WEIGHTS_PATH = os.environ.get(
     "SERVER_WEIGHTS_PATH",
-    "/app/AI/data/weights"  # 서버 Docker 컨테이너 내부 경로
+    "/app/AI/data/weights"
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 배포할 모델 목록
+# 배포할 모델 목록 (4개 전체)
 # ─────────────────────────────────────────────────────────────────────────────
 MODELS = [
     {
-        "name"     : "PatchTST",
-        "local_dir": os.path.join(project_root, "AI/data/weights/PatchTST"),
+        "name"      : "PatchTST",
+        "local_dir" : os.path.join(project_root, "AI/data/weights/PatchTST"),
         "remote_dir": f"{SERVER_WEIGHTS_PATH}/PatchTST",
-        "files"    : ["patchtst_model.pt", "patchtst_scaler.pkl"],
+        "files"     : ["patchtst_model.pt", "patchtst_scaler.pkl"],
     },
     {
-        "name"     : "Transformer",
-        "local_dir": os.path.join(project_root, "AI/data/weights/transformer/tests"),
-        "remote_dir": f"{SERVER_WEIGHTS_PATH}/transformer/tests",
-        "files"    : ["multi_horizon_model.keras", "multi_horizon_scaler.pkl"],
+        "name"      : "Transformer",
+        "local_dir" : os.path.join(project_root, "AI/data/weights/transformer/prod"),
+        "remote_dir": f"{SERVER_WEIGHTS_PATH}/transformer/prod",
+        "files"     : ["multi_horizon_model_prod.keras", "multi_horizon_scaler_prod.pkl"],
     },
-    # 머지 후 추가
-    # {
-    #     "name"     : "TCN",
-    #     "local_dir": os.path.join(project_root, "AI/data/weights/tcn"),
-    #     "remote_dir": f"{SERVER_WEIGHTS_PATH}/tcn",
-    #     "files"    : ["model.pt", "scaler.pkl", "metadata.json"],
-    # },
+    {
+        "name"      : "iTransformer",
+        "local_dir" : os.path.join(project_root, "AI/data/weights/itransformer"),
+        "remote_dir": f"{SERVER_WEIGHTS_PATH}/itransformer",
+        "files"     : ["multi_horizon_model.keras", "multi_horizon_scaler.pkl", "metadata.json"],
+    },
+    {
+        "name"      : "TCN",
+        "local_dir" : os.path.join(project_root, "AI/data/weights/tcn"),
+        "remote_dir": f"{SERVER_WEIGHTS_PATH}/tcn",
+        "files"     : ["model.pt", "scaler.pkl", "metadata.json"],
+    },
 ]
 
 
 def create_ssh_client() -> paramiko.SSHClient:
     """SSH 연결 생성 (키 문자열로 직접 연결)"""
-    import io
-
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    # 환경변수로 받은 키 문자열을 파일처럼 사용
     private_key = paramiko.RSAKey.from_private_key(io.StringIO(SSH_KEY_STR))
-
     ssh.connect(
         hostname = SSH_HOST,
         port     = SSH_PORT,
@@ -90,10 +91,8 @@ def deploy_model(ssh: paramiko.SSHClient, scp: SCPClient, model: dict) -> bool:
     """모델 가중치를 서버에 배포"""
     print(f"\n>> [{model['name']}] 배포 중...")
 
-    # 서버에 디렉토리 생성
     ssh.exec_command(f"mkdir -p {model['remote_dir']}")
 
-    # 파일 전송
     for fname in model['files']:
         local_path = os.path.join(model['local_dir'], fname)
 

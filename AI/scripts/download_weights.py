@@ -36,19 +36,18 @@ MODELS = [
     {
         "name"   : "Transformer",
         "slug"   : f"{KAGGLE_USERNAME}/transformer-training",
-        "dst_dir": os.path.join(project_root, "AI/data/weights/transformer/tests"),
+        "dst_dir": os.path.join(project_root, "AI/data/weights/transformer/prod"),
     },
-    # 머지 후 추가
-    # {
-    #     "name"   : "iTransformer",
-    #     "slug"   : f"{KAGGLE_USERNAME}/itransformer-training",
-    #     "dst_dir": os.path.join(project_root, "AI/data/weights/itransformer"),
-    # },
-    # {
-    #     "name"   : "TCN",
-    #     "slug"   : f"{KAGGLE_USERNAME}/tcn-training",
-    #     "dst_dir": os.path.join(project_root, "AI/data/weights/tcn"),
-    # },
+    {
+        "name"   : "iTransformer",
+        "slug"   : f"{KAGGLE_USERNAME}/sisc-itransformer-training",
+        "dst_dir": os.path.join(project_root, "AI/data/weights/itransformer"),
+    },
+    {
+        "name"   : "TCN",
+        "slug"   : f"{KAGGLE_USERNAME}/sisc-tcn-training",
+        "dst_dir": os.path.join(project_root, "AI/data/weights/tcn"),
+    },
 ]
 
 
@@ -72,11 +71,11 @@ def download_weights(model: dict) -> bool:
 
     if result.returncode == 0:
         print(f"   [{model['name']}] 다운로드 완료! ✅")
-        # 다운로드된 파일 목록 출력
         for f in os.listdir(model['dst_dir']):
             fpath = os.path.join(model['dst_dir'], f)
-            size  = os.path.getsize(fpath) / (1024 * 1024)
-            print(f"   - {f} ({size:.1f} MB)")
+            if os.path.isfile(fpath):
+                size = os.path.getsize(fpath) / (1024 * 1024)
+                print(f"   - {f} ({size:.1f} MB)")
         return True
     else:
         print(f"   [{model['name']}] 다운로드 실패! ❌")
