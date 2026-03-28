@@ -76,7 +76,14 @@ def create_ssh_client() -> paramiko.SSHClient:
     """SSH 연결 생성 (키 문자열로 직접 연결)"""
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    private_key = paramiko.RSAKey.from_private_key(io.StringIO(SSH_KEY_STR))
+    for key_class in [paramiko.Ed25519Key, paramiko.RSAKey, paramiko.ECDSAKey]:
+        try:
+            private_key = key_class.from_private_key(io.StringIO(SSH_KEY_STR))
+            break
+        except Exception:
+            continue
+    else:
+        raise ValueError("SSH 키 타입을 인식할 수 없습니다.")
     ssh.connect(
         hostname = SSH_HOST,
         port     = SSH_PORT,

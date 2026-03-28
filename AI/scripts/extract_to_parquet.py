@@ -78,7 +78,14 @@ def open_tunnel() -> int:
         from sshtunnel import SSHTunnelForwarder
         import paramiko
 
-        private_key = paramiko.RSAKey.from_private_key(io.StringIO(SSH_KEY_STR))
+        for key_class in [paramiko.Ed25519Key, paramiko.RSAKey, paramiko.ECDSAKey]:
+            try:
+                private_key = key_class.from_private_key(io.StringIO(SSH_KEY_STR))
+                break
+            except Exception:
+                continue
+        else:
+            raise ValueError("SSH 키 타입을 인식할 수 없습니다.")
 
         tunnel = SSHTunnelForwarder(
             (SSH_HOST, SSH_PORT),
