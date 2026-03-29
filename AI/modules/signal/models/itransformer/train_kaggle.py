@@ -221,7 +221,7 @@ def build_model(seq_len: int, n_features: int, n_outputs: int) -> tf.keras.Model
         ffn_in = layers.LayerNormalization(epsilon=1e-6, name=f"{name}_ln2")(x)
         ffn = layers.Dense(CONFIG["ff_dim"], activation="gelu", name=f"{name}_ffn1")(ffn_in)
         ffn = layers.Dropout(CONFIG["dropout"])(ffn)
-        ffn = layers.Dense(n_features, name=f"{name}_ffn2")(ffn)
+        ffn = layers.Dense(seq_len, name=f"{name}_ffn2")(ffn)
         ffn = layers.Dropout(CONFIG["dropout"])(ffn)
         x = layers.Add(name=f"{name}_ffn_add")([x, ffn])
 
