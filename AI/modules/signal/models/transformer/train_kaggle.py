@@ -46,7 +46,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.models.transformer.architecture import build_transformer_model
-from AI.modules.signal.core.data_loader import DataLoader
+from sklearn.preprocessing import StandardScaler
 from AI.modules.features.legacy.technical_features import (
     add_technical_indicators,
     add_multi_timeframe_features
@@ -134,6 +134,55 @@ def load_and_preprocess():
     return full_df
 
 
+def build_sequences_transformer(full_df, scaler, fit_scaler=True):
+    """Transformer용 시퀀스 생성 (DB 없이 직접 구현)"""
+    seq_len    = CONFIG['seq_len']
+    horizons   = [1, 3, 5, 7]
+    max_h      = max(horizons)
+    available  = [c for c in TRANSFORMER_TRAIN_FEATURES if c in full_df.columns]
+
+    # ticker/sector ID 매핑
+    tickers    = sorted(full_df['ticker'].unique())
+    sectors    = sorted(full_df['sector'].unique() if 'sector' in full_df.columns else ['Unknown'])
+    ticker_to_id = {t: i for i, t in enumerate(tickers)}
+    sector_to_id = {s: i for i, s in enumerate(sectors)}
+
+    full_df = full_df.dropna(subset=available).copy()
+    if fit_scaler:
+        full_df[available] = scaler.fit_transform(full_df[available])
+    else:
+        full_df[available] = scaler.transform(full_df[available])
+
+    X_ts, X_tick, X_sec, y_list = [], [], [], []
+
+    for ticker, group in full_df.groupby('ticker'):
+        group   = group.sort_values('date').reset_index(drop=True)
+        sector  = group['sector'].iloc[0] if 'sector' in group.columns else 'Unknown'
+        tick_id = ticker_to_id.get(ticker, 0)
+        sec_id  = sector_to_id.get(sector, 0)
+
+        if len(group) < seq_len + max_h:
+            continue
+
+        feat_vals = group[available].values
+        closes    = group['close'].values
+
+        for i in range(len(group) - seq_len - max_h + 1):
+            window = feat_vals[i:i + seq_len]
+            curr   = closes[i + seq_len - 1]
+            labels = [1.0 if closes[i + seq_len + h - 1] > curr else 0.0 for h in horizons]
+            X_ts.append(window)
+            X_tick.append(tick_id)
+            X_sec.append(sec_id)
+            y_list.append(labels)
+
+    return (np.array(X_ts, dtype=np.float32),
+            np.array(X_tick, dtype=np.int32),
+            np.array(X_sec,  dtype=np.int32),
+            np.array(y_list, dtype=np.float32),
+            len(tickers), len(sectors))
+
+
 def train_single_pipeline():
     print("=" * 50)
     print(" Transformer 학습 시작 (Kaggle/Actions 버전)")
@@ -142,35 +191,40 @@ def train_single_pipeline():
     # 1. 데이터 로드
     full_df = load_and_preprocess()
 
-    # 2. DataLoader로 시퀀스 생성
-    # DataLoader의 create_dataset만 사용 (load_data_from_db는 사용 안 함)
-    loader = DataLoader(lookback=CONFIG['seq_len'])
+    # stock_info parquet에서 sector 정보 병합
+    stock_info_path = os.path.join(CONFIG['parquet_dir'], 'stock_info.parquet')
+    if os.path.exists(stock_info_path):
+        stock_info = pd.read_parquet(stock_info_path)[['ticker', 'sector']]
+        full_df = full_df.merge(stock_info, on='ticker', how='left')
+        full_df['sector'] = full_df['sector'].fillna('Unknown')
+        print(f">> sector 병합 완료")
 
-    X_ts, X_ticker, X_sector, y_class, _, info = loader.create_dataset(
-        full_df,
-        feature_columns=TRANSFORMER_TRAIN_FEATURES,
-    )
-
-    horizons  = info.get("horizons", [1, 3, 5, 7])
+    horizons  = [1, 3, 5, 7]
     n_outputs = len(horizons)
 
-    print(f"\n>> 시퀀스 생성 완료: {X_ts.shape}")
-    print(f">> horizon: {horizons}")
+    # 2. Train/Val 분리 (ticker 기준)
+    tickers       = full_df['ticker'].unique()
+    n_val         = max(1, int(len(tickers) * 0.2))
+    val_tickers   = tickers[-n_val:]
+    train_tickers = tickers[:-n_val]
 
-    # 3. Train/Val 분리
-    X_ts_train, X_ts_val, \
-    X_tick_train, X_tick_val, \
-    X_sec_train, X_sec_val, \
-    y_train, y_val = train_test_split(
-        X_ts, X_ticker, X_sector, y_class,
-        test_size=0.2, shuffle=True, random_state=42
-    )
+    train_df = full_df[full_df['ticker'].isin(train_tickers)].copy()
+    val_df   = full_df[full_df['ticker'].isin(val_tickers)].copy()
+    print(f">> Train: {len(train_tickers)}개, Val: {len(val_tickers)}개 종목")
+
+    # 3. 시퀀스 생성
+    scaler = StandardScaler()
+    X_ts_train, X_tick_train, X_sec_train, y_train, n_tickers, n_sectors = build_sequences_transformer(train_df, scaler, fit_scaler=True)
+    X_ts_val,   X_tick_val,   X_sec_val,   y_val,   _,         _         = build_sequences_transformer(val_df,   scaler, fit_scaler=False)
+
+    print(f"\n>> 시퀀스 생성 완료: {X_ts_train.shape}")
+    print(f">> horizon: {horizons}")
 
     # 4. 모델 빌드
     model = build_transformer_model(
-        input_shape=(X_ts.shape[1], X_ts.shape[2]),
-        n_tickers=info['n_tickers'],
-        n_sectors=info['n_sectors'],
+        input_shape=(X_ts_train.shape[1], X_ts_train.shape[2]),
+        n_tickers=n_tickers,
+        n_sectors=n_sectors,
         n_outputs=n_outputs
     )
 
