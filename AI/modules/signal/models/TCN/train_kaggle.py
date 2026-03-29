@@ -303,4 +303,18 @@ if __name__ == "__main__":
 
 def train():
     """노트북에서 module.train()으로 호출하기 위한 래퍼"""
-    train_model(parse_args())
+    import argparse
+    args = argparse.Namespace(
+        parquet_dir  = _find_kaggle_dataset_path(),
+        start_date   = "2015-01-01",
+        end_date     = "2023-12-31",
+        seq_len      = 60,
+        epochs       = 20,
+        batch_size   = 64,
+        learning_rate= 1e-3,
+        kernel_size  = 3,
+        dropout      = 0.2,
+        channels     = [32, 64, 64],
+        output_dir   = "/kaggle/working"
+    )
+    train_model(args)
