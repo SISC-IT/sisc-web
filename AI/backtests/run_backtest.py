@@ -584,7 +584,7 @@ def main() -> None:
         description="Run backtest over business days.",
     )
     parser.add_argument("--start_day", type=str, default="2025-03-03", help="Start day (YYYY-MM-DD)")
-    parser.add_argument("--end_day", type=str, default="2026-03-23", help="End day (YYYY-MM-DD)")
+    parser.add_argument("--end_day", type=str, default="2025-05-30", help="End day (YYYY-MM-DD)")
     parser.add_argument(
         "--engine",
         type=str,
