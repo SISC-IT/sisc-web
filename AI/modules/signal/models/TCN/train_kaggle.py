@@ -15,6 +15,8 @@ import argparse
 import copy
 import json
 import os
+import warnings
+warnings.filterwarnings('ignore')
 import pickle
 import sys
 from typing import Dict, List, Tuple

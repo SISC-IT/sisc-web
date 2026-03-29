@@ -14,10 +14,20 @@ Transformer 학습 스크립트 - Kaggle/GitHub Actions 버전
 import os
 import sys
 import pickle
+import warnings
+import logging
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+
+# 불필요한 로그 억제
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+warnings.filterwarnings('ignore')
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
 import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -271,12 +281,13 @@ def train_single_pipeline():
         epochs=CONFIG['epochs'],
         batch_size=CONFIG['batch_size'],
         shuffle=True,
-        callbacks=callbacks
+        callbacks=callbacks,
+        verbose=2
     )
 
     # 8. 스케일러 저장
     with open(scaler_path, "wb") as f:
-        pickle.dump('scaler', f)
+        pickle.dump(scaler, f)
 
     print(f"\n>> 완료")
     print(f"   모델    : {model_path}")
