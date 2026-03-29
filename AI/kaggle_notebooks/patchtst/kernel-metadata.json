@@ -6,6 +6,7 @@
   "kernel_type": "notebook",
   "is_private": true,
   "enable_gpu": true,
+  "accelerator": "nvidiaTeslaT4",
   "enable_tpu": false,
   "enable_internet": true,
   "dataset_sources": [

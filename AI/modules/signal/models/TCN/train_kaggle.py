@@ -297,3 +297,8 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     train_model(parse_args())
+
+
+def train():
+    """노트북에서 module.train()으로 호출하기 위한 래퍼"""
+    train_model(parse_args())

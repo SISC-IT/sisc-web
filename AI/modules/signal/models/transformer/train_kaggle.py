@@ -231,3 +231,8 @@ def train_single_pipeline():
 
 if __name__ == "__main__":
     train_single_pipeline()
+
+
+def train():
+    """노트북에서 module.train()으로 호출하기 위한 래퍼"""
+    train_single_pipeline()

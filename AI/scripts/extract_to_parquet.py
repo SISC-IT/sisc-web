@@ -25,12 +25,16 @@ import time
 import sys
 import pandas as pd
 import psycopg2
+from dotenv import load_dotenv
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
 # ─────────────────────────────────────────────────────────────────────────────
 current_dir  = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+
+# .env 로드
+load_dotenv(os.path.join(project_root, ".env"))
 
 OUTPUT_DIR = os.path.join(project_root, "AI/data/kaggle_data")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -45,11 +49,11 @@ SSH_USER    = os.environ.get("SSH_USER")
 SSH_KEY_STR = os.environ.get("SSH_PRIVATE_KEY")
 SSH_PORT    = int(os.environ.get("SSH_PORT", 22))
 
-DB_HOST     = os.environ.get("DB_HOST",     "localhost")
+DB_HOST     = os.environ.get("DB_HOST",     "127.0.0.1")
 DB_PORT     = int(os.environ.get("DB_PORT", 5432))
-DB_USER     = os.environ.get("DB_USER",     "유저명")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "비밀번호")
-DB_NAME     = os.environ.get("DB_NAME",     "DB이름")
+DB_USER     = os.environ.get("DB_USER",     "postgres")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+DB_NAME     = os.environ.get("DB_NAME",     "sisc_db")
 
 # GitHub Actions 여부: SSH 환경변수 3개 모두 있으면 Actions 모드
 IS_ACTIONS = all([SSH_HOST, SSH_USER, SSH_KEY_STR])

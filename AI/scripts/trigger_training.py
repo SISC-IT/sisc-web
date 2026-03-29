@@ -34,7 +34,7 @@ NOTEBOOKS = [
     {
         "name"       : "PatchTST",
         "slug"       : "patchtst-training",
-        "notebook_dir": os.path.join(project_root, "AI/kaggle_notebooks/patchtst"),
+        "notebook_dir": os.path.join(project_root, "AI/kaggle_notebooks/PatchTST"),
     },
     {
         "name"       : "Transformer",
@@ -54,28 +54,39 @@ NOTEBOOKS = [
 ]
 
 
-def trigger_notebook(notebook: dict) -> bool:
-    """노트북 학습 트리거. 성공하면 True 반환"""
+def trigger_notebook(notebook: dict, max_retries: int = 3, retry_wait: int = 600) -> bool:
+    """노트북 학습 트리거. GPU 세션 한도 초과 시 재시도"""
     print(f"\n>> [{notebook['name']}] 학습 트리거 중...")
 
     if not os.path.exists(notebook['notebook_dir']):
         print(f"   [오류] 노트북 폴더 없음: {notebook['notebook_dir']}")
         return False
 
-    result = subprocess.run(
-        ["kaggle", "kernels", "push", "-p", notebook['notebook_dir']],
-        capture_output=True,
-        text=True
-    )
+    for attempt in range(1, max_retries + 1):
+        result = subprocess.run(
+            ["kaggle", "kernels", "push", "-p", notebook['notebook_dir']],
+            capture_output=True,
+            text=True
+        )
 
-    if result.returncode == 0:
-        print(f"   [{notebook['name']}] 트리거 성공!")
-        print(f"   확인: https://www.kaggle.com/code/{KAGGLE_USERNAME}/{notebook['slug']}")
-        return True
-    else:
+        if result.returncode == 0:
+            print(f"   [{notebook['name']}] 트리거 성공!")
+            print(f"   확인: https://www.kaggle.com/code/{KAGGLE_USERNAME}/{notebook['slug']}")
+            return True
+
+        # GPU 세션 한도 초과 → 재시도
+        if "Maximum batch GPU session count" in result.stderr:
+            print(f"   [{notebook['name']}] GPU 세션 한도 초과 ({attempt}/{max_retries}). {retry_wait//60}분 후 재시도...")
+            time.sleep(retry_wait)
+            continue
+
+        # 그 외 오류는 즉시 실패
         print(f"   [{notebook['name']}] 트리거 실패!")
         print(result.stderr)
         return False
+
+    print(f"   [{notebook['name']}] {max_retries}회 재시도 모두 실패")
+    return False
 
 
 def wait_for_notebook(notebook: dict, timeout_hours: int = 12) -> bool:

@@ -58,12 +58,12 @@ print(f"   대상: {KAGGLE_USERNAME}/{DATASET_SLUG}")
 result = subprocess.run(
     [
         "kaggle", "datasets", "version",
-        "-p", OUTPUT_DIR,
+        "-p", ".",
         "-m", "Auto update: latest data",
-        "--dir-mode", "zip"
     ],
     capture_output=True,
-    text=True
+    text=True,
+    cwd=OUTPUT_DIR  # kaggle_data 폴더 안에서 실행 (Windows 경로 슬래시 버그 방지)
 )
 
 if result.returncode == 0:
