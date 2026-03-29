@@ -11,6 +11,15 @@ iTransformer Kaggle 학습 스크립트
 -----------------------------------------------
 """
 import os
+
+def _find_kaggle_parquet_dir() -> str:
+    """Kaggle parquet 데이터셋 경로 자동 탐색"""
+    import glob as _glob
+    matches = _glob.glob("/kaggle/input/**/price_data.parquet", recursive=True)
+    if matches:
+        return os.path.dirname(matches[0])
+    return os.environ.get("PARQUET_DIR", "/kaggle/input")
+
 import sys
 import json
 import pickle
@@ -25,7 +34,16 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 
 # Kaggle 경로 설정
-KAGGLE_DATA_DIR = "/kaggle/input/sisc-ai-trading-dataset"
+def _find_kaggle_dataset_path() -> str:
+    """Kaggle 입력 데이터셋 경로 자동 탐색"""
+    base = "/kaggle/input"
+    if os.path.exists(base):
+        for root, dirs, files in os.walk(base):
+            if any(f.endswith(".parquet") for f in files):
+                return root
+    return os.environ.get("PARQUET_DIR", base)
+
+KAGGLE_DATA_DIR = _find_kaggle_dataset_path()
 OUTPUT_DIR      = "/kaggle/working"
 
 # ─────────────────────────────────────────────────────────────────────────────
