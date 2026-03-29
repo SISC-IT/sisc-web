@@ -18,19 +18,7 @@
     "top_n": 30,
     "lookback_days": 10,
     "min_market_cap": 10000000000,
-    "watchlist_path": "AI/config/watchlist.json",
-    "min_avg_dollar_vol": 0,
-    "min_avg_volume": 0,
-    "min_price": 0,
-    "max_price": null,
-    "include_tickers": [],
-    "exclude_tickers": [],
-    "include_sectors": [],
-    "exclude_sectors": [],
-    "dollar_vol_weight": 1.0,
-    "volume_weight": 0.0,
-    "market_cap_weight": 0.0,
-    "sticky_slots": 0
+    "watchlist_path": "AI/config/watchlist.json"
   },
   "data": {
     "seq_len": 60,
