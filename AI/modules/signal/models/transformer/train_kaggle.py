@@ -276,7 +276,7 @@ def train_single_pipeline():
 
     # 8. 스케일러 저장
     with open(scaler_path, "wb") as f:
-        pickle.dump(info['scaler'], f)
+        pickle.dump('scaler', f)
 
     print(f"\n>> 완료")
     print(f"   모델    : {model_path}")
