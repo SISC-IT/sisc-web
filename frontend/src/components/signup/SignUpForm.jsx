@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import styles from '../LoginAndSignUpForm.module.css';
 import sejong_logo from '../../assets/sejong_logo.png';
@@ -48,6 +48,8 @@ const SignUpForm = () => {
   const abortRefSend = useRef(null);
   const abortRefCheck = useRef(null);
   const abortRefSignUp = useRef(null);
+  const [searchParams] = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
   const nav = useNavigate();
 
   const handlePasswordChange = (e) => {
@@ -199,7 +201,11 @@ const SignUpForm = () => {
         abortRefSignUp.current.signal
       );
       toast.success('회원가입이 완료되었습니다.');
-      nav('/login');
+      if (returnUrl) {
+        nav(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+      } else {
+        nav('/login');
+      }
     } catch (error) {
       console.log(error);
       toast.error('회원가입에 실패하였습니다.');
