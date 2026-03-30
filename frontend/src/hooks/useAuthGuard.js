@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { api } from '../utils/axios';
 
 export const useAuthGuard = () => {
   const nav = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -16,12 +17,15 @@ export const useAuthGuard = () => {
         // 401 에러만 로그인 페이지로 리다이렉트
         if (error.status === 401) {
           toast.error('로그인 후 이용하실 수 있습니다.');
-          nav('/login');
+          const returnUrl = encodeURIComponent(
+            location.pathname + location.search
+          );
+          nav(`/login?returnUrl=${returnUrl}`);
         }
         // 404나 다른 에러는 무시
       }
     };
 
     checkAuth();
-  }, [nav]);
+  }, [nav, location.pathname, location.search]);
 };
