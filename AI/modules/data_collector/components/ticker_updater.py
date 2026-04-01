@@ -187,9 +187,12 @@ class TickerUpdater:
             print("[TickerUpdater] 저장할 티커가 없습니다.")
             return
 
-        conn = get_db_conn(self.db_name)
-        cursor = conn.cursor()
+        conn = None
+        cursor = None
         try:
+            conn = get_db_conn(self.db_name)
+            cursor = conn.cursor()
+
             insert_stock_query = """
                 INSERT INTO public.stock_info (ticker)
                 VALUES (%s)
@@ -216,11 +219,14 @@ class TickerUpdater:
 
             conn.commit()
         except Exception as e:
-            conn.rollback()
+            if conn:
+                conn.rollback()
             print(f"[TickerUpdater][Error] DB 저장 실패: {e}")
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     def run(
         self,
@@ -241,11 +247,11 @@ class TickerUpdater:
         current_count = self.count_tickers_in_db()
         print(f"[TickerUpdater] 현재 DB 티커 수: {current_count}개")
 
-        if current_count > min_count:
-            print(f"[TickerUpdater] 기준({min_count}개 초과) 만족. 업데이트 생략.")
+        if current_count >= min_count:
+            print(f"[TickerUpdater] 기준({min_count}개 이상) 만족. 업데이트 생략.")
             return False
 
-        print(f"[TickerUpdater] 기준({min_count}개 이하) 미달. 티커 수집을 실행합니다.")
+        print(f"[TickerUpdater] 기준({min_count}개 미만)으로 티커 수집을 실행합니다.")
         collected_count = self.run(source=source, file_path=file_path, sync_korean_names=True)
         print(f"[TickerUpdater] 실행 완료: {collected_count}개 수집 시도")
         return True
