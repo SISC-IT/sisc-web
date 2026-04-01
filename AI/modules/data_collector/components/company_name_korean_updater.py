@@ -1,6 +1,8 @@
+import json
 import os
+import re
 import sys
-from typing import Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 
@@ -22,7 +24,9 @@ class CompanyNameKoreanUpdater:
     1) 입력 이름이 이미 한글이면 그대로 사용
     2) KNOWN_KOREAN_NAMES 사전 매핑 사용
     3) 위키피디아 langlinks(ko) 조회
-    4) 실패 시 영문명 유지
+    4) Wikidata 라벨(ko) 조회
+    5) LLM 번역 fallback
+    6) 끝까지 실패하면 영문명 유지
     """
 
     WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
@@ -40,7 +44,7 @@ class CompanyNameKoreanUpdater:
         "AAPL": "애플",
         "MSFT": "마이크로소프트",
         "NVDA": "엔비디아",
-        "GOOGL": "알파벳",
+        "GOOGL": "알파벳 클래스A",
         "GOOG": "알파벳",
         "AMZN": "아마존",
         "META": "메타",
@@ -76,19 +80,19 @@ class CompanyNameKoreanUpdater:
         "SPOT": "스포티파이",
         "RBLX": "로블록스",
         "DELL": "델테크놀로지스",
-        "HPQ": "HP",
+        "HPQ": "에이치피",
         "SAP": "SAP",
 
         # Semiconductor
         "INTC": "인텔",
-        "AMD": "AMD",
+        "AMD": "에이엠디",
         "AVGO": "브로드컴",
         "QCOM": "퀄컴",
         "TXN": "텍사스인스트루먼트",
         "MU": "마이크론테크놀로지",
         "AMAT": "어플라이드머티어리얼즈",
         "LRCX": "램리서치",
-        "KLAC": "KLA",
+        "KLAC": "케이엘에이",
         "ADI": "아날로그디바이시스",
         "MCHP": "마이크로칩테크놀로지",
         "MRVL": "마벨테크놀로지",
@@ -105,7 +109,7 @@ class CompanyNameKoreanUpdater:
         "CHTR": "차터커뮤니케이션즈",
         "PARA": "파라마운트글로벌",
         "WBD": "워너브라더스디스커버리",
-        "T": "AT&T",
+        "T": "에이티앤티",
         "VZ": "버라이즌",
         "TMUS": "T모바일US",
         "FOXA": "폭스코퍼레이션A",
@@ -136,7 +140,7 @@ class CompanyNameKoreanUpdater:
         "PNC": "PNC파이낸셜",
         "TFC": "트루이스트파이낸셜",
         "BK": "뱅크오브뉴욕멜론",
-        "AIG": "AIG",
+        "AIG": "에이아이지",
         "MET": "메트라이프",
         "PRU": "프루덴셜파이낸셜",
         "CB": "처브",
@@ -148,7 +152,7 @@ class CompanyNameKoreanUpdater:
         "MCO": "무디스",
         "ICE": "인터콘티넨털익스체인지",
         "CME": "CME그룹",
-        "KKR": "KKR",
+        "KKR": "케이케이알",
         "BX": "블랙스톤",
         "APO": "아폴로글로벌매니지먼트",
 
@@ -213,18 +217,18 @@ class CompanyNameKoreanUpdater:
         # Industrials / Aerospace / Transport
         "GE": "GE에어로스페이스",
         "HON": "허니웰",
-        "RTX": "RTX",
+        "RTX": "알티엑스",
         "LMT": "록히드마틴",
         "NOC": "노스럽그러먼",
         "GD": "제너럴다이내믹스",
         "BA": "보잉",
         "CAT": "캐터필러",
         "DE": "디어앤컴퍼니",
-        "UPS": "UPS",
+        "UPS": "유피에스",
         "FDX": "페덱스",
         "UNP": "유니언퍼시픽",
         "NSC": "노퍽서던",
-        "CSX": "CSX",
+        "CSX": "씨에스엑스",
         "WM": "웨이스트매니지먼트",
         "RSG": "리퍼블릭서비스",
         "EMR": "에머슨일렉트릭",
@@ -257,7 +261,7 @@ class CompanyNameKoreanUpdater:
         "AEP": "아메리칸일렉트릭파워",
         "EXC": "엑셀론",
         "SRE": "셈프라",
-        "PCG": "PG&E",
+        "PCG": "피지앤이",
         "PEG": "퍼블릭서비스엔터프라이즈그룹",
 
         # REIT
@@ -322,6 +326,189 @@ class CompanyNameKoreanUpdater:
         "VYM": "뱅가드 고배당 ETF",
         "IGV": "아이셰어스 확장기술소프트웨어 ETF",
 
+        # Additional manual mapping (unresolved universe batch)
+        "ACGL": "아치 캐피털 그룹",
+        "AEE": "아메런",
+        "AES": "AES 코퍼레이션",
+        "AFL": "애플랙",
+        "AJG": "아서 J. 갤러거",
+        "ALB": "알버말",
+        "ALGN": "얼라인 테크놀로지",
+        "ALLE": "앨리전",
+        "AMCR": "앰코어",
+        "AME": "아메텍",
+        "APA": "APA 코퍼레이션",
+        "APH": "암페놀",
+        "ARE": "알렉산드리아 리얼에스테이트 에쿼티스",
+        "ARES": "아레스 매니지먼트",
+        "ATO": "애트모스 에너지",
+        "AVB": "아발론베이 커뮤니티스",
+        "AVY": "에이버리 데니슨",
+        "AWK": "아메리칸 워터 웍스",
+        "AXON": "액손 엔터프라이즈",
+        "BDX": "벡턴 디킨슨",
+        "BF-B": "브라운 포맨",
+        "BG": "번지 글로벌",
+        "BLDR": "빌더스 퍼스트소스",
+        "BR": "브로드리지 파이낸셜 솔루션즈",
+        "BRO": "브라운 앤 브라운",
+        "BXP": "비엑스피",
+        "CAH": "카디널 헬스",
+        "CBOE": "시보 글로벌 마켓",
+        "CBRE": "CBRE 그룹",
+        "CDW": "CDW 코퍼레이션",
+        "CEG": "컨스텔레이션 에너지",
+        "CF": "CF 인더스트리즈",
+        "CFG": "시티즌스 파이낸셜 그룹",
+        "CHD": "처치 앤 드와이트",
+        "CHRW": "C.H. 로빈슨",
+        "CIEN": "시에나",
+        "CINF": "신시내티 파이낸셜",
+        "CMS": "CMS 에너지",
+        "CNC": "센틴",
+        "CNP": "센터포인트 에너지",
+        "COO": "쿠퍼 컴퍼니즈",
+        "CPB": "캠벨스 컴퍼니",
+        "CPRT": "코파트",
+        "CPT": "캠던 프로퍼티 트러스트",
+        "CRL": "찰스리버 래버러토리스",
+        "CSGP": "코스타 그룹",
+        "CTAS": "신타스",
+        "CTRA": "코테라 에너지",
+        "DECK": "데커스 브랜즈",
+        "DGX": "퀘스트 다이아그노스틱스",
+        "DHI": "D.R. 호튼",
+        "DLTR": "달러 트리",
+        "DOC": "헬스피크 프로퍼티스",
+        "DRI": "다든 레스토랑",
+        "DTE": "DTE 에너지",
+        "ED": "콘솔리데이티드 에디슨",
+        "EG": "에버레스트 그룹",
+        "ELV": "엘리번스 헬스",
+        "EPAM": "EPAM 시스템즈",
+        "EQR": "에쿼티 레지덴셜",
+        "EQT": "EQT 코퍼레이션",
+        "ERIE": "이리 인뎀니티",
+        "ES": "에버소스 에너지",
+        "ESS": "에식스 프로퍼티 트러스트",
+        "ETR": "엔터지",
+        "EVRG": "에버지",
+        "EW": "에드워즈 라이프사이언시스",
+        "EXE": "익스팬드 에너지",
+        "EXPD": "익스피다이터스 인터내셔널",
+        "EXR": "엑스트라 스페이스 스토리지",
+        "FANG": "다이아몬드백 에너지",
+        "FAST": "패스널",
+        "FICO": "페어 아이작",
+        "FIS": "피델리티 내셔널 인포메이션 서비스",
+        "FITB": "피프스 서드 뱅코프",
+        "FIX": "컴포트 시스템즈 USA",
+        "FRT": "페더럴 리얼티 인베스트먼트 트러스트",
+        "FSLR": "퍼스트 솔라",
+        "FTV": "포티브",
+        "GNRC": "제네락",
+        "GPC": "제뉴인 파츠 컴퍼니",
+        "GPN": "글로벌 페이먼츠",
+        "GWW": "W.W. 그레인저",
+        "HBAN": "헌팅턴 뱅크셰어스",
+        "HCA": "HCA 헬스케어",
+        "HIG": "하트퍼드",
+        "HOLX": "홀로직",
+        "HSIC": "헨리 샤인",
+        "HST": "호스트 호텔스 앤 리조트",
+        "HUBB": "허벨",
+        "HWM": "하우멧 에어로스페이스",
+        "IDXX": "아이덱스 래버러토리스",
+        "IEX": "IDEX 코퍼레이션",
+        "IFF": "인터내셔널 플레이버스 앤 프래그런스",
+        "INCY": "인사이트",
+        "INVH": "인비테이션 홈즈",
+        "IR": "잉거솔 랜드",
+        "IRM": "아이언 마운틴",
+        "J": "제이콥스 솔루션스",
+        "JBHT": "J.B. 헌트",
+        "JKHY": "잭 헨리 앤 어소시에이츠",
+        "KDP": "큐리그 닥터페퍼",
+        "KEY": "키코프",
+        "KIM": "킴코 리얼티",
+        "L": "로우스 코퍼레이션",
+        "LDOS": "레이도스",
+        "LEN": "레나",
+        "LH": "랩코프",
+        "LHX": "L3해리스",
+        "LII": "레녹스 인터내셔널",
+        "LYB": "라이온델바젤",
+        "MAA": "미드아메리카 아파트먼트 커뮤니티스",
+        "MKC": "맥코믹 앤 컴퍼니",
+        "MLM": "마틴 마리에타 머티리얼즈",
+        "MOH": "몰리나 헬스케어",
+        "MOS": "모자이크",
+        "MPWR": "모놀리식 파워 시스템즈",
+        "MSCI": "엠에스씨아이",
+        "MTCH": "매치 그룹",
+        "NCLH": "노르웨이지안 크루즈 라인 홀딩스",
+        "NDSN": "노드슨",
+        "NI": "나이소스",
+        "NRG": "NRG 에너지",
+        "NVR": "엔브이알",
+        "NWS": "뉴스 코프 B",
+        "NWSA": "뉴스 코프 A",
+        "ORLY": "오라일리 오토모티브",
+        "PAYX": "페이첵스",
+        "PFG": "프린시펄 파이낸셜 그룹",
+        "PHM": "풀트그룹",
+        "PKG": "패키징 코퍼레이션 오브 아메리카",
+        "PNR": "펜테어",
+        "PNW": "피너클 웨스트 캐피털",
+        "PODD": "인슐렛",
+        "POOL": "풀 코퍼레이션",
+        "PPL": "PPL 코퍼레이션",
+        "PWR": "퀀타 서비스",
+        "Q": "큐니티 일렉트로닉스",
+        "RCL": "로열 캐리비안 그룹",
+        "REG": "리젠시 센터스",
+        "RF": "리전스 파이낸셜",
+        "RMD": "레즈메드",
+        "ROL": "롤린스",
+        "ROP": "로퍼 테크놀로지스",
+        "RVTY": "레비티",
+        "SBAC": "SBA 커뮤니케이션스",
+        "SJM": "J.M. 스머커",
+        "SOLV": "솔벤텀",
+        "STE": "스테리스",
+        "STLD": "스틸 다이내믹스",
+        "STZ": "컨스텔레이션 브랜즈",
+        "SW": "스머핏 웨스트록",
+        "SWKS": "스카이웍스 솔루션즈",
+        "SYF": "싱크로니 파이낸셜",
+        "TDG": "트랜스다임 그룹",
+        "TDY": "텔레다인 테크놀로지스",
+        "TECH": "바이오테크네",
+        "TJX": "TJX 컴퍼니스",
+        "TKO": "TKO 그룹 홀딩스",
+        "TPL": "텍사스 퍼시픽 랜드",
+        "TPR": "태피스트리",
+        "TRGP": "타르가 리소시스",
+        "TRMB": "트림블",
+        "TSCO": "트랙터 서플라이",
+        "TT": "트레인 테크놀로지스",
+        "TYL": "타일러 테크놀로지스",
+        "UDR": "유디알",
+        "UHS": "유니버설 헬스 서비스",
+        "URI": "유나이티드 렌털스",
+        "VICI": "비치 프로퍼티스",
+        "VLTO": "베랄토",
+        "VMC": "벌컨 머티리얼즈",
+        "VRSK": "베리스크 애널리틱스",
+        "VST": "비스트라",
+        "WAT": "워터스 코퍼레이션",
+        "WEC": "WEC 에너지 그룹",
+        "WRB": "W.R. 버클리",
+        "WSM": "윌리엄스 소노마",
+        "WST": "웨스트 파마슈티컬 서비스",
+        "XYL": "자일럼",
+        "ZBH": "짐머 바이오메트",
+
         # Crypto ticker aliases
         "BTC-USD": "비트코인",
         "ETH-USD": "이더리움",
@@ -349,12 +536,25 @@ class CompanyNameKoreanUpdater:
         "024110.KS": "기업은행",
     }
 
-    def __init__(self, db_name: str = "db", timeout_sec: int = 8):
+    def __init__(
+        self,
+        db_name: str = "db",
+        timeout_sec: int = 8,
+        enable_llm_fallback: bool = True,
+        llm_provider: str = "gemini",
+        llm_model: Optional[str] = None,
+    ):
         self.db_name = db_name
         self.timeout_sec = timeout_sec
+        self.enable_llm_fallback = enable_llm_fallback
+        self.llm_provider = llm_provider
+        self.llm_model = llm_model
         # 같은 영문명으로 위키 API를 반복 호출하지 않기 위한 캐시
         self._ko_name_cache: Dict[str, Optional[str]] = {}
         self._wikidata_ko_cache: Dict[str, Optional[str]] = {}
+        self._llm_ko_cache: Dict[str, Optional[str]] = {}
+        self._llm_client = None
+        self._llm_unavailable_reason: Optional[str] = None
 
     @staticmethod
     def _normalize_ticker(ticker: str) -> str:
@@ -367,6 +567,34 @@ class CompanyNameKoreanUpdater:
         if not text:
             return False
         return any("가" <= ch <= "힣" for ch in text)
+
+    @staticmethod
+    def _sanitize_external_name(raw_name: str) -> str:
+        """
+        위키/위키데이터에서 가져온 표시명을 저장하기 전에 정리합니다.
+        - '(기업)' 문구 제거
+        - 말미 괄호 분류(기업/회사/브랜드/법인 등) 제거
+        - 특수문자 제거(한글/영문/숫자/공백만 유지)
+        """
+        cleaned = str(raw_name or "").strip()
+        if not cleaned:
+            return ""
+
+        # 요청사항: '(기업)' 하드코딩 제거
+        cleaned = cleaned.replace("(기업)", " ")
+        cleaned = cleaned.replace("（기업）", " ")
+
+        # 위키 분류성 꼬리표 제거
+        cleaned = re.sub(
+            r"\s*\((?:[^)]*(?:기업|회사|브랜드|법인|지주|주식회사)[^)]*)\)\s*$",
+            "",
+            cleaned,
+        )
+
+        # 특수문자 필터링: 한글/영문/숫자/공백만 유지
+        cleaned = re.sub(r"[^가-힣A-Za-z0-9\s]", "", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
 
     def _lookup_ko_name_in_wikipedia(self, english_name: str) -> Optional[str]:
         """
@@ -408,8 +636,10 @@ class CompanyNameKoreanUpdater:
                     continue
                 candidate = langlinks[0].get("*") or langlinks[0].get("title")
                 if candidate:
-                    ko_name = str(candidate).strip()
-                    break
+                    normalized_candidate = self._sanitize_external_name(str(candidate))
+                    if normalized_candidate:
+                        ko_name = normalized_candidate
+                        break
         except Exception:
             ko_name = None
 
@@ -433,7 +663,9 @@ class CompanyNameKoreanUpdater:
             labels = entity.get("labels") or {}
             ko_label = (labels.get("ko") or {}).get("value")
             if ko_label:
-                return str(ko_label).strip()
+                normalized_label = self._sanitize_external_name(str(ko_label))
+                if normalized_label:
+                    return normalized_label
         except Exception:
             return None
         return None
@@ -512,7 +744,307 @@ class CompanyNameKoreanUpdater:
         if wikidata_name:
             return wikidata_name
 
+        llm_name = self._lookup_ko_name_with_llm(normalized_ticker, normalized_name)
+        if llm_name:
+            return llm_name
+
         return normalized_name
+
+    def fetch_untranslated_company_names(self, limit: Optional[int] = None) -> List[Tuple[str, str]]:
+        """
+        company_names에서 한글이 포함되지 않은 행을 조회합니다.
+        반환 형식: [(ticker, company_name), ...]
+        """
+        conn = None
+        cursor = None
+        try:
+            conn = get_db_conn(self.db_name)
+            cursor = conn.cursor()
+
+            query = """
+                SELECT ticker, company_name
+                FROM public.company_names
+                WHERE company_name IS NULL
+                   OR btrim(company_name) = ''
+                   OR company_name !~ '[가-힣]'
+                ORDER BY ticker
+            """
+            if limit is not None and int(limit) > 0:
+                query += " LIMIT %s"
+                cursor.execute(query, (int(limit),))
+            else:
+                cursor.execute(query)
+
+            rows = cursor.fetchall() or []
+            result: List[Tuple[str, str]] = []
+            for row in rows:
+                if not row or not row[0]:
+                    continue
+                ticker = self._normalize_ticker(str(row[0]))
+                english_name = str(row[1] or "").strip()
+                result.append((ticker, english_name))
+            return result
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    @staticmethod
+    def _extract_first_json_object(raw_text: str) -> Optional[Dict[str, Any]]:
+        if not raw_text:
+            return None
+
+        stripped = raw_text.strip()
+        if stripped.startswith("```"):
+            stripped = stripped.replace("```json", "").replace("```", "").strip()
+
+        try:
+            payload = json.loads(stripped)
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            pass
+
+        start = stripped.find("{")
+        end = stripped.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            return None
+
+        try:
+            payload = json.loads(stripped[start : end + 1])
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            return None
+        return None
+
+    def _sanitize_korean_name(self, name: str) -> Optional[str]:
+        if not name:
+            return None
+        cleaned = " ".join(str(name).strip().split())
+        cleaned = cleaned.strip("`'\"")
+        if not cleaned:
+            return None
+        if len(cleaned) > 100:
+            return None
+        if not self._contains_hangul(cleaned):
+            return None
+        return cleaned
+
+    def _parse_korean_name_from_llm_output(self, raw_text: str) -> Optional[str]:
+        payload = self._extract_first_json_object(raw_text)
+        if payload:
+            for key in ("korean_name", "company_name_ko", "company_name", "translation", "name"):
+                value = payload.get(key)
+                if isinstance(value, str):
+                    parsed = self._sanitize_korean_name(value)
+                    if parsed:
+                        return parsed
+
+        lines = (raw_text or "").strip().splitlines()
+        if lines:
+            parsed = self._sanitize_korean_name(lines[0])
+            if parsed:
+                return parsed
+        return None
+
+    def _build_llm_client(self, provider: str = "gemini", model_name: Optional[str] = None):
+        provider_name = str(provider or "gemini").strip().lower()
+        if provider_name == "gemini":
+            from AI.libs.llm import GeminiClient
+
+            resolved_model = model_name or os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+            return GeminiClient(model_name=resolved_model)
+
+        if provider_name == "groq":
+            from AI.libs.llm import GroqClient
+
+            resolved_model = model_name or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+            return GroqClient(model_name=resolved_model)
+
+        if provider_name == "ollama":
+            from AI.libs.llm import OllamaClient
+
+            resolved_model = model_name or os.environ.get("OLLAMA_MODEL", "llama3:latest")
+            return OllamaClient(model_name=resolved_model)
+
+        raise ValueError(f"Unsupported provider: {provider_name}")
+
+    def _get_llm_client_or_none(self):
+        if not self.enable_llm_fallback:
+            return None
+
+        if self._llm_unavailable_reason:
+            return None
+
+        if self._llm_client is not None:
+            return self._llm_client
+
+        try:
+            self._llm_client = self._build_llm_client(
+                provider=self.llm_provider,
+                model_name=self.llm_model,
+            )
+            return self._llm_client
+        except Exception as e:
+            self._llm_unavailable_reason = str(e)
+            print(f"[CompanyName][LLM][Warn] LLM fallback 비활성화: {self._llm_unavailable_reason}")
+            return None
+
+    @staticmethod
+    def _is_llm_quota_or_rate_error(error_text: str) -> bool:
+        text = str(error_text or "").lower()
+        if not text:
+            return False
+        signals = (
+            "resource_exhausted",
+            "quota exceeded",
+            "rate limit",
+            "too many requests",
+            "free_tier_requests",
+            "free_tier_input_token_count",
+            "429",
+        )
+        return any(sig in text for sig in signals)
+
+    def _lookup_ko_name_with_llm(self, ticker: str, english_name: str) -> Optional[str]:
+        normalized_ticker = self._normalize_ticker(ticker)
+        normalized_name = str(english_name or "").strip()
+        cache_key = f"{normalized_ticker}|{normalized_name.lower()}"
+
+        if cache_key in self._llm_ko_cache:
+            return self._llm_ko_cache[cache_key]
+
+        llm_client = self._get_llm_client_or_none()
+        if not llm_client:
+            self._llm_ko_cache[cache_key] = None
+            return None
+
+        ko_name = self._translate_name_with_llm(
+            ticker=normalized_ticker,
+            english_name=normalized_name,
+            llm_client=llm_client,
+        )
+        if not ko_name:
+            llm_error = str(getattr(llm_client, "last_error", "") or "")
+            if self._is_llm_quota_or_rate_error(llm_error):
+                self._llm_unavailable_reason = "LLM quota/rate exceeded"
+                print(
+                    "[CompanyName][LLM][Warn] 쿼터/레이트 제한 감지로 현재 실행에서 LLM fallback을 중단합니다."
+                )
+
+        if ko_name:
+            print(f"[CompanyName][LLM][Fallback] {normalized_ticker} => {ko_name}")
+
+        self._llm_ko_cache[cache_key] = ko_name
+        return ko_name
+
+    def _translate_name_with_llm(self, ticker: str, english_name: str, llm_client) -> Optional[str]:
+        source_name = str(english_name or "").strip() or ticker
+        if self._contains_hangul(source_name):
+            return source_name
+
+        system_prompt = (
+            "너는 미국 주식/ETF 종목명을 한국어 표시명으로 번역하는 도우미다. "
+            "응답은 반드시 JSON 한 줄만 출력한다."
+        )
+        prompt = (
+            "아래 종목명을 한국 투자자에게 익숙한 한글 회사명으로 번역해줘.\n"
+            f"- ticker: {ticker}\n"
+            f"- english_name: {source_name}\n\n"
+            "출력 형식(반드시 지킬 것):\n"
+            '{"korean_name":"한글명"}\n\n'
+            "규칙:\n"
+            "1) 불필요한 설명/주석/마크다운 금지\n"
+            "2) 회사명만 출력\n"
+            "3) 한글이 불가능하면 빈 문자열 출력"
+        )
+        raw = llm_client.generate_text(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=0.0,
+            max_tokens=120,
+            top_p=0.1,
+        )
+        return self._parse_korean_name_from_llm_output(raw)
+
+    def translate_unresolved_with_llm(
+        self,
+        limit: Optional[int] = None,
+        provider: str = "gemini",
+        model_name: Optional[str] = None,
+        dry_run: bool = False,
+        commit_every: int = 20,
+    ) -> Dict[str, int]:
+        """
+        company_names에서 한글 미포함 행만 대상으로 LLM 번역을 수행합니다.
+        """
+        targets = self.fetch_untranslated_company_names(limit=limit)
+        total = len(targets)
+        if total == 0:
+            print("[CompanyName][LLM] 번역 대상이 없습니다.")
+            return {"total": 0, "translated": 0, "failed": 0}
+
+        llm_client = self._build_llm_client(provider=provider, model_name=model_name)
+        health_ok = llm_client.get_health()
+        if not health_ok:
+            error = getattr(llm_client, "last_error", None)
+            print(f"[CompanyName][LLM][Warn] 헬스체크 실패: {error}")
+
+        conn = None
+        cursor = None
+        translated = 0
+        failed = 0
+        try:
+            if not dry_run:
+                conn = get_db_conn(self.db_name)
+                cursor = conn.cursor()
+
+            for idx, (ticker, english_name) in enumerate(targets, start=1):
+                source_name = english_name or ticker
+                korean_name = self._translate_name_with_llm(
+                    ticker=ticker,
+                    english_name=source_name,
+                    llm_client=llm_client,
+                )
+                if not korean_name:
+                    failed += 1
+                    print(f"[CompanyName][LLM][Fail] {idx}/{total} {ticker} | {source_name}")
+                    llm_error = str(getattr(llm_client, "last_error", "") or "")
+                    if self._is_llm_quota_or_rate_error(llm_error):
+                        print("[CompanyName][LLM][Warn] 쿼터/레이트 제한으로 배치를 조기 종료합니다.")
+                        break
+                    continue
+
+                if dry_run:
+                    print(f"[CompanyName][LLM][DryRun] {ticker}\t{source_name}\t=>\t{korean_name}")
+                    translated += 1
+                    continue
+
+                self._upsert_company_name(ticker=ticker, company_name=korean_name, cursor=cursor)
+                translated += 1
+                print(f"[CompanyName][LLM][OK] {idx}/{total} {ticker} => {korean_name}")
+
+                if commit_every > 0 and translated % commit_every == 0:
+                    conn.commit()
+
+            if conn:
+                conn.commit()
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"[CompanyName][LLM][Error] 배치 실패: {e}")
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+        print(
+            f"[CompanyName][LLM] 완료: total={total}, translated={translated}, failed={failed}, dry_run={dry_run}"
+        )
+        return {"total": total, "translated": translated, "failed": failed}
 
     def _upsert_company_name(self, ticker: str, company_name: str, cursor) -> None:
         # UNIQUE 제약 충돌이 발생해도 트랜잭션이 죽지 않도록 우선 DO NOTHING

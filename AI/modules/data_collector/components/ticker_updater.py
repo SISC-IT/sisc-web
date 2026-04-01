@@ -271,7 +271,6 @@ def main() -> None:
     parser.add_argument("--file", type=str, default="AI/weekly_tickers.json", help="file 소스 경로")
     parser.add_argument("--db", default="db", help="DB 이름")
     parser.add_argument("--min-count", type=int, default=None, help="설정 시 DB 티커 수 기준으로 조건 실행")
-    parser.add_argument("--skip-korean", action="store_true", help="company_names 한글명 동기화 생략")
 
     args = parser.parse_args()
 
@@ -280,7 +279,7 @@ def main() -> None:
         updater.ensure_minimum_tickers(min_count=args.min_count, source=args.source, file_path=args.file)
         return
 
-    count = updater.run(source=args.source, file_path=args.file, sync_korean_names=not args.skip_korean)
+    count = updater.run(source=args.source, file_path=args.file, sync_korean_names=True)
     print(f"[TickerUpdater] 완료: 총 {count}개 티커 수집/저장 시도")
 
 
