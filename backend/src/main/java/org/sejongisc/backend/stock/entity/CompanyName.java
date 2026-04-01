@@ -16,10 +16,9 @@ import lombok.NoArgsConstructor;
 public class CompanyName {
 
   @Id
+  @Column(name = "ticker", nullable = false, length = 255)
+  private String ticker;
+
   @Column(name = "company_name", nullable = false, length = 100)
   private String companyName;
-
-  @Column(name = "ticker", nullable = false, unique = true, length = 255)
-  private String ticker;
 }
-

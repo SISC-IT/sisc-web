@@ -39,6 +39,7 @@ public class QuantBotService {
         .map(log -> new TradeLogDto(
             log.id(),
             log.xaiReportId(),
+            log.ticker(),
             toDisplayTicker(log.ticker(), tickerNameMap),
             log.fillDate(),
             log.fillPrice(),
@@ -73,6 +74,7 @@ public class QuantBotService {
         .orElse(xaiReport.getTicker());
 
     return new XaiReportResponse(
+        xaiReport.getTicker(),
         displayTicker,
         xaiReport.getSignal(),
         xaiReport.getPrice(),
@@ -95,6 +97,7 @@ public class QuantBotService {
 
     return rows.stream()
             .map(p -> new PositionDto(
+                    p.getTicker(),
                     toDisplayTicker(p.getTicker(), tickerNameMap),
                     p.getPositionQty(),
                     p.getAvgPrice(),

@@ -96,7 +96,7 @@ function HoldingsList({ positions, loading, error }) {
       {safeList.map((p) => (
         <div className="holding-item" key={p.ticker}>
           <div>
-            <div className="holding-symbol">{p.ticker}</div>
+            <div className="holding-symbol">{p.displayTicker || p.ticker}</div>
             <div className="holding-shares">{p.positionQty}주</div>
           </div>
           <div className="holding-right">
@@ -568,7 +568,7 @@ export default function QuantTradingDashboard() {
           {positions.map((p) => (
             <div className="holding-item" key={p.ticker}>
               <div>
-                <div className="holding-symbol">{p.ticker}</div>
+                <div className="holding-symbol">{p.displayTicker || p.ticker}</div>
                 <div className="holding-shares">{p.positionQty}주</div>
               </div>
               <div className="holding-right">

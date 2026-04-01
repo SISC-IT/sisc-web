@@ -168,15 +168,19 @@ class TickerUpdater:
         return deduped
 
     def count_tickers_in_db(self) -> int:
-        conn = get_db_conn(self.db_name)
-        cursor = conn.cursor()
+        conn = None
+        cursor = None
         try:
+            conn = get_db_conn(self.db_name)
+            cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM public.stock_info;")
             row = cursor.fetchone()
             return int(row[0] if row else 0)
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     def save_to_db(self, ticker_list: List[Dict], sync_korean_names: bool = True) -> None:
         if not ticker_list:

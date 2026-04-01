@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 public record XaiReportResponse(
     String ticker,
+    String displayTicker,
     String signal,
     BigDecimal price,
     LocalDate date,
@@ -14,6 +15,7 @@ public record XaiReportResponse(
 ) {
     public static XaiReportResponse from(XaiReport r) {
         return new XaiReportResponse(
+                r.getTicker(),
                 r.getTicker(),
                 r.getSignal(),
                 r.getPrice(),

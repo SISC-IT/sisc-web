@@ -10,6 +10,7 @@ import java.math.RoundingMode;
 @AllArgsConstructor
 public class PositionDto {
     String ticker;
+    String displayTicker;
     //수량
     Integer positionQty;
     //매입평균가

@@ -130,6 +130,8 @@ def main():
         args.skip_breadth = False
         print(">> [Mode] Market Breadth Only 모드로 실행합니다.")
 
+    need_stock_tickers = not (args.skip_price and args.skip_info and args.skip_fund and args.skip_event)
+
     # -------------------------------------------------------
     # [Step 0] DB 연결 / ticker_updater 분기
     # -------------------------------------------------------
@@ -137,7 +139,10 @@ def main():
         print("[CrawlerBot] DB 연결 실패로 크롤러 봇을 종료합니다.")
         sys.exit(1)
 
-    bootstrap_tickers_if_needed(db_name=args.db, threshold=100)
+    if need_stock_tickers:
+        bootstrap_tickers_if_needed(db_name=args.db, threshold=100)
+    else:
+        print(">> [Init] 주식 티커가 필요 없는 모드로 ticker_updater를 생략합니다.")
 
     print(f"\n========================================================")
     print(f" [SISC Data Collector] 통합 수집 시작 ({datetime.now()})")
@@ -145,8 +150,6 @@ def main():
 
     start_time = time.time()
 
-    need_stock_tickers = not (args.skip_price and args.skip_info and args.skip_fund and args.skip_event)
-    
     stock_tickers = []
     if need_stock_tickers:
         if args.tickers:
