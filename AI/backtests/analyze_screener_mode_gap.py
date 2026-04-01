@@ -46,8 +46,26 @@ from AI.libs.database.connection import get_db_conn
 import AI.backtests.run_backtest as run_backtest_module
 
 
-def _business_dates(start_day: str, end_day: str) -> list[str]:
-    return [d.strftime("%Y-%m-%d") for d in pd.date_range(start=start_day, end=end_day, freq="B")]
+def _trading_dates(start_day: str, end_day: str, db_name: str) -> list[str]:
+    conn = get_db_conn(db_name)
+    if conn is None:
+        raise RuntimeError(f"DB connection failed for '{db_name}'.")
+
+    try:
+        query = """
+            SELECT DISTINCT date
+            FROM public.price_data
+            WHERE date >= %s::date
+              AND date <= %s::date
+            ORDER BY date ASC
+        """
+        frame = pd.read_sql(query, conn, params=(start_day, end_day))
+    finally:
+        conn.close()
+
+    if frame.empty:
+        raise ValueError(f"No trading dates found in DB between {start_day} and {end_day}.")
+    return pd.to_datetime(frame["date"], errors="coerce").dt.strftime("%Y-%m-%d").dropna().tolist()
 
 
 def _run_shell(cmd: list[str]) -> str | None:
@@ -147,7 +165,7 @@ def _run_backtest_mode(
     if "day_plan" not in captured:
         raise RuntimeError(f"Failed to capture day_plan for mode={mode}.")
 
-    dates = _business_dates(start_day, end_day)
+    dates = _trading_dates(start_day, end_day, trading_config.pipeline.db_name)
     day_plan = captured["day_plan"]
     for date_str in dates:
         day_plan.setdefault(date_str, [])
@@ -176,7 +194,7 @@ def _repo_to_frames(
             }
         )
 
-    summary_df = pd.DataFrame(summary_rows).sort_values("date").reset_index(drop=True)
+    summary_df = pd.DataFrame(summary_rows)
     if summary_df.empty:
         summary_df = pd.DataFrame(
             columns=[
@@ -197,6 +215,7 @@ def _repo_to_frames(
         )
         equity_df = pd.DataFrame(columns=["mode", "date", "run_id", "equity", "daily_return", "drawdown"])
     else:
+        summary_df = summary_df.sort_values("date").reset_index(drop=True)
         summary_df["daily_return"] = summary_df["total_asset"].pct_change().fillna(0.0)
         running_max = summary_df["total_asset"].cummax()
         summary_df["drawdown"] = summary_df["total_asset"] / running_max - 1.0
@@ -921,12 +940,14 @@ def main() -> None:
 
     print("\n== Screener Mode Pair Analysis Finished ==")
     print(f"- Output directory: {output_root}")
-    print(f"- once final return: {mode_to_artifacts['once']['metrics']['final_return']}")
-    print(f"- daily final return: {mode_to_artifacts['daily']['metrics']['final_return']}")
-    print(
-        "- final return gap (daily-once): "
-        f"{mode_to_artifacts['daily']['metrics']['final_return'] - mode_to_artifacts['once']['metrics']['final_return']}"
-    )
+    once_final_return = mode_to_artifacts["once"]["metrics"]["final_return"]
+    daily_final_return = mode_to_artifacts["daily"]["metrics"]["final_return"]
+    print(f"- once final return: {once_final_return}")
+    print(f"- daily final return: {daily_final_return}")
+    if once_final_return is not None and daily_final_return is not None:
+        print(f"- final return gap (daily-once): {daily_final_return - once_final_return}")
+    else:
+        print("- final return gap (daily-once): NA")
 
 
 if __name__ == "__main__":

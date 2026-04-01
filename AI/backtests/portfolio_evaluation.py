@@ -31,13 +31,26 @@ class EvaluationResult:
     monthly_returns: pd.DataFrame
 
 
-def _to_numeric(series: pd.Series, default: float = 0.0) -> pd.Series:
-    return pd.to_numeric(series, errors="coerce").fillna(default)
+def _to_numeric(series: pd.Series, default: float | None = 0.0) -> pd.Series:
+    numeric = pd.to_numeric(series, errors="coerce")
+    if default is None:
+        return numeric
+    return numeric.fillna(default)
+
+
+def _to_numeric_strict(series: pd.Series, field_name: str) -> pd.Series:
+    numeric = pd.to_numeric(series, errors="coerce")
+    invalid_count = int(numeric.isna().sum())
+    if invalid_count > 0:
+        raise ValueError(f"{field_name} contains {invalid_count} non-numeric or missing values.")
+    return numeric.astype("float64")
 
 
 def _ensure_side_upper(executions_df: pd.DataFrame) -> pd.Series:
-    if executions_df.empty or "side" not in executions_df.columns:
+    if executions_df.empty:
         return pd.Series([], dtype="string")
+    if "side" not in executions_df.columns:
+        return pd.Series([""] * len(executions_df), index=executions_df.index, dtype="string")
     return executions_df["side"].astype(str).str.upper()
 
 
@@ -66,16 +79,16 @@ def prepare_summary_frame(summary_df: pd.DataFrame, initial_capital: float) -> p
     else:
         frame = frame.reset_index(drop=True)
 
-    frame["total_asset"] = _to_numeric(frame["total_asset"])
+    frame["total_asset"] = _to_numeric_strict(frame["total_asset"], "summary_df.total_asset")
     frame["daily_return"] = (
-        _to_numeric(frame["daily_return"])
+        _to_numeric_strict(frame["daily_return"], "summary_df.daily_return")
         if "daily_return" in frame.columns
         else frame["total_asset"].pct_change().fillna(0.0)
     )
 
     running_max = frame["total_asset"].cummax()
     frame["drawdown"] = (
-        _to_numeric(frame["drawdown"])
+        _to_numeric_strict(frame["drawdown"], "summary_df.drawdown")
         if "drawdown" in frame.columns
         else frame["total_asset"] / running_max - 1.0
     )
@@ -267,7 +280,7 @@ def evaluate_portfolio(
     pnl_realized_series = (
         _to_numeric(executions["pnl_realized"]) if "pnl_realized" in executions.columns else pd.Series([], dtype="float64")
     )
-    if not pnl_realized_series.empty and not executions.empty:
+    if not pnl_realized_series.empty and not executions.empty and len(side) == len(pnl_realized_series):
         realized_on_sells = pnl_realized_series[side == "SELL"]
         realized_on_sells = realized_on_sells.dropna()
     else:
