@@ -46,10 +46,10 @@ function SummaryCards({ overview, loading, error }) {
 
     cumulativeReturnText = `${rate.toFixed(2)}%`;
     periodText = `${startDate} ~ ${endDate}`;
-    totalAssetText = `₩ ${Math.round(lastTotalAsset).toLocaleString()}원`;
-    initialCapitalText = `초기자본 ${Math.round(
+    totalAssetText = `$${Math.round(lastTotalAsset).toLocaleString()}`;
+    initialCapitalText = `초기자본 $${Math.round(
       initialCapital
-    ).toLocaleString()}원`;
+    ).toLocaleString()}`;
   }
 
   return (
@@ -101,10 +101,10 @@ function HoldingsList({ positions, loading, error }) {
           </div>
           <div className="holding-right">
             <div className="holding-amount">
-              {formatHoldingAmount(p.marketPrice)}원
+              {formatHoldingAmount(p.marketPrice)}
             </div>
             <div className={getHoldingPnlClassName(p.pnlRate)}>
-              {formatSignedHoldingAmount(p.pnl)}원 ({formatPnlRatePercent(p.pnlRate)})
+              {formatSignedHoldingAmount(p.pnl)} ({formatPnlRatePercent(p.pnlRate)})
             </div>
           </div>
         </div>
@@ -124,17 +124,22 @@ function roundToInteger(value) {
 }
 
 function formatHoldingAmount(value) {
-  return roundToInteger(value).toLocaleString();
+  return `$${roundToInteger(value).toLocaleString()}`;
 }
 
 function formatSignedHoldingAmount(value) {
   const rounded = roundToInteger(value);
+  const absText = Math.abs(rounded).toLocaleString();
 
   if (rounded > 0) {
-    return `+${rounded.toLocaleString()}`;
+    return `+$${absText}`;
   }
 
-  return rounded.toLocaleString();
+  if (rounded < 0) {
+    return `-$${absText}`;
+  }
+
+  return `$${absText}`;
 }
 
 function formatPnlRatePercent(value) {
@@ -284,9 +289,8 @@ function StrategyEquityChart({
                       <div>
                         총자산:{' '}
                         {Number.isFinite(value)
-                          ? Math.round(value).toLocaleString()
+                          ? `$${Math.round(value).toLocaleString()}`
                           : value}
-                        원
                       </div>
                       <div
                         style={{
@@ -569,10 +573,10 @@ export default function QuantTradingDashboard() {
               </div>
               <div className="holding-right">
                 <div className="holding-amount">
-                  {formatHoldingAmount(p.marketPrice)}원
+                  {formatHoldingAmount(p.marketPrice)}
                 </div>
                 <div className={getHoldingPnlClassName(p.pnlRate)}>
-                  {formatSignedHoldingAmount(p.pnl)}원 ({formatPnlRatePercent(p.pnlRate)})
+                  {formatSignedHoldingAmount(p.pnl)} ({formatPnlRatePercent(p.pnlRate)})
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-# AI/modules/data_collector/run.py
+# AI/modules/data_collector/crawler_bot.py
 import sys
 import os
 import argparse
@@ -17,6 +17,7 @@ if project_root not in sys.path:
 # -----------------------------------------------------------
 # [모듈 임포트] 
 # -----------------------------------------------------------
+from AI.libs.database.connection import get_db_conn
 from AI.libs.database.ticker_loader import load_all_tickers_from_db
 from AI.modules.data_collector.components.market_data import MarketDataCollector
 from AI.modules.data_collector.components.stock_info_collector import StockInfoCollector
@@ -26,6 +27,7 @@ from AI.modules.data_collector.components.crypto_data import CryptoDataCollector
 from AI.modules.data_collector.components.event_data import EventDataCollector
 from AI.modules.data_collector.components.market_breadth_data import MarketBreadthCollector
 from AI.modules.data_collector.components.market_breadth_stats import MarketBreadthStatsCollector
+from AI.modules.data_collector.components.ticker_updater import TickerUpdater
 
 def get_stock_tickers(db_name="db"):
     """
@@ -44,6 +46,46 @@ def get_stock_tickers(db_name="db"):
     except Exception as e:
         print(f"[Error] 티커 목록 조회 실패: {e}")
         return ["AAPL", "TSLA"]
+
+
+def check_db_connection(db_name="db") -> bool:
+    conn = None
+    try:
+        conn = get_db_conn(db_name)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1;")
+        cursor.fetchone()
+        cursor.close()
+        print(">> [Init] DB 연결 확인 성공")
+        return True
+    except Exception as e:
+        print(f"[Fatal] DB 연결 실패: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def bootstrap_tickers_if_needed(db_name="db", threshold=100):
+    """
+    1) crawler 시작 시 ticker_updater를 실행
+    2) stock_info 티커 수가 threshold 이하일 때만 수집 시도
+    """
+    updater = TickerUpdater(db_name=db_name)
+
+    try:
+        current_count = updater.count_tickers_in_db()
+    except Exception as e:
+        print(f"[Error] DB 티커 수 확인 실패: {e}")
+        return
+
+    print(f">> [Init] DB(stock_info) 티커 수: {current_count}개")
+    if current_count > threshold:
+        print(f">> [Init] 티커 수 {threshold}개 초과로 ticker_updater 생략")
+        return
+
+    print(f">> [Init] 티커 수 {threshold}개 이하로 ticker_updater 실행")
+    updater.ensure_minimum_tickers(min_count=threshold, source="all")
 
 def main():
     parser = argparse.ArgumentParser(description="[SISC AI] 통합 데이터 수집 파이프라인")
@@ -87,6 +129,15 @@ def main():
         args.skip_crypto = args.skip_event = args.skip_stats = True
         args.skip_breadth = False
         print(">> [Mode] Market Breadth Only 모드로 실행합니다.")
+
+    # -------------------------------------------------------
+    # [Step 0] DB 연결 / ticker_updater 분기
+    # -------------------------------------------------------
+    if not check_db_connection(args.db):
+        print("[CrawlerBot] DB 연결 실패로 크롤러 봇을 종료합니다.")
+        sys.exit(1)
+
+    bootstrap_tickers_if_needed(db_name=args.db, threshold=100)
 
     print(f"\n========================================================")
     print(f" [SISC Data Collector] 통합 수집 시작 ({datetime.now()})")

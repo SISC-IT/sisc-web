@@ -17,7 +17,7 @@ export default function TradeCard({ trade, onReportClick }) {
 
       <div className="trade-row">
         <span className="trade-label">가격</span>
-        <span className="trade-value">{trade.fillPrice}$</span>
+        <span className="trade-value">${trade.fillPrice}</span>
       </div>
 
       <div className="trade-row">
