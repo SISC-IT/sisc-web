@@ -11,7 +11,7 @@ CREATE TABLESPACE ts_ai_hdd LOCATION '/var/lib/postgresql/ai_data';
 --    - 종목의 기본 정보 및 메타데이터 관리
 ----------------------------------------------------------------------
 CREATE TABLE "company_names" (
-    "company_name" varchar(100) PRIMARY KEY, -- 기업 한글/영문 정식 명칭
+    "company_name" varchar(100) PRIMARY KEY, -- 기업 한글 정식 명칭
     "ticker" varchar(255) NOT NULL UNIQUE    -- 종목 티커
 ) TABLESPACE ts_ai_hdd;
 
