@@ -26,6 +26,8 @@ class CompanyNameKoreanUpdater:
     """
 
     WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
+    WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php"
+    WIKIDATA_ENTITY_DATA_BASE_URL = "https://www.wikidata.org/wiki/Special:EntityData"
     USER_AGENT = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
@@ -352,6 +354,7 @@ class CompanyNameKoreanUpdater:
         self.timeout_sec = timeout_sec
         # 같은 영문명으로 위키 API를 반복 호출하지 않기 위한 캐시
         self._ko_name_cache: Dict[str, Optional[str]] = {}
+        self._wikidata_ko_cache: Dict[str, Optional[str]] = {}
 
     @staticmethod
     def _normalize_ticker(ticker: str) -> str:
@@ -413,6 +416,75 @@ class CompanyNameKoreanUpdater:
         self._ko_name_cache[normalized_name] = ko_name
         return ko_name
 
+    def _fetch_wikidata_ko_label(self, qid: str) -> Optional[str]:
+        if not qid:
+            return None
+
+        headers = {"User-Agent": self.USER_AGENT}
+        try:
+            response = requests.get(
+                f"{self.WIKIDATA_ENTITY_DATA_BASE_URL}/{qid}.json",
+                headers=headers,
+                timeout=self.timeout_sec,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            entity = ((payload or {}).get("entities") or {}).get(qid) or {}
+            labels = entity.get("labels") or {}
+            ko_label = (labels.get("ko") or {}).get("value")
+            if ko_label:
+                return str(ko_label).strip()
+        except Exception:
+            return None
+        return None
+
+    def _lookup_ko_name_in_wikidata(self, english_name: str) -> Optional[str]:
+        """
+        Wikidata에서 영문 회사명을 검색해 한국어 라벨(ko)을 찾습니다.
+        """
+        normalized_name = str(english_name or "").strip()
+        if not normalized_name:
+            return None
+
+        if normalized_name in self._wikidata_ko_cache:
+            return self._wikidata_ko_cache[normalized_name]
+
+        params = {
+            "action": "wbsearchentities",
+            "search": normalized_name,
+            "language": "en",
+            "type": "item",
+            "limit": "5",
+            "format": "json",
+        }
+        headers = {"User-Agent": self.USER_AGENT}
+
+        ko_name: Optional[str] = None
+        try:
+            response = requests.get(
+                self.WIKIDATA_API_URL,
+                params=params,
+                headers=headers,
+                timeout=self.timeout_sec,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            items = (payload or {}).get("search") or []
+            for item in items:
+                qid = str(item.get("id") or "").strip()
+                if not qid:
+                    continue
+
+                ko_label = self._fetch_wikidata_ko_label(qid)
+                if ko_label:
+                    ko_name = ko_label
+                    break
+        except Exception:
+            ko_name = None
+
+        self._wikidata_ko_cache[normalized_name] = ko_name
+        return ko_name
+
     def _resolve_korean_name(self, ticker: str, english_name: str) -> str:
         """
         최종 저장할 회사명을 결정합니다.
@@ -435,6 +507,10 @@ class CompanyNameKoreanUpdater:
         wiki_name = self._lookup_ko_name_in_wikipedia(normalized_name)
         if wiki_name:
             return wiki_name
+
+        wikidata_name = self._lookup_ko_name_in_wikidata(normalized_name)
+        if wikidata_name:
+            return wikidata_name
 
         return normalized_name
 
