@@ -9,6 +9,7 @@ import profileIcon from '../../assets/profile-icon.svg';
 import binIcon from '../../assets/bin-icon.svg';
 import slashProfileIcon from '../../assets/slash-profile-icon.svg';
 import ConfirmationToast from './ConfirmationToast';
+import AbsenceSummaryModal from './AbsenceSummaryModal';
 
 // 상태별 텍스트 및 스타일 통합 관리
 const ATTENDANCE_CONFIG = {
@@ -151,20 +152,60 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
   const [activeToastId, setActiveToastId] = useState(null);
   const [openDropdownKey, setOpenDropdownKey] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAbsenceModalOpen, setIsAbsenceModalOpen] = useState(false);
   const cardRef = useRef(null);
   const fetchRequestIdRef = useRef(0);
 
   const sortedUserRows = useMemo(() => {
-    return attendanceData.userRows
-      .map((user, index) => ({ user, index }))
-      .sort((a, b) => {
-        const priorityDiff =
-          getRoleSortPriority(a.user.role) - getRoleSortPriority(b.user.role);
-        if (priorityDiff !== 0) return priorityDiff;
-        return a.index - b.index;
-      })
-      .map((item) => item.user);
-  }, [attendanceData.userRows]);
+    if (!attendanceData.rounds.length) {
+      return attendanceData.userRows
+        .map((user, index) => ({ user, index }))
+        .sort((a, b) => {
+          const priorityDiff =
+            getRoleSortPriority(a.user.role) - getRoleSortPriority(b.user.role);
+          if (priorityDiff !== 0) return priorityDiff;
+          return a.index - b.index;
+        })
+        .map((item) => item.user);
+    }
+
+    // 로컬 시간대 기준으로 오늘 날짜(YYYY-MM-DD)와 정렬된 회차 목록 생성
+    const sortedRounds = [...attendanceData.rounds].sort(
+      (a, b) =>
+        a.roundDate.localeCompare(b.roundDate) || a.roundNumber - b.roundNumber
+    );
+    const todayStr = new Date().toLocaleDateString('sv-SE');
+
+    const targetRound =
+      sortedRounds.find((r) => r.roundDate === todayStr) ||
+      sortedRounds[sortedRounds.length - 1];
+
+    const targetRoundId = targetRound?.roundId;
+
+    return [...attendanceData.userRows].sort((a, b) => {
+      const aAtt = a.attendances.find((att) => att.roundId === targetRoundId);
+      const bAtt = b.attendances.find((att) => att.roundId === targetRoundId);
+
+      const aStatus = aAtt?.status || 'PENDING';
+      const bStatus = bAtt?.status || 'PENDING';
+
+      const getStatusPriority = (status) => {
+        if (status === 'ABSENT') return 0;
+        if (status === 'LATE') return 1;
+        return 2;
+      };
+
+      const statusDiff = getStatusPriority(aStatus) - getStatusPriority(bStatus);
+      if (statusDiff !== 0) return statusDiff;
+
+      // Secondary sort by role
+      const priorityDiff =
+        getRoleSortPriority(a.role) - getRoleSortPriority(b.role);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      return a.userName.localeCompare(b.userName, 'ko');
+    });
+  }, [attendanceData.userRows, attendanceData.rounds]);
 
   const totalUsers = sortedUserRows.length;
   const totalPages = Math.max(1, Math.ceil(totalUsers / USERS_PER_PAGE));
@@ -446,6 +487,12 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
               <img src={binIcon} alt="유저 삭제" />
             </button>
           </div>
+          <button
+            className={styles.absenceSummaryButton}
+            onClick={() => setIsAbsenceModalOpen(true)}
+          >
+            결석 인원 모아보기
+          </button>
         </div>
       </header>
 
@@ -475,64 +522,66 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
           </thead>
           <tbody>
             {paginatedUserRows.length > 0 ? (
-              paginatedUserRows.map((user) => (
-                <tr
-                  key={user.userId}
-                  className={
-                    selectedUserIds.has(user.userId) ? styles.selectedRow : ''
-                  }
-                >
-                  <td className={styles.checkboxCell}>
-                    <input
-                      type="checkbox"
-                      checked={selectedUserIds.has(user.userId)}
-                      onChange={() => toggleUserSelection(user.userId)}
-                    />
-                  </td>
-                  <td>{user.userName}</td>
-                  <td>{getRoleDisplayLabel(user.role)}</td>
-                  <td>{user.studentId}</td>
-                  {user.attendances.map((att) => {
-                    const statusClass =
-                      styles[
-                        ATTENDANCE_CONFIG[att.status]?.className ||
-                          ATTENDANCE_CONFIG.PENDING.className
-                      ];
-                    const dropdownKey = `${user.userId}-${att.roundId}`;
-                    const isOpen = openDropdownKey === dropdownKey;
+              paginatedUserRows.map((user) => {
+                return (
+                  <tr
+                    key={user.userId}
+                    className={
+                      selectedUserIds.has(user.userId) ? styles.selectedRow : ''
+                    }
+                  >
+                    <td className={styles.checkboxCell}>
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.has(user.userId)}
+                        onChange={() => toggleUserSelection(user.userId)}
+                      />
+                    </td>
+                    <td>{user.userName}</td>
+                    <td>{getRoleDisplayLabel(user.role)}</td>
+                    <td>{user.studentId}</td>
+                    {user.attendances.map((att) => {
+                      const statusClass =
+                        styles[
+                          ATTENDANCE_CONFIG[att.status]?.className ||
+                            ATTENDANCE_CONFIG.PENDING.className
+                        ];
+                      const dropdownKey = `${user.userId}-${att.roundId}`;
+                      const isOpen = openDropdownKey === dropdownKey;
 
-                    return (
-                      <td
-                        key={att.roundId}
-                        className={`${styles.statusCell} ${
-                          isOpen ? styles.openStatusCell : ''
-                        }`}
-                      >
-                        <AttendanceStatusDropdown
-                          value={att.status}
-                          statusClass={statusClass}
-                          isOpen={isOpen}
-                          onToggle={() =>
-                            setOpenDropdownKey((prev) =>
-                              prev === dropdownKey ? null : dropdownKey
-                            )
-                          }
-                          onSelect={(nextStatus) => {
-                            setOpenDropdownKey(null);
-                            if (nextStatus !== att.status) {
-                              handleAttendanceChange(
-                                user.userId,
-                                att.roundId,
-                                nextStatus
-                              );
+                      return (
+                        <td
+                          key={att.roundId}
+                          className={`${styles.statusCell} ${
+                            isOpen ? styles.openStatusCell : ''
+                          }`}
+                        >
+                          <AttendanceStatusDropdown
+                            value={att.status}
+                            statusClass={statusClass}
+                            isOpen={isOpen}
+                            onToggle={() =>
+                              setOpenDropdownKey((prev) =>
+                                prev === dropdownKey ? null : dropdownKey
+                              )
                             }
-                          }}
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
+                            onSelect={(nextStatus) => {
+                              setOpenDropdownKey(null);
+                              if (nextStatus !== att.status) {
+                                handleAttendanceChange(
+                                  user.userId,
+                                  att.roundId,
+                                  nextStatus
+                                );
+                              }
+                            }}
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td
@@ -565,6 +614,13 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
             );
           })}
         </div>
+      )}
+      {isAbsenceModalOpen && (
+        <AbsenceSummaryModal
+          isOpen={isAbsenceModalOpen}
+          onClose={() => setIsAbsenceModalOpen(false)}
+          userRows={attendanceData.userRows}
+        />
       )}
     </div>
   );
