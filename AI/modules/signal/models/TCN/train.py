@@ -19,7 +19,8 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.core.dataset_builder import get_standard_training_data
-from AI.modules.signal.core.data_loader import DataLoader
+from AI.config import load_trading_config
+from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 from AI.modules.signal.models.TCN.architecture import TCNClassifier
 
 
@@ -84,6 +85,8 @@ def build_sequences(
 
 
 def train_model(args: argparse.Namespace):
+    output_dir = os.path.abspath(args.output_dir)
+
     # 1. DB에서 원시 데이터 로드 및 파이프라인 표준 전처리 적용 (단일 데이터프레임 반환)
     # [주의] get_standard_training_data가 원본 DB 로드 기능까지 수행하므로 DataLoader 별도 호출 불필요
     raw_df = get_standard_training_data(args.start_date, args.end_date)
@@ -176,10 +179,10 @@ def train_model(args: argparse.Namespace):
         best_state = model.state_dict()
 
     # 6. 아티팩트(가중치, 스케일러, 메타데이터) 파일 시스템 저장
-    os.makedirs(args.output_dir, exist_ok=True)
-    model_path = os.path.join(args.output_dir, "model.pt")
-    scaler_path = os.path.join(args.output_dir, "scaler.pkl")
-    metadata_path = os.path.join(args.output_dir, "metadata.json")
+    os.makedirs(output_dir, exist_ok=True)
+    model_path = os.path.join(output_dir, "model.pt")
+    scaler_path = os.path.join(output_dir, "scaler.pkl")
+    metadata_path = os.path.join(output_dir, "metadata.json")
 
     torch.save(best_state, model_path)
     with open(scaler_path, "wb") as f:
@@ -205,6 +208,11 @@ def train_model(args: argparse.Namespace):
 
 
 def parse_args() -> argparse.Namespace:
+    default_output_dir = resolve_model_artifacts(
+        model_name="tcn",
+        config_weights_dir=load_trading_config().model.weights_dir,
+    ).model_dir
+
     parser = argparse.ArgumentParser(description="Train TCN signal model.")
     parser.add_argument("--start-date", default="2018-01-01")
     parser.add_argument("--end-date", default="2024-01-01")
@@ -216,7 +224,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--kernel-size", type=int, default=3)
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--channels", type=int, nargs="+", default=[32, 64, 64])
-    parser.add_argument("--output-dir", default=os.path.join(project_root, "AI", "data", "weights", "tcn"))
+    parser.add_argument("--output-dir", default=default_output_dir)
     return parser.parse_args()
 
 

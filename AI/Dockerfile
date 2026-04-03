@@ -2,9 +2,11 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# 1. 라이브러리 설치
-COPY requirements.txt /app/AI/requirements.txt
-RUN pip install --no-cache-dir -r AI/requirements.txt
+# 1. 운영용 requirements 설치
+# requirements.prod.txt 안에 TensorFlow + CPU 전용 PyTorch가 함께 들어 있습니다.
+COPY requirements*.txt /app/AI/
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir -r AI/requirements.prod.txt
 
 # 2. 소스 코드 복사
 COPY . /app/AI

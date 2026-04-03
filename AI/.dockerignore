@@ -10,3 +10,4 @@ backend
 **/.venv
 node_modules
 AI/tests
+AI/backtests

@@ -25,14 +25,11 @@ const AdminRoute = () => {
         setIsAuthorized(isAdminRole(role));
       } catch (error) {
         setIsAuthorized(false);
-        const isUnauthorized =
-          error?.status === 401 || error?.response?.status === 401;
-
         const returnUrl = encodeURIComponent(
           location.pathname + location.search
         );
         setRedirectPath(
-          isUnauthorized ? `/login?returnUrl=${returnUrl}` : '/'
+          error?.status === 401 ? `/login?returnUrl=${returnUrl}` : '/'
         );
       } finally {
         setLoading(false);

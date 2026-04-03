@@ -11,6 +11,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = Path(__file__).resolve().parent
 CONFIG_ENV_VAR = "AI_TRADING_CONFIG_PATH"
+MODEL_WEIGHTS_DIR_ENV_VAR = "AI_MODEL_WEIGHTS_DIR"
 DEFAULT_CONFIG_PATH = CONFIG_DIR / "trading.default.json"
 DEFAULT_LOCAL_CONFIG_PATH = CONFIG_DIR / "trading.local.json"
 
@@ -39,6 +40,18 @@ class ScreenerConfig:
     lookback_days: int
     min_market_cap: float
     watchlist_path: str
+    min_avg_dollar_vol: float
+    min_avg_volume: float
+    min_price: float
+    max_price: float | None
+    include_tickers: tuple[str, ...]
+    exclude_tickers: tuple[str, ...]
+    include_sectors: tuple[str, ...]
+    exclude_sectors: tuple[str, ...]
+    dollar_vol_weight: float
+    volume_weight: float
+    market_cap_weight: float
+    sticky_slots: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +113,28 @@ def _resolve_path(raw_path: str) -> str:
     return str((PROJECT_ROOT / path).resolve())
 
 
+def _as_clean_tuple(values: Any, *, upper: bool = False) -> tuple[str, ...]:
+    if values is None:
+        return tuple()
+    if not isinstance(values, list):
+        values = [values]
+
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in values:
+        text = str(item).strip()
+        if not text:
+            continue
+        if upper:
+            text = text.upper()
+        key = text.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return tuple(result)
+
+
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     merged = dict(base)
     for key, value in override.items():
@@ -116,8 +151,14 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _build_config(raw: dict[str, Any]) -> TradingConfig:
+    env_model_weights_dir = os.getenv(MODEL_WEIGHTS_DIR_ENV_VAR)
+    if env_model_weights_dir and env_model_weights_dir.strip():
+        model_weights_dir = env_model_weights_dir.strip()
+    else:
+        model_weights_dir = raw["model"]["weights_dir"]
     risk_overlay = RiskOverlayConfig(**raw["portfolio"]["risk_overlay"])
     macro_fallback = MacroFallbackConfig(**raw["pipeline"]["macro_fallback"])
+    screener_raw = raw["screener"]
     config = TradingConfig(
         pipeline=PipelineConfig(
             db_name=raw["pipeline"]["db_name"],
@@ -129,10 +170,26 @@ def _build_config(raw: dict[str, Any]) -> TradingConfig:
             macro_fallback=macro_fallback,
         ),
         screener=ScreenerConfig(
-            top_n=raw["screener"]["top_n"],
-            lookback_days=raw["screener"]["lookback_days"],
-            min_market_cap=raw["screener"]["min_market_cap"],
-            watchlist_path=_resolve_path(raw["screener"]["watchlist_path"]),
+            top_n=screener_raw["top_n"],
+            lookback_days=screener_raw["lookback_days"],
+            min_market_cap=screener_raw["min_market_cap"],
+            watchlist_path=_resolve_path(screener_raw["watchlist_path"]),
+            min_avg_dollar_vol=float(screener_raw.get("min_avg_dollar_vol", 0.0)),
+            min_avg_volume=float(screener_raw.get("min_avg_volume", 0.0)),
+            min_price=float(screener_raw.get("min_price", 0.0)),
+            max_price=(
+                float(screener_raw["max_price"])
+                if screener_raw.get("max_price") is not None
+                else None
+            ),
+            include_tickers=_as_clean_tuple(screener_raw.get("include_tickers"), upper=True),
+            exclude_tickers=_as_clean_tuple(screener_raw.get("exclude_tickers"), upper=True),
+            include_sectors=_as_clean_tuple(screener_raw.get("include_sectors")),
+            exclude_sectors=_as_clean_tuple(screener_raw.get("exclude_sectors")),
+            dollar_vol_weight=float(screener_raw.get("dollar_vol_weight", 1.0)),
+            volume_weight=float(screener_raw.get("volume_weight", 0.0)),
+            market_cap_weight=float(screener_raw.get("market_cap_weight", 0.0)),
+            sticky_slots=int(screener_raw.get("sticky_slots", 0)),
         ),
         data=DataConfig(
             seq_len=raw["data"]["seq_len"],
@@ -141,7 +198,7 @@ def _build_config(raw: dict[str, Any]) -> TradingConfig:
             prediction_horizons=tuple(raw["data"]["prediction_horizons"]),
         ),
         model=ModelConfig(
-            weights_dir=_resolve_path(raw["model"]["weights_dir"]),
+            weights_dir=_resolve_path(model_weights_dir),
             weights_file=raw["model"]["weights_file"],
             scaler_file=raw["model"]["scaler_file"],
         ),
