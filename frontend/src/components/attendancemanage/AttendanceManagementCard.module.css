@@ -625,6 +625,28 @@
   height: 18px;
 }
 
+.absenceSummaryButton {
+  margin-left: 12px;
+  padding: 8px 16px;
+  background-color: #ff4d2d;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.absenceSummaryButton:hover {
+  background-color: #e6391d;
+}
+
+.absenceSummaryButton:active {
+  transform: scale(0.98);
+}
+
 .tableGroup {
   margin-top: 4px;
   max-height: none;
