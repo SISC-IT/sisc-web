@@ -143,10 +143,20 @@ function formatSignedHoldingAmount(value) {
 }
 
 function formatPnlRatePercent(value) {
-  const percentValue = roundToInteger(Number(value) * 100);
-  const sign = percentValue > 0 ? '+' : '';
+  const numericValue = Number(value);
 
-  return `${sign}${percentValue}%`;
+  if (!Number.isFinite(numericValue)) {
+    return '0.0%';
+  }
+
+  const roundedPercentValue = Number((numericValue * 100).toFixed(1));
+  const normalizedPercentValue =
+    Object.is(roundedPercentValue, -0) || roundedPercentValue === 0
+      ? 0
+      : roundedPercentValue;
+  const sign = normalizedPercentValue > 0 ? '+' : '';
+
+  return `${sign}${normalizedPercentValue.toFixed(1)}%`;
 }
 
 function getHoldingPnlClassName(pnlRate) {
