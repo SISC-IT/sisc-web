@@ -1,190 +1,327 @@
-# AI/scripts/download_weights.py
+# AI/modules/signal/models/PatchTST/train_kaggle.py
 """
-[목적]
-  Kaggle 노트북 Output에서 학습된 가중치 파일만 선택적 다운로드
-  kaggle kernels output CLI 대신 Kaggle API 직접 사용 (안정적 다운로드)
+PatchTST 학습 스크립트 - Kaggle/GitHub Actions 버전
+-----------------------------------------------
+[train.py와의 차이점]
+- DB 연결 없음 (SISCDataLoader 사용 안 함)
+- parquet 파일에서 직접 로드
+- GitHub Actions 자동화 파이프라인에서 사용
+
+[사용 환경]
+- Kaggle 노트북 (GPU 학습)
+- GitHub Actions (자동화)
+
+[train.py는 그대로 유지]
+- 로컬/서버에서 DB 연결로 학습할 때 사용
+- 팀원 파트 영향 없음
+-----------------------------------------------
 """
 import os
-import shutil
 import sys
-import requests
-import json
+import pickle
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+from sklearn.preprocessing import MinMaxScaler
+from tqdm import tqdm
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
+# Kaggle: /kaggle/input/datasets/jihyeongkimm/sisc-ai-trading-dataset
+# GitHub Actions: ./kaggle_data
 # ─────────────────────────────────────────────────────────────────────────────
 current_dir  = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+project_root = os.path.abspath(os.path.join(current_dir, "../../../../.."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
-KAGGLE_USERNAME = os.environ.get("KAGGLE_USERNAME", "jihyeongkimm")
-KAGGLE_KEY      = os.environ.get("KAGGLE_KEY", "")
+from AI.modules.signal.models.PatchTST.architecture import PatchTST_Model
+from AI.modules.features.legacy.technical_features import (
+    add_technical_indicators,
+    add_multi_timeframe_features
+)
 
-# kaggle.json에서 읽기 (로컬 환경)
-if not KAGGLE_KEY:
-    kaggle_json = os.path.expanduser("~/.kaggle/kaggle.json")
-    if os.path.exists(kaggle_json):
-        with open(kaggle_json) as f:
-            creds = json.load(f)
-            KAGGLE_USERNAME = creds.get("username", KAGGLE_USERNAME)
-            KAGGLE_KEY      = creds.get("key", "")
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIG
+# ─────────────────────────────────────────────────────────────────────────────
+CONFIG = {
+    # parquet 파일 경로
+    # Kaggle 환경이면 /kaggle/input/datasets/... 로 바꿔서 쓰면 됨
+    'parquet_dir'    : os.environ.get(
+        'PARQUET_DIR',
+        '/kaggle/input/datasets/jihyeongkimm/sisc-ai-trading-dataset'
+    ),
 
-MODELS = [
-    {
-        "name"      : "PatchTST",
-        "slug"      : f"{KAGGLE_USERNAME}/patchtst-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/PatchTST"),
-        "keep_files": ["patchtst_model.pt", "patchtst_scaler.pkl"],
-    },
-    {
-        "name"      : "Transformer",
-        "slug"      : f"{KAGGLE_USERNAME}/transformer-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/transformer/prod"),
-        "keep_files": ["multi_horizon_model.keras", "multi_horizon_scaler.pkl"],
-    },
-    {
-        "name"      : "iTransformer",
-        "slug"      : f"{KAGGLE_USERNAME}/itransformer-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/itransformer"),
-        "keep_files": ["multi_horizon_model.keras", "multi_horizon_scaler.pkl", "metadata.json"],
-    },
-    {
-        "name"      : "TCN",
-        "slug"      : f"{KAGGLE_USERNAME}/tcn-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/tcn"),
-        "keep_files": ["model.pt", "scaler.pkl", "metadata.json"],
-    },
+    'start_date'     : '2015-01-01',
+    'end_date'       : '2023-12-31',
+    'seq_len'        : 120,
+    'horizons'       : [1, 3, 5, 7],
+
+    # 모델 구조
+    'patch_len'      : 16,
+    'stride'         : 8,
+    'd_model'        : 128,
+    'n_heads'        : 4,
+    'e_layers'       : 3,
+    'd_ff'           : 256,
+    'dropout'        : 0.1,
+
+    # 학습
+    'batch_size'     : 256,
+    'learning_rate'  : 0.0001,
+    'epochs'         : 50,
+    'patience'       : 10,
+
+    # 저장 경로
+    # Kaggle: /kaggle/working/
+    # GitHub Actions: AI/data/weights/PatchTST/
+    'weights_dir'    : os.environ.get('WEIGHTS_DIR', '/kaggle/working'),
+    'model_name'     : 'patchtst_model.pt',
+    'scaler_name'    : 'patchtst_scaler.pkl',
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 피처 정의 (train.py, wrapper.py와 동일한 순서 유지)
+# ─────────────────────────────────────────────────────────────────────────────
+FEATURE_COLUMNS = [
+    # 일봉 (11개)
+    'log_return',
+    'ma5_ratio', 'ma20_ratio', 'ma60_ratio',
+    'rsi', 'bb_position', 'macd_ratio',
+    'open_ratio', 'high_ratio', 'low_ratio',
+    'vol_change',
+    # 주봉 (4개)
+    'week_ma20_ratio', 'week_rsi', 'week_bb_pos', 'week_vol_change',
+    # 월봉 (2개)
+    'month_ma12_ratio', 'month_rsi',
 ]
 
-
-def list_output_files(slug: str) -> list:
-    """Kaggle API로 노트북 output 파일 목록 조회"""
-    owner, kernel = slug.split("/")
-    url = f"https://www.kaggle.com/api/v1/kernels/output/{owner}/{kernel}?page_token=START"
-    resp = requests.get(url, auth=(KAGGLE_USERNAME, KAGGLE_KEY))
-    if resp.status_code != 200:
-        print(f"   [오류] 파일 목록 조회 실패: {resp.status_code}")
-        return []
-    data = resp.json()
-    files = data.get("files", [])
-    return files
+HORIZONS = [1, 3, 5, 7]
 
 
-def download_file(slug: str, file_name: str, dst_path: str) -> bool:
-    """Kaggle API로 특정 파일 다운로드 (스트리밍)"""
-    owner, kernel = slug.split("/")
-    url = f"https://www.kaggle.com/api/v1/kernels/output/{owner}/{kernel}?fileName={file_name}"
-    
-    with requests.get(url, auth=(KAGGLE_USERNAME, KAGGLE_KEY), stream=True) as resp:
-        if resp.status_code != 200:
-            print(f"   [오류] 다운로드 실패: {file_name} ({resp.status_code})")
-            return False
-        
-        total = int(resp.headers.get("content-length", 0))
-        downloaded = 0
-        with open(dst_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=8192):
-                f.write(chunk)
-                downloaded += len(chunk)
-        
-        actual = os.path.getsize(dst_path)
-        if total > 0 and actual != total:
-            print(f"   [경고] {file_name} 크기 불일치: 예상 {total}, 실제 {actual}")
-            return False
-        return True
+# ─────────────────────────────────────────────────────────────────────────────
+# 시퀀스 생성 (train.py와 동일)
+# ─────────────────────────────────────────────────────────────────────────────
+def build_sequences(full_df: pd.DataFrame, scaler: MinMaxScaler, fit_scaler: bool = True):
+    seq_len     = CONFIG['seq_len']
+    horizons    = CONFIG['horizons']
+    max_horizon = max(horizons)
 
-
-def download_weights(model: dict) -> bool:
-    print(f"\n>> [{model['name']}] 가중치 다운로드 중...")
-    print(f"   소스: {model['slug']}")
-    print(f"   저장: {model['dst_dir']}")
-    print(f"   대상: {model['keep_files']}")
-
-    os.makedirs(model['dst_dir'], exist_ok=True)
-
-    # 파일 목록 조회
-    all_files = list_output_files(model['slug'])
-    if not all_files:
-        print(f"   [{model['name']}] 파일 목록 없음 (CLI 폴백)")
-        # CLI 폴백
-        import subprocess, tempfile
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            result = subprocess.run(
-                ["kaggle", "kernels", "output", model['slug'], "-p", tmp_dir, "-o"],
-                capture_output=True, text=True
-            )
-            file_map = {}
-            for root, dirs, files in os.walk(tmp_dir):
-                for f in files:
-                    if f not in file_map:
-                        file_map[f] = os.path.join(root, f)
-            copied = []
-            for fname in model['keep_files']:
-                if fname in file_map:
-                    src = file_map[fname]
-                    if os.path.getsize(src) < 100:
-                        continue
-                    dst = os.path.join(model['dst_dir'], fname)
-                    shutil.copy2(src, dst)
-                    size = os.path.getsize(dst) / (1024 * 1024)
-                    copied.append(f"{fname} ({size:.1f} MB)")
-            if copied:
-                print(f"   [{model['name']}] 다운로드 완료!")
-                for f in copied: print(f"   - {f}")
-                return True
-            return False
-
-    # 파일명 → URL 매핑
-    file_map = {}
-    for f in all_files:
-        name = f.get("name", "").split("/")[-1]  # 경로에서 파일명만 추출
-        if name and name not in file_map:
-            file_map[name] = f.get("name", name)
-
-    copied = []
-    missing = []
-    for fname in model['keep_files']:
-        if fname in file_map:
-            dst = os.path.join(model['dst_dir'], fname)
-            print(f"   다운로드 중: {fname}...")
-            success = download_file(model['slug'], file_map[fname], dst)
-            if success:
-                size = os.path.getsize(dst) / (1024 * 1024)
-                copied.append(f"{fname} ({size:.1f} MB)")
-            else:
-                missing.append(fname)
-        else:
-            missing.append(fname)
-
+    available = [c for c in FEATURE_COLUMNS if c in full_df.columns]
+    missing   = set(FEATURE_COLUMNS) - set(available)
     if missing:
-        print(f"   [{model['name']}] 경고: 파일 없음 -> {missing}")
-    if not copied:
-        print(f"   [{model['name']}] 실패: 가중치 파일 없음")
-        return False
+        print(f"[경고] 누락된 피처: {missing}")
 
-    print(f"   [{model['name']}] 다운로드 완료!")
-    for f in copied:
-        print(f"   - {f}")
-    return True
+    full_df = full_df.dropna(subset=available).copy()
+
+    if fit_scaler:
+        full_df[available] = scaler.fit_transform(full_df[available])
+    else:
+        full_df[available] = scaler.transform(full_df[available])
+
+    X_list, y_list = [], []
+
+    for ticker in tqdm(full_df['ticker'].unique(), desc="시퀀스 생성"):
+        sub = full_df[full_df['ticker'] == ticker].sort_values('date')
+
+        if len(sub) < seq_len + max_horizon:
+            continue
+
+        feat_vals  = sub[available].values
+        raw_closes = sub['close'].values
+
+        num_samples = len(sub) - seq_len - max_horizon + 1
+        if num_samples <= 0:
+            continue
+
+        for i in range(num_samples):
+            window     = feat_vals[i : i + seq_len]
+            curr_price = raw_closes[i + seq_len - 1]
+            labels     = []
+            for h in horizons:
+                future_price = raw_closes[i + seq_len + h - 1]
+                labels.append(1 if future_price > curr_price else 0)
+
+            X_list.append(window)
+            y_list.append(labels)
+
+    X = np.array(X_list, dtype=np.float32)
+    y = np.array(y_list,  dtype=np.float32)
+    print(f">> 시퀀스 완료: X={X.shape}, y={y.shape}")
+    return X, y
 
 
-print("=" * 50)
-print(">> download_weights.py 시작")
-print("=" * 50)
+# ─────────────────────────────────────────────────────────────────────────────
+# [핵심 변경] 데이터 로드
+# train.py: SISCDataLoader → DB 연결 필요
+# train_kaggle.py: parquet 직접 읽기 → DB 연결 불필요
+# ─────────────────────────────────────────────────────────────────────────────
+def load_and_preprocess():
+    parquet_path = os.path.join(CONFIG['parquet_dir'], 'price_data.parquet')
+    print(f">> parquet 로드 중: {parquet_path}")
 
-if not KAGGLE_KEY:
-    print(">> Kaggle API 키 없음. kaggle.json 확인 필요")
-    sys.exit(1)
+    raw_df = pd.read_parquet(parquet_path)
+    raw_df['date'] = pd.to_datetime(raw_df['date'])
 
-failed = []
-for model in MODELS:
-    success = download_weights(model)
-    if not success:
-        failed.append(model['name'])
+    # 날짜 필터링
+    raw_df = raw_df[
+        (raw_df['date'] >= CONFIG['start_date']) &
+        (raw_df['date'] <= CONFIG['end_date'])
+    ].copy()
 
-print("\n" + "=" * 50)
-if failed:
-    print(f">> 실패한 모델: {failed}")
-    sys.exit(1)
-else:
-    print(">> 전체 가중치 다운로드 완료!")
-print("=" * 50)
+    print(f">> 로드 완료: {len(raw_df):,}행, {raw_df['ticker'].nunique()}개 종목")
+
+    # 피처 계산
+    print(">> 피처 계산 중 (일봉 + 주봉/월봉)...")
+    processed  = []
+    fail_count = 0
+    fail_limit = 20
+
+    for ticker in tqdm(raw_df['ticker'].unique(), desc="피처 계산"):
+        df_t = raw_df[raw_df['ticker'] == ticker].copy()
+        try:
+            df_t = add_technical_indicators(df_t)
+            df_t = add_multi_timeframe_features(df_t)
+            processed.append(df_t)
+        except Exception as e:
+            fail_count += 1
+            print(f"\n[경고] {ticker} 피처 계산 실패 ({fail_count}/{fail_limit}): {e}")
+            if fail_count >= fail_limit:
+                raise RuntimeError(f"피처 계산 실패가 {fail_limit}개를 초과했습니다.")
+
+    if not processed:
+        raise ValueError("전처리된 데이터가 없습니다.")
+
+    full_df = pd.concat(processed).reset_index(drop=True)
+    print(f">> 피처 계산 완료: {len(full_df):,}행 (실패: {fail_count}개)")
+    return full_df
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 학습 메인 (train.py와 동일)
+# ─────────────────────────────────────────────────────────────────────────────
+def train():
+    print("=" * 50)
+    print(" PatchTST 학습 시작 (Kaggle/Actions 버전)")
+    print(f" 데이터: {CONFIG['parquet_dir']}")
+    print(f" 피처: {len(FEATURE_COLUMNS)}개")
+    print(f" horizon: {CONFIG['horizons']}일")
+    print("=" * 50)
+
+    # 1. 데이터 로드
+    full_df = load_and_preprocess()
+
+    # 2. Train/Val 분리
+    tickers       = full_df['ticker'].unique()
+    n_val         = max(1, int(len(tickers) * 0.2))
+    val_tickers   = tickers[-n_val:]
+    train_tickers = tickers[:-n_val]
+
+    train_df = full_df[full_df['ticker'].isin(train_tickers)].copy()
+    val_df   = full_df[full_df['ticker'].isin(val_tickers)].copy()
+    print(f"\n>> Train 티커: {len(train_tickers)}개, Val 티커: {len(val_tickers)}개")
+
+    # 3. 시퀀스 생성
+    scaler  = MinMaxScaler()
+    X_train, y_train = build_sequences(train_df, scaler, fit_scaler=True)
+    X_val,   y_val   = build_sequences(val_df,   scaler, fit_scaler=False)
+    print(f"\n>> Train: {X_train.shape}, Val: {X_val.shape}")
+
+    # 4. DataLoader
+    train_loader = DataLoader(
+        TensorDataset(torch.FloatTensor(X_train), torch.FloatTensor(y_train)),
+        batch_size=CONFIG['batch_size'], shuffle=True
+    )
+    val_loader = DataLoader(
+        TensorDataset(torch.FloatTensor(X_val), torch.FloatTensor(y_val)),
+        batch_size=CONFIG['batch_size'], shuffle=False
+    )
+
+    # 5. 모델
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f">> Device: {device}\n")
+
+    model = PatchTST_Model(
+        seq_len   = CONFIG['seq_len'],
+        enc_in    = len(FEATURE_COLUMNS),
+        patch_len = CONFIG['patch_len'],
+        stride    = CONFIG['stride'],
+        d_model   = CONFIG['d_model'],
+        n_heads   = CONFIG['n_heads'],
+        e_layers  = CONFIG['e_layers'],
+        d_ff      = CONFIG['d_ff'],
+        dropout   = CONFIG['dropout'],
+        n_outputs = len(CONFIG['horizons'])
+    ).to(device)
+
+    # 6. 손실함수 & 옵티마이저
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.AdamW(model.parameters(), lr=CONFIG['learning_rate'])
+
+    # 7. 저장 경로
+    save_dir    = CONFIG['weights_dir']
+    os.makedirs(save_dir, exist_ok=True)
+    model_path  = os.path.join(save_dir, CONFIG['model_name'])
+    scaler_path = os.path.join(save_dir, CONFIG['scaler_name'])
+
+    best_val_loss    = float('inf')
+    patience_counter = 0
+
+    print(f">> 학습 시작 (epochs={CONFIG['epochs']}, patience={CONFIG['patience']})\n")
+
+    for epoch in range(CONFIG['epochs']):
+
+        # Training
+        model.train()
+        train_loss = 0.0
+        for X_b, y_b in train_loader:
+            X_b, y_b = X_b.to(device), y_b.to(device)
+            optimizer.zero_grad()
+            loss = criterion(model(X_b), y_b)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+        avg_train = train_loss / len(train_loader)
+
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for X_v, y_v in val_loader:
+                X_v, y_v = X_v.to(device), y_v.to(device)
+                val_loss += criterion(model(X_v), y_v).item()
+        avg_val = val_loss / len(val_loader)
+
+        print(f"Epoch [{epoch+1:3d}/{CONFIG['epochs']}] "
+              f"Train: {avg_train:.4f} | Val: {avg_val:.4f}", end="")
+
+        # Early Stopping & 저장
+        if avg_val < best_val_loss:
+            best_val_loss    = avg_val
+            patience_counter = 0
+            torch.save({
+                'config'    : CONFIG,
+                'state_dict': model.state_dict()
+            }, model_path)
+            print("  ✓ saved")
+        else:
+            patience_counter += 1
+            print(f"  ({patience_counter}/{CONFIG['patience']})")
+            if patience_counter >= CONFIG['patience']:
+                print(f"\n>> Early Stopping at epoch {epoch+1}")
+                break
+
+    # 8. 스케일러 저장
+    with open(scaler_path, 'wb') as f:
+        pickle.dump(scaler, f)
+
+    print(f"\n>> 완료")
+    print(f"   모델    : {model_path}")
+    print(f"   스케일러: {scaler_path}")
+
+
+if __name__ == '__main__':
+    train()
