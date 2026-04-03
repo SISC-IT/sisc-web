@@ -169,10 +169,16 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
         .map((item) => item.user);
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    // 로컬 시간대 기준으로 오늘 날짜(YYYY-MM-DD)와 정렬된 회차 목록 생성
+    const sortedRounds = [...attendanceData.rounds].sort(
+      (a, b) =>
+        a.roundDate.localeCompare(b.roundDate) || a.roundNumber - b.roundNumber
+    );
+    const todayStr = new Date().toLocaleDateString('sv-SE');
+
     const targetRound =
-      attendanceData.rounds.find((r) => r.roundDate === todayStr) ||
-      attendanceData.rounds[attendanceData.rounds.length - 1];
+      sortedRounds.find((r) => r.roundDate === todayStr) ||
+      sortedRounds[sortedRounds.length - 1];
 
     const targetRoundId = targetRound?.roundId;
 

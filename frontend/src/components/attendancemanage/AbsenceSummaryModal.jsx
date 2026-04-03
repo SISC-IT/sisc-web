@@ -20,10 +20,23 @@ const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+      <div
+        className={styles.modalContent}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="absence-modal-title"
+      >
         <div className={styles.modalHeader}>
-          <h2>결석 및 지각 집계</h2>
-          <button className={styles.closeButton} onClick={onClose}>&times;</button>
+          <h2 id="absence-modal-title">결석 및 지각 집계</h2>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="닫기"
+          >
+            &times;
+          </button>
         </div>
         <div className={styles.modalBody}>
           {absenceData.length > 0 ? (
@@ -37,22 +50,32 @@ const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
                 </tr>
               </thead>
               <tbody>
-                {absenceData.map(user => (
+                {absenceData.map((user) => (
                   <tr key={user.userId}>
                     <td>{user.userName}</td>
                     <td>{user.studentId}</td>
-                    <td className={styles.absentCount}>{user.totalAbsences}회</td>
+                    <td className={styles.absentCount}>
+                      {user.totalAbsences}회
+                    </td>
                     <td className={styles.lateCount}>{user.totalLates}회</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <p className={styles.noData}>결석 또는 지각 기록이 있는 학생이 없습니다.</p>
+            <p className={styles.noData}>
+              결석 또는 지각 기록이 있는 학생이 없습니다.
+            </p>
           )}
         </div>
         <div className={styles.modalFooter}>
-          <button className={styles.confirmButton} onClick={onClose}>확인</button>
+          <button
+            type="button"
+            className={styles.confirmButton}
+            onClick={onClose}
+          >
+            확인
+          </button>
         </div>
       </div>
     </div>

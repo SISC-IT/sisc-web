@@ -14,8 +14,11 @@ export const useAuthGuard = () => {
         await api.get('/api/user/details');
         // 성공하면 아무것도 하지 않음
       } catch (error) {
-        // 401 에러만 로그인 페이지로 리다이렉트
-        if (error.status === 401) {
+        // 401 에러(인증 실패)만 로그인 페이지로 리다이렉트
+        const isUnauthorized =
+          error?.status === 401 || error?.response?.status === 401;
+
+        if (isUnauthorized) {
           toast.error('로그인 후 이용하실 수 있습니다.');
           const returnUrl = encodeURIComponent(
             location.pathname + location.search
