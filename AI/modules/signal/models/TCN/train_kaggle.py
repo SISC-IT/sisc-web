@@ -305,16 +305,16 @@ def train():
     """노트북에서 module.train()으로 호출하기 위한 래퍼"""
     import argparse
     args = argparse.Namespace(
-        parquet_dir  = _find_kaggle_dataset_path(),
-        start_date   = "2015-01-01",
-        end_date     = "2023-12-31",
-        seq_len      = 60,
-        epochs       = 20,
-        batch_size   = 64,
-        learning_rate= 1e-3,
-        kernel_size  = 3,
-        dropout      = 0.2,
-        channels     = [32, 64, 64],
-        output_dir   = "/kaggle/working"
-    )
+    parquet_dir   = _find_kaggle_dataset_path(),
+    start_date    = "2015-01-01",
+    end_date      = "2023-12-31",
+    seq_len       = 60,
+    epochs        = 50,          # 20 → 50
+    batch_size    = 64,
+    learning_rate = 1e-4,        # 1e-3 → 1e-4 (학습률 낮춤)
+    kernel_size   = 3,
+    dropout       = 0.3,         # 0.2 → 0.3 (과적합 방지)
+    channels      = [64, 128, 128],  # [32,64,64] → 더 크게
+    output_dir    = "/kaggle/working"
+)
     train_model(args)
