@@ -221,7 +221,7 @@ def build_model(seq_len: int, n_features: int, n_outputs: int) -> tf.keras.Model
     seq_input = tf.keras.Input(shape=(seq_len, n_features), name="sequence_input")
 
     # Transpose: [batch, seq, feat] → [batch, feat, seq]
-    x = layers.Lambda(lambda t: tf.transpose(t, perm=[0, 2, 1]))(seq_input)
+    x = layers.Permute((2, 1), name="transpose_in")(seq_input)
 
     # Transformer Encoder 블록
     for block_idx in range(CONFIG["num_blocks"]):
@@ -244,7 +244,7 @@ def build_model(seq_len: int, n_features: int, n_outputs: int) -> tf.keras.Model
         x = layers.Add(name=f"{name}_ffn_add")([x, ffn])
 
     # Transpose back: [batch, feat, seq] → [batch, seq, feat]
-    x = layers.Lambda(lambda t: tf.transpose(t, perm=[0, 2, 1]))(x)
+    x = layers.Permute((2, 1), name="transpose_out")(x)
 
     # Global Average Pooling
     x = layers.GlobalAveragePooling1D()(x)
