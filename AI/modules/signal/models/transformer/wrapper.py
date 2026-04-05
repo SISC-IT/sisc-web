@@ -1,4 +1,5 @@
 import os
+import json
 import pickle
 import shutil
 import tempfile
@@ -34,7 +35,13 @@ class TransformerSignalModel(BaseSignalModel):
             self.features = list(scaler_features)
             #print(f"[Transformer] Feature schema restored from scaler: {self.features}")
         elif hasattr(self.scaler, "n_features_in_") and len(self.features) != int(self.scaler.n_features_in_):
-            self.features = list(self.features[: int(self.scaler.n_features_in_)])
+            n_features = int(self.scaler.n_features_in_)
+            if len(self.features) >= n_features:
+                self.features = list(self.features[:n_features])
+            else:
+                self.features = list(self.features) + [
+                    f"feature_{idx}" for idx in range(len(self.features), n_features)
+                ]
             #print("[Transformer] Feature schema inferred from scaler width: "f"{len(self.features)} columns")
 
         #print(f"[Transformer] Scaler loaded: {filepath}")
@@ -169,9 +176,12 @@ class TransformerSignalModel(BaseSignalModel):
                 return
             except Exception as full_model_error:
                 if self.model is None:
-                    raise ValueError(
-                        "load() requires build() before loading a weights-only checkpoint."
-                    ) from full_model_error
+                    inferred_input_shape = self._infer_input_shape_from_legacy_h5(temp_path)
+                    if inferred_input_shape is None:
+                        raise ValueError(
+                            "load() requires build() before loading a weights-only checkpoint."
+                        ) from full_model_error
+                    self.build(input_shape=inferred_input_shape)
 
                 try:
                     self.model.load_weights(temp_path)
@@ -185,3 +195,63 @@ class TransformerSignalModel(BaseSignalModel):
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+
+    def _infer_input_shape_from_legacy_h5(self, filepath: str) -> Optional[tuple[int, int]]:
+        try:
+            import h5py
+        except Exception:
+            return None
+
+        try:
+            with h5py.File(filepath, "r") as handle:
+                model_config = handle.attrs.get("model_config")
+        except Exception:
+            return None
+
+        if model_config is None:
+            return None
+
+        try:
+            if isinstance(model_config, bytes):
+                model_config_json = model_config.decode("utf-8")
+            elif isinstance(model_config, str):
+                model_config_json = model_config
+            else:
+                model_config_json = model_config.tobytes().decode("utf-8")
+            parsed = json.loads(model_config_json)
+        except Exception:
+            return None
+
+        layers = parsed.get("config", {}).get("layers", [])
+        embedding_input_dims: list[int] = []
+        for layer in layers:
+            if layer.get("class_name") != "Embedding":
+                continue
+            config = layer.get("config", {})
+            input_dim = config.get("input_dim")
+            if isinstance(input_dim, int) and input_dim > 1:
+                embedding_input_dims.append(input_dim)
+
+        for layer in layers:
+            if layer.get("class_name") != "InputLayer":
+                continue
+            config = layer.get("config", {})
+            shape = config.get("batch_input_shape") or config.get("batch_shape")
+            if not (isinstance(shape, (list, tuple)) and len(shape) == 3):
+                continue
+            timesteps, features = shape[1], shape[2]
+            if not (isinstance(timesteps, int) and timesteps > 0):
+                continue
+            if not (isinstance(features, int) and features > 0):
+                continue
+
+            self.seq_len = timesteps
+            if not self.features:
+                self.features = [f"feature_{i}" for i in range(features)]
+            if len(embedding_input_dims) >= 1:
+                self.config["n_tickers"] = max(1, embedding_input_dims[0] - 1)
+            if len(embedding_input_dims) >= 2:
+                self.config["n_sectors"] = max(1, embedding_input_dims[1] - 1)
+            return timesteps, features
+
+        return None

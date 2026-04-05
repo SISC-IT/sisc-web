@@ -51,6 +51,9 @@ logging:
   file:
     name: /app/logs/application.log
 
+server:
+  forward-headers-strategy: framework
+
 springdoc:
   swagger-ui:
     tags-sorter: alpha  # 컨트롤러(Tag)를 알파벳/숫자 순으로 정렬

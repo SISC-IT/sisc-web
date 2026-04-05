@@ -22,7 +22,10 @@ def settle_portfolio(
     total_pnl_realized_cum = 0.0
     daily_positions = []
 
-    for ticker in target_tickers:
+    tracked_tickers = set(target_tickers or [])
+    tracked_tickers.update(repo.get_open_tickers(exec_date_str))
+
+    for ticker in sorted(tracked_tickers):
         # 각 종목의 현재 보유 정보 (마감 기준) 조회
         pos_info = repo.get_current_position(ticker, target_date=exec_date_str, initial_cash=0)
         qty = pos_info["qty"]
