@@ -1,5 +1,4 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
 import styles from './AbsenceSummaryModal.module.css';
 
 const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
@@ -19,7 +18,7 @@ const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
     .filter(user => user.totalAbsences > 0 || user.totalLates > 0)
     .sort((a, b) => b.totalAbsences - a.totalAbsences || b.totalLates - a.totalLates);
 
-  const modalContent = (
+  return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div
         className={styles.modalContent}
@@ -81,8 +80,6 @@ const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
       </div>
     </div>
   );
-
-  return createPortal(modalContent, document.body);
 };
 
 export default AbsenceSummaryModal;
