@@ -1,14 +1,14 @@
-import React from 'react';
+import { createPortal } from 'react-dom';
 import styles from './AbsenceSummaryModal.module.css';
 
 const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
   if (!isOpen) return null;
 
   // 결석한 기록이 있는 유저들만 필터링하고 결석 횟수 계산
-  const absenceData = userRows
+  const absenceData = (userRows || [])
     .map(user => {
-      const totalAbsences = user.attendances.filter(att => att.status === 'ABSENT').length;
-      const totalLates = user.attendances.filter(att => att.status === 'LATE').length;
+      const totalAbsences = (user.attendances || []).filter(att => att.status === 'ABSENT').length;
+      const totalLates = (user.attendances || []).filter(att => att.status === 'LATE').length;
       return {
         ...user,
         totalAbsences,
@@ -18,7 +18,7 @@ const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
     .filter(user => user.totalAbsences > 0 || user.totalLates > 0)
     .sort((a, b) => b.totalAbsences - a.totalAbsences || b.totalLates - a.totalLates);
 
-  return (
+  const modalContent = (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div
         className={styles.modalContent}
@@ -80,6 +80,8 @@ const AbsenceSummaryModal = ({ isOpen, onClose, userRows }) => {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default AbsenceSummaryModal;
