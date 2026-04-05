@@ -19,6 +19,7 @@ import AdminMemberApproval from './pages/AdminMemberApproval.jsx';
 import AdminMemberManage from './pages/AdminMemberManage.jsx';
 import AdminExcelUpload from './pages/AdminExcelUpload.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import AdminFeedback from './pages/AdminFeedback.jsx';
 
 // import CheckInPage from './components/attendancemanage/qrmanagement/CheckInPage.jsx';
 import QrRenderPage from './components/attendancemanage/qrmanagement/QrRenderPage.jsx';
@@ -100,6 +101,7 @@ function App() {
               element={<AdminExcelUpload />}
             />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/feedbacks" element={<AdminFeedback />} />
           </Route>
         </Route>
       </Routes>
