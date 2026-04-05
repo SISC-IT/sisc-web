@@ -67,7 +67,6 @@
   padding: 24px 28px;
   overflow-y: auto;
   flex: 1;
-  max-height: 100%;
 }
 
 .summaryTable {
@@ -76,8 +75,6 @@
 }
 
 .summaryTable th {
-  position: sticky;
-  top: -24px; /* modalBody padding-top 보정 */
   text-align: left;
   padding: 12px 14px;
   font-size: 14px;
@@ -85,7 +82,6 @@
   color: #64748b;
   background: #f8fafc;
   border-bottom: 2px solid #e2e8f0;
-  z-index: 10;
 }
 
 .summaryTable td {

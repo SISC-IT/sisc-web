@@ -157,8 +157,8 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
   const fetchRequestIdRef = useRef(0);
 
   const sortedUserRows = useMemo(() => {
-    if (!(attendanceData?.rounds || []).length) {
-      return (attendanceData?.userRows || [])
+    if (!attendanceData.rounds.length) {
+      return attendanceData.userRows
         .map((user, index) => ({ user, index }))
         .sort((a, b) => {
           const priorityDiff =
@@ -170,9 +170,9 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
     }
 
     // 로컬 시간대 기준으로 오늘 날짜(YYYY-MM-DD)와 정렬된 회차 목록 생성
-    const sortedRounds = [...(attendanceData?.rounds || [])].sort(
+    const sortedRounds = [...attendanceData.rounds].sort(
       (a, b) =>
-        (a.roundDate || '').localeCompare(b.roundDate || '') || (a.roundNumber || 0) - (b.roundNumber || 0)
+        a.roundDate.localeCompare(b.roundDate) || a.roundNumber - b.roundNumber
     );
     const todayStr = new Date().toLocaleDateString('sv-SE');
 
@@ -181,9 +181,10 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
       sortedRounds[sortedRounds.length - 1];
 
     const targetRoundId = targetRound?.roundId;
-    return [...(attendanceData?.userRows || [])].sort((a, b) => {
-      const aAtt = (a?.attendances || []).find((att) => att.roundId === targetRoundId);
-      const bAtt = (b?.attendances || []).find((att) => att.roundId === targetRoundId);
+
+    return [...attendanceData.userRows].sort((a, b) => {
+      const aAtt = a.attendances.find((att) => att.roundId === targetRoundId);
+      const bAtt = b.attendances.find((att) => att.roundId === targetRoundId);
 
       const aStatus = aAtt?.status || 'PENDING';
       const bStatus = bAtt?.status || 'PENDING';
@@ -539,7 +540,7 @@ const AttendanceManagementCard = ({ styles: commonStyles }) => {
                     <td>{user.userName}</td>
                     <td>{getRoleDisplayLabel(user.role)}</td>
                     <td>{user.studentId}</td>
-                    {(user.attendances || []).map((att) => {
+                    {user.attendances.map((att) => {
                       const statusClass =
                         styles[
                           ATTENDANCE_CONFIG[att.status]?.className ||
