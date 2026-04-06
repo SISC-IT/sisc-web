@@ -136,8 +136,6 @@ def _path_for_report(path: Path) -> str:
         return str(path.resolve().relative_to(PROJECT_ROOT))
     except ValueError:
         return str(path.resolve())
-
-
 def _fit_single_schema(
     *,
     schema_name: str,

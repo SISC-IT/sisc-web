@@ -342,7 +342,10 @@ class PortfolioRepository:
         try:
             with conn.cursor() as cursor:
                 account_id = self._resolve_account_id(conn)
+<<<<<<< HEAD
                 allow_global_chain_reset = False
+=======
+>>>>>>> 262cd04 ([AI] [FEAT] 계정 ID 생성)
                 if target_date:
                     # Safety-first default: only clear current run artifacts.
                     # Global chain reset can remove unrelated simulations sharing the same DB.
@@ -364,6 +367,7 @@ class PortfolioRepository:
                                 "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%' AND account_id = %s",
                                 (target_date, account_id),
                             )
+<<<<<<< HEAD
                             # xai_reports/portfolio_* tables are not account-scoped in current schema.
                             # Keep chain consistency by resetting those tables globally by date.
                             cursor.execute(
@@ -372,6 +376,8 @@ class PortfolioRepository:
                             )
                             cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
                             cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
+=======
+>>>>>>> 262cd04 ([AI] [FEAT] 계정 ID 생성)
                     else:
                         if account_id is None:
                             cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
