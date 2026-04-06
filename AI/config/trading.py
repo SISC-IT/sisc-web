@@ -26,6 +26,7 @@ class MacroFallbackConfig:
 @dataclass(frozen=True, slots=True)
 class PipelineConfig:
     db_name: str
+    account_code: str
     default_mode: str
     enable_xai: bool
     data_start_date: str
@@ -162,6 +163,7 @@ def _build_config(raw: dict[str, Any]) -> TradingConfig:
     config = TradingConfig(
         pipeline=PipelineConfig(
             db_name=raw["pipeline"]["db_name"],
+            account_code=str(raw["pipeline"].get("account_code", "chart_based_signal_model")).strip(),
             default_mode=raw["pipeline"]["default_mode"],
             enable_xai=raw["pipeline"]["enable_xai"],
             data_start_date=raw["pipeline"]["data_start_date"],
@@ -212,6 +214,8 @@ def _build_config(raw: dict[str, Any]) -> TradingConfig:
     )
     if config.pipeline.initial_capital <= 0:
         raise ValueError("pipeline.initial_capital must be greater than 0")
+    if not config.pipeline.account_code:
+        raise ValueError("pipeline.account_code must be a non-empty string")
     return config
 
 
