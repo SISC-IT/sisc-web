@@ -1,6 +1,7 @@
 {
   "pipeline": {
     "db_name": "db",
+    "account_code": "chart_based_signal_model",
     "default_mode": "simulation",
     "enable_xai": true,
     "data_start_date": "2023-01-01",

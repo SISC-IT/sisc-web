@@ -84,7 +84,10 @@ def run_daily_pipeline(
     run_id = f"daily_{exec_date_str}"
     print(f"\n[{exec_date_str}] === AI Daily Portfolio Routine (Mode: {mode.upper()}) ===")
 
-    repo = repo if repo is not None else PortfolioRepository(db_name=trading_config.pipeline.db_name)
+    repo = repo if repo is not None else PortfolioRepository(
+        db_name=trading_config.pipeline.db_name,
+        account_code=trading_config.pipeline.account_code,
+    )
 
     if mode == "simulation" and hasattr(repo, "reset_run_data"):
         try:
