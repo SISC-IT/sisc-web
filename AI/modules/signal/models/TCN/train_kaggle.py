@@ -204,11 +204,13 @@ def train_model(args: argparse.Namespace):
     ).to(device)
 
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate,weight_decay=1e-4)#L2규제 추가
 
     best_val_loss = float("inf")
     best_state    = None
 
+    patience = 7      # 성능 개선이 없어도 기다려줄 에포크 횟수
+    counter = 0
     # 6. 학습 루프
     print(f">> 학습 시작 (epochs={args.epochs})\n")
     for epoch in range(args.epochs):
@@ -236,9 +238,15 @@ def train_model(args: argparse.Namespace):
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_state    = copy.deepcopy(model.state_dict())
+            counter = 0  # 성능이 개선되었으므로 카운터 초기화
             print("  ✓ saved")
         else:
-            print()
+            counter += 1  # 성능 개선이 없으므로 카운터 증가
+            print(f"  (Patience: {counter}/{patience})")
+        
+            if counter >= patience:
+                print(f"\n>> [Early Stopping] {patience}번의 에포크 동안 개선이 없어 학습을 중단합니다.")
+                break
 
     # 7. 저장
     os.makedirs(args.output_dir, exist_ok=True)
