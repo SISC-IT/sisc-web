@@ -159,7 +159,7 @@ def train_model(args: argparse.Namespace):
 
     # 2. Train/Val 날짜 기준 분리
     dates          = raw_df['date'].sort_values().unique()
-    split_date_idx = int(len(dates) * 0.8)
+    split_date_idx = int(len(dates) * 0.85)
     split_date     = dates[split_date_idx]
 
     # split_date 미만을 train으로 → val이 비어지는 경계 케이스 방지
