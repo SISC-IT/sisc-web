@@ -316,12 +316,12 @@ def train():
     parquet_dir  = '/kaggle/input/sisc-ai-trading-dataset',
     start_date    = "2015-01-01",
     end_date      = "2023-12-31",
-    seq_len       = 60,
+    seq_len       = 30,
     epochs        = 50,          # 20 → 50
     batch_size    = 64,
     learning_rate = 1e-4,        # 1e-3 → 1e-4 (학습률 낮춤)
     kernel_size   = 3,
-    dropout       = 0.3,         # 0.2 → 0.3 (과적합 방지)
+    dropout       = 0.5,         
     channels      = [64, 128, 128],  # [32,64,64] → 더 크게
     output_dir    = "/kaggle/working"
 )
