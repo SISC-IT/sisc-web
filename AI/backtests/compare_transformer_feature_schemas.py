@@ -136,6 +136,11 @@ def _path_for_report(path: Path) -> str:
         return str(path.resolve().relative_to(PROJECT_ROOT))
     except ValueError:
         return str(path.resolve())
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 6d2e920 ([AI] [FEAT] 트랜스포머 테스트코드 작성)
 def _fit_single_schema(
     *,
     schema_name: str,
@@ -275,11 +280,14 @@ def _fit_single_schema(
                 f"[{schema_name}] Out of memory during fit ({message}). "
                 "Try lowering --max-samples (e.g. 200000) and/or --batch-size."
             ) from fit_error
+<<<<<<< HEAD
         if "Deterministic GPU implementation of unsorted segment reduction op not available" in message:
             raise RuntimeError(
                 f"[{schema_name}] Deterministic GPU ops are incompatible with this model's embedding/optimizer path. "
                 "Re-run without --deterministic, or force CPU execution if you need deterministic training."
             ) from fit_error
+=======
+>>>>>>> 6d2e920 ([AI] [FEAT] 트랜스포머 테스트코드 작성)
         raise
 
     with scaler_path.open("wb") as handle:
@@ -484,7 +492,10 @@ def main() -> int:
         "min_lr": args.min_lr,
         "max_samples": args.max_samples,
         "verbose": args.verbose,
+<<<<<<< HEAD
         "deterministic": bool(args.deterministic),
+=======
+>>>>>>> 6d2e920 ([AI] [FEAT] 트랜스포머 테스트코드 작성)
         "output_dir": _path_for_report(output_dir),
     }
     (output_dir / "run_config.json").write_text(json.dumps(run_config, indent=2, ensure_ascii=False), encoding="utf-8")
