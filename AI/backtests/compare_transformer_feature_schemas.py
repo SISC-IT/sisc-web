@@ -32,9 +32,11 @@ PRE307_DYNAMIC_23 = [
     "high_ratio",
     "low_ratio",
     "vol_change",
-    "ma_5_ratio",
-    "ma_20_ratio",
-    "ma_60_ratio",
+    # Historical potential_features used underscored names, but actual engineered
+    # columns are ma5/ma20/ma60_ratio. Use executable names to avoid silent drops.
+    "ma5_ratio",
+    "ma20_ratio",
+    "ma60_ratio",
     "rsi",
     "macd_ratio",
     "bb_position",
@@ -78,6 +80,8 @@ class TrainArtifacts:
     schema_name: str
     requested_features: list[str]
     effective_features: list[str]
+    missing_features: list[str]
+    raw_n_samples: int
     n_features: int
     n_samples: int
     epochs_ran: int
@@ -126,6 +130,13 @@ def _prepare_output_dir(output_dir: str | None) -> Path:
     return target
 
 
+def _path_for_report(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path.resolve())
+
+
 def _fit_single_schema(
     *,
     schema_name: str,
@@ -145,6 +156,7 @@ def _fit_single_schema(
     lr_patience: int,
     lr_factor: float,
     min_lr: float,
+    max_samples: int | None,
     verbose: int,
 ) -> TrainArtifacts:
     _set_global_seed(global_seed)
@@ -159,6 +171,29 @@ def _fit_single_schema(
     X_ts, X_ticker, X_sector, y_class, _, info = loader.create_dataset(raw_df, feature_columns=requested_features)
     if len(y_class) == 0:
         raise ValueError(f"[{schema_name}] dataset is empty after preprocessing.")
+    raw_n_samples = int(len(y_class))
+    effective_features = list(info.get("feature_names", []))
+    missing_features = [feature for feature in requested_features if feature not in set(effective_features)]
+    if missing_features:
+        print(
+            f"[SchemaCompare][Warning] {schema_name}: requested features were not included in dataset: "
+            f"{missing_features}"
+        )
+    if max_samples is not None and max_samples > 0 and raw_n_samples > max_samples:
+        rng = np.random.default_rng(global_seed)
+        sampled_indices = rng.choice(raw_n_samples, size=max_samples, replace=False)
+        sampled_indices.sort()
+        X_ts = X_ts[sampled_indices]
+        X_ticker = X_ticker[sampled_indices]
+        X_sector = X_sector[sampled_indices]
+        y_class = y_class[sampled_indices]
+        print(f"[SchemaCompare] {schema_name}: downsampled samples {raw_n_samples} -> {len(y_class)}")
+
+    # Minimize extra conversion copies during model.fit.
+    X_ts = np.asarray(X_ts, dtype=np.float32)
+    X_ticker = np.asarray(X_ticker, dtype=np.int32)
+    X_sector = np.asarray(X_sector, dtype=np.int32)
+    y_class = np.asarray(y_class, dtype=np.float32)
 
     (
         X_ts_train,
@@ -217,16 +252,30 @@ def _fit_single_schema(
         ),
     ]
 
-    history = model.fit(
-        x=[X_ts_train, X_tick_train, X_sec_train],
-        y=y_train,
-        validation_data=([X_ts_val, X_tick_val, X_sec_val], y_val),
-        epochs=epochs,
-        batch_size=batch_size,
-        shuffle=True,
-        callbacks=callbacks,
-        verbose=verbose,
-    )
+    try:
+        history = model.fit(
+            x=[X_ts_train, X_tick_train, X_sec_train],
+            y=y_train,
+            validation_data=([X_ts_val, X_tick_val, X_sec_val], y_val),
+            epochs=epochs,
+            batch_size=batch_size,
+            shuffle=True,
+            callbacks=callbacks,
+            verbose=verbose,
+        )
+    except MemoryError as memory_error:
+        raise RuntimeError(
+            f"[{schema_name}] Out of memory during fit. "
+            "Try lowering --max-samples (e.g. 200000) and/or --batch-size."
+        ) from memory_error
+    except Exception as fit_error:
+        message = str(fit_error)
+        if "Unable to allocate" in message:
+            raise RuntimeError(
+                f"[{schema_name}] Out of memory during fit ({message}). "
+                "Try lowering --max-samples (e.g. 200000) and/or --batch-size."
+            ) from fit_error
+        raise
 
     with scaler_path.open("wb") as handle:
         pickle.dump(info["scaler"], handle)
@@ -250,7 +299,9 @@ def _fit_single_schema(
     summary = {
         "schema_name": schema_name,
         "requested_features": requested_features,
-        "effective_features": info.get("feature_names", []),
+        "effective_features": effective_features,
+        "missing_features": missing_features,
+        "raw_n_samples": raw_n_samples,
         "n_features": int(info.get("n_features", 0)),
         "n_samples": int(len(y_class)),
         "lookback": int(lookback),
@@ -262,9 +313,9 @@ def _fit_single_schema(
         "best_val_loss": best_val_loss,
         "best_epoch": best_epoch,
         "final_val_loss": final_val_loss,
-        "history_csv": str(history_csv),
-        "model_path": str(model_path),
-        "scaler_path": str(scaler_path),
+        "history_csv": _path_for_report(history_csv),
+        "model_path": _path_for_report(model_path),
+        "scaler_path": _path_for_report(scaler_path),
     }
 
     summary_json = case_output_dir / "summary.json"
@@ -273,7 +324,9 @@ def _fit_single_schema(
     return TrainArtifacts(
         schema_name=schema_name,
         requested_features=list(requested_features),
-        effective_features=list(info.get("feature_names", [])),
+        effective_features=effective_features,
+        missing_features=missing_features,
+        raw_n_samples=raw_n_samples,
         n_features=int(info.get("n_features", 0)),
         n_samples=int(len(y_class)),
         epochs_ran=int(len(history_df)),
@@ -382,6 +435,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lr-patience", type=int, default=5, help="ReduceLROnPlateau patience.")
     parser.add_argument("--lr-factor", type=float, default=0.5, help="ReduceLROnPlateau factor.")
     parser.add_argument("--min-lr", type=float, default=1e-6, help="Minimum learning rate.")
+    parser.add_argument(
+        "--max-samples",
+        type=int,
+        default=300000,
+        help="Cap samples per schema to avoid OOM. <=0 disables capping.",
+    )
     parser.add_argument("--verbose", type=int, default=2, choices=[0, 1, 2], help="Keras fit verbosity.")
     parser.add_argument(
         "--output-dir",
@@ -413,8 +472,9 @@ def main() -> int:
         "lr_patience": args.lr_patience,
         "lr_factor": args.lr_factor,
         "min_lr": args.min_lr,
+        "max_samples": args.max_samples,
         "verbose": args.verbose,
-        "output_dir": str(output_dir),
+        "output_dir": _path_for_report(output_dir),
     }
     (output_dir / "run_config.json").write_text(json.dumps(run_config, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -438,6 +498,7 @@ def main() -> int:
         lr_patience=args.lr_patience,
         lr_factor=args.lr_factor,
         min_lr=args.min_lr,
+        max_samples=(None if args.max_samples <= 0 else args.max_samples),
         verbose=args.verbose,
     )
 
@@ -460,6 +521,7 @@ def main() -> int:
         lr_patience=args.lr_patience,
         lr_factor=args.lr_factor,
         min_lr=args.min_lr,
+        max_samples=(None if args.max_samples <= 0 else args.max_samples),
         verbose=args.verbose,
     )
 

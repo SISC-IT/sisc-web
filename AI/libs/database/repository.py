@@ -342,6 +342,7 @@ class PortfolioRepository:
         try:
             with conn.cursor() as cursor:
                 account_id = self._resolve_account_id(conn)
+                allow_global_chain_reset = False
                 if target_date:
                     # Safety-first default: only clear current run artifacts.
                     # Global chain reset can remove unrelated simulations sharing the same DB.
@@ -363,6 +364,14 @@ class PortfolioRepository:
                                 "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%' AND account_id = %s",
                                 (target_date, account_id),
                             )
+                            # xai_reports/portfolio_* tables are not account-scoped in current schema.
+                            # Keep chain consistency by resetting those tables globally by date.
+                            cursor.execute(
+                                "DELETE FROM public.xai_reports WHERE date >= %s AND run_id LIKE 'daily_%%'",
+                                (target_date,),
+                            )
+                            cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
+                            cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
                     else:
                         if account_id is None:
                             cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
@@ -383,11 +392,16 @@ class PortfolioRepository:
                         )
             conn.commit()
             if target_date:
-                if os.environ.get("AI_ALLOW_GLOBAL_CHAIN_RESET", "0") == "1":
+                if allow_global_chain_reset:
                     print(
                         f"[PortfolioRepository] Reset simulation rows from {target_date} onward "
                         f"(triggered by run_id={run_id})."
                     )
+                    if account_id is not None:
+                        print(
+                            "[PortfolioRepository] account_id was specified, but xai_reports/portfolio tables "
+                            "are not account-scoped; those tables were reset globally by date."
+                        )
                 else:
                     print(
                         f"[PortfolioRepository] Reset current run artifacts only "
