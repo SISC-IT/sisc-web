@@ -40,6 +40,7 @@ AI/data/weights/itransformer/*
 
 AI/config/trading.local.json
 AI/tests/out/
+AI/backtests/out/
 AI/docs/
 
 # ===== Backend =====

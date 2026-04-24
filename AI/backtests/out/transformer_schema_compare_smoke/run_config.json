@@ -1,0 +1,23 @@
+{
+  "db_name": "db",
+  "lookback": 60,
+  "horizons": [
+    1,
+    3,
+    5,
+    7
+  ],
+  "data_start_date": "2015-01-01",
+  "train_end_date": "2023-12-31",
+  "epochs": 1,
+  "batch_size": 32,
+  "test_size": 0.2,
+  "split_seed": 42,
+  "global_seed": 42,
+  "patience": 10,
+  "lr_patience": 5,
+  "lr_factor": 0.5,
+  "min_lr": 1e-06,
+  "verbose": 2,
+  "output_dir": "C:\\Users\\jaebin\\Documents\\GitHub\\sisc-web\\AI\\backtests\\out\\transformer_schema_compare_smoke"
+}
