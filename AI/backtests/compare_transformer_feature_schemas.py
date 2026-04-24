@@ -94,14 +94,15 @@ class TrainArtifacts:
     final_val_loss: float | None
 
 
-def _set_global_seed(seed: int) -> None:
+def _set_global_seed(seed: int, *, deterministic: bool = False) -> None:
     random.seed(seed)
     np.random.seed(seed)
     tf.keras.utils.set_random_seed(seed)
-    try:
-        tf.config.experimental.enable_op_determinism()
-    except Exception:
-        pass
+    if deterministic:
+        try:
+            tf.config.experimental.enable_op_determinism()
+        except Exception:
+            pass
 
 
 def _safe_float(value: Any) -> float | None:
@@ -158,8 +159,9 @@ def _fit_single_schema(
     min_lr: float,
     max_samples: int | None,
     verbose: int,
+    deterministic: bool,
 ) -> TrainArtifacts:
-    _set_global_seed(global_seed)
+    _set_global_seed(global_seed, deterministic=deterministic)
     tf.keras.backend.clear_session()
 
     loader = DataLoader(db_name=db_name, lookback=lookback, horizons=horizons)
@@ -274,6 +276,11 @@ def _fit_single_schema(
             raise RuntimeError(
                 f"[{schema_name}] Out of memory during fit ({message}). "
                 "Try lowering --max-samples (e.g. 200000) and/or --batch-size."
+            ) from fit_error
+        if "Deterministic GPU implementation of unsorted segment reduction op not available" in message:
+            raise RuntimeError(
+                f"[{schema_name}] Deterministic GPU ops are incompatible with this model's embedding/optimizer path. "
+                "Re-run without --deterministic, or force CPU execution if you need deterministic training."
             ) from fit_error
         raise
 
@@ -443,6 +450,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--verbose", type=int, default=2, choices=[0, 1, 2], help="Keras fit verbosity.")
     parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Enable deterministic TensorFlow ops. This may fail on GPU with embedding sparse updates.",
+    )
+    parser.add_argument(
         "--output-dir",
         default=None,
         help="Optional output directory. Default: AI/backtests/out/transformer_schema_compare_<timestamp>",
@@ -474,11 +486,16 @@ def main() -> int:
         "min_lr": args.min_lr,
         "max_samples": args.max_samples,
         "verbose": args.verbose,
+        "deterministic": bool(args.deterministic),
         "output_dir": _path_for_report(output_dir),
     }
     (output_dir / "run_config.json").write_text(json.dumps(run_config, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print(f"[SchemaCompare] Output directory: {output_dir}")
+    if args.deterministic:
+        print("[SchemaCompare] Deterministic TensorFlow ops enabled.")
+    else:
+        print("[SchemaCompare] Deterministic TensorFlow ops disabled to keep GPU embedding updates compatible.")
     print("[SchemaCompare] Training case 1/2: dynamic23 (pre-#307 schema)")
     dynamic_artifacts = _fit_single_schema(
         schema_name="dynamic23",
@@ -500,6 +517,7 @@ def main() -> int:
         min_lr=args.min_lr,
         max_samples=(None if args.max_samples <= 0 else args.max_samples),
         verbose=args.verbose,
+        deterministic=bool(args.deterministic),
     )
 
     print("[SchemaCompare] Training case 2/2: fixed17 (current schema)")
@@ -523,6 +541,7 @@ def main() -> int:
         min_lr=args.min_lr,
         max_samples=(None if args.max_samples <= 0 else args.max_samples),
         verbose=args.verbose,
+        deterministic=bool(args.deterministic),
     )
 
     dynamic_df = pd.read_csv(dynamic_artifacts.history_csv)
