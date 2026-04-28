@@ -32,14 +32,17 @@ MODELS = [
     {
         "name"      : "PatchTST",
         "slug"      : f"{KAGGLE_USERNAME}/patchtst-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/PatchTST"),
+        "dst_dir"   : os.path.join(project_root, "AI/data/weights/patchtst"),
         "keep_files": ["patchtst_model.pt", "patchtst_scaler.pkl"],
     },
     {
         "name"      : "Transformer",
         "slug"      : f"{KAGGLE_USERNAME}/transformer-training",
         "dst_dir"   : os.path.join(project_root, "AI/data/weights/transformer/prod"),
-        "keep_files": ["multi_horizon_model.keras", "multi_horizon_scaler.pkl"],
+        "keep_files": [
+            {"source": "multi_horizon_model.keras", "dest": "multi_horizon_model_prod.keras"},
+            {"source": "multi_horizon_scaler.pkl", "dest": "multi_horizon_scaler_prod.pkl"},
+        ],
     },
     {
         "name"      : "iTransformer",
@@ -56,11 +59,23 @@ MODELS = [
 ]
 
 
+def normalize_file_spec(file_spec) -> tuple[str, str]:
+    """Kaggle output 파일명과 로컬 저장 파일명을 분리한다."""
+    if isinstance(file_spec, dict):
+        source = file_spec["source"]
+        return source, file_spec.get("dest", source)
+    return file_spec, file_spec
+
+
 def list_output_files(slug: str) -> list:
     """Kaggle API로 노트북 output 파일 목록 조회"""
     owner, kernel = slug.split("/")
     url = f"https://www.kaggle.com/api/v1/kernels/output/{owner}/{kernel}?page_token=START"
-    resp = requests.get(url, auth=(KAGGLE_USERNAME, KAGGLE_KEY))
+    try:
+        resp = requests.get(url, auth=(KAGGLE_USERNAME, KAGGLE_KEY), timeout=60)
+    except requests.exceptions.RequestException as e:
+        print(f"   [오류] 파일 목록 조회 요청 실패: {e}")
+        return []
     if resp.status_code != 200:
         print(f"   [오류] 파일 목록 조회 실패: {resp.status_code}")
         return []
@@ -73,8 +88,19 @@ def download_file(slug: str, file_name: str, dst_path: str) -> bool:
     """Kaggle API로 특정 파일 다운로드 (스트리밍)"""
     owner, kernel = slug.split("/")
     url = f"https://www.kaggle.com/api/v1/kernels/output/{owner}/{kernel}?fileName={file_name}"
-    
-    with requests.get(url, auth=(KAGGLE_USERNAME, KAGGLE_KEY), stream=True) as resp:
+
+    try:
+        resp_ctx = requests.get(
+            url,
+            auth=(KAGGLE_USERNAME, KAGGLE_KEY),
+            stream=True,
+            timeout=(10, 300),
+        )
+    except requests.exceptions.RequestException as e:
+        print(f"   [오류] 다운로드 요청 실패: {file_name} ({e})")
+        return False
+
+    with resp_ctx as resp:
         if resp.status_code != 200:
             print(f"   [오류] 다운로드 실패: {file_name} ({resp.status_code})")
             return False
@@ -97,7 +123,8 @@ def download_weights(model: dict) -> bool:
     print(f"\n>> [{model['name']}] 가중치 다운로드 중...")
     print(f"   소스: {model['slug']}")
     print(f"   저장: {model['dst_dir']}")
-    print(f"   대상: {model['keep_files']}")
+    targets = [normalize_file_spec(spec) for spec in model["keep_files"]]
+    print(f"   대상: {[f'{source} -> {dest}' if source != dest else source for source, dest in targets]}")
 
     os.makedirs(model['dst_dir'], exist_ok=True)
 
@@ -117,24 +144,33 @@ def download_weights(model: dict) -> bool:
             if result.stdout.strip():
                 print(f"   [CLI 출력] {result.stdout.strip()}")
             file_map = {}
-            for root, dirs, files in os.walk(tmp_dir):
+            for root, _dirs, files in os.walk(tmp_dir):
                 for f in files:
                     if f not in file_map:
                         file_map[f] = os.path.join(root, f)
             copied = []
-            for fname in model['keep_files']:
-                if fname in file_map:
-                    src = file_map[fname]
+            for file_spec in model['keep_files']:
+                source_name, dest_name = normalize_file_spec(file_spec)
+                if source_name in file_map:
+                    src = file_map[source_name]
                     if os.path.getsize(src) < 100:
                         continue
-                    dst = os.path.join(model['dst_dir'], fname)
+                    dst = os.path.join(model['dst_dir'], dest_name)
                     shutil.copy2(src, dst)
                     size = os.path.getsize(dst) / (1024 * 1024)
-                    copied.append(f"{fname} ({size:.1f} MB)")
-            if copied:
+                    copied.append(f"{dest_name} ({size:.1f} MB)")
+            expected_count = len(model["keep_files"])
+            if len(copied) == expected_count:
                 print(f"   [{model['name']}] 다운로드 완료!")
-                for f in copied: print(f"   - {f}")
+                for f in copied:
+                    print(f"   - {f}")
                 return True
+            missing_sources = [
+                normalize_file_spec(spec)[0]
+                for spec in model["keep_files"]
+                if normalize_file_spec(spec)[1] not in {item.split(" (", 1)[0] for item in copied}
+            ]
+            print(f"   [{model['name']}] 실패: 누락 파일 -> {missing_sources}")
             return False
 
     # 파일명 → URL 매핑
@@ -146,21 +182,23 @@ def download_weights(model: dict) -> bool:
 
     copied = []
     missing = []
-    for fname in model['keep_files']:
-        if fname in file_map:
-            dst = os.path.join(model['dst_dir'], fname)
-            print(f"   다운로드 중: {fname}...")
-            success = download_file(model['slug'], file_map[fname], dst)
+    for file_spec in model['keep_files']:
+        source_name, dest_name = normalize_file_spec(file_spec)
+        if source_name in file_map:
+            dst = os.path.join(model['dst_dir'], dest_name)
+            print(f"   다운로드 중: {source_name}...")
+            success = download_file(model['slug'], file_map[source_name], dst)
             if success:
                 size = os.path.getsize(dst) / (1024 * 1024)
-                copied.append(f"{fname} ({size:.1f} MB)")
+                copied.append(f"{dest_name} ({size:.1f} MB)")
             else:
-                missing.append(fname)
+                missing.append(source_name)
         else:
-            missing.append(fname)
+            missing.append(source_name)
 
     if missing:
-        print(f"   [{model['name']}] 경고: 파일 없음 -> {missing}")
+        print(f"   [{model['name']}] 실패: 파일 없음 -> {missing}")
+        return False
     if not copied:
         print(f"   [{model['name']}] 실패: 가중치 파일 없음")
         return False

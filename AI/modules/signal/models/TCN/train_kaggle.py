@@ -1,14 +1,18 @@
 # AI/modules/signal/models/TCN/train_kaggle.py
 """
-TCN 학습 스크립트 - Kaggle/GitHub Actions 버전
+TCN 학습 스크립트 - Kaggle 크론잡 버전
 -----------------------------------------------
 [train.py와의 차이점]
 - DB 연결 없음 (get_standard_training_data 사용 안 함)
 - parquet 파일에서 직접 로드 후 피처 계산
-- GitHub Actions 자동화 파이프라인에서 사용
+- 서버 크론잡이 Kaggle 커널을 push할 때 사용
 
 [train.py는 그대로 유지]
 - 로컬/서버에서 DB 연결로 학습할 때 사용
+
+[과적합 방지 기본값]
+- 채널은 [32, 64, 64] 이하의 작은 모델부터 사용한다.
+- weight_decay, dropout, early stopping을 기본 적용한다.
 -----------------------------------------------
 """
 import argparse
@@ -19,6 +23,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import pickle
 import sys
+from datetime import date
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -151,7 +156,7 @@ def load_and_preprocess(parquet_dir: str, start_date: str, end_date: str) -> pd.
 
 def train_model(args: argparse.Namespace):
     print("=" * 50)
-    print(" TCN 학습 시작 (Kaggle/Actions 버전)")
+    print(" TCN 학습 시작 (Kaggle 크론잡 버전)")
     print("=" * 50)
 
     # 1. 데이터 로드
@@ -159,12 +164,18 @@ def train_model(args: argparse.Namespace):
 
     # 2. Train/Val 날짜 기준 분리
     dates          = raw_df['date'].sort_values().unique()
-    split_date_idx = int(len(dates) * 0.9)
+    if len(dates) < 2:
+        raise ValueError(f"날짜 분할을 위한 데이터가 부족합니다. unique dates={len(dates)}")
+    split_date_idx = min(max(1, int(len(dates) * 0.9)), len(dates) - 1)
     split_date     = dates[split_date_idx]
 
     # split_date 미만을 train으로 → val이 비어지는 경계 케이스 방지
     train_df = raw_df[raw_df['date'] <  split_date].copy()
     val_df   = raw_df[raw_df['date'] >= split_date].copy()
+    if train_df.empty or val_df.empty:
+        raise ValueError(
+            f"train/val 분할 결과가 비었습니다. train={len(train_df)}, val={len(val_df)}"
+        )
     print(f">> Train: ~{split_date} 미만, Val: {split_date}~")
 
     # 3. 스케일링 (train만 fit)
@@ -204,12 +215,16 @@ def train_model(args: argparse.Namespace):
     ).to(device)
 
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate,weight_decay=1e-4)#L2규제 추가
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=args.learning_rate,
+        weight_decay=args.weight_decay,
+    )
 
     best_val_loss = float("inf")
     best_state    = None
 
-    patience = 7      # 성능 개선이 없어도 기다려줄 에포크 횟수
+    patience = args.patience
     counter = 0
     # 6. 학습 루프
     print(f">> 학습 시작 (epochs={args.epochs})\n")
@@ -239,7 +254,7 @@ def train_model(args: argparse.Namespace):
             best_val_loss = val_loss
             best_state    = copy.deepcopy(model.state_dict())
             counter = 0  # 성능이 개선되었으므로 카운터 초기화
-            print("  ✓ saved")
+            print("  saved")
         else:
             counter += 1  # 성능 개선이 없으므로 카운터 증가
             print(f"  (Patience: {counter}/{patience})")
@@ -282,25 +297,27 @@ def _find_kaggle_dataset_path() -> str:
     """Kaggle 입력 데이터셋 경로를 자동으로 탐색"""
     base = "/kaggle/input"
     if os.path.exists(base):
-        for entry in os.listdir(base):
+        for entry in sorted(os.listdir(base)):
             full = os.path.join(base, entry)
-            if os.path.isdir(full) and any(f.endswith(".parquet") for f in os.listdir(full)):
+            if os.path.isdir(full) and os.path.exists(os.path.join(full, "price_data.parquet")):
                 return full
     return os.environ.get("PARQUET_DIR", base)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train TCN signal model (Kaggle/Actions 버전)")
+    parser = argparse.ArgumentParser(description="Train TCN signal model (Kaggle 크론잡 버전)")
     parser.add_argument("--parquet-dir",   default=os.environ.get("PARQUET_DIR", _find_kaggle_dataset_path()))
     parser.add_argument("--start-date",    default="2015-01-01")
-    parser.add_argument("--end-date",      default="2023-12-31")
+    parser.add_argument("--end-date",      default=os.environ.get("END_DATE", date.today().isoformat()))
     parser.add_argument("--seq-len",       type=int,   default=60)
     parser.add_argument("--epochs",        type=int,   default=20)
     parser.add_argument("--batch-size",    type=int,   default=64)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
+    parser.add_argument("--weight-decay",  type=float, default=1e-4)
     parser.add_argument("--kernel-size",   type=int,   default=3)
     parser.add_argument("--dropout",       type=float, default=0.2)
     parser.add_argument("--channels",      type=int, nargs="+", default=[32, 64, 64])
+    parser.add_argument("--patience",      type=int,   default=7)
     parser.add_argument("--output-dir",    default=os.environ.get('WEIGHTS_DIR', '/kaggle/working/tcn'))
     return parser.parse_args()
 
@@ -313,16 +330,18 @@ def train():
     """노트북에서 module.train()으로 호출하기 위한 래퍼"""
     import argparse
     args = argparse.Namespace(
-    parquet_dir  = '/kaggle/input/sisc-ai-trading-dataset',
-    start_date    = "2015-01-01",
-    end_date      = "2023-12-31",
-    seq_len       = 30,
-    epochs        = 50,          # 20 → 50
-    batch_size    = 64,
-    learning_rate = 1e-4,        # 1e-3 → 1e-4 (학습률 낮춤)
-    kernel_size   = 3,
-    dropout       = 0.5,         
-    channels      = [64, 128, 128],  # [32,64,64] → 더 크게
-    output_dir    = "/kaggle/working"
-)
+        parquet_dir    = '/kaggle/input/sisc-ai-trading-dataset',
+        start_date     = "2015-01-01",
+        end_date       = os.environ.get("END_DATE", date.today().isoformat()),
+        seq_len        = 60,
+        epochs         = 20,
+        batch_size     = 64,
+        learning_rate  = 1e-3,
+        weight_decay   = 1e-4,
+        kernel_size    = 3,
+        dropout        = 0.2,
+        channels       = [32, 64, 64],
+        patience       = 7,
+        output_dir     = "/kaggle/working",
+    )
     train_model(args)

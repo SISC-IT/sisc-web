@@ -1,11 +1,11 @@
 # AI/modules/signal/models/transformer/train_kaggle.py
 """
-Transformer 학습 스크립트 - Kaggle/GitHub Actions 버전
+Transformer 학습 스크립트 - Kaggle 크론잡 버전
 -----------------------------------------------
 [train.py와의 차이점]
 - DB 연결 없음 (DataLoader.load_data_from_db 사용 안 함)
 - parquet 파일에서 직접 로드
-- GitHub Actions 자동화 파이프라인에서 사용
+- 서버 크론잡이 Kaggle 커널을 push할 때 사용
 
 [train.py는 그대로 유지]
 - 로컬/서버에서 DB 연결로 학습할 때 사용
@@ -41,7 +41,7 @@ if gpus:
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-        print(f"🚀 GPU {len(gpus)}대 사용")
+        print(f"GPU {len(gpus)}대 사용")
     except RuntimeError as e:
         print(e)
 else:
@@ -72,7 +72,7 @@ CONFIG = {
         '/kaggle/input/datasets/jihyeongkimm/sisc-ai-trading-dataset'
     ),
     'start_date'  : '2015-01-01',
-    'end_date'    : '2023-12-31',
+    'end_date'    : os.environ.get('END_DATE', pd.Timestamp.today().strftime('%Y-%m-%d')),
     'seq_len'     : 60,
     'batch_size'  : 32,
     'epochs'      : 50,
@@ -137,25 +137,22 @@ def load_and_preprocess():
         except Exception as e:
             fail_count += 1
             if fail_count >= 20:
-                raise RuntimeError("피처 계산 실패가 20개를 초과했습니다.")
+                raise RuntimeError("피처 계산 실패가 20개를 초과했습니다.") from e
+
+    if not processed:
+        raise ValueError(f"전처리된 데이터가 없습니다. 실패 종목 수={fail_count}")
 
     full_df = pd.concat(processed).reset_index(drop=True)
     print(f">> 피처 계산 완료: {len(full_df):,}행 (실패: {fail_count}개)")
     return full_df
 
 
-def build_sequences_transformer(full_df, scaler, fit_scaler=True):
+def build_sequences_transformer(full_df, scaler, ticker_to_id, sector_to_id, fit_scaler=True):
     """Transformer용 시퀀스 생성 (DB 없이 직접 구현)"""
     seq_len    = CONFIG['seq_len']
     horizons   = [1, 3, 5, 7]
     max_h      = max(horizons)
     available  = [c for c in TRANSFORMER_TRAIN_FEATURES if c in full_df.columns]
-
-    # ticker/sector ID 매핑
-    tickers    = sorted(full_df['ticker'].unique())
-    sectors    = sorted(full_df['sector'].unique() if 'sector' in full_df.columns else ['Unknown'])
-    ticker_to_id = {t: i for i, t in enumerate(tickers)}
-    sector_to_id = {s: i for i, s in enumerate(sectors)}
 
     full_df = full_df.dropna(subset=available).copy()
     if fit_scaler:
@@ -190,12 +187,12 @@ def build_sequences_transformer(full_df, scaler, fit_scaler=True):
             np.array(X_tick, dtype=np.int32),
             np.array(X_sec,  dtype=np.int32),
             np.array(y_list, dtype=np.float32),
-            len(tickers), len(sectors))
+            len(ticker_to_id), len(sector_to_id))
 
 
 def train_single_pipeline():
     print("=" * 50)
-    print(" Transformer 학습 시작 (Kaggle/Actions 버전)")
+    print(" Transformer 학습 시작 (Kaggle 크론잡 버전)")
     print("=" * 50)
 
     # 1. 데이터 로드
@@ -214,7 +211,9 @@ def train_single_pipeline():
 
     # 2. Train/Val 분리 (ticker 기준)
     tickers       = full_df['ticker'].unique()
-    n_val         = max(1, int(len(tickers) * 0.2))
+    if len(tickers) < 2:
+        raise ValueError(f"학습을 위한 ticker가 부족합니다. 현재 {len(tickers)}개")
+    n_val         = min(max(1, int(len(tickers) * 0.2)), len(tickers) - 1)
     val_tickers   = tickers[-n_val:]
     train_tickers = tickers[:-n_val]
 
@@ -224,8 +223,26 @@ def train_single_pipeline():
 
     # 3. 시퀀스 생성
     scaler = StandardScaler()
-    X_ts_train, X_tick_train, X_sec_train, y_train, n_tickers, n_sectors = build_sequences_transformer(train_df, scaler, fit_scaler=True)
-    X_ts_val,   X_tick_val,   X_sec_val,   y_val,   _,         _         = build_sequences_transformer(val_df,   scaler, fit_scaler=False)
+    all_tickers = sorted(full_df['ticker'].unique())
+    all_sectors = sorted(full_df['sector'].unique() if 'sector' in full_df.columns else ['Unknown'])
+    ticker_to_id = {ticker: idx for idx, ticker in enumerate(all_tickers)}
+    sector_to_id = {sector: idx for idx, sector in enumerate(all_sectors)}
+    X_ts_train, X_tick_train, X_sec_train, y_train, n_tickers, n_sectors = build_sequences_transformer(
+        train_df,
+        scaler,
+        ticker_to_id,
+        sector_to_id,
+        fit_scaler=True,
+    )
+    X_ts_val, X_tick_val, X_sec_val, y_val, _, _ = build_sequences_transformer(
+        val_df,
+        scaler,
+        ticker_to_id,
+        sector_to_id,
+        fit_scaler=False,
+    )
+    if len(X_ts_train) == 0 or len(X_ts_val) == 0:
+        raise ValueError("시퀀스 생성 결과가 비어 있습니다. 분할과 입력 데이터를 확인하세요.")
 
     print(f"\n>> 시퀀스 생성 완료: {X_ts_train.shape}")
     print(f">> horizon: {horizons}")

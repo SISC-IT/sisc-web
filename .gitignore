@@ -30,6 +30,7 @@ __pycache__/
 /.venv/
 /venv310/
 SISC_개인메모.md
+wandb
 AI/data/weights/
 
 AI/.venv/

@@ -7,8 +7,8 @@
 [실행 방법]
   python AI/scripts/deploy_to_server.py
 
-[GitHub Actions에서]
-  download_weights.py 완료 후 자동 실행
+[서버 크론잡에서]
+  download_weights.py 완료 후 weekly_routine.py가 호출한다.
   SSH_HOST, SSH_USER, SSH_PRIVATE_KEY 환경변수 필요
 
 [전제 조건]
@@ -18,12 +18,13 @@
 import os
 import sys
 import io
+import shlex
 
 import paramiko
 from scp import SCPClient
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 서버 접속 정보 (GitHub Secrets → 환경변수로 주입)
+# 서버 접속 정보 (서버 환경 변수로 주입)
 # ─────────────────────────────────────────────────────────────────────────────
 SSH_HOST    = os.environ.get("SSH_HOST")
 SSH_USER    = os.environ.get("SSH_USER")
@@ -47,8 +48,8 @@ SERVER_WEIGHTS_PATH = os.environ.get(
 MODELS = [
     {
         "name"      : "PatchTST",
-        "local_dir" : os.path.join(project_root, "AI/data/weights/PatchTST"),
-        "remote_dir": f"{SERVER_WEIGHTS_PATH}/PatchTST",
+        "local_dir" : os.path.join(project_root, "AI/data/weights/patchtst"),
+        "remote_dir": f"{SERVER_WEIGHTS_PATH}/patchtst",
         "files"     : ["patchtst_model.pt", "patchtst_scaler.pkl"],
     },
     {
@@ -98,13 +99,16 @@ def deploy_model(ssh: paramiko.SSHClient, scp: SCPClient, model: dict) -> bool:
     """모델 가중치를 서버에 배포"""
     print(f"\n>> [{model['name']}] 배포 중...")
 
-    ssh.exec_command(f"mkdir -p {model['remote_dir']}")
+    remote_dir_q = shlex.quote(model["remote_dir"])
+    ssh.exec_command(f"mkdir -p {remote_dir_q}")
 
+    missing = []
     for fname in model['files']:
         local_path = os.path.join(model['local_dir'], fname)
 
         if not os.path.exists(local_path):
-            print(f"   [경고] 파일 없음 (스킵): {local_path}")
+            print(f"   [오류] 파일 없음: {local_path}")
+            missing.append(fname)
             continue
 
         remote_path = f"{model['remote_dir']}/{fname}"
@@ -114,7 +118,11 @@ def deploy_model(ssh: paramiko.SSHClient, scp: SCPClient, model: dict) -> bool:
         scp.put(local_path, remote_path)
         print(f"   전송 완료: {remote_path}")
 
-    print(f"   [{model['name']}] 배포 완료! ✅")
+    if missing:
+        print(f"   [{model['name']}] 배포 실패: 누락 파일 {missing}")
+        return False
+
+    print(f"   [{model['name']}] 배포 완료")
     return True
 
 
@@ -126,7 +134,7 @@ print(">> deploy_to_server.py 시작")
 print("=" * 50)
 
 if not all([SSH_HOST, SSH_USER, SSH_KEY_STR]):
-    print("❌ SSH 접속 정보 없음!")
+    print("[오류] SSH 접속 정보 없음")
     print("   SSH_HOST, SSH_USER, SSH_PRIVATE_KEY 환경변수를 설정하세요.")
     sys.exit(1)
 
@@ -140,7 +148,7 @@ try:
     print("\n>> SSH 연결 중...")
     ssh = create_ssh_client()
     scp = SCPClient(ssh.get_transport())
-    print(">> SSH 연결 성공! ✅")
+    print(">> SSH 연결 성공")
 
     failed = []
     for model in MODELS:
@@ -156,10 +164,10 @@ try:
         print(f">> 실패한 모델: {failed}")
         sys.exit(1)
     else:
-        print(">> 전체 배포 완료! ✅")
+        print(">> 전체 배포 완료")
         print(">> 서버가 새 가중치로 업데이트됐습니다.")
     print("=" * 50)
 
 except Exception as e:
-    print(f"❌ 배포 실패: {e}")
+    print(f"[오류] 배포 실패: {e}")
     sys.exit(1)

@@ -1,4 +1,4 @@
-# AI/modules/signal/models/PatchTST/wrapper.py
+# AI/modules/signal/models/patchtst/wrapper.py
 """
 PatchTST Wrapper
 -----------------------------------------------
@@ -25,7 +25,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.core.base_model import BaseSignalModel
-from AI.modules.signal.models.PatchTST.architecture import PatchTST_Model
+from AI.modules.signal.models.patchtst.architecture import PatchTST_Model
 
 # ─────────────────────────────────────────────────────────────────────────────
 # [수정] train.py와 완전히 동일한 순서로 정의
@@ -86,7 +86,7 @@ class PatchTSTWrapper(BaseSignalModel):
 
     # ── 2. train() ───────────────────────────────────────────────────────────
     def train(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
-        from AI.modules.signal.models.PatchTST.train import train as run_training
+        from AI.modules.signal.models.patchtst.train import train as run_training
         run_training()
 
     # ── 3. predict() ─────────────────────────────────────────────────────────

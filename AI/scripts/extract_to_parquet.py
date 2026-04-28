@@ -3,21 +3,27 @@
 [목적]
   운영 서버 DB에서 학습 데이터를 추출하여 parquet 파일로 저장
 
-[두 가지 실행 환경]
-  1. 로컬 (Termius 터널 켜둔 상태)
-     → SSH_PRIVATE_KEY 환경변수 없으면 자동으로 로컬 터널 모드
-     → localhost:15432 직접 접속
+[실행 환경]
+  1. 서버 크론잡 기본값
+     → DB_CONNECT_MODE=direct
+     → DB_HOST, DB_PORT로 DB에 직접 접속
 
-  2. GitHub Actions (자동화)
-     → SSH_PRIVATE_KEY 환경변수 있으면 paramiko로 터널 자동 오픈
-     → Termius 불필요
+  2. SSH 터널 모드
+     → DB_CONNECT_MODE=ssh_tunnel
+     → SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, SSH_PORT를 사용해 터널 생성
+
+  3. 로컬 Termius 터널 모드
+     → DB_CONNECT_MODE=termius를 명시한 경우에만 127.0.0.1:15432 사용
 
 [실행 방법]
-  # 로컬 (Termius 켜둔 상태)
+  # 서버 크론잡
   python AI/scripts/extract_to_parquet.py
 
-  # GitHub Actions (환경변수 자동 주입)
-  python AI/scripts/extract_to_parquet.py
+  # 로컬 Termius 터널을 명시적으로 사용할 때
+  DB_CONNECT_MODE=termius python AI/scripts/extract_to_parquet.py
+
+  # SSH 터널을 스크립트에서 열어야 할 때
+  DB_CONNECT_MODE=ssh_tunnel python AI/scripts/extract_to_parquet.py
 """
 import os
 import io
@@ -41,8 +47,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 접속 설정
-# 로컬: 환경변수 없으면 localhost:15432 (Termius 터널)
-# Actions: 환경변수로 SSH 정보 주입 → paramiko 터널 자동 오픈
+# 서버 크론잡에서는 기본적으로 DB_HOST, DB_PORT에 직접 접속한다.
+# 로컬 Termius나 SSH 터널은 DB_CONNECT_MODE로 명시해야 한다.
 # ─────────────────────────────────────────────────────────────────────────────
 SSH_HOST    = os.environ.get("SSH_HOST")
 SSH_USER    = os.environ.get("SSH_USER")
@@ -54,30 +60,47 @@ DB_PORT     = int(os.environ.get("DB_PORT", 5432))
 DB_USER     = os.environ.get("DB_USER",     "postgres")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 DB_NAME     = os.environ.get("DB_NAME",     "sisc_db")
+DB_SSLMODE  = os.environ.get("DB_SSLMODE", "").strip()
 
-# GitHub Actions 여부: SSH 환경변수 3개 모두 있으면 Actions 모드
-IS_ACTIONS = all([SSH_HOST, SSH_USER, SSH_KEY_STR])
+DB_CONNECT_MODE = os.environ.get("DB_CONNECT_MODE", "direct").strip().lower()
+VALID_CONNECT_MODES = {"direct", "ssh_tunnel", "ssh-tunnel", "termius", "local_termius", "local-termius"}
+if DB_CONNECT_MODE not in VALID_CONNECT_MODES:
+    raise ValueError(f"지원하지 않는 DB_CONNECT_MODE입니다: {DB_CONNECT_MODE}")
+
+USE_SSH_TUNNEL = DB_CONNECT_MODE in {"ssh_tunnel", "ssh-tunnel"}
+USE_TERMIUS_TUNNEL = DB_CONNECT_MODE in {"termius", "local_termius", "local-termius"}
+
+DB_CONNECT_HOST = DB_HOST
+DB_CONNECT_PORT = DB_PORT
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SSH 터널 오픈
-# 로컬: Termius가 이미 15432 열어두니까 그냥 패스
-# Actions: paramiko + sshtunnel 로 코드에서 직접 터널 생성
+# DB 접속 준비
+# direct: DB_HOST, DB_PORT 직접 접속
+# termius: 명시적으로 요청된 로컬 터널만 사용
+# ssh_tunnel: paramiko + sshtunnel로 터널 생성
 # ─────────────────────────────────────────────────────────────────────────────
 tunnel     = None
-LOCAL_PORT = None
 
 
-def open_tunnel() -> int:
-    global tunnel, LOCAL_PORT
+def prepare_connection() -> None:
+    global tunnel, DB_CONNECT_HOST, DB_CONNECT_PORT
 
-    if not IS_ACTIONS:
-        # 로컬 모드: Termius 터널이 이미 열려있다고 가정
-        print(">> [로컬 모드] Termius 터널 사용 (127.0.0.1:15432)")
-        LOCAL_PORT = 15432
-        return LOCAL_PORT
+    if USE_TERMIUS_TUNNEL:
+        DB_CONNECT_HOST = os.environ.get("TERMIUS_DB_HOST", "127.0.0.1")
+        DB_CONNECT_PORT = int(os.environ.get("TERMIUS_DB_PORT", 15432))
+        print(f">> [Termius 모드] 로컬 터널 사용 ({DB_CONNECT_HOST}:{DB_CONNECT_PORT})")
+        return
 
-    print(">> [Actions 모드] paramiko SSH 터널 오픈 중...")
+    if not USE_SSH_TUNNEL:
+        print(f">> [직접 DB 접속] {DB_CONNECT_HOST}:{DB_CONNECT_PORT}")
+        return
+
+    if not all([SSH_HOST, SSH_USER, SSH_KEY_STR]):
+        print("[오류] SSH 터널 모드에는 SSH_HOST, SSH_USER, SSH_PRIVATE_KEY가 필요합니다.")
+        sys.exit(1)
+
+    print(">> [SSH 터널 모드] paramiko SSH 터널 오픈 중...")
     try:
         from sshtunnel import SSHTunnelForwarder
         import paramiko
@@ -99,12 +122,12 @@ def open_tunnel() -> int:
             local_bind_address  = ('127.0.0.1', 0),  # 0 = 빈 포트 자동 배정
         )
         tunnel.start()
-        LOCAL_PORT = tunnel.local_bind_port
-        print(f">> SSH 터널 오픈 완료! (127.0.0.1:{LOCAL_PORT} → {DB_HOST}:{DB_PORT})")
-        return LOCAL_PORT
+        DB_CONNECT_HOST = "127.0.0.1"
+        DB_CONNECT_PORT = tunnel.local_bind_port
+        print(f">> SSH 터널 오픈 완료! ({DB_CONNECT_HOST}:{DB_CONNECT_PORT} → {DB_HOST}:{DB_PORT})")
 
     except Exception as e:
-        print(f"❌ SSH 터널 오픈 실패: {e}")
+        print(f"[오류] SSH 터널 오픈 실패: {e}")
         sys.exit(1)
 
 
@@ -119,14 +142,17 @@ def close_tunnel():
 # DB 연결 (매번 새 연결 생성 - Neon 연결 끊김 방지)
 # ─────────────────────────────────────────────────────────────────────────────
 def get_conn():
-    return psycopg2.connect(
-        host            = "127.0.0.1",
-        port            = LOCAL_PORT,
+    conn_kwargs = dict(
+        host            = DB_CONNECT_HOST,
+        port            = DB_CONNECT_PORT,
         user            = DB_USER,
         password        = DB_PASSWORD,
         dbname          = DB_NAME,
         connect_timeout = 30,
     )
+    if DB_SSLMODE:
+        conn_kwargs["sslmode"] = DB_SSLMODE
+    return psycopg2.connect(**conn_kwargs)
 
 
 def read_sql_safe(query: str, desc: str = "") -> pd.DataFrame:
@@ -155,10 +181,10 @@ def read_sql_safe(query: str, desc: str = "") -> pd.DataFrame:
 def main():
     print("=" * 50)
     print(">> extract_to_parquet.py 시작")
-    print(f">> 실행 환경: {'GitHub Actions' if IS_ACTIONS else '로컬 (Termius)'}")
+    print(f">> DB 접속 모드: {DB_CONNECT_MODE}")
     print("=" * 50)
 
-    open_tunnel()
+    prepare_connection()
 
     try:
         # 1. price_data (연도별 청크)

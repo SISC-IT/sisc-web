@@ -33,6 +33,8 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 
+from AI.modules.signal.models.itransformer.architecture import build_itransformer_model
+
 # Kaggle 경로 설정
 def _find_kaggle_dataset_path() -> str:
     """Kaggle 입력 데이터셋 경로 자동 탐색"""
@@ -52,7 +54,7 @@ OUTPUT_DIR      = "/kaggle/working"
 CONFIG = {
     "lookback"        : 60,
     "horizons"        : [1, 3, 5, 7],
-    "train_end_date"  : "2023-12-31",
+    "train_end_date"  : os.environ.get("TRAIN_END_DATE"),
     "epochs"          : 50,
     "batch_size"      : 32,
     "learning_rate"   : 1e-4,
@@ -135,7 +137,11 @@ def load_parquet_data() -> pd.DataFrame:
                   "credit_spread_hy", "wti_price", "gold_price",
                   "nh_nl_index", "correlation_spike", "surprise_cpi"]
     available_macro = [c for c in macro_cols if c in macro_df.columns]
-    macro_df = macro_df[available_macro].drop_duplicates("date")
+    macro_df = (
+        macro_df[available_macro]
+        .sort_values("date")
+        .drop_duplicates("date", keep="last")
+    )
 
     # 변화율 계산
     if "us10y" in macro_df.columns:
@@ -153,8 +159,9 @@ def load_parquet_data() -> pd.DataFrame:
     df[macro_cols] = df.groupby("ticker")[macro_cols].transform(lambda x: x.ffill())
     df = df.fillna(0)
 
-    # 학습 기간 필터
-    df = df[df["date"] <= CONFIG["train_end_date"]]
+    # 학습 기간 필터: TRAIN_END_DATE가 없으면 parquet 최신 날짜까지 사용한다.
+    if CONFIG["train_end_date"]:
+        df = df[df["date"] <= pd.to_datetime(CONFIG["train_end_date"])]
 
     print(f">> 로드 완료: {len(df):,}행, {df['ticker'].nunique()}개 종목")
     return df
@@ -166,6 +173,7 @@ def load_parquet_data() -> pd.DataFrame:
 def build_sequences(
     df: pd.DataFrame,
     scaler: StandardScaler,
+    ticker_to_id: dict | None = None,
     fit_scaler: bool = False,
 ) -> tuple:
     lookback    = CONFIG["lookback"]
@@ -183,18 +191,21 @@ def build_sequences(
     if fit_scaler:
         scaler.fit(all_feat_vals)
 
-    X_list, y_list = [], []
+    X_list, ticker_id_list, sector_id_list, y_list = [], [], [], []
 
     for ticker, group in df.groupby("ticker"):
         group = group.sort_values("date").reset_index(drop=True)
         if len(group) < lookback + max_horizon + 10:
             continue
 
+        ticker_id = ticker_to_id.get(ticker, 0) if ticker_to_id else 0
         feat_vals  = scaler.transform(group[available_feats].values.astype(np.float32))
         close_vals = group["close"].values
 
         for i in range(lookback, len(group) - max_horizon):
             X_list.append(feat_vals[i - lookback : i])
+            ticker_id_list.append(ticker_id)
+            sector_id_list.append(0)
             labels = []
             for h in horizons:
                 future_ret = (close_vals[i + h] - close_vals[i]) / close_vals[i]
@@ -205,58 +216,31 @@ def build_sequences(
         raise ValueError("시퀀스 생성 실패 - 데이터 부족")
 
     X = np.array(X_list, dtype=np.float32)
+    X_ticker = np.array(ticker_id_list, dtype=np.int32).reshape(-1, 1)
+    X_sector = np.array(sector_id_list, dtype=np.int32).reshape(-1, 1)
     y = np.array(y_list, dtype=np.float32)
     print(f">> 시퀀스: X={X.shape}, y={y.shape}, 피처={available_feats}")
-    return X, y, available_feats
+    return X, X_ticker, X_sector, y, available_feats
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 모델 구성
 # ─────────────────────────────────────────────────────────────────────────────
-def build_model(seq_len: int, n_features: int, n_outputs: int) -> tf.keras.Model:
-    """iTransformer: 변수(feature) 축을 토큰으로 취급하는 Transformer"""
-    from tensorflow.keras import layers
-
-    # 입력
-    seq_input = tf.keras.Input(shape=(seq_len, n_features), name="sequence_input")
-
-    # Transpose: [batch, seq, feat] → [batch, feat, seq]
-    x = layers.Permute((2, 1), name="transpose_in")(seq_input)
-
-    # Transformer Encoder 블록
-    for block_idx in range(CONFIG["num_blocks"]):
-        name = f"block{block_idx}"
-        attn_in = layers.LayerNormalization(epsilon=1e-6, name=f"{name}_ln1")(x)
-        attn_out = layers.MultiHeadAttention(
-            num_heads=CONFIG["num_heads"],
-            key_dim=CONFIG["head_size"] // CONFIG["num_heads"],
-            dropout=CONFIG["dropout"],
-            name=f"{name}_mha",
-        )(attn_in, attn_in)
-        attn_out = layers.Dropout(CONFIG["dropout"])(attn_out)
-        x = layers.Add(name=f"{name}_attn_add")([x, attn_out])
-
-        ffn_in = layers.LayerNormalization(epsilon=1e-6, name=f"{name}_ln2")(x)
-        ffn = layers.Dense(CONFIG["ff_dim"], activation="gelu", name=f"{name}_ffn1")(ffn_in)
-        ffn = layers.Dropout(CONFIG["dropout"])(ffn)
-        ffn = layers.Dense(seq_len, name=f"{name}_ffn2")(ffn)
-        ffn = layers.Dropout(CONFIG["dropout"])(ffn)
-        x = layers.Add(name=f"{name}_ffn_add")([x, ffn])
-
-    # Transpose back: [batch, feat, seq] → [batch, seq, feat]
-    x = layers.Permute((2, 1), name="transpose_out")(x)
-
-    # Global Average Pooling
-    x = layers.GlobalAveragePooling1D()(x)
-
-    # MLP Head
-    for units in CONFIG["mlp_units"]:
-        x = layers.Dense(units, activation="relu")(x)
-        x = layers.Dropout(CONFIG["mlp_dropout"])(x)
-
-    output = layers.Dense(n_outputs, activation="sigmoid", name="output")(x)
-
-    model = tf.keras.Model(inputs=seq_input, outputs=output)
+def build_model(seq_len: int, n_features: int, n_outputs: int, n_tickers: int, n_sectors: int) -> tf.keras.Model:
+    """추론 wrapper와 같은 3입력 모델 계약으로 iTransformer를 생성한다."""
+    model = build_itransformer_model(
+        input_shape=(seq_len, n_features),
+        n_tickers=n_tickers,
+        n_sectors=n_sectors,
+        head_size=CONFIG["head_size"],
+        num_heads=CONFIG["num_heads"],
+        ff_dim=CONFIG["ff_dim"],
+        num_transformer_blocks=CONFIG["num_blocks"],
+        mlp_units=CONFIG["mlp_units"],
+        dropout=CONFIG["dropout"],
+        mlp_dropout=CONFIG["mlp_dropout"],
+        n_outputs=n_outputs,
+    )
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=CONFIG["learning_rate"]),
         loss="binary_crossentropy",
@@ -280,7 +264,9 @@ def train():
 
     # 2. Train / Val 분리 (티커 기준, 시간 순서 보존)
     tickers      = df["ticker"].unique()
-    n_val        = max(1, int(len(tickers) * CONFIG["test_size"]))
+    if len(tickers) < 2:
+        raise ValueError(f"학습을 위한 ticker가 부족합니다. 현재 {len(tickers)}개")
+    n_val        = min(max(1, int(len(tickers) * CONFIG["test_size"])), len(tickers) - 1)
     val_tickers  = tickers[-n_val:]
     train_tickers = tickers[:-n_val]
 
@@ -290,13 +276,30 @@ def train():
 
     # 3. 시퀀스 생성 (train만 scaler fit)
     scaler = StandardScaler()
-    X_train, y_train, feat_cols = build_sequences(train_df, scaler, fit_scaler=True)
-    X_val,   y_val,   _         = build_sequences(val_df,   scaler, fit_scaler=False)
+    ticker_to_id = {ticker: idx for idx, ticker in enumerate(sorted(tickers))}
+    X_train, X_tick_train, X_sec_train, y_train, feat_cols = build_sequences(
+        train_df,
+        scaler,
+        ticker_to_id=ticker_to_id,
+        fit_scaler=True,
+    )
+    X_val, X_tick_val, X_sec_val, y_val, _ = build_sequences(
+        val_df,
+        scaler,
+        ticker_to_id=ticker_to_id,
+        fit_scaler=False,
+    )
 
     # 4. 모델 구성
     n_features = X_train.shape[2]
     n_outputs  = len(HORIZONS)
-    model = build_model(CONFIG["lookback"], n_features, n_outputs)
+    model = build_model(
+        CONFIG["lookback"],
+        n_features,
+        n_outputs,
+        n_tickers=max(1, len(ticker_to_id)),
+        n_sectors=1,
+    )
     model.summary()
 
     # 5. 학습
@@ -310,8 +313,9 @@ def train():
     ]
 
     history = model.fit(
-        X_train, y_train,
-        validation_data=(X_val, y_val),
+        [X_train, X_tick_train, X_sec_train],
+        y_train,
+        validation_data=([X_val, X_tick_val, X_sec_val], y_val),
         epochs=CONFIG["epochs"],
         batch_size=CONFIG["batch_size"],
         callbacks=callbacks,
@@ -348,6 +352,8 @@ def train():
         "best_val_acc"   : round(best_val_acc, 4),
         "n_train_samples": int(len(X_train)),
         "n_val_samples"  : int(len(X_val)),
+        "n_tickers"      : max(1, len(ticker_to_id)),
+        "n_sectors"      : 1,
     }
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)

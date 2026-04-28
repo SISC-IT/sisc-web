@@ -12,7 +12,7 @@ def _resolve_model_class(model_name: str):
 
         return TransformerSignalModel
     if normalized == "patchtst":
-        from AI.modules.signal.models.PatchTST.wrapper import PatchTSTWrapper
+        from AI.modules.signal.models.patchtst.wrapper import PatchTSTWrapper
 
         return PatchTSTWrapper
     if normalized in {"itransformer", "i_transformer", "i-transformer"}:
