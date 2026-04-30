@@ -99,13 +99,20 @@ def write_kernel_files(work_dir: Path, spec: dict) -> None:
     )
 
     runner = f"""
+import glob
 import os
 import sys
 import zipfile
 from pathlib import Path
 
-dataset_dir = Path("{KAGGLE_DATASET_MOUNT}")
-code_zip = dataset_dir / "{CODE_ARCHIVE_NAME}"
+preferred_dataset_dir = Path("{KAGGLE_DATASET_MOUNT}")
+code_candidates = []
+preferred_code_zip = preferred_dataset_dir / "{CODE_ARCHIVE_NAME}"
+if preferred_code_zip.exists():
+    code_candidates.append(preferred_code_zip)
+code_candidates.extend(Path(path) for path in glob.glob("/kaggle/input/**/{CODE_ARCHIVE_NAME}", recursive=True))
+
+code_zip = code_candidates[0] if code_candidates else preferred_code_zip
 code_root = Path("/kaggle/working/sisc_code")
 
 if code_zip.exists():
@@ -117,8 +124,17 @@ else:
     sys.path.insert(0, os.path.dirname(__file__))
     print(f"[WARN] Code archive not found: {{code_zip}}")
 
-os.environ.setdefault("PARQUET_DIR", "{KAGGLE_DATASET_MOUNT}")
+parquet_candidates = []
+preferred_price_file = preferred_dataset_dir / "price_data.parquet"
+if preferred_price_file.exists():
+    parquet_candidates.append(preferred_price_file)
+parquet_candidates.extend(Path(path) for path in glob.glob("/kaggle/input/**/price_data.parquet", recursive=True))
+
+parquet_dir = parquet_candidates[0].parent if parquet_candidates else preferred_dataset_dir
+os.environ.setdefault("PARQUET_DIR", str(parquet_dir))
 os.environ.setdefault("WEIGHTS_DIR", "/kaggle/working")
+print(f"[INFO] PARQUET_DIR={{os.environ['PARQUET_DIR']}}")
+print(f"[INFO] CODE_ZIP={{code_zip}}")
 
 from {spec["module"]} import train
 
