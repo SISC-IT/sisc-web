@@ -15,6 +15,11 @@ import json
 # ─────────────────────────────────────────────────────────────────────────────
 current_dir  = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+ARTIFACT_ROOT = (
+    os.environ.get("AI_MODEL_WEIGHTS_DIR")
+    or os.environ.get("WEIGHTS_DIR")
+    or os.path.join(project_root, "AI/data/weights")
+)
 
 KAGGLE_USERNAME = os.environ.get("KAGGLE_USERNAME", "jihyeongkimm")
 KAGGLE_KEY      = os.environ.get("KAGGLE_KEY", "")
@@ -32,13 +37,13 @@ MODELS = [
     {
         "name"      : "PatchTST",
         "slug"      : f"{KAGGLE_USERNAME}/patchtst-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/patchtst"),
+        "dst_dir"   : os.path.join(ARTIFACT_ROOT, "patchtst"),
         "keep_files": ["patchtst_model.pt", "patchtst_scaler.pkl"],
     },
     {
         "name"      : "Transformer",
         "slug"      : f"{KAGGLE_USERNAME}/transformer-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/transformer/prod"),
+        "dst_dir"   : os.path.join(ARTIFACT_ROOT, "transformer/prod"),
         "keep_files": [
             {"source": "multi_horizon_model.keras", "dest": "multi_horizon_model_prod.keras"},
             {"source": "multi_horizon_scaler.pkl", "dest": "multi_horizon_scaler_prod.pkl"},
@@ -47,13 +52,13 @@ MODELS = [
     {
         "name"      : "iTransformer",
         "slug"      : f"{KAGGLE_USERNAME}/itransformer-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/itransformer"),
+        "dst_dir"   : os.path.join(ARTIFACT_ROOT, "itransformer"),
         "keep_files": ["multi_horizon_model.keras", "multi_horizon_scaler.pkl", "metadata.json"],
     },
     {
         "name"      : "TCN",
         "slug"      : f"{KAGGLE_USERNAME}/tcn-training",
-        "dst_dir"   : os.path.join(project_root, "AI/data/weights/tcn"),
+        "dst_dir"   : os.path.join(ARTIFACT_ROOT, "tcn"),
         "keep_files": ["model.pt", "scaler.pkl", "metadata.json"],
     },
 ]

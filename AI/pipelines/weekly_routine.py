@@ -75,7 +75,11 @@ def run_script(script_name: str, desc: str) -> bool:
         return False
 
 
-def run_weekly_pipeline(skip_extract: bool = False, skip_upload: bool = False):
+def run_weekly_pipeline(
+    skip_extract: bool = False,
+    skip_upload: bool = False,
+    skip_deploy: bool = False,
+):
     """
     주간 학습 파이프라인 메인
 
@@ -88,6 +92,7 @@ def run_weekly_pipeline(skip_extract: bool = False, skip_upload: bool = False):
     log(" 주간 학습 파이프라인 시작")
     log(f" skip_extract: {skip_extract}")
     log(f" skip_upload:  {skip_upload}")
+    log(f" skip_deploy:  {skip_deploy}")
     log("=" * 50)
 
     # ─────────────────────────────────────────────────────
@@ -139,10 +144,13 @@ def run_weekly_pipeline(skip_extract: bool = False, skip_upload: bool = False):
     # STEP 5. 서버 배포
     # SCP로 운영 서버 AI/data/weights/ 에 가중치 덮어씌움
     # ─────────────────────────────────────────────────────
-    success = run_script("deploy_to_server.py", "서버 배포")
-    if not success:
-        log("[오류] 서버 배포 실패.")
-        return False
+    if not skip_deploy:
+        success = run_script("deploy_to_server.py", "server deploy")
+        if not success:
+            log("[error] server deploy failed.")
+            return False
+    else:
+        log(">> [server deploy] skipped")
 
     # ─────────────────────────────────────────────────────
     # 완료
@@ -171,10 +179,17 @@ if __name__ == "__main__":
         action="store_true",
         help="Kaggle 업로드 스킵 (데이터 변경 없을 때)"
     )
+    parser.add_argument(
+        "--skip-deploy",
+        action="store_true",
+        default=os.environ.get("SKIP_SERVER_DEPLOY", "").strip().lower() in {"1", "true", "yes", "y"},
+        help="Skip SSH/SCP deployment after downloading weights."
+    )
     args = parser.parse_args()
 
     success = run_weekly_pipeline(
         skip_extract = args.skip_extract,
         skip_upload  = args.skip_upload,
+        skip_deploy  = args.skip_deploy,
     )
     sys.exit(0 if success else 1)

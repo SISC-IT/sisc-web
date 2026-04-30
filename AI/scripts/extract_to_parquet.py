@@ -29,6 +29,7 @@ import os
 import io
 import time
 import sys
+from datetime import date
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
@@ -57,7 +58,7 @@ SSH_PORT    = int(os.environ.get("SSH_PORT", 22))
 
 DB_HOST     = os.environ.get("DB_HOST",     "127.0.0.1")
 DB_PORT     = int(os.environ.get("DB_PORT", 5432))
-DB_USER     = os.environ.get("DB_USER",     "postgres")
+DB_USER     = os.environ.get("DB_USER") or os.environ.get("DB_USERNAME", "postgres")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 DB_NAME     = os.environ.get("DB_NAME",     "sisc_db")
 DB_SSLMODE  = os.environ.get("DB_SSLMODE", "").strip()
@@ -190,7 +191,7 @@ def main():
         # 1. price_data (연도별 청크)
         print("\n>> [1/6] price_data 추출 중 (연도별 분할)...")
         chunks = []
-        for year in range(2015, 2024):
+        for year in range(2015, date.today().year + 1):
             print(f"   {year}년 읽는 중...")
             query = f"""
                 SELECT ticker, date, open, high, low, close, volume, per, pbr
