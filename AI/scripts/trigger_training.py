@@ -39,6 +39,7 @@ KAGGLE_DATASET_MOUNT = os.environ.get(
     "KAGGLE_DATASET_MOUNT",
     "/kaggle/input/sisc-ai-trading-dataset",
 )
+CODE_ARCHIVE_NAME = os.environ.get("KAGGLE_CODE_ARCHIVE_NAME", "sisc_ai_code.zip")
 
 MODEL_SPECS = [
     {
@@ -100,8 +101,22 @@ def write_kernel_files(work_dir: Path, spec: dict) -> None:
     runner = f"""
 import os
 import sys
+import zipfile
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(__file__))
+dataset_dir = Path("{KAGGLE_DATASET_MOUNT}")
+code_zip = dataset_dir / "{CODE_ARCHIVE_NAME}"
+code_root = Path("/kaggle/working/sisc_code")
+
+if code_zip.exists():
+    code_root.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(code_zip) as zf:
+        zf.extractall(code_root)
+    sys.path.insert(0, str(code_root))
+else:
+    sys.path.insert(0, os.path.dirname(__file__))
+    print(f"[WARN] Code archive not found: {{code_zip}}")
+
 os.environ.setdefault("PARQUET_DIR", "{KAGGLE_DATASET_MOUNT}")
 os.environ.setdefault("WEIGHTS_DIR", "/kaggle/working")
 
