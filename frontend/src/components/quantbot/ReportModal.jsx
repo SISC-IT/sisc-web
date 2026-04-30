@@ -30,7 +30,7 @@ export default function ReportModal({ open, onClose, report }) {
             <div className="modal-left">
               <div className="modal-item">
                 <span className="label">티커</span>
-                <span className="value">{report.ticker}</span>
+                <span className="value">{report.displayTicker || report.ticker}</span>
               </div>
               <div className="modal-item">
                 <span className="label">시그널</span>

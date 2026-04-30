@@ -128,7 +128,14 @@ const LoginForm = () => {
               비밀번호 초기화
             </a>
           </div>
-          <NavLink to="/signup" className={styles.text}>
+          <NavLink
+            to={
+              returnUrl
+                ? `/signup?returnUrl=${encodeURIComponent(returnUrl)}`
+                : '/signup'
+            }
+            className={styles.text}
+          >
             회원가입
           </NavLink>
         </div>

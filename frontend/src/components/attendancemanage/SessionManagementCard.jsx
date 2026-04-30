@@ -77,7 +77,12 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
         const rounds = await getRounds(selectedSessionId);
         setCurrentDisplayedRounds(rounds || []);
       } catch (e) {
-        toast.error('라운드를 불러오지 못했습니다.');
+        const status = e?.response?.status ?? e?.status;
+        if (status === 403) {
+          toast.error('세션 멤버가 아니거나 조회 권한이 없습니다.');
+        } else {
+          toast.error('라운드를 불러오지 못했습니다.');
+        }
         setCurrentDisplayedRounds([]);
       }
     };
@@ -214,8 +219,8 @@ const SessionManagementCard = ({ styles: commonStyles }) => {
             </tr>
           </thead>
           <tbody>
-            {currentDisplayedRounds.length > 0 ? (
-              currentDisplayedRounds.map((round, index) => {
+            {(currentDisplayedRounds || []).length > 0 ? (
+              (currentDisplayedRounds || []).map((round, index) => {
                 const startTime = new Date(round.startAt);
                 const closeTime = new Date(round.closeAt);
 

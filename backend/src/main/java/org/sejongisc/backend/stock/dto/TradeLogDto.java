@@ -7,6 +7,7 @@ public record TradeLogDto(
     Long id,
     Long xaiReportId,
     String ticker,
+    String displayTicker,
     LocalDate fillDate,
     BigDecimal fillPrice,
     Integer qty,
