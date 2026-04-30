@@ -17,6 +17,7 @@ import os
 import shutil
 import subprocess
 import sys
+import zipfile
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
@@ -30,6 +31,31 @@ DATASET_SLUG    = os.environ.get("KAGGLE_DATASET_SLUG", "sisc-ai-trading-dataset
 DATASET_ID      = os.environ.get("KAGGLE_DATASET_ID", f"{KAGGLE_USERNAME}/{DATASET_SLUG}")
 DATASET_TITLE   = os.environ.get("KAGGLE_DATASET_TITLE", "SISC AI Trading Dataset")
 METADATA_PATH   = os.path.join(OUTPUT_DIR, "dataset-metadata.json")
+CODE_ARCHIVE_NAME = "sisc_ai_code.zip"
+CODE_ARCHIVE_PATH = os.path.join(OUTPUT_DIR, CODE_ARCHIVE_NAME)
+
+
+def build_code_archive() -> None:
+    """Package AI source code needed by Kaggle kernels into the dataset."""
+    source_root = os.path.join(project_root, "AI")
+    skipped_dirs = {"data", "docs", "tests", "__pycache__", ".venv", "venv", "wandb"}
+    skipped_suffixes = {".pyc", ".pyo"}
+
+    if os.path.exists(CODE_ARCHIVE_PATH):
+        os.remove(CODE_ARCHIVE_PATH)
+
+    with zipfile.ZipFile(CODE_ARCHIVE_PATH, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(source_root):
+            dirs[:] = [d for d in dirs if d not in skipped_dirs]
+            for file_name in files:
+                if any(file_name.endswith(suffix) for suffix in skipped_suffixes):
+                    continue
+                full_path = os.path.join(root, file_name)
+                rel_path = os.path.relpath(full_path, project_root)
+                zf.write(full_path, rel_path)
+
+    size = os.path.getsize(CODE_ARCHIVE_PATH) / (1024 * 1024)
+    print(f">> Kaggle 코드 아카이브 생성: {CODE_ARCHIVE_NAME} ({size:.1f} MB)")
 
 
 def ensure_dataset_metadata() -> None:
@@ -72,6 +98,7 @@ if not parquet_files:
     sys.exit(1)
 
 ensure_dataset_metadata()
+build_code_archive()
 
 if shutil.which("kaggle") is None:
     print("[오류] kaggle CLI가 PATH에 없습니다.")
