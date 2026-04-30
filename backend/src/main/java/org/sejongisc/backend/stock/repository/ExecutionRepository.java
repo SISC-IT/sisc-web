@@ -15,6 +15,25 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface ExecutionRepository extends JpaRepository<Execution, Long> {
   // 전체 매매로그 (최신 체결 순)
+  @Query("""
+      SELECT new org.sejongisc.backend.stock.dto.TradeLogDto(
+          e.id,
+          xr.id,
+          e.ticker,
+          e.ticker,
+          e.fillDate,
+          e.fillPrice,
+          e.qty,
+          e.side,
+          e.value,
+          e.positionQty,
+          e.avgPrice,
+          e.pnlRealized
+      )
+      FROM Execution e
+      LEFT JOIN e.xaiReport xr
+      ORDER BY e.fillDate DESC, e.id DESC
+      """)
   List<TradeLogDto> findAllByOrderByFillDateDesc();
 /*
   // 전체 종목별 보유 주식

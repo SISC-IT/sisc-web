@@ -47,6 +47,14 @@ class GeminiClient(BaseLLMClient):
 
         raise RuntimeError("Gemini response did not contain text.")
 
+    @staticmethod
+    def _format_error_summary(error_text: str, max_len: int = 220) -> str:
+        text = str(error_text or "").strip().replace("\r", " ").replace("\n", " ")
+        text = " ".join(text.split())
+        if len(text) <= max_len:
+            return text
+        return text[: max_len - 3] + "..."
+
     def generate_text(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
         try:
             config = types.GenerateContentConfig(
@@ -67,7 +75,8 @@ class GeminiClient(BaseLLMClient):
             return text
         except Exception as e:
             self.set_last_error(e)
-            print(f"[GeminiClient][Error] Text generation failed: {self.last_error}")
+            summary = self._format_error_summary(self.last_error or str(e))
+            print(f"[GeminiClient][Error] Text generation failed: {summary}")
             return ""
 
     def get_health(self) -> bool:
