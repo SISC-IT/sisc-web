@@ -21,6 +21,7 @@ ARTIFACT_CONTAINER_DIR="${AI_MODEL_WEIGHTS_DIR:-/mnt/ai-artifacts}"
 #   XAI_ADD_HOST_GATEWAY=true
 XAI_ENV_FILE="${XAI_ENV_FILE:-}"
 XAI_ADD_HOST_GATEWAY="${XAI_ADD_HOST_GATEWAY:-true}"
+XAI_COMMAND="${XAI_COMMAND:-}"
 
 # Optional auth. If omitted, script uses existing docker auth state.
 GHCR_READ_USER="${GHCR_READ_USER:-}"
@@ -71,7 +72,12 @@ if [[ "$XAI_ADD_HOST_GATEWAY" == "true" ]]; then
   run_args+=(--add-host=host.docker.internal:host-gateway)
 fi
 
-docker run "${run_args[@]}" "$IMAGE"
+if [[ -n "$XAI_COMMAND" ]]; then
+  echo "[INFO] Running custom XAI command: $XAI_COMMAND"
+  docker run "${run_args[@]}" "$IMAGE" /bin/sh -lc "$XAI_COMMAND"
+else
+  docker run "${run_args[@]}" "$IMAGE"
+fi
 
 CURRENT_IMAGE_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
 while read -r image_ref image_id; do

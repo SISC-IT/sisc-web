@@ -100,13 +100,14 @@ def resolve_model_artifacts(
             metadata_path=str(resolved_model_dir / "metadata.json"),
         )
 
+    # PatchTST artifact 경로는 리눅스 서버와 동일하게 소문자 patchtst로 통일한다.
     if normalized_model == "patchtst":
         resolved_model_dir = _resolve_absolute(model_dir) if model_dir else (root_dir / "patchtst")
         return ModelArtifactPaths(
             root_dir=str(root_dir),
             model_dir=str(resolved_model_dir),
-            model_path=str(resolved_model_dir / "PatchTST_best.pt"),
-            scaler_path=None,
+            model_path=str(resolved_model_dir / "patchtst_model.pt"),
+            scaler_path=str(resolved_model_dir / "patchtst_scaler.pkl"),
             metadata_path=None,
         )
 

@@ -5,6 +5,7 @@
 python-dotenv
 pandas
 numpy<2.0
+pyarrow
 
 # --- 현재 운영 모델 ---
 tensorflow-cpu<2.11
@@ -17,6 +18,10 @@ https://download.pytorch.org/whl/cpu/torch-2.3.1%2Bcpu-cp310-cp310-linux_x86_64.
 # --- DB / 외부 API ---
 psycopg2-binary
 requests
+kaggle
+paramiko
+scp
+sshtunnel
 beautifulsoup4
 groq
 google-genai

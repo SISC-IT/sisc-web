@@ -48,7 +48,7 @@ class TCNWrapper(BaseSignalModel):
         self.dropout = float(config.get("dropout", 0.2))
         self.scaler = None
         self.metadata = {}
-        self.is_loaded = False #중복로딩 방지 플래그
+        self.is_loaded = False
 
         artifact_paths = resolve_model_artifacts(
             model_name="tcn",
@@ -62,7 +62,6 @@ class TCNWrapper(BaseSignalModel):
         self.metadata_path = os.path.abspath(config.get("metadata_path", artifact_paths.metadata_path))
 
     def build(self, input_shape: tuple):
-        # 학습 메타데이터 기준 shape로 TCN 본체를 복원합니다.
         self.model = TCNClassifier(
             input_size=input_shape[1],
             output_size=len(self.horizons),
@@ -79,7 +78,6 @@ class TCNWrapper(BaseSignalModel):
         y_val: Optional[np.ndarray] = None,
         **kwargs,
     ):
-        # wrapper 단독 테스트용 학습 루프입니다. 실제 대규모 학습은 train.py 사용을 기준으로 둡니다.
         if self.model is None:
             self.build(X_train.shape[1:])
 
@@ -115,10 +113,9 @@ class TCNWrapper(BaseSignalModel):
                 print(f"Epoch [{epoch + 1}/{epochs}] Loss: {epoch_loss:.4f}")
 
     def _load_artifacts(self):
-        # metadata -> scaler -> model 순서로 읽어 추론에 필요한 상태를 복원합니다.
-
         if self.is_loaded:
-            return # 이미 로드된 상태라면 중복 로딩을 방지합니다.
+            return
+
         if self.metadata_path and os.path.exists(self.metadata_path):
             with open(self.metadata_path, "r", encoding="utf-8") as f:
                 self.metadata = json.load(f)
@@ -138,6 +135,11 @@ class TCNWrapper(BaseSignalModel):
 
         if self.model is not None and os.path.exists(self.model_path):
             state_dict = torch.load(self.model_path, map_location=self.device)
+
+            # [수정] Kaggle DataParallel 학습 시 생기는 'module.' 접두사 제거
+            if all(k.startswith("module.") for k in state_dict.keys()):
+                state_dict = {k[len("module."):]: v for k, v in state_dict.items()}
+
             self.model.load_state_dict(state_dict)
             self.model.eval()
 
@@ -151,20 +153,16 @@ class TCNWrapper(BaseSignalModel):
         self.scaler_path = os.path.abspath(filepath)
 
     def _prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        # 서비스 파이프라인이 넘겨준 원본 df에서 TCN용 기술지표를 생성합니다.
         if df is None or df.empty:
             raise ValueError("Input dataframe is empty.")
-
         prepared = get_standard_training_data(df.copy())
         missing = [col for col in self.feature_columns if col not in prepared.columns]
         if missing:
             raise ValueError(f"Missing required TCN feature columns: {missing}")
-
         prepared = prepared.replace([np.inf, -np.inf], np.nan).fillna(0)
         return prepared
 
     def _prepare_input_tensor(self, df: pd.DataFrame) -> torch.Tensor:
-        # 최근 seq_len 구간만 잘라서 학습 때와 동일한 feature 순서/스케일로 맞춥니다.
         prepared = self._prepare_dataframe(df)
         feature_frame = prepared[self.feature_columns]
 
@@ -181,7 +179,6 @@ class TCNWrapper(BaseSignalModel):
         return torch.from_numpy(batch).float().to(self.device)
 
     def predict(self, X_input: Union[pd.DataFrame, np.ndarray]) -> Dict[str, float]:
-        # DataFrame 입력이 기본 경로이며, 테스트 편의를 위해 ndarray도 허용합니다.
         self._load_artifacts()
 
         if self.model is None:
@@ -200,7 +197,6 @@ class TCNWrapper(BaseSignalModel):
             logits = self.model(tensor_x)
             probs = torch.sigmoid(logits).cpu().numpy().flatten()
 
-        # 포트폴리오 파이프라인이 바로 읽을 수 있도록 horizon별 dict 형태로 반환합니다.
         return {
             f"tcn_{horizon}d": float(prob)
             for horizon, prob in zip(self.horizons, probs)
@@ -208,13 +204,8 @@ class TCNWrapper(BaseSignalModel):
 
     def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
         return self.predict(df)
-    
+
     def predict_batch(self, ticker_data_map: Dict[str, pd.DataFrame]) -> Dict[str, Dict[str, float]]:
-        """
-        [Batch 추론] 여러 종목의 DataFrame을 받아 한 번의 GPU 연산으로 결과를 반환합니다.
-        입력: {"AAPL": df_aapl, "MSFT": df_msft, ...}
-        출력: {"AAPL": {"tcn_1d": 0.55, ...}, "MSFT": {"tcn_1d": 0.61, ...}}
-        """
         self._load_artifacts()
 
         if self.model is None:
@@ -223,69 +214,55 @@ class TCNWrapper(BaseSignalModel):
         valid_tickers = []
         tensor_list = []
 
-        # 1. 딕셔너리로 받은 종목별 데이터를 순회하며 전처리 및 윈도우 추출
         for ticker, df in ticker_data_map.items():
             try:
-                # dataset_builder의 다형성을 활용하여 전처리 (에러 발생 종목은 스킵)
                 prepared = get_standard_training_data(df.copy())
                 feature_frame = prepared[self.feature_columns]
 
                 if len(feature_frame) < self.seq_len:
-                    continue # 시퀀스 길이가 부족한 신규 상장 종목 등은 건너뜁니다.
+                    continue
 
                 latest_window = feature_frame.tail(self.seq_len).to_numpy(dtype=np.float32)
-                
-                # [참고] Global Scaler를 가정하고 일괄 적용합니다.
                 if self.scaler is not None:
                     latest_window = self.scaler.transform(latest_window).astype(np.float32)
 
                 tensor_list.append(latest_window)
                 valid_tickers.append(ticker)
-                
+
             except Exception as e:
-                # 특정 종목 데이터 불량 시 전체 파이프라인이 멈추지 않도록 예외 처리
-                print(f"⚠️ [{ticker}] 전처리 실패로 배치 추론에서 제외됨: {e}")
+                print(f"[{ticker}] 전처리 실패로 배치 추론에서 제외됨: {e}")
 
         if not tensor_list:
-            return {} # 유효한 종목이 없으면 빈 결과 반환
+            return {}
 
-        # 2. 리스트에 모인 2D 배열들을 3D 텐서로 조립 [Batch, Seq, Features]
         batch_array = np.stack(tensor_list, axis=0)
         batch_tensor = torch.from_numpy(batch_array).float().to(self.device)
 
-        # 3. GPU 병렬 추론 (단 1번의 호출로 전체 종목 예측)
         self.model.eval()
         with torch.no_grad():
             logits = self.model(batch_tensor)
-            probs = torch.sigmoid(logits).cpu().numpy() # 형태: [Batch, Horizons]
+            probs = torch.sigmoid(logits).cpu().numpy()
 
-        # 4. 결과를 포트폴리오 모듈이 인식할 수 있도록 딕셔너리로 매핑
         results = {}
         for i, ticker in enumerate(valid_tickers):
             results[ticker] = {
                 f"tcn_{horizon}d": float(probs[i, j])
                 for j, horizon in enumerate(self.horizons)
             }
-            
+
         return results
 
     def save(self, filepath: str):
-        # 수동 저장이 필요한 경우 wrapper에서도 state_dict 저장이 가능합니다.
         if self.model is None:
             raise ValueError("No TCN model to save.")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         torch.save(self.model.state_dict(), filepath)
 
     def load(self, filepath: str):
-        """
-        외부 경로의 가중치를 불러옵니다.
-        가중치가 위치한 동일 폴더 내의 scaler 및 metadata를 읽어오도록 경로를 동기화합니다.
-        """
         self.model_path = filepath
         target_dir = os.path.dirname(filepath)
         self.weights_dir = target_dir
         self.scaler_path = os.path.join(target_dir, "scaler.pkl")
         self.metadata_path = os.path.join(target_dir, "metadata.json")
-        
-        self.is_loaded = False # 새 경로로 로드할 때는 중복 로딩 방지 플래그를 초기화합니다.
+        self.is_loaded = False
         self._load_artifacts()

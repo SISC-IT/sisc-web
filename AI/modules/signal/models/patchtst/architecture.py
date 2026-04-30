@@ -1,4 +1,4 @@
-# AI/modules/signal/models/PatchTST/architecture.py
+# AI/modules/signal/models/patchtst/architecture.py
 import torch
 import torch.nn as nn
 
