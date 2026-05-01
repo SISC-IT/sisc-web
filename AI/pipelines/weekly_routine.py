@@ -36,6 +36,7 @@ import sys
 import argparse
 import subprocess
 from datetime import datetime
+from pathlib import Path
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
@@ -46,6 +47,37 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 SCRIPTS_DIR = os.path.join(project_root, "AI/scripts")
+
+
+def resolve_artifact_root() -> Path:
+    """weekly/download/deploy가 공유할 artifact 루트 경로를 결정한다."""
+    selected = (
+        os.environ.get("AI_MODEL_WEIGHTS_DIR")
+        or os.environ.get("WEIGHTS_DIR")
+        or os.path.join(project_root, "AI/data/weights")
+    )
+    path = Path(selected).expanduser()
+    if not path.is_absolute():
+        path = Path(project_root) / path
+    return path.resolve()
+
+
+def log_artifact_root() -> bool:
+    """cron 경로 불일치를 초기에 드러낸다."""
+    artifact_root = resolve_artifact_root()
+    log(f" artifact_root: {artifact_root}")
+    log(f" AI_MODEL_WEIGHTS_DIR: {os.environ.get('AI_MODEL_WEIGHTS_DIR') or '(unset)'}")
+    log(f" WEIGHTS_DIR: {os.environ.get('WEIGHTS_DIR') or '(unset)'}")
+
+    if os.environ.get("AI_MODEL_WEIGHTS_DIR"):
+        return True
+
+    log("[경고] AI_MODEL_WEIGHTS_DIR가 설정되지 않았습니다.")
+    log("       서버 cron에서는 AI_MODEL_WEIGHTS_DIR=/mnt/storage/ai-artifacts 처럼 명시하세요.")
+    if os.environ.get("REQUIRE_AI_MODEL_WEIGHTS_DIR", "").strip().lower() in {"1", "true", "yes", "y"}:
+        log("[오류] REQUIRE_AI_MODEL_WEIGHTS_DIR가 켜져 있어 파이프라인을 중단합니다.")
+        return False
+    return True
 
 
 def log(msg: str):
@@ -94,6 +126,8 @@ def run_weekly_pipeline(
     log(f" skip_upload:  {skip_upload}")
     log(f" skip_deploy:  {skip_deploy}")
     log("=" * 50)
+    if not log_artifact_root():
+        return False
 
     # ─────────────────────────────────────────────────────
     # STEP 1. DB 추출 → parquet

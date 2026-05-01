@@ -43,6 +43,7 @@ AI/data/weights/itransformer/*
 AI/config/trading.local.json
 AI/tests/out/
 AI/docs/
+AI/local_notes/
 
 SISC_*.md
 test_*.py

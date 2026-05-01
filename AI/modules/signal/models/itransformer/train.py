@@ -23,41 +23,26 @@ from AI.config import load_trading_config
 from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models.itransformer.architecture import build_itransformer_model
+from AI.modules.signal.models.itransformer.feature_contract import (
+    ITRANSFORMER_DEFAULT_FEATURES,
+    ITRANSFORMER_DYNAMIC_FEATURE_PREFIXES,
+    ITRANSFORMER_FEATURE_ALIASES,
+    ITRANSFORMER_FEATURE_SET_VER,
+    ITRANSFORMER_OPTIONAL_CONTEXT_FEATURES,
+    build_itransformer_metadata,
+    canonicalize_itransformer_feature_name,
+    normalize_itransformer_feature_aliases,
+    resolve_itransformer_feature_columns,
+    save_itransformer_metadata,
+)
 
 
 DEFAULT_SIGNAL_NAME = "signal_itrans"
 DEFAULT_SIGNAL_HORIZON_WEIGHTS = [0.1, 0.2, 0.3, 0.4]
-FEATURE_ALIASES = {
-    "mkt_breadth_ma200": "ma200_pct",
-    "mkt_breadth_nh_nl": "nh_nl_index",
-}
-DYNAMIC_FEATURE_PREFIXES = ("sector_return_",)
-
-DEFAULT_ITRANSFORMER_FEATURES = [
-    "us10y",
-    "us10y_chg",
-    "yield_spread",
-    "vix_close",
-    "vix_change_rate",
-    "dxy_close",
-    "dxy_chg",
-    "credit_spread_hy",
-    "wti_price",
-    "gold_price",
-    "nh_nl_index",
-    "ma200_pct",
-    "correlation_spike",
-    "recent_loss_ema",
-    "ret_1d",
-    "intraday_vol",
-    "log_return",
-    "surprise_cpi",
-]
-
-OPTIONAL_CONTEXT_FEATURES = [
-    "btc_close",
-    "eth_close",
-]
+FEATURE_ALIASES = dict(ITRANSFORMER_FEATURE_ALIASES)
+DYNAMIC_FEATURE_PREFIXES = tuple(ITRANSFORMER_DYNAMIC_FEATURE_PREFIXES)
+DEFAULT_ITRANSFORMER_FEATURES = list(ITRANSFORMER_DEFAULT_FEATURES)
+OPTIONAL_CONTEXT_FEATURES = list(ITRANSFORMER_OPTIONAL_CONTEXT_FEATURES)
 
 DEFAULT_CONFIG = {
     # iTransformer는 상대적으로 "변수 간 관계"를 보므로
@@ -79,6 +64,7 @@ DEFAULT_CONFIG = {
     "mlp_units": [128, 64],
     "dropout": 0.2,
     "mlp_dropout": 0.2,
+    "feature_set_ver": ITRANSFORMER_FEATURE_SET_VER,
     "feature_candidates": DEFAULT_ITRANSFORMER_FEATURES,
     "min_feature_count": 8,
     "signal_name": DEFAULT_SIGNAL_NAME,
@@ -87,15 +73,11 @@ DEFAULT_CONFIG = {
 
 
 def canonicalize_feature_name(name: str) -> str:
-    return FEATURE_ALIASES.get(name, name)
+    return canonicalize_itransformer_feature_name(name)
 
 
 def normalize_feature_aliases(df: pd.DataFrame) -> pd.DataFrame:
-    normalized = df.copy()
-    for alias, canonical in FEATURE_ALIASES.items():
-        if alias in normalized.columns and canonical not in normalized.columns:
-            normalized[canonical] = normalized[alias]
-    return normalized
+    return normalize_itransformer_feature_aliases(df)
 
 
 def resolve_signal_horizon_weights(horizons: List[int], raw_weights=None) -> List[float]:
@@ -188,40 +170,12 @@ def prepare_itransformer_frame(sub_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def resolve_feature_columns(df: pd.DataFrame, config: Dict) -> List[str]:
+    # 피처 선택 규칙은 학습, Kaggle, wrapper가 같은 계약을 쓰도록 별도 모듈에 둔다.
+    return resolve_itransformer_feature_columns(df, config)
     # 학습 피처 선택 규칙:
     # 1. feature_columns를 명시했다면 그대로 강제
     # 2. 아니면 기본 macro/correlation 후보 중 실제 존재하는 컬럼만 채택
     # 3. btc/eth, sector_return_* 같은 optional context 컬럼은 있으면 덧붙임
-    normalized_df = normalize_feature_aliases(df)
-    explicit_features = config.get("feature_columns")
-    raw_candidate_features = explicit_features or config.get("feature_candidates", DEFAULT_ITRANSFORMER_FEATURES)
-    candidate_features = list(dict.fromkeys(canonicalize_feature_name(column) for column in raw_candidate_features))
-
-    if explicit_features:
-        missing = [column for column in candidate_features if column not in normalized_df.columns]
-        if missing:
-            raise ValueError(f"학습 데이터에 필요한 컬럼이 없습니다: {missing}")
-        return candidate_features
-
-    selected = [column for column in candidate_features if column in normalized_df.columns]
-    selected.extend(
-        column
-        for column in OPTIONAL_CONTEXT_FEATURES
-        if column in normalized_df.columns and column not in selected
-    )
-    selected.extend(
-        column
-        for column in sorted(normalized_df.columns)
-        if any(column.startswith(prefix) for prefix in DYNAMIC_FEATURE_PREFIXES) and column not in selected
-    )
-
-    if len(selected) < int(config.get("min_feature_count", 1)):
-        raise ValueError(
-            "iTransformer 학습에 사용할 거시/상관관계 피처가 너무 적습니다. "
-            f"selected={selected}"
-        )
-
-    return selected
 
 
 def prepare_macro_correlation_frame(
@@ -379,7 +333,10 @@ def build_time_split_dataset(
         "ticker_to_sector_id": {
             str(key): int(value) for key, value in loader.ticker_to_sector_id.items()
         },
+        "feature_set_ver": str(config.get("feature_set_ver", ITRANSFORMER_FEATURE_SET_VER)),
+        "feature_columns": feature_columns,
         "feature_names": feature_columns,
+        "feature_count": len(feature_columns),
         "n_features": len(feature_columns),
         "horizons": horizons,
         "scaler": scaler,
@@ -407,36 +364,41 @@ def build_time_split_dataset(
     )
 
 
-def save_training_metadata(metadata_path: str, info: Dict, config: Dict):
+def save_training_metadata(
+    metadata_path: str,
+    info: Dict,
+    config: Dict,
+    *,
+    model_path: str,
+    scaler_path: str,
+):
     # wrapper가 추론 시 똑같은 feature 순서와 seq_len을 재현할 수 있도록
     # 학습 메타데이터를 함께 저장합니다.
-    metadata = {
-        "model_name": "itransformer",
-        "seq_len": int(config["lookback"]),
-        "feature_names": info["feature_names"],
+    metadata_config = {
+        **config,
+        "feature_set_ver": info.get("feature_set_ver", ITRANSFORMER_FEATURE_SET_VER),
         "feature_focus": info["feature_focus"],
         "horizons": info["horizons"],
+        "seq_len": int(config["lookback"]),
         "n_tickers": int(info["n_tickers"]),
         "n_sectors": int(info["n_sectors"]),
         "ticker_to_id": info["ticker_to_id"],
         "sector_to_id": info["sector_to_id"],
         "ticker_to_sector_id": info["ticker_to_sector_id"],
-        "head_size": int(config["head_size"]),
-        "num_heads": int(config["num_heads"]),
-        "ff_dim": int(config["ff_dim"]),
-        "num_blocks": int(config["num_blocks"]),
-        "mlp_units": list(config["mlp_units"]),
-        "dropout": float(config["dropout"]),
-        "mlp_dropout": float(config["mlp_dropout"]),
         "scaler_type": info["scaler_type"],
         "val_start_date": info["val_start_date"],
         "signal_name": info["signal_name"],
         "signal_horizon_weights": info["signal_horizon_weights"],
+        "train_samples": int(info["train_samples"]),
+        "val_samples": int(info["val_samples"]),
     }
-
-    with open(metadata_path, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
-
+    metadata = build_itransformer_metadata(
+        config=metadata_config,
+        model_path=model_path,
+        scaler_path=scaler_path,
+        feature_columns=info["feature_columns"],
+    )
+    save_itransformer_metadata(metadata_path, metadata)
     return metadata_path
 
 
@@ -578,7 +540,13 @@ def train_single_pipeline(
     with open(scaler_path, "wb") as f:
         pickle.dump(info["scaler"], f)
 
-    metadata_path = save_training_metadata(metadata_path, info, config)
+    metadata_path = save_training_metadata(
+        metadata_path,
+        info,
+        config,
+        model_path=model_path,
+        scaler_path=scaler_path,
+    )
 
     print("\n[완료] iTransformer 학습 종료")
     print(f" - feature focus: {info['feature_focus']}")
@@ -589,6 +557,8 @@ def train_single_pipeline(
 
     return {
         "history": history.history,
+        "feature_set_ver": info["feature_set_ver"],
+        "feature_count": info["feature_count"],
         "feature_names": info["feature_names"],
         "signal_name": info["signal_name"],
         "model_path": model_path,

@@ -12,39 +12,40 @@ import tensorflow as tf
 from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 from AI.modules.signal.core.base_model import BaseSignalModel
 from AI.modules.signal.models.itransformer.architecture import build_itransformer_model
+from AI.modules.signal.models.itransformer.feature_contract import (
+    ITRANSFORMER_DEFAULT_HORIZONS,
+    ITRANSFORMER_FEATURE_SET_VER,
+    build_itransformer_metadata,
+    canonicalize_itransformer_feature_name,
+    get_itransformer_default_features,
+    load_itransformer_metadata,
+    normalize_itransformer_feature_aliases,
+    require_itransformer_feature_columns,
+    resolve_itransformer_metadata_path,
+    save_itransformer_metadata,
+)
 
 
-DEFAULT_HORIZONS = [1, 3, 5, 7]
-DEFAULT_FEATURE_COLUMNS = [
-    "us10y",
-    "us10y_chg",
-    "yield_spread",
-    "vix_close",
-    "vix_change_rate",
-    "dxy_close",
-    "dxy_chg",
-    "credit_spread_hy",
-    "wti_price",
-    "gold_price",
-    "nh_nl_index",
-    "ma200_pct",
-    "correlation_spike",
-    "recent_loss_ema",
-    "ret_1d",
-    "intraday_vol",
-    "log_return",
-    "surprise_cpi",
-]
+DEFAULT_HORIZONS = list(ITRANSFORMER_DEFAULT_HORIZONS)
+DEFAULT_FEATURE_COLUMNS = get_itransformer_default_features()
 
 
 class ITransformerWrapper(BaseSignalModel):
+    """iTransformer 추론 wrapper.
+
+    `predict()`는 기존 배열 기반 호출 호환성을 유지한다. 평가 경로에서는
+    `predict_with_status()`를 사용해 metadata 없는 legacy artifact나 오류 예측을
+    `prediction_status="fallback"`으로 분리한다.
+    """
+
     supports_model_load_before_build = True
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.model_name = "itransformer"
-        self.seq_len = int(config.get("seq_len", 60))
+        self.seq_len = int(config.get("seq_len", config.get("lookback", 60)))
         self.horizons = list(config.get("horizons") or DEFAULT_HORIZONS)
+        self.feature_set_ver = str(config.get("feature_set_ver", ITRANSFORMER_FEATURE_SET_VER))
 
         configured_features = (
             config.get("feature_columns")
@@ -52,11 +53,18 @@ class ITransformerWrapper(BaseSignalModel):
             or config.get("features")
             or DEFAULT_FEATURE_COLUMNS
         )
-        self.features = list(configured_features)
-        self.feature_columns = self.features
+        self.feature_columns = [
+            canonicalize_itransformer_feature_name(column) for column in configured_features
+        ]
+        self.features = self.feature_columns
 
         self.scaler = None
         self.metadata: Dict[str, Any] = {}
+        self.legacy_artifact = False
+        self.artifact_status = "metadata"
+        self.metadata_error = ""
+        self.last_prediction_status = "ok"
+        self.last_error_message = ""
 
         self._explicit_scaler_path = bool(config.get("scaler_path"))
         self._explicit_metadata_path = bool(config.get("metadata_path"))
@@ -75,6 +83,11 @@ class ITransformerWrapper(BaseSignalModel):
 
         self._load_metadata()
 
+    @property
+    def feature_count(self) -> int:
+        """현재 wrapper가 기대하는 feature 수를 반환한다."""
+        return len(self.feature_columns)
+
     @staticmethod
     def _abspath_or_none(filepath: Optional[str]) -> Optional[str]:
         if not filepath:
@@ -87,6 +100,13 @@ class ITransformerWrapper(BaseSignalModel):
         if array.ndim == 1:
             array = np.expand_dims(array, axis=1)
         return array
+
+    def _default_output(self) -> Dict[str, float]:
+        """fallback 상황에서 중립 확률을 반환한다."""
+        return {f"itransformer_{horizon}d": 0.5 for horizon in self.horizons}
+
+    def _artifact_path(self) -> str:
+        return str(self.model_path or self.config.get("model_path") or "")
 
     def _normalize_input_array(self, X_input: np.ndarray) -> np.ndarray:
         array_x = np.asarray(X_input, dtype=np.float32)
@@ -111,49 +131,91 @@ class ITransformerWrapper(BaseSignalModel):
             return list(self.horizons)
         if len(self.horizons) > output_dim:
             return list(self.horizons[:output_dim])
-
-        if not self.horizons:
-            return list(range(1, output_dim + 1))
-
-        resolved = list(self.horizons)
-        next_horizon = int(resolved[-1])
+        resolved = list(self.horizons or DEFAULT_HORIZONS)
+        next_horizon = int(resolved[-1]) if resolved else 1
         while len(resolved) < output_dim:
             next_horizon += 1
             resolved.append(next_horizon)
         return resolved
 
-    def _load_metadata(self) -> None:
-        if not self.metadata_path or not os.path.exists(self.metadata_path):
-            return
+    def _apply_metadata(self, metadata: dict[str, Any], *, strict: bool) -> None:
+        self.metadata = dict(metadata)
+        self.feature_set_ver = str(metadata.get("feature_set_ver", self.feature_set_ver))
 
-        with open(self.metadata_path, "r", encoding="utf-8") as f:
-            self.metadata = json.load(f)
-
-        self.seq_len = int(self.metadata.get("seq_len", self.seq_len))
-        metadata_horizons = self.metadata.get("horizons")
-        if isinstance(metadata_horizons, list) and metadata_horizons:
-            self.horizons = list(metadata_horizons)
-
-        metadata_features = self.metadata.get("feature_names") or self.metadata.get("feature_columns")
+        metadata_features = metadata.get("feature_columns") or metadata.get("feature_names")
         if isinstance(metadata_features, list) and metadata_features:
-            self.features = list(metadata_features)
-            self.feature_columns = self.features
+            self.feature_columns = [
+                canonicalize_itransformer_feature_name(column) for column in metadata_features
+            ]
+            self.features = self.feature_columns
+
+        if strict:
+            expected_count = int(metadata.get("feature_count", len(self.feature_columns)))
+            if expected_count != len(self.feature_columns):
+                raise ValueError(
+                    "iTransformer metadata feature_count가 feature_columns 길이와 다릅니다. "
+                    f"feature_count={expected_count}, columns={len(self.feature_columns)}"
+                )
+
+        self.seq_len = int(metadata.get("seq_len", self.seq_len))
+        metadata_horizons = metadata.get("horizons")
+        if isinstance(metadata_horizons, list) and metadata_horizons:
+            self.horizons = [int(horizon) for horizon in metadata_horizons]
+
+        if metadata.get("model_path") and not self.model_path:
+            self.model_path = os.path.abspath(str(metadata["model_path"]))
+        if metadata.get("scaler_path") and not self.scaler_path and not self._explicit_scaler_path:
+            self.scaler_path = os.path.abspath(str(metadata["scaler_path"]))
 
         config_overrides = {
-            "n_tickers": self.metadata.get("n_tickers"),
-            "n_sectors": self.metadata.get("n_sectors"),
-            "head_size": self.metadata.get("head_size"),
-            "num_heads": self.metadata.get("num_heads"),
-            "ff_dim": self.metadata.get("ff_dim"),
-            "num_blocks": self.metadata.get("num_blocks"),
-            "mlp_units": self.metadata.get("mlp_units"),
-            "dropout": self.metadata.get("dropout"),
-            "mlp_dropout": self.metadata.get("mlp_dropout"),
+            "n_tickers": metadata.get("n_tickers"),
+            "n_sectors": metadata.get("n_sectors"),
+            "head_size": metadata.get("head_size"),
+            "num_heads": metadata.get("num_heads"),
+            "ff_dim": metadata.get("ff_dim"),
+            "num_blocks": metadata.get("num_blocks"),
+            "mlp_units": metadata.get("mlp_units"),
+            "dropout": metadata.get("dropout"),
+            "mlp_dropout": metadata.get("mlp_dropout"),
             "n_outputs": len(self.horizons),
+            "feature_set_ver": self.feature_set_ver,
+            "feature_columns": list(self.feature_columns),
         }
         for key, value in config_overrides.items():
             if value is not None and key not in self.config:
                 self.config[key] = value
+
+    def _load_metadata(self) -> None:
+        if not self.metadata_path or not os.path.exists(self.metadata_path):
+            self.legacy_artifact = True
+            self.artifact_status = "legacy"
+            self.metadata = {}
+            return
+
+        try:
+            metadata = load_itransformer_metadata(self.metadata_path)
+        except Exception as exc:
+            self.legacy_artifact = True
+            self.artifact_status = "legacy_metadata_error"
+            self.metadata_error = str(exc)
+            try:
+                with open(self.metadata_path, "r", encoding="utf-8") as f:
+                    raw_metadata = json.load(f)
+                self._apply_metadata(raw_metadata, strict=False)
+            except Exception:
+                self.metadata = {}
+            return
+
+        if metadata is None:
+            self.legacy_artifact = True
+            self.artifact_status = "legacy"
+            self.metadata = {}
+            return
+
+        self.legacy_artifact = False
+        self.artifact_status = "metadata"
+        self.metadata_error = ""
+        self._apply_metadata(metadata, strict=True)
 
     def _load_artifacts(self, require_scaler: bool = False) -> None:
         if self.model is None:
@@ -168,6 +230,29 @@ class ITransformerWrapper(BaseSignalModel):
                 raise FileNotFoundError(f"iTransformer scaler file not found: {self.scaler_path}")
             self.load_scaler(self.scaler_path)
 
+    def _validate_scaler_contract(self) -> None:
+        if self.scaler is None:
+            return
+
+        scaler_features = getattr(self.scaler, "feature_names_in_", None)
+        if scaler_features is not None and len(scaler_features) > 0:
+            scaler_feature_columns = [str(column) for column in scaler_features]
+            if self.legacy_artifact and not self.metadata:
+                self.feature_columns = scaler_feature_columns
+                self.features = self.feature_columns
+            elif scaler_feature_columns != self.feature_columns:
+                raise ValueError(
+                    "iTransformer scaler feature 순서가 metadata와 다릅니다. "
+                    f"scaler={scaler_feature_columns}, metadata={self.feature_columns}"
+                )
+
+        scaler_feature_count = getattr(self.scaler, "n_features_in_", None)
+        if scaler_feature_count is not None and int(scaler_feature_count) != len(self.feature_columns):
+            raise ValueError(
+                "iTransformer scaler feature 수가 metadata와 다릅니다. "
+                f"scaler={int(scaler_feature_count)}, metadata={len(self.feature_columns)}"
+            )
+
     def load_scaler(self, filepath: str) -> None:
         scaler_path = os.path.abspath(filepath)
         if not os.path.exists(scaler_path):
@@ -176,11 +261,7 @@ class ITransformerWrapper(BaseSignalModel):
         with open(scaler_path, "rb") as f:
             self.scaler = pickle.load(f)
         self.scaler_path = scaler_path
-
-        scaler_features = getattr(self.scaler, "feature_names_in_", None)
-        if scaler_features is not None and len(scaler_features) > 0:
-            self.features = [str(name) for name in scaler_features]
-            self.feature_columns = self.features
+        self._validate_scaler_contract()
 
     def _prepare_model_inputs(
         self,
@@ -203,9 +284,14 @@ class ITransformerWrapper(BaseSignalModel):
 
         seq_len, feature_count = int(input_shape[0]), int(input_shape[1])
         self.seq_len = seq_len
-        if len(self.features) != feature_count:
-            self.features = [f"feature_{idx}" for idx in range(feature_count)]
-            self.feature_columns = self.features
+        if len(self.feature_columns) != feature_count:
+            if self.metadata and not self.legacy_artifact:
+                raise ValueError(
+                    "iTransformer metadata feature 수가 model input shape와 다릅니다. "
+                    f"metadata={len(self.feature_columns)}, model={feature_count}"
+                )
+            self.feature_columns = [f"feature_{idx}" for idx in range(feature_count)]
+            self.features = self.feature_columns
 
         n_outputs = int(self.config.get("n_outputs", max(1, len(self.horizons))))
         self.horizons = self._resolve_horizons(n_outputs)
@@ -286,45 +372,118 @@ class ITransformerWrapper(BaseSignalModel):
 
     def _prepare_feature_window(self, df: pd.DataFrame) -> np.ndarray:
         if df is None or df.empty:
-            raise ValueError("Input dataframe is empty.")
-        if not self.features:
-            raise ValueError("No iTransformer feature schema is configured.")
+            raise ValueError("iTransformer 입력 DataFrame이 비어 있습니다.")
+        if not self.feature_columns:
+            raise ValueError("iTransformer feature schema가 설정되지 않았습니다.")
         if len(df) < self.seq_len:
             raise ValueError(
-                f"Insufficient rows for iTransformer inference: required {self.seq_len}, got {len(df)}"
+                f"iTransformer 추론에 필요한 row가 부족합니다: required={self.seq_len}, got={len(df)}"
             )
+        if self.scaler is None:
+            raise ValueError("iTransformer scaler가 로드되지 않았습니다.")
 
-        missing_features = [column for column in self.features if column not in df.columns]
-        if missing_features:
-            raise ValueError(
-                "Missing required features for iTransformer inference: " + ", ".join(missing_features)
-            )
+        normalized = normalize_itransformer_feature_aliases(df)
+        feature_columns = require_itransformer_feature_columns(
+            normalized,
+            feature_columns=self.feature_columns,
+        )
+        window_frame = normalized[feature_columns].tail(self.seq_len).astype(np.float32)
+        if not np.isfinite(window_frame.to_numpy(dtype=np.float32)).all():
+            raise ValueError("iTransformer 입력 feature에 NaN 또는 무한대 값이 있습니다.")
+        return self.scaler.transform(window_frame).astype(np.float32)
 
-        window = df[self.features].tail(self.seq_len).to_numpy(dtype=np.float32)
-        if self.scaler is not None:
-            window = self.scaler.transform(window).astype(np.float32)
-        return window
+    def _predict_probabilities(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> np.ndarray:
+        self._load_artifacts(require_scaler=True)
+        window = self._prepare_feature_window(df)
+        probs = np.asarray(
+            self.predict(window, ticker_id=ticker_id, sector_id=sector_id, verbose=0)[0]
+        ).reshape(-1)
+        return probs.astype(np.float32)
+
+    def predict_with_status(
+        self,
+        df: pd.DataFrame,
+        ticker_id: int = 0,
+        sector_id: int = 0,
+    ) -> Dict[str, Any]:
+        """평가 경로에서 사용할 status 포함 예측 결과를 반환한다."""
+        try:
+            probs = self._predict_probabilities(df, ticker_id=ticker_id, sector_id=sector_id)
+            if probs.size == 0:
+                raise ValueError("iTransformer output dimension이 0입니다.")
+            horizons = self._resolve_horizons(int(probs.size))
+            self.horizons = horizons
+            output = {
+                f"itransformer_{horizon}d": float(prob)
+                for horizon, prob in zip(horizons, probs)
+            }
+            if self.legacy_artifact:
+                status = "fallback"
+                error_message = (
+                    "metadata sidecar가 없는 legacy artifact입니다. "
+                    "평가 기본 집계에서는 제외해야 합니다."
+                )
+                if self.metadata_error:
+                    error_message = f"{error_message} metadata_error={self.metadata_error}"
+            else:
+                status = "ok"
+                error_message = ""
+        except Exception as exc:
+            output = self._default_output()
+            status = "fallback"
+            error_message = str(exc)
+
+        self.last_prediction_status = status
+        self.last_error_message = error_message
+        return {
+            "output": output,
+            "prediction_status": status,
+            "error_message": error_message,
+            "feature_set_ver": self.feature_set_ver,
+            "seq_len": self.seq_len,
+            "feature_count": self.feature_count,
+            "artifact_path": self._artifact_path(),
+            "metadata_path": str(self.metadata_path or ""),
+            "legacy_artifact": self.legacy_artifact,
+            "artifact_status": self.artifact_status,
+        }
 
     def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
-        self._load_artifacts(require_scaler=bool(self.scaler_path))
-        window = self._prepare_feature_window(df)
-        probs = np.asarray(self.predict(window, ticker_id=ticker_id, sector_id=sector_id, verbose=0)[0]).reshape(-1)
-
-        if probs.size == 0:
-            return {"itransformer_1d": 0.5}
-
-        horizons = self._resolve_horizons(int(probs.size))
-        self.horizons = horizons
-        return {f"itransformer_{horizon}d": float(prob) for horizon, prob in zip(horizons, probs)}
+        return dict(self.predict_with_status(df, ticker_id=ticker_id, sector_id=sector_id)["output"])
 
     def save(self, filepath: str):
         if self.model is None:
-            raise ValueError("No iTransformer model to save.")
+            raise ValueError("저장할 iTransformer model이 없습니다.")
         target_path = os.path.abspath(filepath)
         target_dir = os.path.dirname(target_path)
         if target_dir:
             os.makedirs(target_dir, exist_ok=True)
         self.model.save(target_path)
+        self.model_path = target_path
+
+        scaler_path = self.scaler_path or os.path.join(target_dir, "multi_horizon_scaler.pkl")
+        metadata_path = resolve_itransformer_metadata_path(
+            model_path=target_path,
+            scaler_path=scaler_path,
+            metadata_path=self.metadata_path,
+        )
+        metadata = build_itransformer_metadata(
+            config={
+                **self.config,
+                "feature_set_ver": self.feature_set_ver,
+                "feature_columns": list(self.feature_columns),
+                "horizons": list(self.horizons),
+                "seq_len": self.seq_len,
+            },
+            model_path=target_path,
+            scaler_path=scaler_path,
+            feature_columns=self.feature_columns,
+        )
+        save_itransformer_metadata(metadata_path, metadata)
+        self.metadata_path = metadata_path
+        self.metadata = metadata
+        self.legacy_artifact = False
+        self.artifact_status = "metadata"
 
     def load(self, filepath: Optional[str] = None):
         target_path = os.path.abspath(filepath or self.model_path)

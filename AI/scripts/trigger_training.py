@@ -57,8 +57,9 @@ MODEL_SPECS = [
     {
         "name": "iTransformer",
         "slug": "itransformer-training",
-        "title": "iTransformer Training",
-        "module": "AI.modules.signal.models.itransformer.train_kaggle",
+        "title": "iTransformer Training + Evaluation",
+        "module": "AI.modules.signal.models.itransformer.kaggle_train_eval",
+        "function": "run_kaggle_train_eval",
     },
     {
         "name": "TCN",
@@ -136,9 +137,9 @@ os.environ.setdefault("WEIGHTS_DIR", "/kaggle/working")
 print(f"[INFO] PARQUET_DIR={{os.environ['PARQUET_DIR']}}")
 print(f"[INFO] CODE_ZIP={{code_zip}}")
 
-from {spec["module"]} import train
+from {spec["module"]} import {spec.get("function", "train")} as run_training
 
-train()
+run_training()
 """
     (work_dir / "kernel.py").write_text(textwrap.dedent(runner).lstrip(), encoding="utf-8")
 

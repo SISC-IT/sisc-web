@@ -8,25 +8,19 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-from AI.modules.signal.core.dataset_builder import get_standard_training_data
 from AI.modules.signal.core.base_model import BaseSignalModel
 from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 from AI.modules.signal.models.TCN.architecture import TCNClassifier
+from AI.modules.signal.models.TCN.preprocessing import (
+    TECHNICAL_DAILY_V1,
+    get_tcn_feature_columns,
+    prepare_tcn_standard_data,
+    validate_tcn_feature_set_contract,
+)
 
 
-DEFAULT_FEATURE_COLUMNS = [
-    "log_return",
-    "open_ratio",
-    "high_ratio",
-    "low_ratio",
-    "vol_change",
-    "ma5_ratio",
-    "ma20_ratio",
-    "ma60_ratio",
-    "rsi",
-    "macd_ratio",
-    "bb_position",
-]
+DEFAULT_FEATURE_SET_VER = TECHNICAL_DAILY_V1
+DEFAULT_FEATURE_COLUMNS = get_tcn_feature_columns(DEFAULT_FEATURE_SET_VER)
 
 DEFAULT_HORIZONS = [1, 3, 5, 7]
 
@@ -41,7 +35,12 @@ class TCNWrapper(BaseSignalModel):
         super().__init__(config)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.seq_len = int(config.get("seq_len", 60))
-        self.feature_columns = config.get("feature_columns", DEFAULT_FEATURE_COLUMNS)
+        self.feature_set_ver, self.feature_columns = validate_tcn_feature_set_contract(
+            config.get("feature_set_ver", DEFAULT_FEATURE_SET_VER),
+            config.get("feature_columns"),
+            config.get("feature_count"),
+            stage_name="TCN wrapper config",
+        )
         self.horizons = config.get("horizons", DEFAULT_HORIZONS)
         self.channels = config.get("channels", [32, 64, 64])
         self.kernel_size = int(config.get("kernel_size", 3))
@@ -119,7 +118,13 @@ class TCNWrapper(BaseSignalModel):
         if self.metadata_path and os.path.exists(self.metadata_path):
             with open(self.metadata_path, "r", encoding="utf-8") as f:
                 self.metadata = json.load(f)
-            self.feature_columns = self.metadata.get("feature_columns", self.feature_columns)
+            # metadata가 없는 구버전 artifact는 technical_daily_v1로 해석한다.
+            self.feature_set_ver, self.feature_columns = validate_tcn_feature_set_contract(
+                self.metadata.get("feature_set_ver", self.feature_set_ver),
+                self.metadata.get("feature_columns"),
+                self.metadata.get("feature_count"),
+                stage_name="TCN metadata",
+            )
             self.horizons = self.metadata.get("horizons", self.horizons)
             self.seq_len = int(self.metadata.get("seq_len", self.seq_len))
             self.channels = self.metadata.get("channels", self.channels)
@@ -129,6 +134,7 @@ class TCNWrapper(BaseSignalModel):
         if self.scaler is None and os.path.exists(self.scaler_path):
             with open(self.scaler_path, "rb") as f:
                 self.scaler = pickle.load(f)
+            self._validate_scaler_contract()
 
         if self.model is None:
             self.build((self.seq_len, len(self.feature_columns)))
@@ -151,19 +157,47 @@ class TCNWrapper(BaseSignalModel):
         with open(filepath, "rb") as f:
             self.scaler = pickle.load(f)
         self.scaler_path = os.path.abspath(filepath)
+        self._validate_scaler_contract()
+
+    def _validate_scaler_contract(self):
+        if self.scaler is None:
+            return
+        n_features = getattr(self.scaler, "n_features_in_", None)
+        if n_features is not None and int(n_features) != len(self.feature_columns):
+            raise ValueError(
+                "TCN scaler feature 수가 metadata feature_columns와 다릅니다. "
+                f"scaler={int(n_features)}, metadata={len(self.feature_columns)}"
+            )
+        scaler_features = getattr(self.scaler, "feature_names_in_", None)
+        if scaler_features is not None and list(scaler_features) != list(self.feature_columns):
+            raise ValueError(
+                "TCN scaler feature 순서가 metadata feature_columns와 다릅니다. "
+                f"scaler={list(scaler_features)}, metadata={list(self.feature_columns)}"
+            )
 
     def _prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         if df is None or df.empty:
             raise ValueError("Input dataframe is empty.")
-        prepared = get_standard_training_data(df.copy())
+        prepared = prepare_tcn_standard_data(
+            df.copy(),
+            stage_name="TCN wrapper",
+            feature_set_ver=self.feature_set_ver,
+        )
         missing = [col for col in self.feature_columns if col not in prepared.columns]
         if missing:
             raise ValueError(f"Missing required TCN feature columns: {missing}")
-        prepared = prepared.replace([np.inf, -np.inf], np.nan).fillna(0)
+        prepared = prepared.copy()
+        prepared[self.feature_columns] = (
+            prepared[self.feature_columns]
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
         return prepared
 
     def _prepare_input_tensor(self, df: pd.DataFrame) -> torch.Tensor:
         prepared = self._prepare_dataframe(df)
+        if prepared["ticker"].nunique() != 1:
+            raise ValueError("TCN predict()는 단일 ticker 입력만 허용합니다. 여러 ticker는 predict_batch()를 사용하세요.")
         feature_frame = prepared[self.feature_columns]
 
         if len(feature_frame) < self.seq_len:
@@ -216,7 +250,7 @@ class TCNWrapper(BaseSignalModel):
 
         for ticker, df in ticker_data_map.items():
             try:
-                prepared = get_standard_training_data(df.copy())
+                prepared = self._prepare_dataframe(df.copy())
                 feature_frame = prepared[self.feature_columns]
 
                 if len(feature_frame) < self.seq_len:
