@@ -121,8 +121,16 @@ if code_zip.exists():
         zf.extractall(code_root)
     sys.path.insert(0, str(code_root))
 else:
-    sys.path.insert(0, os.path.dirname(__file__))
-    print(f"[WARN] Code archive not found: {{code_zip}}")
+    ai_candidates = [
+        Path(path).parent
+        for path in glob.glob("/kaggle/input/**/AI/modules", recursive=True)
+    ]
+    if ai_candidates:
+        sys.path.insert(0, str(ai_candidates[0]))
+        print(f"[INFO] AI source root={{ai_candidates[0]}}")
+    else:
+        sys.path.insert(0, os.path.dirname(__file__))
+        print(f"[WARN] Code archive not found: {{code_zip}}")
 
 parquet_candidates = []
 preferred_price_file = preferred_dataset_dir / "price_data.parquet"
