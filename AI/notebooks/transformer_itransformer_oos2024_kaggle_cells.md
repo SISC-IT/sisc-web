@@ -65,6 +65,14 @@ os.environ.setdefault("COST_BPS_PER_SIDE", "5.0")
 
 print("PARQUET_DIR=", os.environ["PARQUET_DIR"])
 print("OOS2024_OUTPUT_ROOT=", os.environ["OOS2024_OUTPUT_ROOT"])
+
+import pandas as pd
+price_probe = pd.read_parquet(price_files[0], columns=["date"])
+price_probe["date"] = pd.to_datetime(price_probe["date"]).dt.normalize()
+print("DATA_DATE_MIN=", price_probe["date"].min())
+print("DATA_DATE_MAX=", price_probe["date"].max())
+print("ROWS_REQUESTED_EVAL=", int((price_probe["date"] >= "2024-09-03").sum()))
+print("ROWS_AFTER_CUTOFF=", int((price_probe["date"] > "2024-06-30").sum()))
 ```
 
 ## 셀 3. config smoke 확인

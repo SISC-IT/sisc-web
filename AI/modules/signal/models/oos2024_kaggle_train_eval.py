@@ -171,6 +171,7 @@ def build_oos2024_config(overrides: Mapping[str, Any] | None = None) -> dict[str
         "confidence_threshold_alt": _env_float("CONFIDENCE_THRESHOLD_ALT", 0.2),
         "cost_bps_per_side": _env_float("COST_BPS_PER_SIDE", 5.0),
         "missing_return_policy": "error",
+        "allow_eval_window_fallback": True,
         "transformer": {
             "model_name": "transformer",
             "feature_set_ver": TRANSFORMER_FEATURE_SET_VER,
@@ -466,6 +467,7 @@ def _build_supervised_sequences(
     realized_rows: list[dict[str, Any]] = []
 
     clean_frame = frame.dropna(subset=feature_columns + ["close"]).copy()
+    sequence_policy = purpose
     for ticker, group in clean_frame.groupby("ticker", sort=True):
         group = group.sort_values("date").reset_index(drop=True)
         if len(group) < seq_len + max_horizon:
@@ -489,6 +491,12 @@ def _build_supervised_sequences(
                 if asof_date < dates["eval_start"] or asof_date > dates["eval_end"]:
                     continue
                 if label_end_max > dates["eval_end"] or label_end_max >= dates["holdout_start"]:
+                    continue
+            elif purpose == "eval_fallback":
+                fallback_end = min(dates["eval_end"], dates["holdout_start"] - pd.Timedelta(days=1))
+                if asof_date <= dates["train_cutoff"] or asof_date > fallback_end:
+                    continue
+                if label_end_max > fallback_end or label_end_max >= dates["holdout_start"]:
                     continue
             else:
                 raise ValueError(f"지원하지 않는 sequence 목적입니다: {purpose}")
@@ -531,14 +539,42 @@ def _build_supervised_sequences(
             )
             realized_rows.extend(sample_realized_rows)
 
+    if not x_values and purpose == "eval" and bool(config.get("allow_eval_window_fallback", True)):
+        return _build_supervised_sequences(
+            frame,
+            feature_columns=feature_columns,
+            scaler=scaler,
+            ticker_to_id=ticker_to_id,
+            sector_to_id=sector_to_id,
+            config=config,
+            purpose="eval_fallback",
+        )
+
     if not x_values:
-        raise ValueError(f"{purpose} sequence가 생성되지 않았습니다.")
+        date_values = pd.to_datetime(frame["date"], errors="coerce").dropna()
+        max_date = date_values.max() if not date_values.empty else None
+        min_date = date_values.min() if not date_values.empty else None
+        rows_after_cutoff = int((frame["date"] > dates["train_cutoff"]).sum()) if "date" in frame.columns else 0
+        rows_in_requested_eval = int(
+            ((frame["date"] >= dates["eval_start"]) & (frame["date"] <= dates["eval_end"])).sum()
+        ) if "date" in frame.columns else 0
+        raise ValueError(
+            f"{purpose} sequence가 생성되지 않았습니다. "
+            f"data_min={_date_text(min_date) if min_date is not None else 'unknown'}, "
+            f"data_max={_date_text(max_date) if max_date is not None else 'unknown'}, "
+            f"rows_after_train_cutoff={rows_after_cutoff}, "
+            f"rows_in_requested_eval={rows_in_requested_eval}, "
+            f"requested_eval={_date_text(dates['eval_start'])}..{_date_text(dates['eval_end'])}"
+        )
 
     rows_frame = pd.DataFrame(sample_rows)
     realized_frame = pd.DataFrame(realized_rows).drop_duplicates(
         subset=["asof_date", "ticker", "horizon"],
         keep="last",
     )
+    actual_asof_min = pd.to_datetime(rows_frame["asof_date"]).min()
+    actual_asof_max = pd.to_datetime(rows_frame["asof_date"]).max()
+    actual_label_end_max = pd.to_datetime(rows_frame["label_end_max"]).max()
     return {
         "x": np.asarray(x_values, dtype=np.float32),
         "ticker": np.asarray(ticker_values, dtype=np.int32).reshape(-1, 1),
@@ -546,6 +582,10 @@ def _build_supervised_sequences(
         "y": np.asarray(y_values, dtype=np.float32),
         "rows": rows_frame,
         "realized_returns": realized_frame,
+        "sequence_policy": sequence_policy,
+        "actual_asof_min": actual_asof_min,
+        "actual_asof_max": actual_asof_max,
+        "actual_label_end_max": actual_label_end_max,
     }
 
 
@@ -624,6 +664,10 @@ def _common_metadata(
 ) -> dict[str, Any]:
     train_label_end_max = pd.to_datetime(train_dataset["rows"]["label_end_max"]).max()
     eval_label_end_max = pd.to_datetime(eval_dataset["rows"]["label_end_max"]).max()
+    actual_eval_start = pd.to_datetime(eval_dataset["rows"]["asof_date"]).min()
+    actual_eval_end = pd.to_datetime(eval_dataset["rows"]["asof_date"]).max()
+    requested_eval_start = _timestamp(config["eval_start"], name="eval_start")
+    requested_eval_end = _timestamp(config["eval_end"], name="eval_end")
     return {
         "artifact_purpose": ARTIFACT_PURPOSE,
         "model_name": model_name,
@@ -636,9 +680,13 @@ def _common_metadata(
         "train_cutoff": str(config["train_cutoff"]),
         "train_label_end_max": _date_text(train_label_end_max),
         "validation_start": str(config["validation_start"]),
-        "eval_start": str(config["eval_start"]),
-        "eval_end": str(config["eval_end"]),
+        "requested_eval_start": str(config["eval_start"]),
+        "requested_eval_end": str(config["eval_end"]),
+        "eval_start": _date_text(actual_eval_start),
+        "eval_end": _date_text(actual_eval_end),
         "eval_label_end_max": _date_text(eval_label_end_max),
+        "requested_eval_window_available": bool(actual_eval_start >= requested_eval_start and actual_eval_end <= requested_eval_end),
+        "eval_sequence_policy": str(eval_dataset.get("sequence_policy", "unknown")),
         "holdout_start": str(config["holdout_start"]),
         "model_path": model_path,
         "scaler_path": scaler_path,
@@ -655,7 +703,8 @@ def _common_metadata(
         "train_window": _window_text(config["train_start"], config["train_cutoff"]),
         "validation_window": f"{config['validation_start']}..{config['train_cutoff']}",
         "validation_split_method": str(val_dataset.get("split_method", "unknown")),
-        "eval_window": _window_text(config["eval_start"], config["eval_end"]),
+        "requested_eval_window": _window_text(requested_eval_start, requested_eval_end),
+        "eval_window": _window_text(actual_eval_start, actual_eval_end),
         "label_policy": "training sample included only when every horizon label_end_date <= train_cutoff",
         "holdout_policy": "2025-01-01 이후 데이터는 학습/평가에서 제외",
     }
@@ -1345,8 +1394,21 @@ def run_oos2024_kaggle_train_eval(config: Mapping[str, Any] | None = None) -> di
         "split_validation": {
             "transformer_train_label_end_max": transformer_result["metadata"]["train_label_end_max"],
             "itransformer_train_label_end_max": itransformer_result["metadata"]["train_label_end_max"],
+            "transformer_eval_start": transformer_result["metadata"]["eval_start"],
+            "transformer_eval_end": transformer_result["metadata"]["eval_end"],
+            "transformer_eval_sequence_policy": transformer_result["metadata"]["eval_sequence_policy"],
+            "itransformer_eval_start": itransformer_result["metadata"]["eval_start"],
+            "itransformer_eval_end": itransformer_result["metadata"]["eval_end"],
+            "itransformer_eval_sequence_policy": itransformer_result["metadata"]["eval_sequence_policy"],
             "train_label_end_policy_pass": True,
-            "eval_start_policy_pass": True,
+            "eval_start_policy_pass": bool(
+                transformer_result["metadata"]["requested_eval_window_available"]
+                and itransformer_result["metadata"]["requested_eval_window_available"]
+            ),
+            "eval_window_fallback_used": bool(
+                transformer_result["metadata"]["eval_sequence_policy"] != "eval"
+                or itransformer_result["metadata"]["eval_sequence_policy"] != "eval"
+            ),
             "holdout_2025_excluded": True,
             "prod_artifact_overwrite": False,
         },
