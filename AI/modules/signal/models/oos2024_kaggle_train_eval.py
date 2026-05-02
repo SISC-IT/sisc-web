@@ -154,7 +154,7 @@ def build_oos2024_config(overrides: Mapping[str, Any] | None = None) -> dict[str
         "output_root": output_root,
         "train_start": os.environ.get("TRAIN_START_DATE", "2021-01-01"),
         "train_cutoff": os.environ.get("TRAIN_CUTOFF_DATE", "2024-06-30"),
-        "validation_start": os.environ.get("VALIDATION_START_DATE", "2024-05-01"),
+        "validation_start": os.environ.get("VALIDATION_START_DATE", "2024-01-02"),
         "eval_start": os.environ.get("EVAL_START_DATE", "2024-09-03"),
         "eval_end": os.environ.get("EVAL_END_DATE", "2024-12-31"),
         "holdout_start": os.environ.get("HOLDOUT_START_DATE", "2025-01-01"),
@@ -554,6 +554,18 @@ def _split_train_val(dataset: Mapping[str, Any], config: Mapping[str, Any]) -> t
     rows = dataset["rows"].copy()
     train_mask = rows["asof_date"] < dates["validation_start"]
     val_mask = rows["asof_date"] >= dates["validation_start"]
+    split_method = f"time_split:{_date_text(dates['validation_start'])}"
+
+    if not bool(val_mask.any()):
+        ordered_rows = rows.sort_values(["asof_date", "ticker"]).reset_index()
+        n_val = min(max(1, int(len(ordered_rows) * 0.2)), len(ordered_rows) - 1)
+        if n_val <= 0:
+            raise ValueError("validation sequence를 만들 수 있을 만큼 train sequence가 충분하지 않습니다.")
+        val_indices = set(ordered_rows.tail(n_val)["index"].astype(int).tolist())
+        val_mask = rows.index.to_series().isin(val_indices)
+        train_mask = ~val_mask
+        split_method = f"tail_time_fallback:last_{n_val}_of_{len(rows)}"
+
     if not bool(train_mask.any()):
         raise ValueError("fit train sequence가 비었습니다.")
     if not bool(val_mask.any()):
@@ -567,6 +579,7 @@ def _split_train_val(dataset: Mapping[str, Any], config: Mapping[str, Any]) -> t
             "sector": dataset["sector"][index],
             "y": dataset["y"][index],
             "rows": rows.iloc[index].reset_index(drop=True),
+            "split_method": split_method,
         }
 
     return subset(train_mask), subset(val_mask)
@@ -641,6 +654,7 @@ def _common_metadata(
         "n_eval_samples": int(len(eval_dataset["x"])),
         "train_window": _window_text(config["train_start"], config["train_cutoff"]),
         "validation_window": f"{config['validation_start']}..{config['train_cutoff']}",
+        "validation_split_method": str(val_dataset.get("split_method", "unknown")),
         "eval_window": _window_text(config["eval_start"], config["eval_end"]),
         "label_policy": "training sample included only when every horizon label_end_date <= train_cutoff",
         "holdout_policy": "2025-01-01 이후 데이터는 학습/평가에서 제외",

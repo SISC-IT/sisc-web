@@ -49,7 +49,7 @@ os.environ["OOS2024_OUTPUT_ROOT"] = "/kaggle/working/oos2024"
 
 os.environ["TRAIN_START_DATE"] = "2021-01-01"
 os.environ["TRAIN_CUTOFF_DATE"] = "2024-06-30"
-os.environ["VALIDATION_START_DATE"] = "2024-05-01"
+os.environ["VALIDATION_START_DATE"] = "2024-01-02"
 os.environ["EVAL_START_DATE"] = "2024-09-03"
 os.environ["EVAL_END_DATE"] = "2024-12-31"
 os.environ["HOLDOUT_START_DATE"] = "2025-01-01"
