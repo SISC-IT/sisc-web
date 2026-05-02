@@ -82,6 +82,7 @@ import json
 
 from AI.modules.signal.models.oos2024_kaggle_train_eval import (
     build_oos2024_config,
+    preflight_data_window_summary,
     smoke_config_summary,
 )
 
@@ -93,6 +94,10 @@ assert summary["train_cutoff"] == "2024-06-30"
 assert summary["eval_start"] >= "2024-09-03"
 assert summary["holdout_start"] == "2025-01-01"
 assert summary["prod_artifact_overwrite"] is False
+
+data_window = preflight_data_window_summary(config, strict_oos2024=True)
+print(json.dumps(data_window, ensure_ascii=False, indent=2))
+assert data_window["can_run_requested_oos2024"] is True
 assert summary["transformer_output_dir"].endswith("/oos2024/transformer")
 assert summary["itransformer_output_dir"].endswith("/oos2024/itransformer")
 ```

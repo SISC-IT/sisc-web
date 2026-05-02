@@ -280,6 +280,60 @@ def smoke_config_summary(config: Mapping[str, Any] | None = None) -> dict[str, A
     }
 
 
+def preflight_data_window_summary(
+    config: Mapping[str, Any] | None = None,
+    *,
+    strict_oos2024: bool = True,
+) -> dict[str, Any]:
+    """입력 parquet가 OOS2024 평가 기간을 실제로 포함하는지 학습 전에 확인한다."""
+    active_config = build_oos2024_config(config or {})
+    dates = validate_oos2024_config(active_config)
+    paths = _require_input_files(str(active_config["parquet_dir"]))
+    date_frame = pd.read_parquet(paths["price"], columns=["date"])
+    date_series = pd.to_datetime(date_frame["date"], errors="coerce").dropna().dt.normalize()
+    if date_series.empty:
+        raise ValueError("price_data.parquet에서 유효한 date를 찾지 못했습니다.")
+
+    data_min = date_series.min()
+    data_max = date_series.max()
+    rows_after_train_cutoff = int((date_series > dates["train_cutoff"]).sum())
+    rows_in_requested_eval = int(
+        ((date_series >= dates["eval_start"]) & (date_series <= dates["eval_end"])).sum()
+    )
+    can_run_requested_oos2024 = bool(data_max >= dates["eval_end"] and rows_in_requested_eval > 0)
+    can_run_any_post_cutoff_eval = bool(rows_after_train_cutoff > 0 and data_max < dates["holdout_start"])
+
+    summary = {
+        "parquet_dir": active_config["parquet_dir"],
+        "data_min": _date_text(data_min),
+        "data_max": _date_text(data_max),
+        "train_cutoff": _date_text(dates["train_cutoff"]),
+        "requested_eval_start": _date_text(dates["eval_start"]),
+        "requested_eval_end": _date_text(dates["eval_end"]),
+        "holdout_start": _date_text(dates["holdout_start"]),
+        "rows_after_train_cutoff": rows_after_train_cutoff,
+        "rows_in_requested_eval": rows_in_requested_eval,
+        "can_run_requested_oos2024": can_run_requested_oos2024,
+        "can_run_any_post_cutoff_eval": can_run_any_post_cutoff_eval,
+    }
+
+    if strict_oos2024 and not can_run_requested_oos2024:
+        raise ValueError(
+            "입력 dataset이 requested OOS2024 평가 구간을 포함하지 않습니다. "
+            f"data_max={summary['data_max']}, "
+            f"requested_eval={summary['requested_eval_start']}..{summary['requested_eval_end']}, "
+            f"rows_in_requested_eval={rows_in_requested_eval}. "
+            "2024-12-31까지 포함된 Kaggle dataset을 연결해야 합니다."
+        )
+    if not strict_oos2024 and not can_run_any_post_cutoff_eval:
+        raise ValueError(
+            "train_cutoff 이후 평가 가능한 row가 없습니다. "
+            f"data_max={summary['data_max']}, train_cutoff={summary['train_cutoff']}, "
+            f"rows_after_train_cutoff={rows_after_train_cutoff}."
+        )
+    return summary
+
+
 def _require_input_files(parquet_dir: str) -> dict[str, str]:
     required = {
         "price": "price_data.parquet",
@@ -1307,6 +1361,7 @@ def run_oos2024_kaggle_train_eval(config: Mapping[str, Any] | None = None) -> di
     """두 모델 학습, 단독 평가, ensemble/gating 평가를 한 번에 실행한다."""
     active_config = build_oos2024_config(config or {})
     _validate_output_is_oos2024(active_config)
+    preflight_data_window_summary(active_config, strict_oos2024=True)
     output_root = str(active_config["output_root"])
     Path(output_root).mkdir(parents=True, exist_ok=True)
 
