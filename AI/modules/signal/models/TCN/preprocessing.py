@@ -120,6 +120,7 @@ def prepare_tcn_standard_data(
     stage_name: str,
     feature_set_ver: str = TECHNICAL_DAILY_V1,
     allow_exact_duplicate_drop: bool = False,
+    fill_missing_features: bool = True,
 ) -> pd.DataFrame:
     """TCN 학습/추론용 표준 피처를 ticker별로 생성한다."""
     feature_set_ver = normalize_tcn_feature_set_ver(feature_set_ver)
@@ -147,6 +148,7 @@ def prepare_tcn_standard_data(
             ticker_processed,
             feature_set_ver=feature_set_ver,
             stage_name=f"{stage_name} feature_set={feature_set_ver} ticker={ticker}",
+            fill_missing_features=fill_missing_features,
         )
         processed_frames.append(ticker_processed)
 
@@ -213,6 +215,7 @@ def prepare_tcn_feature_set(
     *,
     feature_set_ver: str = TECHNICAL_DAILY_V1,
     stage_name: str,
+    fill_missing_features: bool = True,
 ) -> pd.DataFrame:
     """선택한 TCN feature set을 생성하고 입력 컬럼 품질을 검증한다."""
     normalized = normalize_tcn_feature_set_ver(feature_set_ver)
@@ -223,12 +226,10 @@ def prepare_tcn_feature_set(
 
     feature_columns = get_tcn_feature_columns(normalized)
     validate_tcn_feature_columns(prepared, feature_columns, stage_name=stage_name)
-    prepared[feature_columns] = (
-        prepared[feature_columns]
-        .replace([np.inf, -np.inf], np.nan)
-        .fillna(0.0)
-    )
-    validate_tcn_feature_values(prepared, feature_columns, stage_name=stage_name)
+    prepared[feature_columns] = prepared[feature_columns].replace([np.inf, -np.inf], np.nan)
+    if fill_missing_features:
+        prepared[feature_columns] = prepared[feature_columns].fillna(0.0)
+        validate_tcn_feature_values(prepared, feature_columns, stage_name=stage_name)
     return prepared
 
 

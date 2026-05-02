@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from AI.modules.signal.evaluation.metrics import (
+    avoid_filter_metrics,
     calibration_metrics,
     classification_metrics,
     high_confidence_metrics,
@@ -39,6 +40,12 @@ MODEL_METRIC_FRAME_COLUMNS = [
     "rank_ic_mean",
     "top_bottom_spread",
     "top_k_mean_return",
+    "buy_bucket_coverage",
+    "sell_bucket_coverage",
+    "buy_bucket_mean_return",
+    "sell_bucket_mean_return",
+    "avoid_filter_spread",
+    "avoided_loss_mean",
     "net_return",
     "mdd",
     "calmar",
@@ -61,6 +68,8 @@ def build_model_metric_frame(
     top_k: int = 5,
     classification_threshold: float = 0.5,
     high_confidence_threshold: float = 0.2,
+    avoid_filter_buy_threshold: float = 0.6,
+    avoid_filter_sell_threshold: float = 0.4,
     calibration_bins: int = 10,
     leaderboard_run_id: str | None = None,
 ) -> pd.DataFrame:
@@ -129,6 +138,15 @@ def build_model_metric_frame(
                 if model_name in RANKING_MODELS:
                     row.update(
                         _ranking_metric_values(scoped_signal, scoped_returns, top_k=top_k)
+                    )
+                    row.update(
+                        _avoid_filter_metric_values(
+                            scoped_signal,
+                            scoped_returns,
+                            buy_threshold=avoid_filter_buy_threshold,
+                            sell_threshold=avoid_filter_sell_threshold,
+                            confidence_threshold=high_confidence_threshold,
+                        )
                     )
                     sources.append("ranking")
 
@@ -259,6 +277,12 @@ def _base_metric_row(
         "rank_ic_mean": None,
         "top_bottom_spread": None,
         "top_k_mean_return": None,
+        "buy_bucket_coverage": None,
+        "sell_bucket_coverage": None,
+        "buy_bucket_mean_return": None,
+        "sell_bucket_mean_return": None,
+        "avoid_filter_spread": None,
+        "avoided_loss_mean": None,
         "net_return": None,
         "mdd": None,
         "calmar": None,
@@ -331,6 +355,41 @@ def _ranking_metric_values(
         "rank_ic_mean": metrics["rank_ic_mean"],
         "top_bottom_spread": metrics["top_bottom_spread"],
         "top_k_mean_return": metrics["top_k_mean_return"],
+    }
+
+
+def _avoid_filter_metric_values(
+    signal_frame: pd.DataFrame,
+    returns_frame: pd.DataFrame,
+    *,
+    buy_threshold: float,
+    sell_threshold: float,
+    confidence_threshold: float,
+) -> dict[str, Any]:
+    try:
+        metrics = avoid_filter_metrics(
+            signal_frame,
+            returns_frame,
+            buy_threshold=buy_threshold,
+            sell_threshold=sell_threshold,
+            confidence_threshold=confidence_threshold,
+        )
+    except ValueError:
+        return {
+            "buy_bucket_coverage": None,
+            "sell_bucket_coverage": None,
+            "buy_bucket_mean_return": None,
+            "sell_bucket_mean_return": None,
+            "avoid_filter_spread": None,
+            "avoided_loss_mean": None,
+        }
+    return {
+        "buy_bucket_coverage": metrics["buy_bucket_coverage"],
+        "sell_bucket_coverage": metrics["sell_bucket_coverage"],
+        "buy_bucket_mean_return": metrics["buy_bucket_mean_return"],
+        "sell_bucket_mean_return": metrics["sell_bucket_mean_return"],
+        "avoid_filter_spread": metrics["avoid_filter_spread"],
+        "avoided_loss_mean": metrics["avoided_loss_mean"],
     }
 
 

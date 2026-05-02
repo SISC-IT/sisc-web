@@ -10,6 +10,7 @@ from .leaderboard import (
     validate_leaderboard_frame,
 )
 from .metrics import (
+    avoid_filter_metrics,
     calibration_metrics,
     classification_metrics,
     high_confidence_metrics,
@@ -64,6 +65,7 @@ __all__ = [
     "normalize_smoke_prediction_outputs",
     "run_smoke_evaluation",
     "classification_metrics",
+    "avoid_filter_metrics",
     "high_confidence_metrics",
     "ranking_metrics",
     "calibration_metrics",

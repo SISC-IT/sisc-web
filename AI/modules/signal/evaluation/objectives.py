@@ -44,7 +44,9 @@ MODEL_OBJECTIVE_PROFILES = {
             "high_confidence_precision",
             "high_confidence_coverage",
             "net_return",
+            "universe_excess_return",
             "turnover",
+            "selected_periods",
             "cash_period_rate",
         ],
         "metric_aliases": {
@@ -54,8 +56,18 @@ MODEL_OBJECTIVE_PROFILES = {
         "guardrails": {
             "require_all_horizons": True,
             "max_missing_return_rate": 0.0,
-            "required_metrics": ["high_confidence_precision", "high_confidence_coverage", "net_return"],
-            "min_metrics": {"high_confidence_coverage": 0.05},
+            "required_metrics": [
+                "high_confidence_precision",
+                "high_confidence_coverage",
+                "net_return",
+                "selected_periods",
+                "universe_excess_return",
+            ],
+            "min_metrics": {
+                "high_confidence_coverage": 0.05,
+                "selected_periods": 1,
+                "universe_excess_return": 0.0,
+            },
             "max_metrics": {"cash_period_rate": 0.99},
         },
     },
@@ -68,14 +80,35 @@ MODEL_OBJECTIVE_PROFILES = {
         "horizons": ALL_MODEL_HORIZONS,
         "primary_hypothesis_horizons": [5, 7],
         "record_all_horizons": True,
-        "metrics": ["rank_ic_mean", "top_bottom_spread", "top_k_mean_return", "net_return"],
+        "metrics": [
+            "rank_ic_mean",
+            "top_bottom_spread",
+            "top_k_mean_return",
+            "buy_bucket_coverage",
+            "sell_bucket_coverage",
+            "buy_bucket_mean_return",
+            "sell_bucket_mean_return",
+            "avoid_filter_spread",
+            "avoided_loss_mean",
+            "net_return",
+            "universe_excess_return",
+        ],
         "metric_aliases": {
             "top_k_mean_return": ["top_k_mean_return", "top_k_return"],
         },
         "guardrails": {
             "require_all_horizons": True,
             "max_missing_return_rate": 0.0,
-            "required_metrics": ["rank_ic_mean", "top_bottom_spread", "net_return"],
+            "required_metrics": [
+                "rank_ic_mean",
+                "top_bottom_spread",
+                "net_return",
+                "universe_excess_return",
+            ],
+            "min_metrics": {
+                "top_bottom_spread": 0.0,
+                "universe_excess_return": 0.0,
+            },
             "max_metrics": {"cash_period_rate": 0.99},
         },
     },
@@ -137,7 +170,15 @@ OBJECTIVE_FRAME_COLUMNS = [
     "rank_ic_mean",
     "top_bottom_spread",
     "top_k_mean_return",
+    "buy_bucket_coverage",
+    "sell_bucket_coverage",
+    "buy_bucket_mean_return",
+    "sell_bucket_mean_return",
+    "avoid_filter_spread",
+    "avoided_loss_mean",
     "net_return",
+    "universe_equal_net_return",
+    "universe_excess_return",
     "turnover",
     "selected_periods",
     "total_periods",
@@ -217,7 +258,10 @@ def build_model_objective_frame(
     active_profiles = dict(profiles or MODEL_OBJECTIVE_PROFILES)
     _validate_profiles(active_profiles)
 
-    leaderboard = _prepare_leaderboard_frame(leaderboard_frame)
+    full_leaderboard = _prepare_leaderboard_frame(leaderboard_frame, keep_benchmarks=True)
+    leaderboard = full_leaderboard[full_leaderboard["model_name"].notna()].copy()
+    if leaderboard.empty:
+        raise ValueError("모델 row가 있는 leaderboard_frame이 필요합니다.")
     metrics = _prepare_metric_frame(metric_frame)
 
     unknown_models = sorted(set(leaderboard["model_name"]) - set(active_profiles))
@@ -235,6 +279,7 @@ def build_model_objective_frame(
                 model_name=str(model_name),
                 profile=profile,
                 leaderboard_subset=strategy_frame,
+                full_leaderboard=full_leaderboard,
                 metric_frame=metrics,
             )
             if row is not None:
@@ -293,18 +338,32 @@ def _validate_profiles(profiles: Mapping[str, Mapping[str, Any]]) -> None:
             )
 
 
-def _prepare_leaderboard_frame(leaderboard_frame: pd.DataFrame) -> pd.DataFrame:
+def _prepare_leaderboard_frame(
+    leaderboard_frame: pd.DataFrame,
+    *,
+    keep_benchmarks: bool = False,
+) -> pd.DataFrame:
     required = ["model_name", "horizon", "strategy_name"]
     missing = [column for column in required if column not in leaderboard_frame.columns]
     if missing:
         raise ValueError(f"leaderboard_frame에 필요한 컬럼이 없습니다: {missing}")
 
     frame = leaderboard_frame.copy()
-    frame = frame[frame["model_name"].notna()].copy()
+    model_name = frame["model_name"].astype("string").str.strip()
+    has_model = model_name.notna() & (model_name != "")
+    if keep_benchmarks and "benchmark_name" in frame.columns:
+        benchmark_name = frame["benchmark_name"].astype("string").str.strip()
+        has_benchmark = benchmark_name.notna() & (benchmark_name != "")
+        frame = frame[has_model | has_benchmark].copy()
+    else:
+        frame = frame[has_model].copy()
     if frame.empty:
         raise ValueError("모델 row가 있는 leaderboard_frame이 필요합니다.")
 
-    frame["model_name"] = frame["model_name"].astype(str).str.lower()
+    model_name = frame["model_name"].astype("string").str.strip()
+    has_model = model_name.notna() & (model_name != "")
+    frame.loc[has_model, "model_name"] = model_name[has_model].str.lower()
+    frame.loc[~has_model, "model_name"] = pd.NA
     frame["horizon"] = _coerce_int_column(frame, "horizon", "leaderboard_frame")
     return frame
 
@@ -344,6 +403,7 @@ def _build_objective_row(
     model_name: str,
     profile: Mapping[str, Any],
     leaderboard_subset: pd.DataFrame,
+    full_leaderboard: pd.DataFrame,
     metric_frame: pd.DataFrame | None,
 ) -> dict[str, Any] | None:
     profile_horizons = [int(horizon) for horizon in profile["horizons"]]
@@ -367,7 +427,12 @@ def _build_objective_row(
         horizons=primary_hypothesis_horizons,
         leaderboard_subset=scoped_leaderboard,
     )
-    metrics = _collect_metrics(profile, primary_leaderboard, metric_subset)
+    metrics = _collect_metrics(
+        profile,
+        primary_leaderboard,
+        metric_subset,
+        full_leaderboard=full_leaderboard,
+    )
     evaluated_horizons = sorted(scoped_leaderboard["horizon"].unique().tolist())
     primary_hypothesis_evaluated_horizons = sorted(
         primary_leaderboard["horizon"].unique().tolist()
@@ -498,6 +563,8 @@ def _collect_metrics(
     profile: Mapping[str, Any],
     leaderboard_subset: pd.DataFrame,
     metric_subset: pd.DataFrame | None,
+    *,
+    full_leaderboard: pd.DataFrame,
 ) -> dict[str, Any]:
     collected: dict[str, Any] = {}
     aliases = profile.get("metric_aliases", {})
@@ -516,6 +583,11 @@ def _collect_metrics(
 
     if "downside_return" in profile["metrics"] and collected.get("downside_return") is None:
         collected["downside_return"] = _downside_return(leaderboard_subset)
+    if (
+        "universe_equal_net_return" in profile["metrics"]
+        or "universe_excess_return" in profile["metrics"]
+    ):
+        collected.update(_universe_excess_metrics(leaderboard_subset, full_leaderboard))
     return collected
 
 
@@ -561,6 +633,67 @@ def _downside_return(leaderboard_subset: pd.DataFrame) -> float | None:
     if net_return.empty:
         return None
     return float(np.minimum(net_return.to_numpy(dtype=float), 0.0).mean())
+
+
+def _has_value(value: Any) -> bool:
+    cleaned = _clean_scalar(value)
+    return cleaned is not None and str(cleaned).strip() != ""
+
+
+def _universe_excess_metrics(
+    model_subset: pd.DataFrame,
+    full_leaderboard: pd.DataFrame,
+) -> dict[str, Any]:
+    """같은 run/horizon의 universe_equal 대비 초과수익을 계산한다."""
+    required = {"benchmark_name", "horizon", "net_return"}
+    if not required.issubset(full_leaderboard.columns) or "net_return" not in model_subset.columns:
+        return {"universe_equal_net_return": None, "universe_excess_return": None}
+
+    benchmark_name = full_leaderboard["benchmark_name"].astype("string").str.strip().str.lower()
+    benchmarks = full_leaderboard[benchmark_name == "universe_equal"].copy()
+    if benchmarks.empty:
+        return {"universe_equal_net_return": None, "universe_excess_return": None}
+
+    benchmark_values: list[float] = []
+    excess_values: list[float] = []
+    match_keys = [
+        "leaderboard_run_id",
+        "prediction_run_id",
+        "train_window",
+        "validation_window",
+        "horizon",
+    ]
+
+    for _, model_row in model_subset.iterrows():
+        model_return = pd.to_numeric(pd.Series([model_row.get("net_return")]), errors="coerce").iloc[0]
+        if pd.isna(model_return):
+            continue
+
+        candidates = benchmarks.copy()
+        for key in match_keys:
+            if key not in candidates.columns or key not in model_subset.columns:
+                continue
+            value = model_row.get(key)
+            if not _has_value(value):
+                continue
+            narrowed = candidates[candidates[key] == value].copy()
+            if not narrowed.empty:
+                candidates = narrowed
+
+        if candidates.empty:
+            continue
+        benchmark_return = pd.to_numeric(candidates["net_return"], errors="coerce").dropna()
+        if benchmark_return.empty:
+            continue
+        benchmark_mean = float(benchmark_return.mean())
+        model_return_float = float(model_return)
+        benchmark_values.append(benchmark_mean)
+        excess_values.append(model_return_float - benchmark_mean)
+
+    return {
+        "universe_equal_net_return": float(np.mean(benchmark_values)) if benchmark_values else None,
+        "universe_excess_return": float(np.mean(excess_values)) if excess_values else None,
+    }
 
 
 def _objective_score(value: Any, direction: str) -> float | None:

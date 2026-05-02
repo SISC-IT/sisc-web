@@ -135,8 +135,12 @@ class TCNWrapper(BaseSignalModel):
             with open(self.scaler_path, "rb") as f:
                 self.scaler = pickle.load(f)
             self._validate_scaler_contract()
+        elif self.scaler is None:
+            raise FileNotFoundError(f"TCN scaler file not found: {self.scaler_path}")
 
         if self.model is None:
+            if not os.path.exists(self.model_path):
+                raise FileNotFoundError(f"TCN model file not found: {self.model_path}")
             self.build((self.seq_len, len(self.feature_columns)))
 
         if self.model is not None and os.path.exists(self.model_path):
@@ -182,17 +186,47 @@ class TCNWrapper(BaseSignalModel):
             df.copy(),
             stage_name="TCN wrapper",
             feature_set_ver=self.feature_set_ver,
+            fill_missing_features=False,
         )
         missing = [col for col in self.feature_columns if col not in prepared.columns]
         if missing:
             raise ValueError(f"Missing required TCN feature columns: {missing}")
-        prepared = prepared.copy()
-        prepared[self.feature_columns] = (
-            prepared[self.feature_columns]
-            .replace([np.inf, -np.inf], np.nan)
-            .fillna(0.0)
-        )
-        return prepared
+        return prepared.copy()
+
+    def _validate_inference_window(self, feature_frame: pd.DataFrame) -> None:
+        """평가/추론용 최신 window에 NaN 또는 무한대가 있으면 정상 예측으로 처리하지 않는다."""
+        if feature_frame.isna().any().any():
+            nan_columns = feature_frame.columns[feature_frame.isna().any()].tolist()
+            raise ValueError(f"TCN 추론 feature window에 NaN이 있습니다: {nan_columns}")
+        values = feature_frame.to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError("TCN 추론 feature window에 무한대 값이 있습니다.")
+
+    def _default_output(self) -> Dict[str, float]:
+        """fallback 상황에서 평가 오염을 막기 위한 중립 확률을 반환한다."""
+        return {f"tcn_{horizon}d": 0.5 for horizon in self.horizons}
+
+    def _status_payload(
+        self,
+        *,
+        output: Dict[str, float],
+        prediction_status: str,
+        error_message: str = "",
+    ) -> Dict[str, Any]:
+        return {
+            "output": output,
+            "prediction_status": prediction_status,
+            "error_message": error_message,
+            "model_name": "tcn",
+            "feature_set_ver": self.feature_set_ver,
+            "feature_columns": list(self.feature_columns),
+            "feature_count": len(self.feature_columns),
+            "horizons": list(self.horizons),
+            "seq_len": self.seq_len,
+            "model_path": str(self.model_path or ""),
+            "scaler_path": str(self.scaler_path or ""),
+            "metadata_path": str(self.metadata_path or ""),
+        }
 
     def _prepare_input_tensor(self, df: pd.DataFrame) -> torch.Tensor:
         prepared = self._prepare_dataframe(df)
@@ -205,7 +239,9 @@ class TCNWrapper(BaseSignalModel):
                 f"Not enough rows for TCN inference. Required {self.seq_len}, got {len(feature_frame)}."
             )
 
-        latest_window = feature_frame.tail(self.seq_len).to_numpy(dtype=np.float32)
+        feature_frame = feature_frame.tail(self.seq_len)
+        self._validate_inference_window(feature_frame)
+        latest_window = feature_frame.to_numpy(dtype=np.float32)
         if self.scaler is not None:
             latest_window = self.scaler.transform(latest_window).astype(np.float32)
 
@@ -224,6 +260,8 @@ class TCNWrapper(BaseSignalModel):
             array_x = np.asarray(X_input, dtype=np.float32)
             if array_x.ndim == 2:
                 array_x = np.expand_dims(array_x, axis=0)
+            if not np.isfinite(array_x).all():
+                raise ValueError("TCN 입력 배열에 NaN 또는 무한대가 있습니다.")
             tensor_x = torch.from_numpy(array_x).float().to(self.device)
 
         self.model.eval()
@@ -235,6 +273,18 @@ class TCNWrapper(BaseSignalModel):
             f"tcn_{horizon}d": float(prob)
             for horizon, prob in zip(self.horizons, probs)
         }
+
+    def predict_with_status(self, X_input: Union[pd.DataFrame, np.ndarray]) -> Dict[str, Any]:
+        """평가 경로에서 fallback/error 상태를 보존하는 TCN 예측 결과를 반환한다."""
+        try:
+            output = self.predict(X_input)
+            return self._status_payload(output=output, prediction_status="ok")
+        except Exception as exc:
+            return self._status_payload(
+                output=self._default_output(),
+                prediction_status="fallback",
+                error_message=str(exc),
+            )
 
     def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
         return self.predict(df)
@@ -256,7 +306,9 @@ class TCNWrapper(BaseSignalModel):
                 if len(feature_frame) < self.seq_len:
                     continue
 
-                latest_window = feature_frame.tail(self.seq_len).to_numpy(dtype=np.float32)
+                feature_frame = feature_frame.tail(self.seq_len)
+                self._validate_inference_window(feature_frame)
+                latest_window = feature_frame.to_numpy(dtype=np.float32)
                 if self.scaler is not None:
                     latest_window = self.scaler.transform(latest_window).astype(np.float32)
 

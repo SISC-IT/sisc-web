@@ -260,6 +260,81 @@ def ranking_metrics(
     }
 
 
+def avoid_filter_metrics(
+    signal_frame,
+    returns_frame,
+    *,
+    buy_threshold: float = 0.6,
+    sell_threshold: float = 0.4,
+    confidence_threshold: float = 0.2,
+) -> dict:
+    """고확신 buy/sell bucket의 realized return 차이를 계산한다."""
+    required_signal_columns = ["asof_date", "ticker", "horizon", "prob_up"]
+    required_return_columns = ["asof_date", "ticker", "horizon", "forward_return"]
+    signal_frame = pd.DataFrame(signal_frame).copy()
+    returns_frame = pd.DataFrame(returns_frame).copy()
+    _require_columns(signal_frame, required_signal_columns, "signal_frame")
+    _require_columns(returns_frame, required_return_columns, "returns_frame")
+    _require_non_null(signal_frame, required_signal_columns, "signal_frame")
+    _require_non_null(returns_frame, required_return_columns, "returns_frame")
+
+    buy_threshold = float(buy_threshold)
+    sell_threshold = float(sell_threshold)
+    confidence_threshold = float(confidence_threshold)
+    if not 0.0 <= sell_threshold < buy_threshold <= 1.0:
+        raise ValueError("buy_threshold는 sell_threshold보다 크고 둘 다 0~1 범위여야 합니다.")
+    if not 0.0 <= confidence_threshold <= 1.0:
+        raise ValueError("confidence_threshold는 0 이상 1 이하여야 합니다.")
+
+    if "confidence" not in signal_frame.columns:
+        signal_frame["confidence"] = signal_frame["prob_up"].astype(float).sub(0.5).abs() * 2.0
+
+    join_keys = ["asof_date", "ticker", "horizon"]
+    signal_frame["asof_date"] = pd.to_datetime(signal_frame["asof_date"], errors="raise").dt.normalize()
+    returns_frame["asof_date"] = pd.to_datetime(returns_frame["asof_date"], errors="raise").dt.normalize()
+    signal_frame["horizon"] = signal_frame["horizon"].astype(int)
+    returns_frame["horizon"] = returns_frame["horizon"].astype(int)
+    _require_unique_keys(signal_frame, join_keys, "signal_frame")
+    _require_unique_keys(returns_frame, join_keys, "returns_frame")
+
+    merged = signal_frame[required_signal_columns + ["confidence"]].merge(
+        returns_frame[required_return_columns],
+        on=join_keys,
+        how="inner",
+    )
+    if merged.empty:
+        raise ValueError("signal_frame과 returns_frame을 조인한 결과가 비어 있습니다.")
+
+    merged["prob_up"] = _validate_probabilities(merged["prob_up"].to_numpy())
+    merged["confidence"] = _validate_probabilities(merged["confidence"].to_numpy())
+    merged["forward_return"] = _as_float_array(merged["forward_return"].to_numpy(), "forward_return")
+
+    high_confidence = merged["confidence"] >= confidence_threshold
+    buy_mask = (merged["prob_up"] >= buy_threshold) & high_confidence
+    sell_mask = (merged["prob_up"] <= sell_threshold) & high_confidence
+
+    buy_count = int(buy_mask.sum())
+    sell_count = int(sell_mask.sum())
+    row_count = int(len(merged))
+    buy_mean = float(merged.loc[buy_mask, "forward_return"].mean()) if buy_count > 0 else None
+    sell_mean = float(merged.loc[sell_mask, "forward_return"].mean()) if sell_count > 0 else None
+    spread = None
+    if buy_mean is not None and sell_mean is not None:
+        spread = float(buy_mean - sell_mean)
+
+    return {
+        "count_rows": row_count,
+        "buy_bucket_count": buy_count,
+        "sell_bucket_count": sell_count,
+        "buy_bucket_coverage": float(buy_count / row_count),
+        "sell_bucket_coverage": float(sell_count / row_count),
+        "buy_bucket_mean_return": buy_mean,
+        "sell_bucket_mean_return": sell_mean,
+        "avoid_filter_spread": spread,
+        "avoided_loss_mean": float(-sell_mean) if sell_mean is not None else None,
+    }
+
+
 def calibration_metrics(
     y_true,
     prob_up,
