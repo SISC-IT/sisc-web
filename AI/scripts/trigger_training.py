@@ -157,6 +157,32 @@ train()
     shutil.copytree(project_root / "AI", work_dir / "AI", ignore=ignore_ai_files)
 
 
+def get_kernel_status(spec: dict) -> str:
+    full_slug = f"{KAGGLE_USERNAME}/{spec['slug']}"
+    result = subprocess.run(
+        ["kaggle", "kernels", "status", full_slug],
+        capture_output=True,
+        text=True,
+    )
+    return (result.stdout or result.stderr or "").strip()
+
+
+def has_active_kernel() -> bool:
+    active_words = ("running", "queued", "pending")
+    for spec in MODEL_SPECS:
+        output = get_kernel_status(spec)
+        if any(word in output.lower() for word in active_words):
+            print(f"   [WAIT] Active Kaggle kernel: {KAGGLE_USERNAME}/{spec['slug']} -> {output}")
+            return True
+    return False
+
+
+def wait_until_no_active_kernel(poll_minutes: int) -> None:
+    while has_active_kernel():
+        print(f">> Active Kaggle kernel exists. Waiting {poll_minutes} minutes before next push.")
+        time.sleep(poll_minutes * 60)
+
+
 def trigger_kernel(spec: dict, dry_run: bool) -> bool:
     """로컬 메타데이터 기반 kaggle kernels push로 학습을 시작한다."""
     full_slug = f"{KAGGLE_USERNAME}/{spec['slug']}"
@@ -267,6 +293,9 @@ def main() -> int:
 
     failed = []
     for spec in models_to_run:
+        if not args.dry_run:
+            wait_until_no_active_kernel(args.poll_minutes)
+
         if not trigger_kernel(spec, dry_run=args.dry_run):
             failed.append(spec["name"])
             print(f"\n>> [{spec['name']}] 실패. 다음 모델로 넘어갑니다.")

@@ -28,6 +28,16 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
+
+def log_gpu_status() -> None:
+    if torch.cuda.is_available():
+        devices = [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
+        print(f"[INFO] GPU devices: {devices}")
+        print("[INFO] Using GPU")
+    else:
+        print("[INFO] GPU devices: []")
+        print("[INFO] Using CPU")
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
 # Kaggle: /kaggle/input/sisc-ai-trading-dataset
@@ -204,6 +214,7 @@ def load_and_preprocess():
 # 학습 메인 (train.py와 동일)
 # ─────────────────────────────────────────────────────────────────────────────
 def train():
+    log_gpu_status()
     print("=" * 50)
     print(" PatchTST 학습 시작 (Kaggle 크론잡 버전)")
     print(f" 데이터: {CONFIG['parquet_dir']}")
