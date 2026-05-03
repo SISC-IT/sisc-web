@@ -157,7 +157,7 @@ def load_parquet_data() -> pd.DataFrame:
     # macro 컬럼만 티커별로 ffill (전역 ffill 시 티커 간 누수 발생)
     macro_cols = [c for c in macro_df.columns if c != "date"]
     df[macro_cols] = df.groupby("ticker")[macro_cols].transform(lambda x: x.ffill())
-    df = df.fillna(0)
+    df = df.replace([np.inf, -np.inf], np.nan).fillna(0)
 
     # 학습 기간 필터: TRAIN_END_DATE가 없으면 parquet 최신 날짜까지 사용한다.
     if CONFIG["train_end_date"]:
@@ -187,6 +187,12 @@ def build_sequences(
 
     # 스케일러는 루프 밖에서 전체 데이터로 한 번만 fit
     # 루프 안에서 fit하면 마지막 티커 통계만 남아 스케일 불일치 발생
+    df.loc[:, available_feats] = (
+        df[available_feats]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+        .clip(-1e6, 1e6)
+    )
     all_feat_vals = df[available_feats].values.astype(np.float32)
     if fit_scaler:
         scaler.fit(all_feat_vals)
@@ -199,7 +205,13 @@ def build_sequences(
             continue
 
         ticker_id = ticker_to_id.get(ticker, 0) if ticker_to_id else 0
-        feat_vals  = scaler.transform(group[available_feats].values.astype(np.float32))
+        feature_frame = (
+            group[available_feats]
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0)
+            .clip(-1e6, 1e6)
+        )
+        feat_vals  = scaler.transform(feature_frame.values.astype(np.float32))
         close_vals = group["close"].values
 
         for i in range(lookback, len(group) - max_horizon):
