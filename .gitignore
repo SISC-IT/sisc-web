@@ -42,6 +42,7 @@ AI/data/weights/itransformer/*
 
 AI/config/trading.local.json
 AI/tests/out/
+AI/data/experiments/
 AI/docs/
 AI/local_notes/
 
