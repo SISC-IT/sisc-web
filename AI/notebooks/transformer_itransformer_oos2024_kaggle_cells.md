@@ -91,6 +91,7 @@ preflight = run_preflight(
     eval_start=os.environ["EVAL_START_DATE"],
     eval_end=os.environ["EVAL_END_DATE"],
     holdout_start=os.environ["HOLDOUT_START_DATE"],
+    write_outputs=False,
     strict=True,
 )
 
