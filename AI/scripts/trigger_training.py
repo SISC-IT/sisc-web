@@ -179,7 +179,8 @@ def trigger_kernel(spec: dict, dry_run: bool) -> bool:
         )
         if result.stdout.strip():
             print(result.stdout.strip())
-        if result.returncode != 0:
+        combined_output = f"{result.stdout}\n{result.stderr}".lower()
+        if result.returncode != 0 or "kernel push error" in combined_output:
             print(f"   [오류] {spec['name']} 커널 push 실패")
             if result.stderr.strip():
                 print(result.stderr.strip())
