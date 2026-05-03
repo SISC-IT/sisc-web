@@ -150,6 +150,12 @@ def load_and_preprocess(parquet_dir: str, start_date: str, end_date: str) -> pd.
         raise ValueError("전처리된 데이터가 없습니다. 날짜 범위나 parquet 파일을 확인하세요.")
 
     full_df = pd.concat(processed).reset_index(drop=True)
+    full_df[FEATURE_COLUMNS] = (
+        full_df[FEATURE_COLUMNS]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+        .clip(-1e6, 1e6)
+    )
     print(f">> 피처 계산 완료: {len(full_df):,}행 (실패: {fail_count}개)")
     return full_df
 
@@ -179,6 +185,18 @@ def train_model(args: argparse.Namespace):
     print(f">> Train: ~{split_date} 미만, Val: {split_date}~")
 
     # 3. 스케일링 (train만 fit)
+    train_df[FEATURE_COLUMNS] = (
+        train_df[FEATURE_COLUMNS]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+        .clip(-1e6, 1e6)
+    )
+    val_df[FEATURE_COLUMNS] = (
+        val_df[FEATURE_COLUMNS]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+        .clip(-1e6, 1e6)
+    )
     scaler = StandardScaler()
     scaler.fit(train_df[FEATURE_COLUMNS])
     train_df[FEATURE_COLUMNS] = scaler.transform(train_df[FEATURE_COLUMNS])
@@ -330,7 +348,7 @@ def train():
     """노트북에서 module.train()으로 호출하기 위한 래퍼"""
     import argparse
     args = argparse.Namespace(
-        parquet_dir    = '/kaggle/input/sisc-ai-trading-dataset',
+        parquet_dir    = os.environ.get("PARQUET_DIR", _find_kaggle_dataset_path()),
         start_date     = "2015-01-01",
         end_date       = os.environ.get("END_DATE", date.today().isoformat()),
         seq_len        = 60,
