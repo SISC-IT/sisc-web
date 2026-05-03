@@ -182,6 +182,25 @@ def _spearman_correlation(left: pd.Series, right: pd.Series) -> float | None:
     return float(value)
 
 
+def _prepare_ranking_join_frame(
+    frame: pd.DataFrame,
+    required_columns: list[str],
+    frame_name: str,
+) -> pd.DataFrame:
+    prepared = frame[required_columns].copy()
+    prepared["asof_date"] = pd.to_datetime(
+        prepared["asof_date"],
+        errors="raise",
+    ).dt.normalize()
+    prepared["ticker"] = prepared["ticker"].astype(str)
+
+    horizon = pd.to_numeric(prepared["horizon"], errors="coerce")
+    if horizon.isna().any() or not horizon.map(lambda value: float(value).is_integer()).all():
+        raise ValueError(f"{frame_name}.horizon? ?뺤닔?ъ빞 ?⑸땲??")
+    prepared["horizon"] = horizon.astype(int)
+    return prepared
+
+
 def ranking_metrics(
     signal_frame,
     returns_frame,
@@ -201,16 +220,26 @@ def ranking_metrics(
     _require_non_null(signal_frame, required_signal_columns, "signal_frame")
     _require_non_null(returns_frame, required_return_columns, "returns_frame")
     join_keys = ["asof_date", "ticker", "horizon"]
-    _require_unique_keys(signal_frame, join_keys, "signal_frame")
-    _require_unique_keys(returns_frame, join_keys, "returns_frame")
+    signal = _prepare_ranking_join_frame(
+        signal_frame,
+        required_signal_columns,
+        "signal_frame",
+    )
+    returns = _prepare_ranking_join_frame(
+        returns_frame,
+        required_return_columns,
+        "returns_frame",
+    )
+    _require_unique_keys(signal, join_keys, "signal_frame")
+    _require_unique_keys(returns, join_keys, "returns_frame")
 
     k = int(k)
     if k <= 0:
         raise ValueError("k는 1 이상이어야 합니다.")
 
-    merged = signal_frame[required_signal_columns].merge(
-        returns_frame[required_return_columns],
-        on=["asof_date", "ticker", "horizon"],
+    merged = signal.merge(
+        returns,
+        on=join_keys,
         how="inner",
     )
     if merged.empty:

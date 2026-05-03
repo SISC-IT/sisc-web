@@ -11,6 +11,13 @@ from AI.modules.signal.evaluation.schema import VALID_PREDICTION_STATUSES
 
 
 DIAGNOSTIC_COLUMNS = [
+    "run_id",
+    "model_ver",
+    "feature_set_ver",
+    "train_window",
+    "eval_window",
+    "prediction_run_id",
+    "leaderboard_run_id",
     "model_name",
     "horizon",
     "row_count",
@@ -37,6 +44,16 @@ DIAGNOSTIC_COLUMNS = [
     "missing_return_rate",
     "diagnostic_status",
     "diagnostic_reasons",
+]
+
+DIAGNOSTIC_IDENTITY_COLUMNS = [
+    "run_id",
+    "model_ver",
+    "feature_set_ver",
+    "train_window",
+    "eval_window",
+    "prediction_run_id",
+    "leaderboard_run_id",
 ]
 
 SIGNAL_DIAGNOSTIC_REQUIRED_COLUMNS = [
@@ -87,12 +104,19 @@ def build_signal_diagnostics_frame(
         validate="many_to_one",
     )
 
+    group_columns = [
+        column for column in DIAGNOSTIC_IDENTITY_COLUMNS if column in merged.columns
+    ] + ["model_name", "horizon"]
+
     rows: list[dict[str, Any]] = []
-    for (model_name, horizon), group in merged.groupby(["model_name", "horizon"], sort=True):
+    for group_key, group in merged.groupby(group_columns, dropna=False, sort=True):
+        group_values = group_key if isinstance(group_key, tuple) else (group_key,)
+        identity_values = dict(zip(group_columns, group_values))
         rows.append(
             _build_group_diagnostics(
-                model_name=str(model_name),
-                horizon=int(horizon),
+                identity_values=identity_values,
+                model_name=str(identity_values["model_name"]),
+                horizon=int(identity_values["horizon"]),
                 group=group,
                 buy_threshold=buy_threshold,
                 sell_threshold=sell_threshold,
@@ -109,6 +133,7 @@ def build_signal_diagnostics_frame(
 
 def _build_group_diagnostics(
     *,
+    identity_values: dict[str, Any],
     model_name: str,
     horizon: int,
     group: pd.DataFrame,
@@ -173,7 +198,11 @@ def _build_group_diagnostics(
     elif warn_reasons:
         diagnostic_status = "warn"
 
-    return {
+    row = {
+        column: _clean_identity_value(identity_values.get(column))
+        for column in DIAGNOSTIC_IDENTITY_COLUMNS
+    }
+    row.update({
         "model_name": model_name,
         "horizon": horizon,
         "row_count": row_count,
@@ -200,7 +229,16 @@ def _build_group_diagnostics(
         "missing_return_rate": missing_return_rate,
         "diagnostic_status": diagnostic_status,
         "diagnostic_reasons": "; ".join(fail_reasons + warn_reasons),
-    }
+    })
+    return row
+
+
+def _clean_identity_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if pd.isna(value):
+        return None
+    return value
 
 
 def _prepare_signal_frame(signal_frame: pd.DataFrame) -> pd.DataFrame:

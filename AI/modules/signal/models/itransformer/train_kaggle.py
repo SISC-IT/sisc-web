@@ -264,9 +264,21 @@ def build_sequences(
     horizons = [int(horizon) for horizon in active_config["horizons"]]
     max_horizon = max(horizons)
     available_feats = list(feature_columns or resolve_itransformer_feature_columns(df, active_config))
+    label_cutoff_raw = active_config.get("label_cutoff_date")
+    label_cutoff = (
+        pd.to_datetime(label_cutoff_raw, errors="raise").normalize()
+        if label_cutoff_raw
+        else None
+    )
 
     if fit_scaler:
-        scaler.fit(df[available_feats].astype(np.float32))
+        scaler_source = df
+        if label_cutoff is not None:
+            source_dates = pd.to_datetime(scaler_source["date"], errors="raise").dt.normalize()
+            scaler_source = scaler_source[source_dates <= label_cutoff].copy()
+        if scaler_source.empty:
+            raise ValueError("label_cutoff_date 이전 scaler fit 데이터가 없습니다.")
+        scaler.fit(scaler_source[available_feats].astype(np.float32))
 
     x_list: list[np.ndarray] = []
     ticker_id_list: list[int] = []
@@ -281,8 +293,11 @@ def build_sequences(
         ticker_id = int(ticker_to_id.get(str(ticker), 0)) if ticker_to_id else 0
         feat_vals = scaler.transform(group[available_feats].astype(np.float32))
         close_vals = group["close"].to_numpy(dtype=np.float32)
+        date_vals = pd.to_datetime(group["date"], errors="raise").dt.normalize()
 
         for idx in range(lookback, len(group) - max_horizon):
+            if label_cutoff is not None and date_vals.iloc[idx + max_horizon] > label_cutoff:
+                continue
             x_list.append(feat_vals[idx - lookback : idx])
             ticker_id_list.append(ticker_id)
             sector_id_list.append(0)

@@ -442,14 +442,22 @@ def _build_objective_row(
         set(primary_hypothesis_horizons) - set(primary_hypothesis_evaluated_horizons)
     )
     primary_metric_name = str(profile["primary_metric"])
-    primary_metric_value = metrics.get(primary_metric_name)
     direction = str(profile["primary_metric_direction"])
     best_horizon = _best_horizon(
         model_name=model_name,
         profile=profile,
-        leaderboard_subset=scoped_leaderboard,
+        leaderboard_subset=primary_leaderboard,
         metric_frame=metric_frame,
     )
+    primary_metric_value = _primary_metric_value_for_horizon(
+        model_name=model_name,
+        profile=profile,
+        leaderboard_subset=primary_leaderboard,
+        metric_frame=metric_frame,
+        best_horizon=best_horizon,
+    )
+    if primary_metric_value is None:
+        primary_metric_value = metrics.get(primary_metric_name)
     objective_score = _objective_score(primary_metric_value, direction)
     guardrail_pass, guardrail_reasons = _evaluate_guardrails(
         profile=profile,
@@ -557,6 +565,38 @@ def _best_horizon(
     if direction == "lower":
         return min(horizon_scores, key=lambda item: item[1])[0]
     return max(horizon_scores, key=lambda item: item[1])[0]
+
+
+def _primary_metric_value_for_horizon(
+    *,
+    model_name: str,
+    profile: Mapping[str, Any],
+    leaderboard_subset: pd.DataFrame,
+    metric_frame: pd.DataFrame | None,
+    best_horizon: int | None,
+) -> Any:
+    if best_horizon is None:
+        return None
+    primary_metric_name = str(profile["primary_metric"])
+    aliases = profile.get("metric_aliases", {})
+    candidates = aliases.get(primary_metric_name, [primary_metric_name])
+    horizon_leaderboard = leaderboard_subset[
+        leaderboard_subset["horizon"] == int(best_horizon)
+    ].copy()
+    if horizon_leaderboard.empty:
+        return None
+    horizon_metric = _filter_metric_frame(
+        metric_frame,
+        model_name=model_name,
+        horizons=[int(best_horizon)],
+        leaderboard_subset=horizon_leaderboard,
+    )
+    return _resolve_metric_value(
+        metric_name=primary_metric_name,
+        candidates=candidates,
+        leaderboard_subset=horizon_leaderboard,
+        metric_subset=horizon_metric,
+    )
 
 
 def _collect_metrics(

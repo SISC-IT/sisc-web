@@ -115,7 +115,12 @@ def create_ssh_client(ssh_host: str, ssh_user: str, ssh_key_str: str, ssh_port: 
     import paramiko
 
     ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    known_hosts_path = os.environ.get("SSH_KNOWN_HOSTS")
+    if known_hosts_path:
+        ssh.load_host_keys(known_hosts_path)
+    else:
+        ssh.load_system_host_keys()
+    ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
     for key_class in [paramiko.Ed25519Key, paramiko.RSAKey, paramiko.ECDSAKey]:
         try:
             private_key = key_class.from_private_key(io.StringIO(ssh_key_str))

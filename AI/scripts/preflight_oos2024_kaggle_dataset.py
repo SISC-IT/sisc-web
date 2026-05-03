@@ -237,6 +237,8 @@ def run_preflight(
 
         if pd.isna(data_max) or data_max < eval_end_ts:
             failures.append(f"DATA_DATE_MAX가 부족합니다: {price_summary['data_max']} < {eval_end}")
+        if pd.isna(data_min) or data_min > train_start_ts:
+            failures.append(f"DATA_DATE_MIN이 학습 시작일보다 늦습니다: {price_summary['data_min']} > {train_start}")
         if duplicate_count != 0:
             failures.append(f"price_data ticker/date 중복 row가 있습니다: {duplicate_count}")
         if rows_2025_plus != 0:

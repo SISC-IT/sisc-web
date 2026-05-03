@@ -104,7 +104,6 @@ LEGACY_PATCHTST_FEATURE_COLUMNS = [
     'month_ma12_ratio', 'month_rsi',
 ]
 
-HORIZONS = [1, 3, 5, 7]  # wrapper.py와 공유
 # 실제 학습/추론 계약은 feature_contract.py에서 가져온다.
 FEATURE_COLUMNS = get_patchtst_feature_columns()
 HORIZONS = list(PATCHTST_DEFAULT_HORIZONS)
@@ -362,7 +361,7 @@ def train():
     )
     save_patchtst_metadata(metadata_path, metadata)
 
-    print(f"\n>> 완료")
+    print("\n>> 완료")
     print(f"   모델    : {model_path}")
     print(f"   스케일러: {scaler_path}")
     print(f"   메타데이터: {metadata_path}")

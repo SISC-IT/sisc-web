@@ -462,9 +462,14 @@ class ITransformerWrapper(BaseSignalModel):
         self.model_path = target_path
 
         scaler_path = self.scaler_path or os.path.join(target_dir, "multi_horizon_scaler.pkl")
+        if self.scaler is None:
+            raise ValueError("저장할 iTransformer scaler가 없습니다.")
+        with open(scaler_path, "wb") as f:
+            pickle.dump(self.scaler, f)
+        self.scaler_path = os.path.abspath(scaler_path)
         metadata_path = resolve_itransformer_metadata_path(
             model_path=target_path,
-            scaler_path=scaler_path,
+            scaler_path=self.scaler_path,
             metadata_path=self.metadata_path,
         )
         metadata = build_itransformer_metadata(
@@ -476,7 +481,7 @@ class ITransformerWrapper(BaseSignalModel):
                 "seq_len": self.seq_len,
             },
             model_path=target_path,
-            scaler_path=scaler_path,
+            scaler_path=self.scaler_path,
             feature_columns=self.feature_columns,
         )
         save_itransformer_metadata(metadata_path, metadata)

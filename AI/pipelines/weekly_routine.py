@@ -69,13 +69,23 @@ def log_artifact_root() -> bool:
     log(f" AI_MODEL_WEIGHTS_DIR: {os.environ.get('AI_MODEL_WEIGHTS_DIR') or '(unset)'}")
     log(f" WEIGHTS_DIR: {os.environ.get('WEIGHTS_DIR') or '(unset)'}")
 
-    if os.environ.get("AI_MODEL_WEIGHTS_DIR"):
-        return True
+    if not os.environ.get("AI_MODEL_WEIGHTS_DIR"):
+        log("[경고] AI_MODEL_WEIGHTS_DIR가 설정되지 않았습니다.")
+        log("       서버 cron에서는 AI_MODEL_WEIGHTS_DIR=/mnt/storage/ai-artifacts 처럼 명시하세요.")
+        if os.environ.get("REQUIRE_AI_MODEL_WEIGHTS_DIR", "").strip().lower() in {"1", "true", "yes", "y"}:
+            log("[오류] REQUIRE_AI_MODEL_WEIGHTS_DIR가 켜져 있어 파이프라인을 중단합니다.")
+            return False
 
-    log("[경고] AI_MODEL_WEIGHTS_DIR가 설정되지 않았습니다.")
-    log("       서버 cron에서는 AI_MODEL_WEIGHTS_DIR=/mnt/storage/ai-artifacts 처럼 명시하세요.")
-    if os.environ.get("REQUIRE_AI_MODEL_WEIGHTS_DIR", "").strip().lower() in {"1", "true", "yes", "y"}:
-        log("[오류] REQUIRE_AI_MODEL_WEIGHTS_DIR가 켜져 있어 파이프라인을 중단합니다.")
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        if not artifact_root.is_dir():
+            log(f"[오류] artifact_root가 디렉터리가 아닙니다: {artifact_root}")
+            return False
+        probe_path = artifact_root / ".weekly_routine_write_test"
+        probe_path.write_text("ok", encoding="utf-8")
+        probe_path.unlink(missing_ok=True)
+    except Exception as exc:
+        log(f"[오류] artifact_root를 사용할 수 없습니다: {artifact_root} ({exc})")
         return False
     return True
 

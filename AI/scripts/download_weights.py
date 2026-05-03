@@ -327,12 +327,23 @@ def promote_staged_artifacts(staged_models: list[dict[str, Any]], artifact_root:
 
         if backup_root.exists():
             shutil.rmtree(backup_root)
-    except Exception:
+    except Exception as original_exc:
+        rollback_errors: list[str] = []
         for final_dir, backup_dir in reversed(promoted):
-            if final_dir.exists():
-                shutil.rmtree(final_dir)
-            if backup_dir is not None and backup_dir.exists():
-                shutil.move(str(backup_dir), str(final_dir))
+            try:
+                if final_dir.exists():
+                    shutil.rmtree(final_dir)
+                if backup_dir is not None and backup_dir.exists():
+                    shutil.move(str(backup_dir), str(final_dir))
+            except Exception as rollback_exc:
+                rollback_errors.append(
+                    f"{final_dir}: {type(rollback_exc).__name__}: {rollback_exc}"
+                )
+        if rollback_errors:
+            raise RuntimeError(
+                "artifact 승격 실패 후 롤백에도 실패했습니다: "
+                + "; ".join(rollback_errors)
+            ) from original_exc
         raise
 
 
