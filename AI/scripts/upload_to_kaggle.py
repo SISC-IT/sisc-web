@@ -19,13 +19,15 @@ import subprocess
 import sys
 import zipfile
 
+from preflight_oos2024_kaggle_dataset import run_preflight
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
 # ─────────────────────────────────────────────────────────────────────────────
 current_dir  = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../.."))
 
-OUTPUT_DIR      = os.path.join(project_root, "AI/data/kaggle_data")
+OUTPUT_DIR      = os.path.join(project_root, "AI", "data", "kaggle_data")
 KAGGLE_USERNAME = os.environ.get("KAGGLE_USERNAME", "jihyeongkimm")
 DATASET_SLUG    = os.environ.get("KAGGLE_DATASET_SLUG", "sisc-ai-trading-dataset")
 DATASET_ID      = os.environ.get("KAGGLE_DATASET_ID", f"{KAGGLE_USERNAME}/{DATASET_SLUG}")
@@ -33,6 +35,26 @@ DATASET_TITLE   = os.environ.get("KAGGLE_DATASET_TITLE", "SISC AI Trading Datase
 METADATA_PATH   = os.path.join(OUTPUT_DIR, "dataset-metadata.json")
 CODE_ARCHIVE_NAME = "sisc_ai_code.zip"
 CODE_ARCHIVE_PATH = os.path.join(OUTPUT_DIR, CODE_ARCHIVE_NAME)
+
+
+def run_oos2024_dataset_preflight() -> dict:
+    """Kaggle 업로드 전에 OOS2024 데이터셋 조건을 강제 검증한다."""
+    print("\n>> OOS2024 dataset preflight 실행")
+    summary = run_preflight(
+        OUTPUT_DIR,
+        train_start=os.environ.get("TRAIN_START_DATE", "2021-01-01"),
+        train_cutoff=os.environ.get("TRAIN_CUTOFF_DATE", "2024-06-30"),
+        eval_start=os.environ.get("EVAL_START_DATE", "2024-09-03"),
+        eval_end=os.environ.get("EVAL_END_DATE", "2024-12-31"),
+        holdout_start=os.environ.get("HOLDOUT_START_DATE", "2025-01-01"),
+        strict=True,
+    )
+    price_summary = summary.get("price_data_summary", {})
+    print(f"   DATA_DATE_MIN={price_summary.get('data_min')}")
+    print(f"   DATA_DATE_MAX={price_summary.get('data_max')}")
+    print(f"   ROWS_2025_PLUS={price_summary.get('rows_2025_plus')}")
+    print("   preflight 통과")
+    return summary
 
 
 def build_code_archive() -> None:
@@ -98,6 +120,7 @@ if not parquet_files:
     sys.exit(1)
 
 ensure_dataset_metadata()
+run_oos2024_dataset_preflight()
 build_code_archive()
 
 if shutil.which("kaggle") is None:
@@ -133,6 +156,8 @@ if result.returncode == 0:
     print(result.stdout)
 else:
     print("   [오류] 업로드 실패")
+    if result.stdout:
+        print(result.stdout)
     print(result.stderr)
     sys.exit(1)
 

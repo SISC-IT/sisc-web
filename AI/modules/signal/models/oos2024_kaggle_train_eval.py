@@ -54,6 +54,19 @@ ARTIFACT_PURPOSE = "oos2024_dev"
 TRANSFORMER_FEATURE_SET_VER = "transformer_technical_mtf_v1"
 TRANSFORMER_MODEL_VER = "transformer_technical_mtf_v1_oos2024_dev_v0"
 ITRANSFORMER_MODEL_VER = f"{ITRANSFORMER_FEATURE_SET_VER}_oos2024_dev_v0"
+UNIVERSE_EXCESS_COLUMNS = [
+    "model_name",
+    "horizon",
+    "strategy_name",
+    "confidence_threshold",
+    "net_return",
+    "universe_equal_net_return",
+    "universe_excess_return",
+    "mdd",
+    "calmar",
+    "selected_periods",
+    "cash_period_rate",
+]
 
 TRANSFORMER_TRAIN_FEATURES = [
     "log_return",
@@ -171,7 +184,7 @@ def build_oos2024_config(overrides: Mapping[str, Any] | None = None) -> dict[str
         "confidence_threshold_alt": _env_float("CONFIDENCE_THRESHOLD_ALT", 0.2),
         "cost_bps_per_side": _env_float("COST_BPS_PER_SIDE", 5.0),
         "missing_return_policy": "error",
-        "allow_eval_window_fallback": True,
+        "allow_eval_window_fallback": False,
         "transformer": {
             "model_name": "transformer",
             "feature_set_ver": TRANSFORMER_FEATURE_SET_VER,
@@ -273,6 +286,7 @@ def smoke_config_summary(config: Mapping[str, Any] | None = None) -> dict[str, A
         "confidence_threshold": float(active_config["confidence_threshold"]),
         "confidence_threshold_alt": float(active_config["confidence_threshold_alt"]),
         "cost_bps_per_side": float(active_config["cost_bps_per_side"]),
+        "allow_eval_window_fallback": bool(active_config.get("allow_eval_window_fallback", False)),
         "transformer_output_dir": _join_path(output_root, "transformer"),
         "itransformer_output_dir": _join_path(output_root, "itransformer"),
         "combined_output_dir": output_root,
@@ -288,6 +302,37 @@ def preflight_data_window_summary(
     """입력 parquet가 OOS2024 평가 기간을 실제로 포함하는지 학습 전에 확인한다."""
     active_config = build_oos2024_config(config or {})
     dates = validate_oos2024_config(active_config)
+    from AI.scripts.preflight_oos2024_kaggle_dataset import run_preflight
+
+    preflight = run_preflight(
+        active_config["parquet_dir"],
+        train_start=_date_text(dates["train_start"]),
+        train_cutoff=_date_text(dates["train_cutoff"]),
+        eval_start=_date_text(dates["eval_start"]),
+        eval_end=_date_text(dates["eval_end"]),
+        holdout_start=_date_text(dates["holdout_start"]),
+        horizons=[int(horizon) for horizon in active_config["horizons"]],
+        write_outputs=False,
+        strict=strict_oos2024,
+    )
+    price_summary = preflight.get("price_data_summary", {})
+    rows_after_train_cutoff = int(price_summary.get("rows_after_train_cutoff", 0))
+    rows_in_requested_eval = int(price_summary.get("rows_in_eval_window", 0))
+    preflight.update(
+        {
+            "parquet_dir": active_config["parquet_dir"],
+            "data_min": price_summary.get("data_min"),
+            "data_max": price_summary.get("data_max"),
+            "requested_eval_start": _date_text(dates["eval_start"]),
+            "requested_eval_end": _date_text(dates["eval_end"]),
+            "rows_after_train_cutoff": rows_after_train_cutoff,
+            "rows_in_requested_eval": rows_in_requested_eval,
+            "can_run_requested_oos2024": bool(preflight.get("passed")),
+            "can_run_any_post_cutoff_eval": bool(rows_after_train_cutoff > 0),
+        }
+    )
+    return preflight
+
     paths = _require_input_files(str(active_config["parquet_dir"]))
     date_frame = pd.read_parquet(paths["price"], columns=["date"])
     date_series = pd.to_datetime(date_frame["date"], errors="coerce").dropna().dt.normalize()
@@ -546,12 +591,6 @@ def _build_supervised_sequences(
                     continue
                 if label_end_max > dates["eval_end"] or label_end_max >= dates["holdout_start"]:
                     continue
-            elif purpose == "eval_fallback":
-                fallback_end = min(dates["eval_end"], dates["holdout_start"] - pd.Timedelta(days=1))
-                if asof_date <= dates["train_cutoff"] or asof_date > fallback_end:
-                    continue
-                if label_end_max > fallback_end or label_end_max >= dates["holdout_start"]:
-                    continue
             else:
                 raise ValueError(f"지원하지 않는 sequence 목적입니다: {purpose}")
 
@@ -592,17 +631,6 @@ def _build_supervised_sequences(
                 }
             )
             realized_rows.extend(sample_realized_rows)
-
-    if not x_values and purpose == "eval" and bool(config.get("allow_eval_window_fallback", True)):
-        return _build_supervised_sequences(
-            frame,
-            feature_columns=feature_columns,
-            scaler=scaler,
-            ticker_to_id=ticker_to_id,
-            sector_to_id=sector_to_id,
-            config=config,
-            purpose="eval_fallback",
-        )
 
     if not x_values:
         date_values = pd.to_datetime(frame["date"], errors="coerce").dropna()
@@ -1317,7 +1345,14 @@ def evaluate_signal_frame(
 
 def build_universe_excess_summary(leaderboard_frame: pd.DataFrame) -> pd.DataFrame:
     """모델별 universe_equal 대비 초과 수익 요약을 만든다."""
+    if leaderboard_frame is None or leaderboard_frame.empty:
+        return pd.DataFrame(columns=UNIVERSE_EXCESS_COLUMNS)
+
     frame = leaderboard_frame.copy()
+    required_columns = {"benchmark_name", "horizon", "model_name", "net_return"}
+    if not required_columns.issubset(frame.columns):
+        return pd.DataFrame(columns=UNIVERSE_EXCESS_COLUMNS)
+
     benchmark_mask = frame["benchmark_name"].astype("string").str.lower().eq("universe_equal")
     benchmarks = frame[benchmark_mask].copy()
     models = frame[~benchmark_mask & frame["model_name"].notna()].copy()
@@ -1345,7 +1380,11 @@ def build_universe_excess_summary(leaderboard_frame: pd.DataFrame) -> pd.DataFra
                 "cash_period_rate": record.get("cash_period_rate"),
             }
         )
-    return pd.DataFrame(rows).sort_values(["model_name", "horizon"]).reset_index(drop=True)
+    if not rows:
+        return pd.DataFrame(columns=UNIVERSE_EXCESS_COLUMNS)
+    return pd.DataFrame(rows, columns=UNIVERSE_EXCESS_COLUMNS).sort_values(
+        ["model_name", "horizon"]
+    ).reset_index(drop=True)
 
 
 def _validate_output_is_oos2024(config: Mapping[str, Any]) -> None:
@@ -1420,6 +1459,11 @@ def run_oos2024_kaggle_train_eval(config: Mapping[str, Any] | None = None) -> di
         leaderboard_run_id="oos2024_combined",
         config=active_config,
     )
+    combined_signal_path = _join_path(output_root, "oos2024_combined_signal_frame.csv")
+    combined_leaderboard_path = _join_path(output_root, "oos2024_combined_leaderboard_frame.csv")
+    combined_signal.to_csv(combined_signal_path, index=False)
+    combined_eval["leaderboard_frame"].to_csv(combined_leaderboard_path, index=False)
+
     confidence_eval = evaluate_signal_frame(
         signal_frame=combined_signal,
         realized_returns=combined_returns,
@@ -1437,11 +1481,6 @@ def run_oos2024_kaggle_train_eval(config: Mapping[str, Any] | None = None) -> di
     universe_excess_summary = build_universe_excess_summary(combined_eval["leaderboard_frame"])
     universe_excess_path = _join_path(output_root, "oos2024_universe_excess_summary.csv")
     universe_excess_summary.to_csv(universe_excess_path, index=False)
-
-    combined_signal_path = _join_path(output_root, "oos2024_combined_signal_frame.csv")
-    combined_leaderboard_path = _join_path(output_root, "oos2024_combined_leaderboard_frame.csv")
-    combined_signal.to_csv(combined_signal_path, index=False)
-    combined_eval["leaderboard_frame"].to_csv(combined_leaderboard_path, index=False)
 
     summary = {
         "artifact_purpose": ARTIFACT_PURPOSE,
@@ -1464,6 +1503,7 @@ def run_oos2024_kaggle_train_eval(config: Mapping[str, Any] | None = None) -> di
                 transformer_result["metadata"]["eval_sequence_policy"] != "eval"
                 or itransformer_result["metadata"]["eval_sequence_policy"] != "eval"
             ),
+            "eval_window_fallback_allowed": bool(active_config.get("allow_eval_window_fallback", False)),
             "holdout_2025_excluded": True,
             "prod_artifact_overwrite": False,
         },

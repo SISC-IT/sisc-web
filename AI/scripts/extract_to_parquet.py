@@ -29,7 +29,7 @@ import os
 import io
 import time
 import sys
-from datetime import date
+from datetime import date, datetime
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
@@ -43,8 +43,19 @@ project_root = os.path.abspath(os.path.join(current_dir, "../.."))
 # .env 로드
 load_dotenv(os.path.join(project_root, ".env"))
 
-OUTPUT_DIR = os.path.join(project_root, "AI/data/kaggle_data")
+OUTPUT_DIR = os.path.join(project_root, "AI", "data", "kaggle_data")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# OOS2024 Kaggle dataset은 2024-12-31까지만 담고 2025 이후 row는 제외한다.
+KAGGLE_DATA_START_DATE = os.environ.get("KAGGLE_DATA_START_DATE", "2015-01-01")
+KAGGLE_DATA_END_DATE = os.environ.get("KAGGLE_DATA_END_DATE", "2024-12-31")
+DATA_START_DATE = datetime.strptime(KAGGLE_DATA_START_DATE, "%Y-%m-%d").date()
+DATA_END_DATE = datetime.strptime(KAGGLE_DATA_END_DATE, "%Y-%m-%d").date()
+if DATA_START_DATE > DATA_END_DATE:
+    raise ValueError(
+        f"KAGGLE_DATA_START_DATE가 KAGGLE_DATA_END_DATE보다 늦습니다: "
+        f"{DATA_START_DATE} > {DATA_END_DATE}"
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 접속 설정
@@ -180,6 +191,7 @@ def read_sql_safe(query: str, desc: str = "") -> pd.DataFrame:
 # 메인
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
+    print(f">> Kaggle 데이터 범위: {DATA_START_DATE}..{DATA_END_DATE}")
     print("=" * 50)
     print(">> extract_to_parquet.py 시작")
     print(f">> DB 접속 모드: {DB_CONNECT_MODE}")
@@ -191,12 +203,14 @@ def main():
         # 1. price_data (연도별 청크)
         print("\n>> [1/6] price_data 추출 중 (연도별 분할)...")
         chunks = []
-        for year in range(2015, date.today().year + 1):
+        for year in range(DATA_START_DATE.year, DATA_END_DATE.year + 1):
+            year_start = max(date(year, 1, 1), DATA_START_DATE)
+            year_end = min(date(year, 12, 31), DATA_END_DATE)
             print(f"   {year}년 읽는 중...")
             query = f"""
                 SELECT ticker, date, open, high, low, close, volume, per, pbr
                 FROM price_data
-                WHERE date BETWEEN '{year}-01-01' AND '{year}-12-31'
+                WHERE date BETWEEN '{year_start}' AND '{year_end}'
                 ORDER BY ticker, date
             """
             df_chunk = read_sql_safe(query, f"price_data {year}")
@@ -219,12 +233,13 @@ def main():
 
         # 3. macroeconomic_indicators
         print("\n>> [3/6] macroeconomic_indicators 추출 중...")
-        df = read_sql_safe("""
+        df = read_sql_safe(f"""
             SELECT date, cpi, gdp, interest_rate, unemployment_rate,
                    us10y, us2y, yield_spread, vix_close, dxy_close,
                    wti_price, gold_price, credit_spread_hy,
                    core_cpi, pce, core_pce
             FROM macroeconomic_indicators
+            WHERE date BETWEEN '{DATA_START_DATE}' AND '{DATA_END_DATE}'
             ORDER BY date
         """, "macroeconomic_indicators")
         df.to_parquet(os.path.join(OUTPUT_DIR, "macroeconomic_indicators.parquet"), index=False)
@@ -232,11 +247,12 @@ def main():
 
         # 4. company_fundamentals
         print("\n>> [4/6] company_fundamentals 추출 중...")
-        df = read_sql_safe("""
+        df = read_sql_safe(f"""
             SELECT ticker, date, revenue, net_income, total_assets,
                    total_liabilities, equity, eps, roe, debt_ratio,
                    operating_cash_flow
             FROM company_fundamentals
+            WHERE date BETWEEN '{DATA_START_DATE}' AND '{DATA_END_DATE}'
             ORDER BY ticker, date
         """, "company_fundamentals")
         df.to_parquet(os.path.join(OUTPUT_DIR, "company_fundamentals.parquet"), index=False)
@@ -244,9 +260,10 @@ def main():
 
         # 5. market_breadth
         print("\n>> [5/6] market_breadth 추출 중...")
-        df = read_sql_safe("""
+        df = read_sql_safe(f"""
             SELECT date, nh_nl_index, ma200_pct
             FROM market_breadth
+            WHERE date BETWEEN '{DATA_START_DATE}' AND '{DATA_END_DATE}'
             ORDER BY date
         """, "market_breadth")
         df.to_parquet(os.path.join(OUTPUT_DIR, "market_breadth.parquet"), index=False)
@@ -254,9 +271,10 @@ def main():
 
         # 6. sector_returns
         print("\n>> [6/6] sector_returns 추출 중...")
-        df = read_sql_safe("""
+        df = read_sql_safe(f"""
             SELECT date, sector, etf_ticker, return, close
             FROM sector_returns
+            WHERE date BETWEEN '{DATA_START_DATE}' AND '{DATA_END_DATE}'
             ORDER BY date, sector
         """, "sector_returns")
         df.to_parquet(os.path.join(OUTPUT_DIR, "sector_returns.parquet"), index=False)

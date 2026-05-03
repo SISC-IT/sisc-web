@@ -1,13 +1,12 @@
-# AI-359-048 Kaggle 복붙 셀
+# AI-359-048/048A Kaggle 복붙 셀
 
-아래 셀을 Kaggle notebook에 순서대로 복붙해서 실행한다.
+아래 셀을 Kaggle notebook에 순서대로 복붙해서 실행한다. 이 노트북은 OOS2024 개발용이므로 `/kaggle/working/oos2024` 아래에만 결과를 만들고 prod artifact는 덮어쓰지 않는다.
 
-전제:
+중요:
 
-- Kaggle dataset에 `sisc-ai-trading-dataset`을 연결한다.
-- GPU를 켠다.
-- 브랜치 `feat/SISC-359-AI-signal-evaluation`에 `AI/modules/signal/models/oos2024_kaggle_train_eval.py`가 올라가 있어야 한다.
-- 출력은 `/kaggle/working/oos2024`와 `/kaggle/working/oos2024_kaggle_outputs.zip`만 사용한다.
+- Kaggle Dataset은 `DATA_DATE_MAX >= 2024-12-31`인 새 버전이어야 한다.
+- 2025-01-01 이후 row가 1개라도 있으면 학습하지 않는다.
+- 데이터가 2023에서 끝나면 OOS2023으로 fallback하지 않고 바로 실패한다.
 
 ## 셀 1. 브랜치 코드 가져오기
 
@@ -65,17 +64,46 @@ os.environ.setdefault("COST_BPS_PER_SIDE", "5.0")
 
 print("PARQUET_DIR=", os.environ["PARQUET_DIR"])
 print("OOS2024_OUTPUT_ROOT=", os.environ["OOS2024_OUTPUT_ROOT"])
-
-import pandas as pd
-price_probe = pd.read_parquet(price_files[0], columns=["date"])
-price_probe["date"] = pd.to_datetime(price_probe["date"]).dt.normalize()
-print("DATA_DATE_MIN=", price_probe["date"].min())
-print("DATA_DATE_MAX=", price_probe["date"].max())
-print("ROWS_REQUESTED_EVAL=", int((price_probe["date"] >= "2024-09-03").sum()))
-print("ROWS_AFTER_CUTOFF=", int((price_probe["date"] > "2024-06-30").sum()))
 ```
 
-## 셀 3. config smoke 확인
+## 셀 2-1. 이전 OOS2024 결과 삭제
+
+재학습을 처음부터 다시 돌릴 때만 실행한다.
+
+```python
+!rm -rf /kaggle/working/oos2024 /kaggle/working/oos2024_kaggle_outputs.zip
+print("old oos2024 outputs removed")
+```
+
+## 셀 3. Dataset preflight
+
+이 셀이 통과하지 않으면 학습 셀을 실행하지 않는다.
+
+```python
+import json
+
+from AI.scripts.preflight_oos2024_kaggle_dataset import run_preflight
+
+preflight = run_preflight(
+    os.environ["PARQUET_DIR"],
+    train_start=os.environ["TRAIN_START_DATE"],
+    train_cutoff=os.environ["TRAIN_CUTOFF_DATE"],
+    eval_start=os.environ["EVAL_START_DATE"],
+    eval_end=os.environ["EVAL_END_DATE"],
+    holdout_start=os.environ["HOLDOUT_START_DATE"],
+    strict=True,
+)
+
+print(json.dumps(preflight, ensure_ascii=False, indent=2))
+
+assert preflight["passed"] is True
+assert preflight["price_data_summary"]["data_max"] >= "2024-12-31"
+assert preflight["price_data_summary"]["rows_2025_plus"] == 0
+assert preflight["price_data_summary"]["ticker_date_duplicate_count"] == 0
+assert preflight["forward_return_summary"]["eval_label_end_max"] <= "2024-12-31"
+```
+
+## 셀 4. Config smoke
 
 ```python
 import json
@@ -94,6 +122,7 @@ assert summary["train_cutoff"] == "2024-06-30"
 assert summary["eval_start"] >= "2024-09-03"
 assert summary["holdout_start"] == "2025-01-01"
 assert summary["prod_artifact_overwrite"] is False
+assert summary["allow_eval_window_fallback"] is False
 
 data_window = preflight_data_window_summary(config, strict_oos2024=True)
 print(json.dumps(data_window, ensure_ascii=False, indent=2))
@@ -102,7 +131,7 @@ assert summary["transformer_output_dir"].endswith("/oos2024/transformer")
 assert summary["itransformer_output_dir"].endswith("/oos2024/itransformer")
 ```
 
-## 셀 4. 학습과 평가 실행
+## 셀 5. 학습과 평가 실행
 
 ```python
 import json
@@ -113,7 +142,7 @@ result = run_oos2024_kaggle_train_eval(config)
 print(json.dumps(result, ensure_ascii=False, indent=2))
 ```
 
-## 셀 5. 필수 output 확인
+## 셀 6. 필수 output 확인
 
 ```python
 from pathlib import Path
@@ -152,7 +181,7 @@ missing = [raw_path for raw_path in expected_outputs if not Path(raw_path).exist
 assert not missing, f"누락 output: {missing}"
 ```
 
-## 셀 6. 결과 전체 zip 만들기
+## 셀 7. 결과 전체 zip 만들기
 
 ```python
 import shutil
@@ -175,9 +204,7 @@ print("SIZE=", zip_file.stat().st_size)
 assert zip_file.exists() and zip_file.stat().st_size > 0
 ```
 
-## Kaggle에서 받을 파일
-
-아래 파일 하나를 받으면 된다.
+Kaggle에서 받을 파일:
 
 ```text
 /kaggle/working/oos2024_kaggle_outputs.zip
