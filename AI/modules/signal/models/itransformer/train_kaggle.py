@@ -35,6 +35,12 @@ from sklearn.preprocessing import StandardScaler
 
 from AI.modules.signal.models.itransformer.architecture import build_itransformer_model
 
+
+def log_gpu_status() -> None:
+    gpus = tf.config.list_physical_devices("GPU")
+    print(f"[INFO] GPU devices: {gpus}")
+    print("[INFO] Using GPU" if gpus else "[INFO] Using CPU")
+
 # Kaggle 경로 설정
 def _find_kaggle_dataset_path() -> str:
     """Kaggle 입력 데이터셋 경로 자동 탐색"""
@@ -265,6 +271,7 @@ def build_model(seq_len: int, n_features: int, n_outputs: int, n_tickers: int, n
 # 학습 메인
 # ─────────────────────────────────────────────────────────────────────────────
 def train():
+    log_gpu_status()
     print("=" * 56)
     print(" iTransformer Kaggle 학습 시작")
     print(f" Horizons: {CONFIG['horizons']}일")
