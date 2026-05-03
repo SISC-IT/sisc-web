@@ -122,7 +122,7 @@ if code_zip.exists():
     sys.path.insert(0, str(code_root))
 else:
     ai_candidates = [
-        Path(path).parent
+        Path(path).parents[1]
         for path in glob.glob("/kaggle/input/**/AI/modules", recursive=True)
     ]
     if ai_candidates:
