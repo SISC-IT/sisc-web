@@ -15,6 +15,103 @@ const createEmptyDoc = () => ({
   ],
 });
 
+const isDataImageUrl = (value = '') => /^data:image\//i.test(String(value || '').trim());
+const DEFAULT_IMAGE_ORIGIN = 'https://api.sisc.kr';
+
+const resolveImageOrigin = () => {
+  const configuredApiUrl = String(import.meta.env.VITE_API_URL || '').trim();
+  if (!configuredApiUrl) return DEFAULT_IMAGE_ORIGIN;
+
+  try {
+    return new URL(configuredApiUrl).origin;
+  } catch {
+    return DEFAULT_IMAGE_ORIGIN;
+  }
+};
+
+const API_IMAGE_ORIGIN = resolveImageOrigin();
+
+const toAbsoluteImageUrl = (value = '') => {
+  const src = String(value || '').trim();
+  if (!src) return '';
+  if (/^data:/i.test(src) || /^blob:/i.test(src)) {
+    return src;
+  }
+
+  let normalizedPath = src;
+
+  if (/^(https?:)?\/\//i.test(src)) {
+    try {
+      normalizedPath = new URL(src, API_IMAGE_ORIGIN).pathname || src;
+    } catch {
+      normalizedPath = src;
+    }
+  }
+
+  if (!normalizedPath.startsWith('/')) {
+    normalizedPath = `/${normalizedPath.replace(/^\/+/, '')}`;
+  }
+
+  const uploadsImagesIndex = normalizedPath.indexOf('/uploads/images/');
+  if (uploadsImagesIndex >= 0) {
+    normalizedPath = normalizedPath.slice(uploadsImagesIndex);
+  }
+
+  return `${API_IMAGE_ORIGIN}${normalizedPath}`;
+};
+
+const dataUrlToFile = async (dataUrl, filename = 'pasted-image.png') => {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const extension = blob.type?.split('/')[1] || 'png';
+  const normalizedName = filename.includes('.') ? filename : `${filename}.${extension}`;
+  return new File([blob], normalizedName, { type: blob.type || 'image/png' });
+};
+
+const replaceBase64ImagesWithUploadedUrls = async (contentJson, uploadImage) => {
+  const uploadedMediaIds = [];
+
+  const processNode = async (node) => {
+    if (!node || typeof node !== 'object') return node;
+
+    const nextNode = { ...node };
+
+    if (nextNode.type === 'image') {
+      const src = String(nextNode.attrs?.src || '');
+
+      if (isDataImageUrl(src)) {
+        const altText = String(nextNode.attrs?.alt || '').trim();
+        const file = await dataUrlToFile(src, altText || `pasted-image-${Date.now()}.png`);
+        const uploaded = await uploadImage(file);
+        const normalizedImageUrl = toAbsoluteImageUrl(uploaded?.url);
+
+        nextNode.attrs = {
+          ...(nextNode.attrs || {}),
+          src: normalizedImageUrl || src,
+          alt: uploaded?.originalFilename || altText || file.name,
+        };
+
+        if (uploaded?.mediaId) {
+          uploadedMediaIds.push(uploaded.mediaId);
+        }
+      }
+    }
+
+    if (Array.isArray(nextNode.content)) {
+      nextNode.content = await Promise.all(nextNode.content.map((childNode) => processNode(childNode)));
+    }
+
+    return nextNode;
+  };
+
+  const normalizedContentJson = await processNode(contentJson);
+
+  return {
+    normalizedContentJson,
+    uploadedMediaIds,
+  };
+};
+
 const getTextFromJson = (contentJson) => {
   if (!contentJson || !Array.isArray(contentJson.content)) return '';
 
@@ -62,7 +159,19 @@ const jsonToHtml = (contentJson) => {
     if (node.type === 'image') {
       const src = String(node.attrs?.src || '').replace(/"/g, '&quot;');
       const alt = String(node.attrs?.alt || '').replace(/"/g, '&quot;');
-      return `<img src="${src}" alt="${alt}" />`;
+      const width = String(node.attrs?.width || '').trim();
+      const height = String(node.attrs?.height || '').trim();
+      const align = String(node.attrs?.align || 'left').trim();
+      const alignStyle = align === 'center'
+        ? 'display: block; margin-left: auto; margin-right: auto;'
+        : align === 'right'
+          ? 'display: block; margin-left: auto; margin-right: 0;'
+          : 'display: block; margin-left: 0; margin-right: auto;';
+      const style = ` style="${alignStyle}${width ? ` width: ${width};` : ''}${height ? ` height: ${height};` : ' height: auto;'}"`;
+      const widthAttr = width ? ` width="${width.replace(/"/g, '&quot;')}"` : '';
+      const heightAttr = height ? ` height="${height.replace(/"/g, '&quot;')}"` : '';
+      const alignAttr = ` data-align="${align}"`;
+      return `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr}${alignAttr}${style} />`;
     }
     if (Array.isArray(node.content)) {
       return node.content.map(renderNode).join('');
@@ -158,8 +267,24 @@ const BoardWrite = () => {
       return;
     }
 
-    const contentHtml = jsonToHtml(contentJson);
-    const contentText = getTextFromJson(contentJson);
+    let normalizedContentJson = contentJson;
+    let normalizedInlineMediaIds = inlineMediaIds;
+
+    try {
+      const { normalizedContentJson: replacedContentJson, uploadedMediaIds } = await replaceBase64ImagesWithUploadedUrls(
+        contentJson,
+        boardApi.uploadBoardImage
+      );
+      normalizedContentJson = replacedContentJson;
+      normalizedInlineMediaIds = Array.from(new Set([...(inlineMediaIds || []), ...(uploadedMediaIds || [])].filter(Boolean)));
+    } catch (error) {
+      console.error('본문 이미지 정규화 실패:', error);
+      alert('본문 이미지 처리에 실패했습니다. 다시 시도해주세요.');
+      return;
+    }
+
+    const contentHtml = jsonToHtml(normalizedContentJson);
+    const contentText = getTextFromJson(normalizedContentJson);
 
     if (!contentText) {
       alert('내용을 입력해주세요.');
@@ -172,15 +297,17 @@ const BoardWrite = () => {
         boardId: selectedBoardId,
         title: normalizedTitle,
         contentFormat: 'TIPTAP_JSON',
-        contentJson,
+        contentJson: normalizedContentJson,
         contentHtml,
         contentText,
         anonymous: isAnonymous,
-        inlineMediaIds,
+        inlineMediaIds: normalizedInlineMediaIds,
         attachmentIds: attachmentFiles.map((file) => file.mediaId).filter(Boolean),
       };
 
       await boardApi.createRichPost(payload);
+      setContentJson(normalizedContentJson);
+      setInlineMediaIds(normalizedInlineMediaIds);
       alert('게시글이 작성되었습니다.');
       navigate(currentBoardPath);
     } catch (error) {
@@ -205,36 +332,6 @@ const BoardWrite = () => {
     } catch (error) {
       console.error('첨부파일 업로드 실패:', error);
       alert('첨부파일 업로드에 실패했습니다.');
-    } finally {
-      event.target.value = '';
-    }
-  };
-
-  const handleImageUpload = async (event) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-
-    try {
-      const uploadedImages = await Promise.all(files.map((file) => boardApi.uploadBoardImage(file)));
-      const nextInlineMediaIds = uploadedImages.map((image) => image.mediaId).filter(Boolean);
-      setInlineMediaIds((prev) => [...prev, ...nextInlineMediaIds]);
-
-      setContentJson((prev) => ({
-        ...prev,
-        content: [
-          ...(Array.isArray(prev?.content) ? prev.content : []),
-          ...uploadedImages.map((image) => ({
-            type: 'image',
-            attrs: {
-              src: image.url,
-              alt: image.originalFilename || '',
-            },
-          })),
-        ],
-      }));
-    } catch (error) {
-      console.error('본문 이미지 업로드 실패:', error);
-      alert('본문 이미지 업로드에 실패했습니다.');
     } finally {
       event.target.value = '';
     }
@@ -279,19 +376,23 @@ const BoardWrite = () => {
           <div className={styles.fieldGroup}>
             <div className={styles.fieldHeader}>
               <label className={styles.label}>내용</label>
-              <div className={styles.fileActions}>
-                <label className={styles.fileButton}>
-                  본문 이미지
-                  <input type="file" accept="image/*" multiple className={styles.hiddenFileInput} onChange={handleImageUpload} />
-                </label>
-                <label className={styles.fileButton}>
-                  첨부파일 추가
-                  <input type="file" multiple className={styles.hiddenFileInput} onChange={handleAttachmentChange} />
-                </label>
-              </div>
+              <label className={styles.fileButton}>
+                첨부파일 추가
+                <input type="file" multiple className={styles.hiddenFileInput} onChange={handleAttachmentChange} />
+              </label>
             </div>
 
-            <RichTextEditor value={contentJson} onChange={setContentJson} placeholder="내용을 입력해 주세요." />
+            <RichTextEditor
+              value={contentJson}
+              onChange={setContentJson}
+              placeholder="내용을 입력해 주세요."
+              onUploadImage={boardApi.uploadBoardImage}
+              onImageInserted={(media) => {
+                if (media?.mediaId) {
+                  setInlineMediaIds((prev) => Array.from(new Set([...(prev || []), media.mediaId])));
+                }
+              }}
+            />
           </div>
 
           {attachmentFiles.length > 0 && (
