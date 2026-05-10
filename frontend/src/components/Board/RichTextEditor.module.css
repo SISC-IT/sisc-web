@@ -1,0 +1,62 @@
+.editorShell {
+  width: 100%;
+  border: 1px solid rgba(214, 214, 214, 1);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(235, 235, 235, 1);
+  background: linear-gradient(180deg, rgba(250, 250, 250, 1), rgba(255, 255, 255, 1));
+}
+
+.toolbar button {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(214, 214, 214, 1);
+  background: #fff;
+  color: #4b5563;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.activeButton {
+  background: #1d80f4 !important;
+  color: #fff !important;
+  border-color: #1d80f4 !important;
+}
+
+.editorBody {
+  min-height: 420px;
+  padding: 20px 22px 30px;
+}
+
+.editorBody :global(.tiptap) {
+  min-height: 370px;
+  outline: none;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #222;
+}
+
+.editorBody :global(.tiptap p.is-editor-empty:first-child::before) {
+  color: #aaa;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.editorBody :global(.tiptap img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}

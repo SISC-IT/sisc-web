@@ -5,6 +5,7 @@ import EditIcon from '../../../assets/boardPencil.svg';
 import DeleteIcon from '../../../assets/boardCloseIcon.svg';
 import { getTimeAgo } from '../../../utils/TimeUtils';
 import FileAttachmentList from './FileAttachmentList';
+import PostHtmlView from './PostHtmlView';
 
 const PostView = ({
   post,
@@ -76,7 +77,7 @@ const PostView = ({
         </div>
       </div>
 
-      <div className={styles.content}>{post.content}</div>
+      <PostHtmlView html={post.contentHtml || post.content || ''} />
 
       {hasAttachments && (
         <div className={styles.attachments}>

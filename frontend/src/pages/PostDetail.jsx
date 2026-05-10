@@ -127,7 +127,7 @@ const PostDetail = () => {
       const updatedPost = await boardApi.getPost(postId);
       setPost(updatedPost);
       setEditTitle(updatedPost.title);
-      setEditContent(updatedPost.content);
+      setEditContent(updatedPost.contentText || updatedPost.content || '');
       const raw = extractRawComments(updatedPost);
       setComments(buildCommentTree(raw));
       return updatedPost;
@@ -149,7 +149,7 @@ const PostDetail = () => {
         const data = await boardApi.getPost(postId);
         setPost(data);
         setEditTitle(data.title);
-        setEditContent(data.content);
+        setEditContent(data.contentText || data.content || '');
         const raw = extractRawComments(data);
         setComments(buildCommentTree(raw));
         setError(null);

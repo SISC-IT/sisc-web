@@ -1,0 +1,218 @@
+.page {
+  width: 100%;
+  min-height: calc(var(--vh, 1vh) * 100);
+  background: linear-gradient(180deg, #f7f9fc 0%, #ffffff 42%);
+  padding: 36px 24px 48px;
+  box-sizing: border-box;
+}
+
+.container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.backButton {
+  border: 1px solid rgba(214, 214, 214, 1);
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.kicker {
+  margin: 0 0 6px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.15;
+  color: #111827;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(229, 231, 235, 1);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.select,
+.input {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(209, 213, 219, 1);
+  padding: 12px 16px;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.fieldHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fileActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fileButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: linear-gradient(92.89deg, #d8e8ff 6.95%, #d1d8ff 74.81%, #dddeff 107.39%);
+  color: #111827;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.attachmentList {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(229, 231, 235, 1);
+}
+
+.attachmentTitle {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.attachmentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.attachmentItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(229, 231, 235, 1);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.attachmentMeta {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.anonymousOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.secondaryButton,
+.primaryButton {
+  min-width: 112px;
+  min-height: 46px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.secondaryButton {
+  background: #eef2f7;
+  color: #374151;
+}
+
+.primaryButton {
+  background: linear-gradient(92.89deg, #2b6ef3 6.95%, #1d80f4 74.81%, #35a0ff 107.39%);
+  color: #fff;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 20px 14px 32px;
+  }
+
+  .card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .headerRow,
+  .footerRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actionGroup {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .fieldHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

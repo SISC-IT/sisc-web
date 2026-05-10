@@ -161,6 +161,53 @@ export const createPost = async (boardId, postData) => {
   return response.data;
 };
 
+/**
+ * 리치 에디터 게시글 작성
+ * POST /api/board/post
+ */
+export const createRichPost = async (postData) => {
+  if (!postData?.boardId) throw new Error('boardId is required');
+  if (!postData?.title) throw new Error('title is required');
+  if (!postData?.contentJson) throw new Error('contentJson is required');
+
+  const response = await api.post('/api/board/post', postData);
+  return response.data;
+};
+
+/**
+ * 본문 이미지 업로드
+ * POST /api/board/images
+ */
+export const uploadBoardImage = async (file) => {
+  if (!file) throw new Error('file is required');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post('/api/board/images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return response.data;
+};
+
+/**
+ * 첨부파일 업로드
+ * POST /api/board/files
+ */
+export const uploadBoardFile = async (file) => {
+  if (!file) throw new Error('file is required');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post('/api/board/files', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return response.data;
+};
+
 /*
  * 게시글 상세 조회
  * GET /api/board/post/{postId}
