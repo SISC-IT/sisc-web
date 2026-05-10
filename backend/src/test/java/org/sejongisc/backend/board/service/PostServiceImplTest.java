@@ -3,6 +3,7 @@ package org.sejongisc.backend.board.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -27,6 +28,7 @@ import org.sejongisc.backend.board.entity.Board;
 import org.sejongisc.backend.board.entity.Comment;
 import org.sejongisc.backend.board.entity.Post;
 import org.sejongisc.backend.board.entity.PostAttachment;
+import org.sejongisc.backend.board.entity.PostContentFormat;
 import org.sejongisc.backend.board.repository.BoardRepository;
 import org.sejongisc.backend.board.repository.CommentRepository;
 import org.sejongisc.backend.board.repository.PostAttachmentRepository;
@@ -68,6 +70,10 @@ class PostServiceImplTest {
   private BoardRepository boardRepository;
   @Mock
   private FileUploadService fileUploadService;
+  @Mock
+  private PostContentService postContentService;
+  @Mock
+  private PostMediaService postMediaService;
 
   // 테스트용 공유 객체
   private User mockUser;
@@ -113,7 +119,30 @@ class PostServiceImplTest {
         .board(mockBoard)
         .title("Test Title")
         .content("Test Content")
+        .contentFormat(PostContentFormat.PLAIN_TEXT)
+        .contentText("Test Content")
+        .contentHtml("<p>Test Content</p>")
         .build();
+
+    lenient().when(postContentService.fromPlainText(any()))
+        .thenAnswer(invocation -> {
+          String content = invocation.getArgument(0);
+          return new PostContentService.NormalizedPostContent(
+              PostContentFormat.PLAIN_TEXT,
+              content,
+              null,
+              "<p>" + content + "</p>",
+              content
+          );
+        });
+    lenient().when(postContentService.resolveFormat(any(Post.class)))
+        .thenAnswer(invocation -> ((Post) invocation.getArgument(0)).getContentFormat());
+    lenient().when(postContentService.parseContentJson(any()))
+        .thenReturn(null);
+    lenient().when(postContentService.resolveContentHtml(any(Post.class)))
+        .thenAnswer(invocation -> ((Post) invocation.getArgument(0)).getContentHtml());
+    lenient().when(postContentService.resolveContentText(any(Post.class)))
+        .thenAnswer(invocation -> ((Post) invocation.getArgument(0)).getContentText());
   }
 
   @Test

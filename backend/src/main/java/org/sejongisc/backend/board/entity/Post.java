@@ -3,12 +3,15 @@ package org.sejongisc.backend.board.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Version;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -52,6 +55,20 @@ public class Post extends BasePostgresEntity {
   private String content;
 
   @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 30)
+  private PostContentFormat contentFormat = PostContentFormat.PLAIN_TEXT;
+
+  @Column(columnDefinition = "TEXT")
+  private String contentJson;
+
+  @Column(columnDefinition = "TEXT")
+  private String contentHtml;
+
+  @Column(columnDefinition = "TEXT")
+  private String contentText;
+
+  @Builder.Default
   @Column(nullable = false, columnDefinition = "boolean default false")
   private boolean anonymous = false;
 
@@ -69,4 +86,14 @@ public class Post extends BasePostgresEntity {
 
   @Version
   private Long version;
+
+  @PrePersist
+  void prePersist() {
+    if (contentFormat == null) {
+      contentFormat = PostContentFormat.PLAIN_TEXT;
+    }
+    if (contentText == null) {
+      contentText = content;
+    }
+  }
 }

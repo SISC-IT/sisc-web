@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.sejongisc.backend.board.dto.BoardResponse;
 import org.sejongisc.backend.board.dto.PostRequest;
 import org.sejongisc.backend.board.dto.PostResponse;
+import org.sejongisc.backend.board.dto.RichPostRequest;
 import org.springframework.data.domain.Page;
 
 public interface PostService {
@@ -12,8 +13,14 @@ public interface PostService {
   // 게시물 작성
   void savePost(PostRequest request, UUID userId);
 
+  // 리치 에디터 게시물 작성
+  void saveRichPost(RichPostRequest request, UUID userId);
+
   // 게시물 수정
   void updatePost(PostRequest request, UUID postId, UUID userId);
+
+  // 리치 에디터 게시물 수정
+  void updateRichPost(RichPostRequest request, UUID postId, UUID userId);
 
   // 게시물 삭제
   void deletePost(UUID postId, UUID userId);

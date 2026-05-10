@@ -48,6 +48,10 @@ dependencies {
 	// PostgreSQL Driver
 	runtimeOnly 'org.postgresql:postgresql'
 
+	// Flyway DB migrations
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
+
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
@@ -89,6 +93,7 @@ dependencies {
 	//validation
 	implementation 'commons-validator:commons-validator:1.10.0'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.jsoup:jsoup:1.18.3'
 
 	// Redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'

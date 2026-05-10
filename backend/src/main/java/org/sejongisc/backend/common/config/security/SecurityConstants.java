@@ -35,14 +35,17 @@ public class SecurityConstants {
     };
 
   public static final String[] ADMIN_URLS = {
-      "/admin/dev/**", "/actuator/**"
+      "/admin/dev/**", "/admin/**", "/actuator/**"
   };
 
   public static final String[] ADMIN_PUBLIC_URLS = {
       "/admin/dev/assets/**",
       "/admin/dev/login",
+      "/admin/assets/**",
+      "/admin/login",
       "/favicon.ico",
       "/admin/dev/favicon.ico",
+      "/admin/favicon.ico",
       "/actuator/health",
       "/actuator/info"
   };

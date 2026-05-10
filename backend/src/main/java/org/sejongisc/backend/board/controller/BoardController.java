@@ -6,9 +6,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.board.dto.BoardResponse;
 import org.sejongisc.backend.board.dto.CommentRequest;
+import org.sejongisc.backend.board.dto.PostMediaResponse;
 import org.sejongisc.backend.board.dto.PostRequest;
 import org.sejongisc.backend.board.dto.PostResponse;
+import org.sejongisc.backend.board.dto.RichPostRequest;
 import org.sejongisc.backend.board.service.PostInteractionService;
+import org.sejongisc.backend.board.service.PostMediaService;
 import org.sejongisc.backend.board.service.PostService;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.springframework.data.domain.Page;
@@ -30,6 +33,7 @@ public class BoardController {
 
   private final PostService postService;
   private final PostInteractionService postInteractionService;
+  private final PostMediaService postMediaService;
 
   // 게시물 생성
   @Operation(
@@ -44,6 +48,19 @@ public class BoardController {
       @AuthenticationPrincipal CustomUserDetails customUserDetails) {
     UUID userId = customUserDetails.getUserId();
     postService.savePost(request, userId);
+    return ResponseEntity.ok().build();
+  }
+
+  @Operation(
+      summary = "리치 에디터 게시물 작성",
+      description = "Tiptap JSON, HTML, plain text를 포함한 게시물 생성. HTML은 서버에서 sanitize 후 저장"
+  )
+  @PostMapping(value = "/post", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<Void> createRichPost(
+      @Valid @RequestBody RichPostRequest request,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postService.saveRichPost(request, userId);
     return ResponseEntity.ok().build();
   }
 
@@ -62,6 +79,44 @@ public class BoardController {
     UUID userId = customUserDetails.getUserId();
     postService.updatePost(request, postId, userId);
     return ResponseEntity.ok().build();
+  }
+
+  @Operation(
+      summary = "리치 에디터 게시물 수정",
+      description = "Tiptap JSON, HTML, plain text를 포함한 게시물 수정. 저장된 인라인 이미지/첨부파일은 요청 ID 기준으로 동기화"
+  )
+  @PutMapping(value = "/post/{postId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<Void> updateRichPost(
+      @Valid @RequestBody RichPostRequest request,
+      @PathVariable UUID postId,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    postService.updateRichPost(request, postId, userId);
+    return ResponseEntity.ok().build();
+  }
+
+  @Operation(
+      summary = "게시물 본문 이미지 업로드",
+      description = "리치 에디터 본문 중간에 삽입할 이미지를 업로드하고 Nginx 정적 서빙 URL을 반환"
+  )
+  @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<PostMediaResponse> uploadImage(
+      @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    return ResponseEntity.ok(postMediaService.uploadImage(file, userId));
+  }
+
+  @Operation(
+      summary = "게시물 첨부파일 업로드",
+      description = "리치 에디터 게시물에 연결할 일반 첨부파일을 업로드하고 Nginx 정적 서빙 URL을 반환"
+  )
+  @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<PostMediaResponse> uploadFile(
+      @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+      @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    UUID userId = customUserDetails.getUserId();
+    return ResponseEntity.ok(postMediaService.uploadFile(file, userId));
   }
 
   // 게시물 삭제
