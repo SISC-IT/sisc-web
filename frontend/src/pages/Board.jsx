@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import PostItem from '../components/Board/PostItem';
-import Modal from '../components/Board/Modal';
 import SearchBar from '../components/Board/SearchBar';
 import BoardActions from '../components/Board/BoardActions';
 import CategoryTabs from '../components/Board/CategoryTabs';
@@ -76,6 +75,7 @@ const buildPostsFromCache = ({
 const Board = () => {
   const { team } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [boardIdMap, setBoardIdMap] = useState({});
   const [boardNameMap, setBoardNameMap] = useState({});
@@ -83,11 +83,6 @@ const Board = () => {
   const [postCacheByBoardId, setPostCacheByBoardId] = useState({});
   const [searchKeyword, setSearchKeyword] = useState('');
 
-  const [showModal, setShowModal] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [isAnonymousPost, setIsAnonymousPost] = useState(false);
   const [sortOption, setSortOption] = useState('latest');
   const [loading, setLoading] = useState(false);
   const [boardsLoaded, setBoardsLoaded] = useState(false);
@@ -96,10 +91,8 @@ const Board = () => {
   const [subBoardName, setSubBoardName] = useState('');
   const [subBoardTabs, setSubBoardTabs] = useState([{ id: ALL_TAB_ID, name: '전체 게시판' }]);
   const [isCreatingSubBoard, setIsCreatingSubBoard] = useState(false);
-  const [writeBoardId, setWriteBoardId] = useState('');
   const [canCreateSubBoard, setCanCreateSubBoard] = useState(false);
   const [canDeleteSubBoard, setCanDeleteSubBoard] = useState(false);
-  const [isSavingPost, setIsSavingPost] = useState(false);
   const [deletingSubBoardId, setDeletingSubBoardId] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -319,20 +312,13 @@ const Board = () => {
     []
   );
 
-  const handleOpenModal = () => {
-    setWriteBoardId('');
-    setIsAnonymousPost(false);
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setTitle('');
-    setContent('');
-    setSelectedFiles([]);
-    setWriteBoardId('');
-    setIsAnonymousPost(false);
-    setIsSavingPost(false);
+  const handleOpenWritePage = () => {
+    const path = team ? `/board/${encodeURIComponent(team)}/write` : '/board/write';
+    navigate(path, {
+      state: {
+        boardId: currentBoardId,
+      },
+    });
   };
 
   const handleOpenSubBoardModal = () => {
@@ -464,68 +450,6 @@ const Board = () => {
       alert('하위 게시판 삭제에 실패했습니다.');
     } finally {
       setDeletingSubBoardId('');
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
-  };
-
-  const handleRemoveFile = (index) => {
-    setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
-  };
-
-  const handleSave = async () => {
-    if (isSavingPost) {
-      return;
-    }
-
-    if (!title || !title.trim()) {
-      alert('제목을 입력해주세요.');
-      return;
-    }
-
-    if (!content || !content.trim()) {
-      alert('내용을 입력해주세요.');
-      return;
-    }
-
-    if (!writeBoardId) {
-      alert('하위 게시판을 선택해야 합니다.');
-      return;
-    }
-
-    try {
-      setIsSavingPost(true);
-
-      const postData = {
-        title: title.trim(),
-        content: content.trim(),
-        files: selectedFiles,
-        anonymous: isAnonymousPost,
-      };
-
-      await boardApi.createPost(writeBoardId, postData);
-
-      handleCloseModal();
-      setSelectedFiles([]);
-
-      const refreshedCurrentBoardCache = await fetchPostsByBoardIds([writeBoardId]);
-      setPostCacheByBoardId((prev) => ({
-        ...prev,
-        ...refreshedCurrentBoardCache,
-      }));
-      setCurrentPage(1);
-
-      alert('게시글이 작성되었습니다!');
-    } catch (error) {
-      console.error('게시글 작성 실패:', error);
-      alert(`게시글 작성에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
-    } finally {
-      window.setTimeout(() => {
-        setIsSavingPost(false);
-      }, 800);
     }
   };
 
@@ -691,7 +615,7 @@ const Board = () => {
       <BoardActions
         sortOption={sortOption}
         onSortChange={handleSortChange}
-        onWrite={handleOpenModal}
+        onWrite={handleOpenWritePage}
         resultCount={sortedPosts.length}
       />
 
@@ -715,51 +639,31 @@ const Board = () => {
       {!loading && sortedPosts.length > 0 && (
         <div className={styles.pagination}>
           <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
             className={styles.pageButton}
+            onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+            disabled={currentPage === 1}
           >
             이전
           </button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
             <button
               key={page}
-              onClick={() => handlePageChange(page)}
               className={`${styles.pageButton} ${currentPage === page ? styles.active : ''}`}
+              onClick={() => handlePageChange(page)}
             >
               {page}
             </button>
           ))}
 
           <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
             className={styles.pageButton}
+            onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
+            disabled={currentPage === totalPages}
           >
             다음
           </button>
         </div>
-      )}
-
-      {showModal && (
-        <Modal
-          title={title}
-          setTitle={setTitle}
-          content={content}
-          setContent={setContent}
-          isAnonymous={isAnonymousPost}
-          setIsAnonymous={setIsAnonymousPost}
-          boardOptions={subBoardTabs.filter((tab) => tab.id !== ALL_TAB_ID)}
-          selectedBoardId={writeBoardId}
-          onBoardChange={setWriteBoardId}
-          selectedFiles={selectedFiles}
-          onFileChange={handleFileChange}
-          onRemoveFile={handleRemoveFile}
-          onSave={handleSave}
-          onClose={handleCloseModal}
-          isSaving={isSavingPost}
-        />
       )}
 
       {showSubBoardModal && (

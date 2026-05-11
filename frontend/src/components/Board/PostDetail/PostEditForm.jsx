@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import styles from '../../../pages/PostDetail.module.css';
+import RichTextEditor from '../../Board/RichTextEditor';
+import * as boardApi from '../../../utils/boardApi';
 import FolderIcon from '../../../assets/boardFolder.svg';
 
 const PostEditForm = ({
@@ -115,16 +117,15 @@ const PostEditForm = ({
             </div>
           )}
 
-          <textarea
-            className={styles.editContentTextarea}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="내용을 입력하세요"
-            onDragEnter={handleDragEnter}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          />
+          <div className={styles.richEditorWrapper}>
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              editable={true}
+              placeholder="내용을 입력하세요"
+              onUploadImage={boardApi.uploadBoardImage}
+            />
+          </div>
         </div>
       </div>
 

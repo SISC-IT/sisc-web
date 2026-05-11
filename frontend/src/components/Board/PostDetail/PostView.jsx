@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import styles from '../../../pages/PostDetail.module.css';
 import ProfileIcon from '../../../assets/board_profile.svg';
 import EditIcon from '../../../assets/boardPencil.svg';
 import DeleteIcon from '../../../assets/boardCloseIcon.svg';
 import { getTimeAgo } from '../../../utils/TimeUtils';
 import FileAttachmentList from './FileAttachmentList';
+import PostHtmlView from './PostHtmlView';
 
 const PostView = ({
   post,
@@ -23,6 +24,37 @@ const PostView = ({
 
   // 데이터 유효성 검사
   const hasAttachments = post.attachments && post.attachments.length > 0;
+
+  useEffect(() => {
+    try {
+      console.log('Post contentHtml:', post?.contentHtml);
+      console.log('Post contentJson:', post?.contentJson);
+      console.log('Post contentText:', post?.contentText || post?.content);
+    } catch (err) {
+      /* ignore */
+    }
+  }, [post]);
+
+  const htmlToRender = (() => {
+    const html = post?.contentHtml || post?.content || '';
+    // prefer contentJson when contentHtml doesn't contain images but contentJson has image nodes
+    const json = post?.contentJson;
+
+    try {
+      if (html && /<img\s+/i.test(html)) return html;
+      if (json) return json;
+    } catch (e) {
+      return html;
+    }
+
+    return html;
+  })();
+
+  useEffect(() => {
+    try {
+      console.log('PostView - htmlToRender:', htmlToRender);
+    } catch (e) {}
+  }, [htmlToRender]);
 
   return (
     <>
@@ -76,7 +108,7 @@ const PostView = ({
         </div>
       </div>
 
-      <div className={styles.content}>{post.content}</div>
+      <PostHtmlView html={htmlToRender} />
 
       {hasAttachments && (
         <div className={styles.attachments}>
