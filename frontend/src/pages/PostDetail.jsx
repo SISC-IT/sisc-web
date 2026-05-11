@@ -127,7 +127,7 @@ const PostDetail = () => {
       const updatedPost = await boardApi.getPost(postId);
       setPost(updatedPost);
       setEditTitle(updatedPost.title);
-      setEditContent(updatedPost.contentText || updatedPost.content || '');
+      setEditContent(updatedPost.contentJson || updatedPost.content || updatedPost.contentText || '');
       const raw = extractRawComments(updatedPost);
       setComments(buildCommentTree(raw));
       return updatedPost;
@@ -147,9 +147,10 @@ const PostDetail = () => {
       try {
         setLoading(true);
         const data = await boardApi.getPost(postId);
+        try { console.log('fetched post data:', data); } catch (e) {}
         setPost(data);
         setEditTitle(data.title);
-        setEditContent(data.contentText || data.content || '');
+        setEditContent(data.contentJson || data.content || data.contentText || '');
         const raw = extractRawComments(data);
         setComments(buildCommentTree(raw));
         setError(null);
@@ -258,7 +259,14 @@ const PostDetail = () => {
   const handleSaveEdit = async () => {
     if (isSavingEdit) return;
 
-    if (!editTitle.trim() || !editContent.trim()) {
+    const hasContent = (content) => {
+      if (!content) return false;
+      if (typeof content === 'string') return !!String(content).trim();
+      if (typeof content === 'object' && Array.isArray(content.content)) return content.content.length > 0;
+      return true;
+    };
+
+    if (!editTitle.trim() || !hasContent(editContent)) {
       alert('제목과 내용을 입력해주세요.');
       return;
     }
@@ -267,12 +275,68 @@ const PostDetail = () => {
 
     try {
       const boardId = post.boardId || post.board?.boardId;
-      const updateData = {
-        title: editTitle,
-        content: editContent,
-        files: newFiles,
-      };
-      await boardApi.updatePost(postId, boardId, updateData);
+      // If editContent appears to be TipTap JSON, use updateRichPost
+      let usedUpdate;
+      if (editContent && typeof editContent === 'object' && Array.isArray(editContent.content)) {
+        const json = editContent;
+        // simple conversion to HTML for servers expecting contentHtml
+        const jsonToHtml = (contentJson) => {
+          if (!contentJson || !Array.isArray(contentJson.content)) return '<p></p>';
+          const renderNode = (node) => {
+            if (!node) return '';
+            if (node.type === 'text') return String(node.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (node.type === 'paragraph') return `<p>${(node.content || []).map(renderNode).join('')}</p>`;
+            if (node.type === 'heading') {
+              const level = Math.min(Math.max(Number(node.attrs?.level || 1), 1), 6);
+              return `<h${level}>${(node.content || []).map(renderNode).join('')}</h${level}>`;
+            }
+            if (node.type === 'image') {
+              const src = String(node.attrs?.src || '').replace(/"/g, '&quot;');
+              const alt = String(node.attrs?.alt || '').replace(/"/g, '&quot;');
+              const width = String(node.attrs?.width || '').trim();
+              const height = String(node.attrs?.height || '').trim();
+              const widthAttr = width ? ` width=\"${width.replace(/\"/g, '&quot;')}\"` : '';
+              const heightAttr = height ? ` height=\"${height.replace(/\"/g, '&quot;')}\"` : '';
+              const style = width || height ? ` style=\"${width ? `width: ${width};` : ''}${height ? `height: ${height};` : ''}\"` : '';
+              return `<img src=\"${src}\" alt=\"${alt}\"${widthAttr}${heightAttr}${style} />`;
+            }
+            if (Array.isArray(node.content)) return node.content.map(renderNode).join('');
+            return '';
+          };
+          return contentJson.content.map(renderNode).join('') || '<p></p>';
+        };
+
+        const payload = {
+          boardId,
+          title: editTitle,
+          contentFormat: 'TIPTAP_JSON',
+          contentJson: json,
+          contentHtml: jsonToHtml(json),
+          contentText: (function getText(j) {
+            if (!j || !Array.isArray(j.content)) return '';
+            const parts = [];
+            const walk = (nodes) => {
+              nodes.forEach((node) => {
+                if (!node) return;
+                if (node.type === 'text' && node.text) { parts.push(node.text); return; }
+                if (Array.isArray(node.content)) { walk(node.content); if (node.type === 'paragraph' || node.type === 'heading') parts.push('\n'); }
+              });
+            };
+            walk(j.content);
+            return parts.join('').replace(/\n+/g, '\n').trim();
+          })(json),
+          files: newFiles,
+        };
+
+        usedUpdate = await boardApi.updateRichPost(postId, payload);
+      } else {
+        const updateData = {
+          title: editTitle,
+          content: editContent,
+          files: newFiles,
+        };
+        usedUpdate = await boardApi.updatePost(postId, boardId, updateData);
+      }
       alert('게시글이 수정되었습니다.');
       setIsEdit(false);
       setNewFiles([]);

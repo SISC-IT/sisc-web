@@ -256,6 +256,20 @@ export const updatePost = async (postId, boardId, postData) => {
   return response.data;
 };
 
+/**
+ * 리치 에디터 게시글 수정
+ * PUT /api/board/post/{postId}
+ */
+export const updateRichPost = async (postId, postData) => {
+  if (!postId) throw new Error('postId is required');
+  if (!postData?.boardId) throw new Error('boardId is required');
+  if (!postData?.title) throw new Error('title is required');
+  if (!postData?.contentJson) throw new Error('contentJson is required');
+
+  const response = await api.put(`/api/board/post/${postId}`, postData);
+  return response.data;
+};
+
 /*
  * 게시글 삭제
  * DELETE /api/board/post/{postId}

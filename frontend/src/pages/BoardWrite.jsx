@@ -15,58 +15,13 @@ const createEmptyDoc = () => ({
   ],
 });
 
-const isDataImageUrl = (value = '') => /^data:image\//i.test(String(value || '').trim());
-const DEFAULT_IMAGE_ORIGIN = 'https://api.sisc.kr';
+import {
+  isDataImageUrl,
+  toAbsoluteImageUrl,
+  dataUrlToFile,
+} from '../utils/imageUtils';
 
-const resolveImageOrigin = () => {
-  const configuredApiUrl = String(import.meta.env.VITE_API_URL || '').trim();
-  if (!configuredApiUrl) return DEFAULT_IMAGE_ORIGIN;
-
-  try {
-    return new URL(configuredApiUrl).origin;
-  } catch {
-    return DEFAULT_IMAGE_ORIGIN;
-  }
-};
-
-const API_IMAGE_ORIGIN = resolveImageOrigin();
-
-const toAbsoluteImageUrl = (value = '') => {
-  const src = String(value || '').trim();
-  if (!src) return '';
-  if (/^data:/i.test(src) || /^blob:/i.test(src)) {
-    return src;
-  }
-
-  let normalizedPath = src;
-
-  if (/^(https?:)?\/\//i.test(src)) {
-    try {
-      normalizedPath = new URL(src, API_IMAGE_ORIGIN).pathname || src;
-    } catch {
-      normalizedPath = src;
-    }
-  }
-
-  if (!normalizedPath.startsWith('/')) {
-    normalizedPath = `/${normalizedPath.replace(/^\/+/, '')}`;
-  }
-
-  const uploadsImagesIndex = normalizedPath.indexOf('/uploads/images/');
-  if (uploadsImagesIndex >= 0) {
-    normalizedPath = normalizedPath.slice(uploadsImagesIndex);
-  }
-
-  return `${API_IMAGE_ORIGIN}${normalizedPath}`;
-};
-
-const dataUrlToFile = async (dataUrl, filename = 'pasted-image.png') => {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  const extension = blob.type?.split('/')[1] || 'png';
-  const normalizedName = filename.includes('.') ? filename : `${filename}.${extension}`;
-  return new File([blob], normalizedName, { type: blob.type || 'image/png' });
-};
+// dataUrlToFile imported from utils
 
 const replaceBase64ImagesWithUploadedUrls = async (contentJson, uploadImage) => {
   const uploadedMediaIds = [];
@@ -191,6 +146,10 @@ const BoardWrite = () => {
   const [boardNameMap, setBoardNameMap] = useState({});
   const [boardOptions, setBoardOptions] = useState([]);
   const [selectedBoardId, setSelectedBoardId] = useState('');
+  const [selectedParentId, setSelectedParentId] = useState('');
+  const [subBoardOptions, setSubBoardOptions] = useState([]);
+  const [selectedSubBoardId, setSelectedSubBoardId] = useState('');
+  const [idToSegment, setIdToSegment] = useState({});
   const [title, setTitle] = useState('');
   const [contentJson, setContentJson] = useState(createEmptyDoc());
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -212,6 +171,7 @@ const BoardWrite = () => {
         const idMap = {};
         const nameMap = {};
         const options = [];
+        const idSegmentMap = {};
 
         (boards || []).forEach((board) => {
           const boardName = String(board.boardName || '').trim();
@@ -221,14 +181,16 @@ const BoardWrite = () => {
           idMap[segment] = board.boardId;
           nameMap[segment] = boardName;
           options.push({ id: board.boardId, name: boardName, segment });
+          idSegmentMap[board.boardId] = segment;
         });
 
         setBoardIdMap(idMap);
         setBoardNameMap(nameMap);
         setBoardOptions(options);
-
+        setIdToSegment((prev) => ({ ...prev, ...idSegmentMap }));
         const initialBoardId = currentBoardId || location.state?.boardId || options[0]?.id || '';
-        setSelectedBoardId(initialBoardId);
+        setSelectedParentId(initialBoardId);
+        // if location.state.boardId is a child id we will select it after loading children
       } catch (error) {
         console.error('게시판 목록 로드 실패:', error);
       }
@@ -237,26 +199,90 @@ const BoardWrite = () => {
     loadBoards();
   }, [currentBoardId, location.state?.boardId]);
 
+  // load sub-boards when parent selection changes
+  useEffect(() => {
+    if (!selectedParentId) {
+      setSubBoardOptions([]);
+      setSelectedSubBoardId('');
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        const subs = await boardApi.getSubBoards(selectedParentId);
+        if (!mounted) return;
+        const subOptions = (subs || []).map((b) => {
+          const name = String(b.boardName || '').trim();
+          const segment = toBoardRouteSegment(name);
+          return { id: b.boardId, name, segment, parentBoardId: b.parentBoardId };
+        });
+
+        setSubBoardOptions(subOptions);
+
+        // map id -> segment for navigation
+        const idSeg = {};
+        subOptions.forEach((s) => (idSeg[s.id] = s.segment));
+        setIdToSegment((prev) => ({ ...prev, ...idSeg }));
+
+        // If user navigated here with a specific boardId in state, prefer that
+        const incomingBoardId = location.state?.boardId;
+        if (incomingBoardId && subOptions.some((s) => s.id === incomingBoardId)) {
+          setSelectedSubBoardId(incomingBoardId);
+          return;
+        }
+
+        // default: clear child selection
+        setSelectedSubBoardId('');
+      } catch (err) {
+        console.error('하위 게시판 로드 실패:', err);
+        setSubBoardOptions([]);
+        setSelectedSubBoardId('');
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedParentId, location.state?.boardId]);
+
+  const computedSelectedBoardId = useMemo(() => selectedSubBoardId || selectedParentId || '', [selectedParentId, selectedSubBoardId]);
+
   const currentBoardPath = useMemo(() => {
-    if (!selectedBoardId) return '/board';
-    const selectedBoard = boardOptions.find((board) => board.id === selectedBoardId);
-    if (!selectedBoard) return '/board';
-    if (selectedBoard.segment === 'root') return '/board';
-    return `/board/${encodeURIComponent(selectedBoard.segment)}`;
-  }, [boardOptions, selectedBoardId]);
+    // When a sub-board is selected, navigate to the parent board route and include subBoardId query
+    if (!computedSelectedBoardId) return '/board';
+
+    if (selectedSubBoardId) {
+      const sub = subBoardOptions.find((s) => s.id === selectedSubBoardId);
+      const parentId = sub?.parentBoardId || selectedParentId;
+      const parentSegment = idToSegment[parentId] || idToSegment[selectedParentId];
+      const base = parentSegment && parentSegment !== 'root' ? `/board/${encodeURIComponent(parentSegment)}` : '/board';
+      return `${base}${selectedSubBoardId ? `?subBoardId=${encodeURIComponent(selectedSubBoardId)}` : ''}`;
+    }
+
+    const segment = idToSegment[computedSelectedBoardId];
+    if (!segment || segment === 'root') return '/board';
+    return `/board/${encodeURIComponent(segment)}`;
+  }, [computedSelectedBoardId, idToSegment, selectedSubBoardId, selectedParentId, subBoardOptions]);
 
   const handleBack = () => {
     navigate(currentBoardPath);
   };
 
   const handleBoardChange = (boardId) => {
-    setSelectedBoardId(boardId);
+    // when user changes the top-level select, treat it as parent selection and clear child
+    setSelectedParentId(boardId);
+    setSelectedSubBoardId('');
+  };
+
+  const handleSubBoardChange = (boardId) => {
+    setSelectedSubBoardId(boardId);
   };
 
   const handleSave = async () => {
     if (isSaving) return;
 
-    if (!selectedBoardId) {
+    if (!computedSelectedBoardId) {
       alert('게시판을 선택해주세요.');
       return;
     }
@@ -294,7 +320,7 @@ const BoardWrite = () => {
     try {
       setIsSaving(true);
       const payload = {
-        boardId: selectedBoardId,
+        boardId: computedSelectedBoardId,
         title: normalizedTitle,
         contentFormat: 'TIPTAP_JSON',
         contentJson: normalizedContentJson,
@@ -352,15 +378,19 @@ const BoardWrite = () => {
 
         <div className={styles.card}>
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>게시판</label>
-            <select className={styles.select} value={selectedBoardId} onChange={(e) => handleBoardChange(e.target.value)}>
-              <option value="">게시판을 선택해 주세요.</option>
-              {boardOptions.map((board) => (
-                <option key={board.id} value={board.id}>
-                  {board.name}
-                </option>
-              ))}
-            </select>
+            {Array.isArray(subBoardOptions) && subBoardOptions.length > 0 ? (
+              <div>
+                <label className={styles.label}>게시판 선택</label>
+                <select className={styles.select} value={selectedSubBoardId} onChange={(e) => handleSubBoardChange(e.target.value)}>
+                  <option value="">(선택) 게시판 선택</option>
+                  {subBoardOptions.map((board) => (
+                    <option key={board.id} value={board.id}>
+                      {board.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.fieldGroup}>

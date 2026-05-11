@@ -12,102 +12,15 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import styles from './RichTextEditor.module.css';
 
-const isDataImageUrl = (value = '') => /^data:image\//i.test(String(value || '').trim());
-const DEFAULT_IMAGE_ORIGIN = 'https://api.sisc.kr';
-
-const resolveImageOrigin = () => {
-  const configuredApiUrl = String(import.meta.env.VITE_API_URL || '').trim();
-  if (!configuredApiUrl) return DEFAULT_IMAGE_ORIGIN;
-
-  try {
-    return new URL(configuredApiUrl).origin;
-  } catch {
-    return DEFAULT_IMAGE_ORIGIN;
-  }
-};
-
-const API_IMAGE_ORIGIN = resolveImageOrigin();
-
-const toAbsoluteImageUrl = (value = '') => {
-  const src = String(value || '').trim();
-  if (!src) return '';
-  if (/^data:/i.test(src) || /^blob:/i.test(src)) {
-    return src;
-  }
-
-  let normalizedPath = src;
-
-  if (/^(https?:)?\/\//i.test(src)) {
-    try {
-      normalizedPath = new URL(src, API_IMAGE_ORIGIN).pathname || src;
-    } catch {
-      normalizedPath = src;
-    }
-  }
-
-  if (!normalizedPath.startsWith('/')) {
-    normalizedPath = `/${normalizedPath.replace(/^\/+/, '')}`;
-  }
-
-  const uploadsImagesIndex = normalizedPath.indexOf('/uploads/images/');
-  if (uploadsImagesIndex >= 0) {
-    normalizedPath = normalizedPath.slice(uploadsImagesIndex);
-  }
-
-  return `${API_IMAGE_ORIGIN}${normalizedPath}`;
-};
-
-const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'heic', 'heif'];
-
-const isImageFile = (file) => {
-  if (!file) return false;
-
-  const mimeType = String(file.type || '').toLowerCase();
-  if (mimeType.startsWith('image/')) {
-    return true;
-  }
-
-  const filename = String(file.name || '').toLowerCase();
-  const extension = filename.includes('.') ? filename.split('.').pop() : '';
-  return IMAGE_EXTENSIONS.includes(extension);
-};
-
-const dataUrlToFile = async (dataUrl, filename = 'pasted-image.png') => {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  const extension = blob.type?.split('/')[1] || 'png';
-  const normalizedName = filename.includes('.') ? filename : `${filename}.${extension}`;
-  return new File([blob], normalizedName, { type: blob.type || 'image/png' });
-};
-
-const blobToFile = (blob, filename = 'pasted-image.png') => {
-  const extension = blob.type?.split('/')[1] || 'png';
-  const normalizedName = filename.includes('.') ? filename : `${filename}.${extension}`;
-  return new File([blob], normalizedName, { type: blob.type || 'image/png' });
-};
-
-const remoteUrlToFile = async (url, filename = 'pasted-image.png') => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.status}`);
-  }
-  const blob = await response.blob();
-  return blobToFile(blob, filename);
-};
-
-const extractImageSrcsFromHtml = (html = '') => {
-  if (!html) return [];
-
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    return Array.from(doc.querySelectorAll('img'))
-      .map((img) => String(img.getAttribute('src') || '').trim())
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-};
+import {
+  isDataImageUrl,
+  toAbsoluteImageUrl,
+  dataUrlToFile,
+  blobToFile,
+  remoteUrlToFile,
+  extractImageSrcsFromHtml,
+  isImageFile,
+} from '../../utils/imageUtils';
 
 const hasClipboardImage = async () => {
   if (!navigator.clipboard?.read) return false;
@@ -260,6 +173,33 @@ const ResizableImageNodeView = (props) => {
     };
 
     const onUp = () => {
+      // final sync: ensure attributes persisted in the ProseMirror document
+      try {
+        const imageEl = imageRef.current;
+        if (imageEl) {
+          const rectFinal = imageEl.getBoundingClientRect();
+          const finalWidth = Math.max(MIN_IMAGE_WIDTH, Math.round(rectFinal.width));
+          const finalHeight = Math.max(MIN_IMAGE_HEIGHT, Math.round(rectFinal.height));
+          const attrs = {};
+          if (isHorizontalOnly) attrs.width = `${finalWidth}px`;
+          else if (isVerticalOnly) attrs.height = `${finalHeight}px`;
+          else attrs.width = `${finalWidth}px`, attrs.height = `${finalHeight}px`;
+
+          // update via provided updateAttributes (NodeView) and editor command to ensure persistence
+          try {
+            updateAttributes?.(attrs);
+          } catch {}
+
+          try {
+            if (editor && editor.chain) {
+              editor.chain().focus().updateAttributes('image', attrs).run();
+            }
+          } catch {}
+        }
+      } catch (e) {
+        // ignore
+      }
+
       stopResizing();
     };
 
