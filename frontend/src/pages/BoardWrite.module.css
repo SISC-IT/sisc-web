@@ -49,6 +49,57 @@
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
 }
 
+.boardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.boardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Prevent the '게시판' label from wrapping */
+.boardHeaderLeft .label {
+  white-space: nowrap;
+}
+
+.boardHeaderTitle {
+  font-weight: 700;
+  color: #111827;
+}
+
+.boardCurrentName {
+  font-size: 15px;
+  color: #374151;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.boardSelectCol {
+  flex: 0 0 300px;
+}
+
+/* Prevent label wrapping in title row and make input grow */
+.titleRow .label {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.titleRow .input {
+  flex: 1 1 0;
+  width: auto;
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;
@@ -60,6 +111,7 @@
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
+  align-items: flex-start;
 }
 
 .fieldCol {
@@ -242,4 +294,17 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* Additional layout tweaks */
+.select {
+  padding-right: 40px; /* avoid native arrow overlapping border */
+}
+
+.boardSelectCol {
+  flex: 0 0 260px;
+}
+
+.titleCol {
+  flex: 1 1 0;
 }

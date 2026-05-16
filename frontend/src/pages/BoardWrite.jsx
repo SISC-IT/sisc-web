@@ -426,10 +426,10 @@ const BoardWrite = () => {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.fieldGroupRow}>
-            {Array.isArray(subBoardOptions) && subBoardOptions.length > 0 ? (
-              <div className={styles.fieldCol}>
-                <label className={styles.label}>게시판</label>
+          <div className={styles.boardHeaderRow}>
+            <div className={styles.boardHeaderLeft}>
+              <label className={styles.label} style={{ margin: 0, marginRight: 12 }}>게시판</label>
+              {Array.isArray(subBoardOptions) && subBoardOptions.length > 0 ? (
                 <select className={styles.select} value={selectedSubBoardId} onChange={(e) => handleSubBoardChange(e.target.value)}>
                   <option value="">(선택) 게시판 선택</option>
                   {subBoardOptions.map((board) => (
@@ -438,18 +438,20 @@ const BoardWrite = () => {
                     </option>
                   ))}
                 </select>
-              </div>
-            ) : null}
-
-            <div className={styles.fieldCol}>
-              <label className={styles.label}>제목</label>
-              <input
-                className={styles.input}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="제목을 입력해 주세요."
-              />
+              ) : (
+                <div className={styles.boardCurrentName}>{currentBoardName}</div>
+              )}
             </div>
+          </div>
+
+          <div className={styles.titleRow}>
+            <label className={styles.label} style={{ marginRight: 12 }}>제목</label>
+            <input
+              className={styles.input}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="제목을 입력해 주세요."
+            />
           </div>
 
           <div className={styles.fieldGroup}>
