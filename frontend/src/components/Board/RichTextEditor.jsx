@@ -549,17 +549,36 @@ const RichTextEditor = ({
         const imageFiles = allDropped.filter(isImageFile);
         const otherFiles = allDropped.filter((f) => !isImageFile(f));
 
-        // If parent provided `onAttachFiles`, delegate all dropped files to it
-        // so they become attachments instead of being inserted inline.
+        // If parent provided `onAttachFiles`, handle images inline and delegate
+        // non-image files to the parent so they become attachments.
         if (onAttachFiles) {
           event.preventDefault();
           window.setTimeout(() => {
             Promise.resolve()
               .then(async () => {
                 try {
-                  await onAttachFiles(allDropped);
-                } catch (err) {
-                  console.error('파일 드롭 처리 실패 (onAttachFiles):', err);
+                  if (imageFiles.length > 0 && onUploadImage) {
+                    try {
+                      setIsUploadingImage(true);
+                      for (const file of imageFiles) {
+                        await insertImage(file);
+                      }
+                    } catch (err) {
+                      console.error('이미지 드래그 앤 드롭 실패:', err);
+                    } finally {
+                      setIsUploadingImage(false);
+                    }
+                  }
+
+                  if (otherFiles.length > 0) {
+                    try {
+                      await onAttachFiles(otherFiles);
+                    } catch (err) {
+                      console.error('파일 드롭 처리 실패 (onAttachFiles):', err);
+                    }
+                  }
+                } catch (error) {
+                  console.error('드롭 처리 실패:', error);
                 }
               })
               .catch((error) => {

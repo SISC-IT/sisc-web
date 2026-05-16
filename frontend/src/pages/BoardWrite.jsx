@@ -340,7 +340,24 @@ const BoardWrite = () => {
     const contentHtml = jsonToHtml(normalizedContentJson);
     const contentText = getTextFromJson(normalizedContentJson);
 
-    if (!contentText) {
+    const containsImageNode = (doc) => {
+      try {
+        if (!doc || !doc.content) return false;
+        const walk = (nodes) => {
+          for (const node of nodes || []) {
+            if (!node) continue;
+            if (node.type === 'image') return true;
+            if (Array.isArray(node.content) && walk(node.content)) return true;
+          }
+          return false;
+        };
+        return walk(doc.content);
+      } catch (e) {
+        return false;
+      }
+    };
+
+    if (!contentText && !containsImageNode(normalizedContentJson)) {
       alert('내용을 입력해주세요.');
       return;
     }
