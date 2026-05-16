@@ -8,12 +8,24 @@
 
 .toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-bottom: 1px solid rgba(235, 235, 235, 1);
   background: linear-gradient(180deg, rgba(250, 250, 250, 1), rgba(255, 255, 255, 1));
+}
+
+.mediaToolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.formatToolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .toolbarGroup {
@@ -30,15 +42,18 @@
 }
 
 .toolbar button {
-  min-width: 28px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  border: 1px solid rgba(214, 214, 214, 1);
-  background: #fff;
+  border: none;
+  background: transparent;
   color: #4b5563;
   font-weight: 700;
   cursor: pointer;
-  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .alignIcon {
@@ -73,10 +88,10 @@
 
 .toolbarSelect {
   min-width: 80px;
-  height: 30px;
+  height: 36px;
   border-radius: 8px;
-  border: 1px solid rgba(214, 214, 214, 1);
-  background: #fff;
+  border: none;
+  background: transparent;
   color: #374151;
   font-size: 13px;
   padding: 0 8px;
@@ -95,9 +110,9 @@
 }
 
 .activeButton {
-  background: #1d80f4 !important;
-  color: #fff !important;
-  border-color: #1d80f4 !important;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  border-color: rgba(0,0,0,0.06) !important;
 }
 
 .hiddenFileInput {
@@ -297,11 +312,106 @@
 .imageResizeHandle::after { display: none; }
 
 .colorInput {
-  width: 34px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mediaToolbar button {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: #6b7280;
+}
+
+.svgIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.iconImg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.alignImg {
+  width: 22px;
+  height: 16px;
+  display: block;
+  object-fit: contain;
+}
+
+.colorGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.colorIcon {
+  width: 18px;
+  height: 18px;
+  color: #6b7280;
+}
+
+/* removed inline preview elements; using icon assets only */
+
+.resetButton {
   height: 30px;
-  padding: 0;
-  border: 1px solid rgba(214, 214, 214, 1);
   border-radius: 6px;
+  border: 1px solid rgba(214,214,214,1);
   background: #fff;
   cursor: pointer;
+}
+
+.formatToolbar button {
+  width: 36px;
+  height: 36px;
+}
+
+.formatToolbar button > strong,
+.formatToolbar button > em,
+.formatToolbar button > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.colorAsset {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.toolbar {
+  padding-top: 8px;
+  padding-bottom: 8px;
 }

@@ -1,8 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import styles from '../../../pages/PostDetail.module.css';
 import RichTextEditor from '../../Board/RichTextEditor';
 import * as boardApi from '../../../utils/boardApi';
-import FolderIcon from '../../../assets/boardFolder.svg';
 
 const PostEditForm = ({
   title,
@@ -18,22 +17,8 @@ const PostEditForm = ({
   onCancel,
   isSaving = false,
 }) => {
-  const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleFileButtonClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handleFileInputChange = (e) => {
-    onAddNewFile(e);
-
-    // Allow selecting the same file name again by resetting the input value.
-    e.target.value = '';
-  };
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -56,52 +41,28 @@ const PostEditForm = ({
   };
 
   const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    // Allow the RichTextEditor inside this container to handle the drop.
+    // We only clear drag state here and do not call preventDefault/stopPropagation,
+    // so the event will reach the editor's drop handler which inserts files into content.
     setIsDragOver(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files || []);
-    if (droppedFiles.length > 0) {
-      onAddNewFile({ target: { files: droppedFiles } });
-    }
   };
 
   return (
     <div className={styles.editFormContainer}>
       <label className={styles.label}>제목</label>
-      <input
-        type="text"
-        className={styles.editTitleInput}
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="제목을 입력하세요"
-      />
+      <div className={styles.editTitleBox}>
+        <input
+          type="text"
+          className={styles.editTitleInput}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="제목을 입력하세요"
+        />
+      </div>
 
       <div className={styles.editContentSection}>
         <div className={styles.editContentHeader}>
           <label className={styles.label}>내용</label>
-          <div
-            className={styles.editFileAddButton}
-            onClick={handleFileButtonClick}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleFileButtonClick();
-              }
-            }}
-          >
-            <img src={FolderIcon} alt="파일" />
-            <span className={styles.editFileText}>파일 추가</span>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFileInputChange}
-            style={{ display: 'none' }}
-          />
         </div>
 
         <div

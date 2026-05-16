@@ -36,18 +36,9 @@ const PostView = ({
   }, [post]);
 
   const htmlToRender = (() => {
-    const html = post?.contentHtml || post?.content || '';
-    // prefer contentJson when contentHtml doesn't contain images but contentJson has image nodes
-    const json = post?.contentJson;
-
-    try {
-      if (html && /<img\s+/i.test(html)) return html;
-      if (json) return json;
-    } catch (e) {
-      return html;
-    }
-
-    return html;
+    // Prefer TipTap JSON when available so marks (textStyle/highlight/color) render correctly.
+    if (post?.contentJson) return post.contentJson;
+    return post?.contentHtml || post?.content || '';
   })();
 
   useEffect(() => {

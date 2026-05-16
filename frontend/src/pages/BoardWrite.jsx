@@ -99,10 +99,38 @@ const jsonToHtml = (contentJson) => {
   const renderNode = (node) => {
     if (!node) return '';
     if (node.type === 'text') {
-      return String(node.text || '')
+      const text = String(node.text || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+
+      // apply marks if present
+      if (!Array.isArray(node.marks) || node.marks.length === 0) return text;
+
+      let content = text;
+      // apply simple formatting marks using tags
+      node.marks.forEach((mark) => {
+        if (!mark || !mark.type) return;
+        const t = String(mark.type || '');
+        if (t === 'bold') content = `<strong>${content}</strong>`;
+        if (t === 'italic') content = `<em>${content}</em>`;
+        if (t === 'underline') content = `<u>${content}</u>`;
+        if (t === 'strike' || t === 'strikeThrough' || t === 'strike_through') content = `<s>${content}</s>`;
+        if (t === 'link' && mark.attrs && mark.attrs.href) content = `<a href="${String(mark.attrs.href).replace(/\"/g, '&quot;')}" target="_blank" rel="noopener noreferrer">${content}</a>`;
+        if (t === 'textStyle' || t === 'color' || t === 'highlight') {
+          // For style/color/highlight, build inline style
+          const styles = [];
+          if (mark.attrs && mark.attrs.color) styles.push(`color: ${mark.attrs.color}`);
+          if (mark.attrs && mark.attrs.backgroundColor) styles.push(`background-color: ${mark.attrs.backgroundColor}`);
+          if (mark.attrs && mark.attrs.fontFamily) styles.push(`font-family: ${mark.attrs.fontFamily}`);
+          if (mark.attrs && mark.attrs.fontSize) styles.push(`font-size: ${mark.attrs.fontSize}px`);
+          if (styles.length > 0) {
+            content = `<span style="${styles.join('; ')}">${content}</span>`;
+          }
+        }
+      });
+
+      return content;
     }
     if (node.type === 'paragraph') {
       return `<p>${(node.content || []).map(renderNode).join('')}</p>`;
@@ -354,6 +382,12 @@ const BoardWrite = () => {
           return boardApi.uploadBoardFile(file);
         })
       );
+      console.log('attachment upload responses:', uploaded);
+      // warn if server didn't return mediaId for any uploaded file
+      const missing = uploaded.filter((u) => !u || (!u.mediaId && !u.postAttachmentId && !u.savedFilename));
+      if (missing.length > 0) {
+        console.warn('Some attachments did not return expected identifiers from server:', missing);
+      }
       setAttachmentFiles((prev) => [...prev, ...uploaded]);
     } catch (error) {
       console.error('첨부파일 업로드 실패:', error);
@@ -363,13 +397,28 @@ const BoardWrite = () => {
     }
   };
 
+  const handleAttachFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    try {
+      const uploaded = await Promise.all(
+        files.map(async (file) => boardApi.uploadBoardFile(file))
+      );
+      setAttachmentFiles((prev) => [...prev, ...uploaded]);
+    } catch (error) {
+      console.error('첨부파일 업로드 실패:', error);
+      // bubble up or alert
+      throw error;
+    }
+  };
+
+  const handleRemoveAttachment = (mediaId) => {
+    setAttachmentFiles((prev) => (prev || []).filter((f) => f.mediaId !== mediaId));
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.headerRow}>
-          <button type="button" className={styles.backButton} onClick={handleBack}>
-            ← 목록으로
-          </button>
           <div>
             <p className={styles.kicker}>새 글 작성</p>
             <h1 className={styles.title}>{currentBoardName} 글 작성하기</h1>
@@ -377,10 +426,10 @@ const BoardWrite = () => {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.fieldGroup}>
+          <div className={styles.fieldGroupRow}>
             {Array.isArray(subBoardOptions) && subBoardOptions.length > 0 ? (
-              <div>
-                <label className={styles.label}>게시판 선택</label>
+              <div className={styles.fieldCol}>
+                <label className={styles.label}>게시판</label>
                 <select className={styles.select} value={selectedSubBoardId} onChange={(e) => handleSubBoardChange(e.target.value)}>
                   <option value="">(선택) 게시판 선택</option>
                   {subBoardOptions.map((board) => (
@@ -391,32 +440,31 @@ const BoardWrite = () => {
                 </select>
               </div>
             ) : null}
-          </div>
 
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>제목</label>
-            <input
-              className={styles.input}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="제목을 입력해 주세요."
-            />
+            <div className={styles.fieldCol}>
+              <label className={styles.label}>제목</label>
+              <input
+                className={styles.input}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="제목을 입력해 주세요."
+              />
+            </div>
           </div>
 
           <div className={styles.fieldGroup}>
             <div className={styles.fieldHeader}>
               <label className={styles.label}>내용</label>
-              <label className={styles.fileButton}>
-                첨부파일 추가
-                <input type="file" multiple className={styles.hiddenFileInput} onChange={handleAttachmentChange} />
-              </label>
             </div>
 
             <RichTextEditor
               value={contentJson}
               onChange={setContentJson}
               placeholder="내용을 입력해 주세요."
-              onUploadImage={boardApi.uploadBoardImage}
+                onUploadImage={boardApi.uploadBoardImage}
+                onUploadFile={boardApi.uploadBoardFile}
+                onUploadVideo={boardApi.uploadBoardFile}
+                  onAttachFiles={handleAttachFiles}
               onImageInserted={(media) => {
                 if (media?.mediaId) {
                   setInlineMediaIds((prev) => Array.from(new Set([...(prev || []), media.mediaId])));
@@ -430,9 +478,12 @@ const BoardWrite = () => {
               <p className={styles.attachmentTitle}>첨부 파일</p>
               <div className={styles.attachmentGrid}>
                 {attachmentFiles.map((file) => (
-                  <div key={file.mediaId} className={styles.attachmentItem}>
-                    <span>{file.originalFilename}</span>
-                    <span className={styles.attachmentMeta}>{file.mediaType}</span>
+                  <div key={file.mediaId || file.url || file.originalFilename} className={styles.attachmentItem}>
+                    <span>{file.originalFilename || file.name || '첨부파일'}</span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className={styles.attachmentMeta}>{file.mediaType || ''}</span>
+                      <button type="button" className={styles.attachmentRemove} onClick={() => handleRemoveAttachment(file.mediaId)} aria-label="첨부파일 삭제">X</button>
+                    </div>
                   </div>
                 ))}
               </div>

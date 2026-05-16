@@ -529,6 +529,13 @@
   margin-bottom: 24px;
 }
 
+/* Wrapper to align the title input inner width with the editor content padding */
+.editTitleBox {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 16px; /* match .editContentContainer padding */
+}
+
 .editTitleInput {
   width: 100%;
   font-size: 20px;
@@ -583,7 +590,6 @@
 .editContentContainer {
   width: 100%;
   min-height: 360px;
-  border: 1px solid #d7d7d7;
   border-radius: 8px;
   padding: 16px;
   box-sizing: border-box;
@@ -596,6 +602,20 @@
 .editContentContainerDragOver {
   border-color: rgba(29, 128, 244, 0.95);
   background: rgba(237, 245, 255, 1);
+}
+
+/* When embedding the RichTextEditor inside the edit content container, remove the editor's outer border
+   to avoid a double-border visual. */
+.editContentContainer .richEditorWrapper .editorShell {
+  border: none !important;
+  border-radius: 6px;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.editContentContainer .richEditorWrapper .editorBody {
+  padding: 0 !important;
+  min-height: 300px;
 }
 
 .editDragOverlay {
