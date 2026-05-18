@@ -29,14 +29,29 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
 
-def log_gpu_status() -> None:
-    if torch.cuda.is_available():
-        devices = [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
-        print(f"[INFO] GPU devices: {devices}")
-        print("[INFO] Using GPU")
-    else:
+def select_torch_device() -> torch.device:
+    if not torch.cuda.is_available():
         print("[INFO] GPU devices: []")
         print("[INFO] Using CPU")
+        return torch.device("cpu")
+
+    devices = []
+    usable_gpu = False
+    for idx in range(torch.cuda.device_count()):
+        name = torch.cuda.get_device_name(idx)
+        major, minor = torch.cuda.get_device_capability(idx)
+        devices.append(f"{name} sm_{major}{minor}")
+        if major >= 7:
+            usable_gpu = True
+
+    print(f"[INFO] GPU devices: {devices}")
+    if usable_gpu:
+        print("[INFO] Using GPU")
+        return torch.device("cuda")
+
+    print("[WARN] CUDA device is visible, but this PyTorch build requires sm_70+; falling back to CPU.")
+    print("[INFO] Using CPU")
+    return torch.device("cpu")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
@@ -274,7 +289,7 @@ def train():
     )
 
     # 5. 모델
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = select_torch_device()
     print(f">> Device: {device}\n")
 
     model = PatchTST_Model(
