@@ -9,6 +9,7 @@ import { toBoardRouteSegment } from '../utils/boardRoute';
 import PostView from '../components/Board/PostDetail/PostView';
 import PostEditForm from '../components/Board/PostDetail/PostEditForm';
 import CommentSection from '../components/Board/PostDetail/CommentSection';
+import { jsonToHtml } from '../utils/richTextHtml';
 
 const FILE_DOWNLOAD_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(
   /\/$/,
@@ -414,56 +415,6 @@ const PostDetail = () => {
       let usedUpdate;
       if (editContent && typeof editContent === 'object' && Array.isArray(editContent.content)) {
         const json = editContent;
-        // simple conversion to HTML for servers expecting contentHtml
-        const jsonToHtml = (contentJson) => {
-          if (!contentJson || !Array.isArray(contentJson.content)) return '<p></p>';
-          const renderNode = (node) => {
-            if (!node) return '';
-            if (node.type === 'text') {
-              const text = String(node.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-              if (!Array.isArray(node.marks) || node.marks.length === 0) return text;
-              let content = text;
-              node.marks.forEach((mark) => {
-                if (!mark || !mark.type) return;
-                const t = String(mark.type || '');
-                if (t === 'bold') content = `<strong>${content}</strong>`;
-                if (t === 'italic') content = `<em>${content}</em>`;
-                if (t === 'underline') content = `<u>${content}</u>`;
-                if (t === 'strike' || t === 'strikeThrough' || t === 'strike_through') content = `<s>${content}</s>`;
-                if (t === 'link' && mark.attrs && mark.attrs.href) content = `<a href="${String(mark.attrs.href).replace(/\"/g, '&quot;')}" target="_blank" rel="noopener noreferrer">${content}</a>`;
-                if (t === 'textStyle' || t === 'color' || t === 'highlight') {
-                  const styles = [];
-                  if (mark.attrs && mark.attrs.color) styles.push(`color: ${mark.attrs.color}`);
-                  if (mark.attrs && mark.attrs.backgroundColor) styles.push(`background-color: ${mark.attrs.backgroundColor}`);
-                  if (mark.attrs && mark.attrs.fontFamily) styles.push(`font-family: ${mark.attrs.fontFamily}`);
-                  if (mark.attrs && mark.attrs.fontSize) styles.push(`font-size: ${mark.attrs.fontSize}px`);
-                  if (styles.length > 0) content = `<span style=\"${styles.join('; ')}\">${content}</span>`;
-                }
-              });
-              return content;
-            }
-            if (node.type === 'paragraph') return `<p>${(node.content || []).map(renderNode).join('')}</p>`;
-            if (node.type === 'heading') {
-              const level = Math.min(Math.max(Number(node.attrs?.level || 1), 1), 6);
-              return `<h${level}>${(node.content || []).map(renderNode).join('')}</h${level}>`;
-            }
-            if (node.type === 'image') {
-              const src = String(node.attrs?.src || '').replace(/"/g, '&quot;');
-              const alt = String(node.attrs?.alt || '').replace(/"/g, '&quot;');
-              const width = String(node.attrs?.width || '').trim();
-              const height = String(node.attrs?.height || '').trim();
-              const widthAttr = width ? ` width=\"${width.replace(/\"/g, '&quot;')}\"` : '';
-              const heightAttr = height ? ` height=\"${height.replace(/\"/g, '&quot;')}\"` : '';
-              const style = width || height ? ` style=\"${width ? `width: ${width};` : ''}${height ? `height: ${height};` : ''}\"` : '';
-              return `<img src=\"${src}\" alt=\"${alt}\"${widthAttr}${heightAttr}${style} />`;
-            }
-            if (Array.isArray(node.content)) return node.content.map(renderNode).join('');
-            return '';
-          };
-
-          return contentJson.content.map(renderNode).join('') || '<p></p>';
-        };
-
         // If there are newly added files (File objects), upload them first
         let uploadedNewMediaIds = [];
         if (newFiles && newFiles.length > 0) {

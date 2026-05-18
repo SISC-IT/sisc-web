@@ -993,7 +993,7 @@ const RichTextEditor = ({
               <input
                 type="color"
                 className={styles.colorInput}
-                value={(editor?.getAttributes('textStyle')?.backgroundColor) || '#ffffff'}
+                value={editor?.getAttributes('highlight')?.color || '#ffffff'}
                 onChange={(e) => applyTextBackground(e.target.value)}
                 aria-label="글자 배경색 선택"
               />

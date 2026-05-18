@@ -23,6 +23,55 @@ import {
 
 // dataUrlToFile imported from utils
 
+const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+const SAFE_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,8})$/;
+const SAFE_FONT_FAMILIES = new Set([
+  'Pretendard',
+  'Noto Sans KR',
+  'Apple SD Gothic Neo',
+  'Arial',
+  'Georgia',
+  'Courier New',
+]);
+const SAFE_FONT_SIZES = new Set([12, 14, 16, 18, 20, 24, 28, 32, 40]);
+
+const escapeHtmlAttribute = (value) => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
+
+const sanitizeUrl = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw || raw.startsWith('//') || /[\u0000-\u001F\u007F<>"']/.test(raw)) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    if (!SAFE_URL_PROTOCOLS.has(parsed.protocol)) return null;
+    return escapeHtmlAttribute(parsed.href);
+  } catch {
+    return null;
+  }
+};
+
+const sanitizeColor = (value) => {
+  const raw = String(value || '').trim();
+  return SAFE_COLOR_PATTERN.test(raw) ? raw.toLowerCase() : null;
+};
+
+const sanitizeFontFamily = (value) => {
+  const raw = String(value || '').trim().replaceAll('"', '').replaceAll("'", '');
+  return SAFE_FONT_FAMILIES.has(raw) ? raw : null;
+};
+
+const sanitizeFontSize = (value) => {
+  const size = Number.parseInt(String(value || '').trim(), 10);
+  return Number.isInteger(size) && SAFE_FONT_SIZES.has(size) ? String(size) : null;
+};
+
 const replaceBase64ImagesWithUploadedUrls = async (contentJson, uploadImage) => {
   const uploadedMediaIds = [];
 
@@ -116,16 +165,26 @@ const jsonToHtml = (contentJson) => {
         if (t === 'italic') content = `<em>${content}</em>`;
         if (t === 'underline') content = `<u>${content}</u>`;
         if (t === 'strike' || t === 'strikeThrough' || t === 'strike_through') content = `<s>${content}</s>`;
-        if (t === 'link' && mark.attrs && mark.attrs.href) content = `<a href="${String(mark.attrs.href).replace(/\"/g, '&quot;')}" target="_blank" rel="noopener noreferrer">${content}</a>`;
+        if (t === 'link') {
+          const safeHref = sanitizeUrl(mark.attrs?.href);
+          if (safeHref) {
+            content = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${content}</a>`;
+          }
+        }
         if (t === 'textStyle' || t === 'color' || t === 'highlight') {
-          // For style/color/highlight, build inline style
           const styles = [];
-          if (mark.attrs && mark.attrs.color) styles.push(`color: ${mark.attrs.color}`);
-          if (mark.attrs && mark.attrs.backgroundColor) styles.push(`background-color: ${mark.attrs.backgroundColor}`);
-          if (mark.attrs && mark.attrs.fontFamily) styles.push(`font-family: ${mark.attrs.fontFamily}`);
-          if (mark.attrs && mark.attrs.fontSize) styles.push(`font-size: ${mark.attrs.fontSize}px`);
+          const color = sanitizeColor(mark.attrs?.color);
+          const highlightColor = t === 'highlight' ? (color || sanitizeColor(mark.attrs?.backgroundColor)) : null;
+          const fontFamily = sanitizeFontFamily(mark.attrs?.fontFamily);
+          const fontSize = sanitizeFontSize(mark.attrs?.fontSize);
+
+          if (color) styles.push(`color: ${color}`);
+          if (highlightColor) styles.push(`background-color: ${highlightColor}`);
+          if (fontFamily) styles.push(`font-family: ${fontFamily}`);
+          if (fontSize) styles.push(`font-size: ${fontSize}px`);
+
           if (styles.length > 0) {
-            content = `<span style="${styles.join('; ')}">${content}</span>`;
+            content = `<span style="${escapeHtmlAttribute(styles.join('; '))}">${content}</span>`;
           }
         }
       });
@@ -428,8 +487,10 @@ const BoardWrite = () => {
     }
   };
 
-  const handleRemoveAttachment = (mediaId) => {
-    setAttachmentFiles((prev) => (prev || []).filter((f) => f.mediaId !== mediaId));
+  const getAttachmentIdentifier = (file) => file?.mediaId || file?.url || file?.originalFilename || file?.name || '';
+
+  const handleRemoveAttachment = (identifier) => {
+    setAttachmentFiles((prev) => (prev || []).filter((file) => getAttachmentIdentifier(file) !== identifier));
   };
 
   return (
@@ -497,11 +558,11 @@ const BoardWrite = () => {
               <p className={styles.attachmentTitle}>첨부 파일</p>
               <div className={styles.attachmentGrid}>
                 {attachmentFiles.map((file) => (
-                  <div key={file.mediaId || file.url || file.originalFilename} className={styles.attachmentItem}>
+                  <div key={getAttachmentIdentifier(file)} className={styles.attachmentItem}>
                     <span>{file.originalFilename || file.name || '첨부파일'}</span>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <span className={styles.attachmentMeta}>{file.mediaType || ''}</span>
-                      <button type="button" className={styles.attachmentRemove} onClick={() => handleRemoveAttachment(file.mediaId)} aria-label="첨부파일 삭제">X</button>
+                      <button type="button" className={styles.attachmentRemove} onClick={() => handleRemoveAttachment(getAttachmentIdentifier(file))} aria-label="첨부파일 삭제">X</button>
                     </div>
                   </div>
                 ))}

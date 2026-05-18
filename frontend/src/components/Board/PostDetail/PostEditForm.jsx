@@ -41,9 +41,7 @@ const PostEditForm = ({
   };
 
   const handleDrop = (e) => {
-    // Allow the RichTextEditor inside this container to handle the drop.
-    // We only clear drag state here and do not call preventDefault/stopPropagation,
-    // so the event will reach the editor's drop handler which inserts files into content.
+    e.preventDefault();
     setIsDragOver(false);
   };
 
