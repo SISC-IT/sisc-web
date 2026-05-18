@@ -43,6 +43,15 @@ def _env_float(name: str, default: float) -> float:
     return float(value) if value not in {None, ""} else float(default)
 
 
+
+def log_gpu_status() -> None:
+    import tensorflow as tf
+
+    gpus = tf.config.list_physical_devices("GPU")
+    print(f"[INFO] GPU devices: {gpus}")
+    print("[INFO] Using GPU" if gpus else "[INFO] Using CPU")
+
+# Kaggle 경로 설정
 def _find_kaggle_dataset_path() -> str:
     """Kaggle 입력 데이터셋 경로를 자동 탐색한다."""
     explicit_dir = os.environ.get("PARQUET_DIR")
@@ -291,7 +300,13 @@ def build_sequences(
             continue
 
         ticker_id = int(ticker_to_id.get(str(ticker), 0)) if ticker_to_id else 0
-        feat_vals = scaler.transform(group[available_feats].astype(np.float32))
+        feature_frame = (
+            group[available_feats]
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0)
+            .clip(-1e6, 1e6)
+        )
+        feat_vals = scaler.transform(feature_frame.astype(np.float32))
         close_vals = group["close"].to_numpy(dtype=np.float32)
         date_vals = pd.to_datetime(group["date"], errors="raise").dt.normalize()
 
@@ -362,7 +377,7 @@ def train(config: dict[str, Any] | None = None) -> dict[str, Any]:
     if config:
         active_config.update(config)
     dates = validate_training_window_policy(active_config)
-
+    log_gpu_status()
     print("=" * 56)
     print(" iTransformer Kaggle 학습 시작")
     print(f" Horizons: {active_config['horizons']}일")

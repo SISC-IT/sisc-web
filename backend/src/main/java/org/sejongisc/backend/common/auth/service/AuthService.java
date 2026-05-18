@@ -34,6 +34,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
 import java.util.UUID;
 
 @Slf4j
@@ -61,6 +62,10 @@ public class AuthService {
             throw new CustomException(ErrorCode.DUPLICATE_USER);
         }
 
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new CustomException(ErrorCode.DUPLICATE_PHONE);
         }
@@ -86,8 +91,39 @@ public class AuthService {
                     null, null));
             return SignupResponse.from(saved);
         } catch (DataIntegrityViolationException e) {
-            throw new CustomException(ErrorCode.DUPLICATE_USER);
+            throw toSignupIntegrityException(request, e);
         }
+    }
+
+    private CustomException toSignupIntegrityException(SignupRequest request, DataIntegrityViolationException e) {
+        String cause = getMostSpecificCauseMessage(e);
+        log.warn(
+                "회원가입 DB 무결성 제약 위반: studentId={}, email={}, phoneNumber={}, cause={}",
+                request.getStudentId(),
+                request.getEmail(),
+                request.getPhoneNumber(),
+                cause
+        );
+
+        String normalizedCause = cause.toLowerCase(Locale.ROOT);
+        if (normalizedCause.contains("email")) {
+            return new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        }
+        if (normalizedCause.contains("phone_number") || normalizedCause.contains("phone")) {
+            return new CustomException(ErrorCode.DUPLICATE_PHONE);
+        }
+        if (normalizedCause.contains("student_id") || normalizedCause.contains("student")) {
+            return new CustomException(ErrorCode.DUPLICATE_USER);
+        }
+        return new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    private String getMostSpecificCauseMessage(DataIntegrityViolationException e) {
+        Throwable cause = e.getMostSpecificCause();
+        if (cause == null || cause.getMessage() == null) {
+            return e.getMessage() == null ? "" : e.getMessage();
+        }
+        return cause.getMessage();
     }
 
     @Transactional

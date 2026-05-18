@@ -35,6 +35,16 @@ from torch.utils.data import DataLoader as TorchDataLoader
 from torch.utils.data import TensorDataset
 from tqdm import tqdm
 
+
+def log_gpu_status() -> None:
+    if torch.cuda.is_available():
+        devices = [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
+        print(f"[INFO] GPU devices: {devices}")
+        print("[INFO] Using GPU")
+    else:
+        print("[INFO] GPU devices: []")
+        print("[INFO] Using CPU")
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 경로 설정
 # ─────────────────────────────────────────────────────────────────────────────
@@ -212,6 +222,18 @@ def train_model(args: argparse.Namespace):
     print(f">> Feature Set: {feature_set_ver}, feature_count={len(feature_columns)}")
 
     # 3. 스케일링 (train만 fit)
+    train_df[feature_columns] = (
+        train_df[feature_columns]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+        .clip(-1e6, 1e6)
+    )
+    val_df[feature_columns] = (
+        val_df[feature_columns]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+        .clip(-1e6, 1e6)
+    )
     scaler = StandardScaler()
     scaler.fit(train_df[feature_columns])
     train_df[feature_columns] = scaler.transform(train_df[feature_columns])
@@ -237,6 +259,7 @@ def train_model(args: argparse.Namespace):
 
     # 5. 모델
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    log_gpu_status()
     print(f">> Device: {device}")
 
     model = TCNClassifier(
@@ -420,7 +443,7 @@ def train():
     """노트북에서 module.train()으로 호출하기 위한 래퍼"""
     import argparse
     args = argparse.Namespace(
-        parquet_dir    = '/kaggle/input/sisc-ai-trading-dataset',
+        parquet_dir    = os.environ.get("PARQUET_DIR", _find_kaggle_dataset_path()),
         start_date     = "2015-01-01",
         end_date       = os.environ.get("END_DATE", date.today().isoformat()),
         tickers        = None,

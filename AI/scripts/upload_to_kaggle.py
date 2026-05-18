@@ -35,6 +35,7 @@ DATASET_TITLE   = os.environ.get("KAGGLE_DATASET_TITLE", "SISC AI Trading Datase
 METADATA_PATH   = os.path.join(OUTPUT_DIR, "dataset-metadata.json")
 CODE_ARCHIVE_NAME = "sisc_ai_code.zip"
 CODE_ARCHIVE_PATH = os.path.join(OUTPUT_DIR, CODE_ARCHIVE_NAME)
+CODE_SOURCE_DIR = os.path.join(OUTPUT_DIR, "sisc_code")
 
 
 def run_oos2024_dataset_preflight() -> dict:
@@ -60,24 +61,33 @@ def run_oos2024_dataset_preflight() -> dict:
 def build_code_archive() -> None:
     """Package AI source code needed by Kaggle kernels into the dataset."""
     source_root = os.path.join(project_root, "AI")
-    skipped_dirs = {"data", "docs", "tests", "__pycache__", ".venv", "venv", "wandb"}
+    skipped_dirs = {"data", "docs", "tests", "backtests", "__pycache__", ".venv", "venv", "wandb"}
     skipped_suffixes = {".pyc", ".pyo"}
 
     if os.path.exists(CODE_ARCHIVE_PATH):
         os.remove(CODE_ARCHIVE_PATH)
+    if os.path.exists(CODE_SOURCE_DIR):
+        shutil.rmtree(CODE_SOURCE_DIR)
+
+    def ignore_ai_files(_, names):
+        return {
+            name
+            for name in names
+            if name in skipped_dirs or any(name.endswith(suffix) for suffix in skipped_suffixes)
+        }
+
+    shutil.copytree(source_root, os.path.join(CODE_SOURCE_DIR, "AI"), ignore=ignore_ai_files)
 
     with zipfile.ZipFile(CODE_ARCHIVE_PATH, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for root, dirs, files in os.walk(source_root):
-            dirs[:] = [d for d in dirs if d not in skipped_dirs]
+        for root, dirs, files in os.walk(os.path.join(CODE_SOURCE_DIR, "AI")):
             for file_name in files:
-                if any(file_name.endswith(suffix) for suffix in skipped_suffixes):
-                    continue
                 full_path = os.path.join(root, file_name)
-                rel_path = os.path.relpath(full_path, project_root)
+                rel_path = os.path.relpath(full_path, CODE_SOURCE_DIR)
                 zf.write(full_path, rel_path)
 
     size = os.path.getsize(CODE_ARCHIVE_PATH) / (1024 * 1024)
     print(f">> Kaggle 코드 아카이브 생성: {CODE_ARCHIVE_NAME} ({size:.1f} MB)")
+    print(f">> Kaggle 코드 디렉터리 생성: {CODE_SOURCE_DIR}")
 
 
 def ensure_dataset_metadata() -> None:

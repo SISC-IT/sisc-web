@@ -3,15 +3,21 @@ spring:
     active: prod
 
   jpa:
-    generate-ddl: true
-#    hibernate:
-#      ddl-auto: update
+    hibernate:
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
         show_sql: false
         format_sql: false       # 가로로 너무 길어지는 게 싫다면 이것도 false
         use_sql_comments: false # 부가 설명 제거
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
 
   servlet:    # 파일 설정
     multipart:
@@ -53,6 +59,12 @@ logging:
 
 server:
   forward-headers-strategy: framework
+
+app:
+  upload:
+    root-location: ${UPLOAD_ROOT_LOCATION:${user.dir}/uploads}
+    public-path-prefix: ${UPLOAD_PUBLIC_PATH_PREFIX:/uploads}
+    public-base-url: ${UPLOAD_PUBLIC_BASE_URL:}
 
 springdoc:
   swagger-ui:

@@ -21,7 +21,7 @@ class PortfolioRepository:
     DB와의 상호작용(조회 및 저장)을 캡슐화하여 제공합니다.
     """
 
-    def __init__(self, db_name: str = "db"):
+    def __init__(self, db_name: str = "db", account_code: Optional[str] = None):
         """
         [초기화 메서드]
         객체 생성 시 사용할 데이터베이스의 이름을 설정합니다.
@@ -31,6 +31,9 @@ class PortfolioRepository:
                            테스트 시에는 "test_db" 등으로 변경하여 주입(의존성 주입)할 수 있습니다.
         """
         self.db_name = db_name
+        normalized_account_code = (account_code or "").strip()
+        self.account_code = normalized_account_code if normalized_account_code else None
+        self._account_id_cache: Optional[int] = None
 
     def get_latest_total_asset(self, target_date: str, default_asset: float = 100_000_000) -> float:
         """
@@ -75,6 +78,57 @@ class PortfolioRepository:
         """
         return get_db_conn(self.db_name)
 
+    def _resolve_account_id(self, conn=None) -> Optional[int]:
+        """
+        Resolve account_id from account_code and cache it for reuse.
+        """
+        if self.account_code is None:
+            return None
+
+        if self._account_id_cache is not None:
+            return self._account_id_cache
+
+        own_connection = conn is None
+        local_conn = conn or self._get_connection()
+        if local_conn is None:
+            raise RuntimeError(
+                f"[PortfolioRepository][Error] Failed to resolve account_id for account_code={self.account_code!r}: DB connection unavailable."
+            )
+
+        try:
+            with local_conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                        SELECT id, is_active
+                        FROM public.account_names
+                        WHERE account_code = %s
+                        ORDER BY id ASC
+                    """,
+                    (self.account_code,),
+                )
+                rows = cursor.fetchall()
+        finally:
+            if own_connection and local_conn:
+                local_conn.close()
+
+        if not rows:
+            raise ValueError(
+                f"[PortfolioRepository][Error] account_code={self.account_code!r} not found in public.account_names."
+            )
+        if len(rows) > 1:
+            raise ValueError(
+                f"[PortfolioRepository][Error] duplicate rows found for account_code={self.account_code!r}."
+            )
+
+        account_id, is_active = rows[0]
+        if not bool(is_active):
+            raise ValueError(
+                f"[PortfolioRepository][Error] account_code={self.account_code!r} is inactive in public.account_names."
+            )
+
+        self._account_id_cache = int(account_id)
+        return self._account_id_cache
+
     def get_current_position(self, ticker: str, target_date: str = None, initial_cash: float = 10000) -> Dict[str, Any]:
         """
         [현재 포지션 조회] 
@@ -102,6 +156,10 @@ class PortfolioRepository:
             WHERE ticker = %s 
         """
         params = [ticker]
+        account_id = self._resolve_account_id(conn)
+        if account_id is not None:
+            query += " AND account_id = %s "
+            params.append(account_id)
         
         # target_date가 주어지면 그 날짜 '이하'의 체결내역만 필터링하여 미래 데이터를 차단합니다.
         if target_date:
@@ -182,18 +240,28 @@ class PortfolioRepository:
 
         try:
             with conn.cursor() as cursor:
+                account_id = self._resolve_account_id(conn)
                 if target_date:
                     exec_cash_query = """
                         SELECT cash_after
                         FROM public.executions
                         WHERE fill_date <= %s
+                    """
+                    exec_cash_params: list[Any] = [target_date]
+                    if account_id is not None:
+                        exec_cash_query += " AND account_id = %s "
+                        exec_cash_params.append(account_id)
+                    exec_cash_query += """
                         ORDER BY fill_date DESC, created_at DESC, id DESC
                         LIMIT 1
                     """
-                    cursor.execute(exec_cash_query, (target_date,))
+                    cursor.execute(exec_cash_query, tuple(exec_cash_params))
                     exec_cash = cursor.fetchone()
                     if exec_cash and exec_cash[0] is not None:
                         return float(exec_cash[0])
+
+                if account_id is not None:
+                    return float(initial_cash)
 
                 summary_cash_query = """
                     SELECT cash
@@ -224,10 +292,17 @@ class PortfolioRepository:
         if conn is None:
             return []
 
+        account_id = self._resolve_account_id(conn)
         query = """
             SELECT ticker
             FROM public.executions
             WHERE fill_date <= %s
+        """
+        query_params: list[Any] = [target_date]
+        if account_id is not None:
+            query += " AND account_id = %s "
+            query_params.append(account_id)
+        query += """
             GROUP BY ticker
             HAVING SUM(
                 CASE
@@ -241,7 +316,7 @@ class PortfolioRepository:
 
         try:
             with conn.cursor() as cursor:
-                cursor.execute(query, (target_date,))
+                cursor.execute(query, tuple(query_params))
                 rows = cursor.fetchall()
             return [str(row[0]) for row in rows]
         except Exception as e:
@@ -266,34 +341,67 @@ class PortfolioRepository:
 
         try:
             with conn.cursor() as cursor:
+                account_id = self._resolve_account_id(conn)
+                allow_global_chain_reset = False
                 if target_date:
                     # Safety-first default: only clear current run artifacts.
                     # Global chain reset can remove unrelated simulations sharing the same DB.
                     allow_global_chain_reset = os.environ.get("AI_ALLOW_GLOBAL_CHAIN_RESET", "0") == "1"
                     if allow_global_chain_reset:
-                        cursor.execute(
-                            "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%'",
-                            (target_date,),
-                        )
-                        cursor.execute(
-                            "DELETE FROM public.xai_reports WHERE date >= %s AND run_id LIKE 'daily_%%'",
-                            (target_date,),
-                        )
-                        cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
-                        cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
+                        if account_id is None:
+                            cursor.execute(
+                                "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%'",
+                                (target_date,),
+                            )
+                            cursor.execute(
+                                "DELETE FROM public.xai_reports WHERE date >= %s AND run_id LIKE 'daily_%%'",
+                                (target_date,),
+                            )
+                            cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
+                            cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
+                        else:
+                            cursor.execute(
+                                "DELETE FROM public.executions WHERE fill_date >= %s AND run_id LIKE 'daily_%%' AND account_id = %s",
+                                (target_date, account_id),
+                            )
+                            # xai_reports/portfolio_* tables are not account-scoped in current schema.
+                            # Keep chain consistency by resetting those tables globally by date.
+                            cursor.execute(
+                                "DELETE FROM public.xai_reports WHERE date >= %s AND run_id LIKE 'daily_%%'",
+                                (target_date,),
+                            )
+                            cursor.execute("DELETE FROM public.portfolio_positions WHERE date >= %s", (target_date,))
+                            cursor.execute("DELETE FROM public.portfolio_summary WHERE date >= %s", (target_date,))
                     else:
+                        if account_id is None:
+                            cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
+                            cursor.execute("DELETE FROM public.xai_reports WHERE run_id = %s", (run_id,))
+                        else:
+                            cursor.execute(
+                                "DELETE FROM public.executions WHERE run_id = %s AND account_id = %s",
+                                (run_id, account_id),
+                            )
+                else:
+                    if account_id is None:
                         cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
                         cursor.execute("DELETE FROM public.xai_reports WHERE run_id = %s", (run_id,))
-                else:
-                    cursor.execute("DELETE FROM public.executions WHERE run_id = %s", (run_id,))
-                    cursor.execute("DELETE FROM public.xai_reports WHERE run_id = %s", (run_id,))
+                    else:
+                        cursor.execute(
+                            "DELETE FROM public.executions WHERE run_id = %s AND account_id = %s",
+                            (run_id, account_id),
+                        )
             conn.commit()
             if target_date:
-                if os.environ.get("AI_ALLOW_GLOBAL_CHAIN_RESET", "0") == "1":
+                if allow_global_chain_reset:
                     print(
                         f"[PortfolioRepository] Reset simulation rows from {target_date} onward "
                         f"(triggered by run_id={run_id})."
                     )
+                    if account_id is not None:
+                        print(
+                            "[PortfolioRepository] account_id was specified, but xai_reports/portfolio tables "
+                            "are not account-scoped; those tables were reset globally by date."
+                        )
                 else:
                     print(
                         f"[PortfolioRepository] Reset current run artifacts only "
@@ -362,6 +470,7 @@ class PortfolioRepository:
         cursor = conn.cursor()
 
         try:
+            resolved_account_id = self._resolve_account_id(conn)
             run_ids = sorted(
                 {
                     str(run_id).strip()
@@ -370,11 +479,17 @@ class PortfolioRepository:
                 }
             )
             if run_ids:
-                cursor.execute("DELETE FROM public.executions WHERE run_id = ANY(%s)", (run_ids,))
+                if resolved_account_id is None:
+                    cursor.execute("DELETE FROM public.executions WHERE run_id = ANY(%s)", (run_ids,))
+                else:
+                    cursor.execute(
+                        "DELETE FROM public.executions WHERE run_id = ANY(%s) AND account_id = %s",
+                        (run_ids, resolved_account_id),
+                    )
             # 다량의 데이터를 빠르게 넣기 위한 INSERT 구문 준비
             insert_query = """
                 INSERT INTO public.executions (
-                    run_id, xai_report_id, ticker, signal_date, signal_price, signal,
+                    run_id, account_id, xai_report_id, ticker, signal_date, signal_price, signal,
                     fill_date, fill_price, qty, side, value,
                     commission, cash_after, position_qty, avg_price,
                     pnl_realized, pnl_unrealized, created_at
@@ -393,6 +508,7 @@ class PortfolioRepository:
 
                 data_to_insert.append((
                     str(row["run_id"]),
+                    resolved_account_id,
                     xai_id,
                     str(row["ticker"]),
                     row["signal_date"],  

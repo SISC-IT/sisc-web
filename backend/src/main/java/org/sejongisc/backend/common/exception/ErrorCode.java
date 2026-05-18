@@ -150,6 +150,14 @@ public enum ErrorCode {
 
   INVALID_BOARD_TYPE(HttpStatus.BAD_REQUEST, "상위 게시판에는 글을 작성할 수 없습니다."),
 
+  INVALID_POST_CONTENT(HttpStatus.BAD_REQUEST, "게시물 본문 형식이 올바르지 않습니다."),
+
+  INVALID_UPLOAD_FILE(HttpStatus.BAD_REQUEST, "업로드할 수 없는 파일입니다."),
+
+  UNSUPPORTED_IMAGE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다."),
+
+  POST_MEDIA_NOT_FOUND(HttpStatus.NOT_FOUND, "업로드된 게시물 파일을 찾을 수 없습니다."),
+
   // ATTENDANCE
 
   SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 세션이 존재하지 않습니다."),

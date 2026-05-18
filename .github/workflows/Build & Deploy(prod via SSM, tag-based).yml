@@ -138,6 +138,7 @@ jobs:
 
           echo "SPRING_API_URL=${{ secrets.SPRING_API_URL }}" >> .env
           echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> .env
+          echo "UPLOAD_PUBLIC_BASE_URL=${{ secrets.UPLOAD_PUBLIC_BASE_URL }}" >> .env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env

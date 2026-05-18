@@ -37,6 +37,8 @@ print("텐서플로우 버전:", tf.__version__)
 print("GPU 목록:", tf.config.list_physical_devices('GPU'))
 
 gpus = tf.config.list_physical_devices('GPU')
+print(f"[INFO] GPU devices: {gpus}")
+print("[INFO] Using GPU" if gpus else "[INFO] Using CPU")
 if gpus:
     try:
         for gpu in gpus:

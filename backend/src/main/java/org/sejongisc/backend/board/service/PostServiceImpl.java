@@ -9,6 +9,7 @@ import org.sejongisc.backend.board.entity.Board;
 import org.sejongisc.backend.board.entity.Comment;
 import org.sejongisc.backend.board.entity.Post;
 import org.sejongisc.backend.board.entity.PostAttachment;
+import org.sejongisc.backend.board.entity.PostMediaType;
 import org.sejongisc.backend.board.repository.*;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
@@ -41,6 +42,8 @@ public class PostServiceImpl implements PostService {
   private final PostAttachmentRepository postAttachmentRepository;
   private final BoardRepository boardRepository;
   private final FileUploadService fileUploadService;
+  private final PostContentService postContentService;
+  private final PostMediaService postMediaService;
   private final ApplicationEventPublisher eventPublisher;
 
   // 게시물 작성
@@ -56,12 +59,18 @@ public class PostServiceImpl implements PostService {
       throw new CustomException(ErrorCode.INVALID_BOARD_TYPE);
     }
 
+    PostContentService.NormalizedPostContent content = postContentService.fromPlainText(request.getContent());
+
     Post post = Post.builder()
         .user(userRepository.findById(userId)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND)))
         .board(board)
         .title(request.getTitle())
-        .content(request.getContent())
+        .content(content.content())
+        .contentFormat(content.contentFormat())
+        .contentJson(content.contentJson())
+        .contentHtml(content.contentHtml())
+        .contentText(content.contentText())
         .anonymous(request.isAnonymous())
         .build();
 
@@ -99,6 +108,40 @@ public class PostServiceImpl implements PostService {
     }
   }
 
+  // 리치 에디터 게시물 작성
+  @Override
+  @Transactional
+  public void saveRichPost(RichPostRequest request, UUID userId) {
+    Board board = boardRepository.findById(request.getBoardId())
+        .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
+
+    if (board.getParentBoard() == null) {
+      log.error("최상위 게시판에는 게시물을 작성할 수 없습니다. boardId: {}", request.getBoardId());
+      throw new CustomException(ErrorCode.INVALID_BOARD_TYPE);
+    }
+
+    PostContentService.NormalizedPostContent content = postContentService.fromRichRequest(request);
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+    Post post = Post.builder()
+        .user(user)
+        .board(board)
+        .title(request.getTitle())
+        .content(content.content())
+        .contentFormat(content.contentFormat())
+        .contentJson(content.contentJson())
+        .contentHtml(content.contentHtml())
+        .contentText(content.contentText())
+        .anonymous(request.isAnonymous())
+        .build();
+
+    post = postRepository.save(post);
+    postMediaService.replacePostMedia(post, userId, request.getInlineMediaIds(), request.getAttachmentIds());
+
+    publishPostActivity(post, userId, board, request.isAnonymous());
+  }
+
   // 게시물 수정
   @Override
   @Transactional
@@ -110,8 +153,10 @@ public class PostServiceImpl implements PostService {
       throw new CustomException(ErrorCode.INVALID_POST_OWNER);
     }
 
+    PostContentService.NormalizedPostContent content = postContentService.fromPlainText(request.getContent());
+
     post.setTitle(request.getTitle());
-    post.setContent(request.getContent());
+    applyContent(post, content);
     post.setAnonymous(request.isAnonymous());
 
     // 기존 파일 조회 및 삭제
@@ -119,6 +164,7 @@ public class PostServiceImpl implements PostService {
 
     // DB에서 첨부파일 정보 일괄 삭제
     postAttachmentRepository.deleteAllByPostPostId(postId);
+    postMediaService.deleteAllByPost(postId);
 
     // 물리적 파일 삭제
     for (PostAttachment attachment : existingAttachments) {
@@ -145,6 +191,25 @@ public class PostServiceImpl implements PostService {
     }
   }
 
+  // 리치 에디터 게시물 수정
+  @Override
+  @Transactional
+  public void updateRichPost(RichPostRequest request, UUID postId, UUID userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new CustomException(ErrorCode.INVALID_POST_OWNER);
+    }
+
+    PostContentService.NormalizedPostContent content = postContentService.fromRichRequest(request);
+
+    post.setTitle(request.getTitle());
+    applyContent(post, content);
+    post.setAnonymous(request.isAnonymous());
+    postMediaService.replacePostMedia(post, userId, request.getInlineMediaIds(), request.getAttachmentIds());
+  }
+
   // 게시물 삭제
   @Override
   @Transactional
@@ -163,6 +228,7 @@ public class PostServiceImpl implements PostService {
 
     // DB에서 첨부파일 정보 삭제
     postAttachmentRepository.deleteAllByPostPostId(postId);
+    postMediaService.deleteAllByPost(postId);
 
     // 물리적 파일 삭제
     for (PostAttachment attachment : attachments) {
@@ -277,6 +343,8 @@ public class PostServiceImpl implements PostService {
     return getCommonPostBuilder(post, user)
         .comments(commentResponses)
         .attachments(attachmentResponses)
+        .inlineImages(postMediaService.getPostMedia(postId, PostMediaType.INLINE_IMAGE))
+        .fileAttachments(postMediaService.getPostMedia(postId, PostMediaType.FILE_ATTACHMENT))
         .build();
   }
 
@@ -309,6 +377,10 @@ public class PostServiceImpl implements PostService {
         .board(BoardResponse.from(post.getBoard()))
         .title(post.getTitle())
         .content(post.getContent())
+        .contentFormat(postContentService.resolveFormat(post))
+        .contentJson(postContentService.parseContentJson(post.getContentJson()))
+        .contentHtml(postContentService.resolveContentHtml(post))
+        .contentText(postContentService.resolveContentText(post))
         .bookmarkCount(post.getBookmarkCount())
         .likeCount(post.getLikeCount())
         .commentCount(post.getCommentCount())
@@ -329,5 +401,27 @@ public class PostServiceImpl implements PostService {
   private PostResponse mapToPostResponse(Post post, User user) {
     return getCommonPostBuilder(post, user)
         .build();
+  }
+
+  private void applyContent(Post post, PostContentService.NormalizedPostContent content) {
+    post.setContent(content.content());
+    post.setContentFormat(content.contentFormat());
+    post.setContentJson(content.contentJson());
+    post.setContentHtml(content.contentHtml());
+    post.setContentText(content.contentText());
+  }
+
+  private void publishPostActivity(Post post, UUID userId, Board board, boolean anonymous) {
+    User user = post.getUser();
+    String username = anonymous ? "익명" : user.getName();
+
+    eventPublisher.publishEvent(new ActivityEvent(
+        userId,
+        username,
+        ActivityType.BOARD_POST,
+        "[" + post.getTitle() + "]글을 게시했습니다.",
+        post.getPostId(),
+        board.getBoardName()
+    ));
   }
 }
