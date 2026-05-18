@@ -56,17 +56,18 @@ def warn_artifact_root_env(artifact_root: Path) -> None:
 
 def load_kaggle_credentials() -> tuple[str, str]:
     """환경변수 또는 ~/.kaggle/kaggle.json에서 Kaggle 인증 정보를 읽는다."""
-    username = os.environ.get("KAGGLE_USERNAME", "jihyeongkimm")
-    key = os.environ.get("KAGGLE_KEY", "")
-    if key:
-        return username, key
+    username = os.environ.get("KAGGLE_USERNAME", "").strip()
+    key = os.environ.get("KAGGLE_KEY", "").strip()
 
     kaggle_json = Path.home() / ".kaggle/kaggle.json"
     if kaggle_json.exists():
         with kaggle_json.open("r", encoding="utf-8") as handle:
             creds = json.load(handle)
-        username = creds.get("username", username)
-        key = creds.get("key", "")
+        username = username or str(creds.get("username", "")).strip()
+        key = key or str(creds.get("key", "")).strip()
+
+    if key and not username:
+        raise RuntimeError("KAGGLE_KEY를 사용할 때는 KAGGLE_USERNAME도 설정해야 합니다.")
     return username, key
 
 
@@ -322,8 +323,8 @@ def promote_staged_artifacts(staged_models: list[dict[str, Any]], artifact_root:
                 final_dir.parent.mkdir(parents=True, exist_ok=True)
                 active_backup = None
 
-            shutil.copytree(staged_dir, final_dir)
             promoted.append((final_dir, active_backup))
+            shutil.copytree(staged_dir, final_dir)
 
         if backup_root.exists():
             shutil.rmtree(backup_root)

@@ -196,7 +196,7 @@ def _prepare_ranking_join_frame(
 
     horizon = pd.to_numeric(prepared["horizon"], errors="coerce")
     if horizon.isna().any() or not horizon.map(lambda value: float(value).is_integer()).all():
-        raise ValueError(f"{frame_name}.horizon? ?뺤닔?ъ빞 ?⑸땲??")
+        raise ValueError(f"{frame_name}.horizon은 정수여야 합니다.")
     prepared["horizon"] = horizon.astype(int)
     return prepared
 
