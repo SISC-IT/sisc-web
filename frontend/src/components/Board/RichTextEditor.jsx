@@ -145,8 +145,6 @@ const ResizableImageNodeView = (props) => {
     const isVerticalOnly = direction === 's';
     const isCorner = direction === 'se';
 
-    
-
     const onMove = (moveEvent) => {
       const xDelta = moveEvent.clientX - startX;
       const yDelta = moveEvent.clientY - startY;
@@ -368,8 +366,6 @@ const RichTextEditor = ({
   const onChangeRef = useRef(onChange);
   const imageInputRef = useRef(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-
-  
 
   useEffect(() => {
     onChangeRef.current = onChange;

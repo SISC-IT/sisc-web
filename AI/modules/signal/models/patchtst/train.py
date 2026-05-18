@@ -32,6 +32,17 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.models.patchtst.architecture import PatchTST_Model
+from AI.modules.signal.models.patchtst.feature_contract import (
+    PATCHTST_DEFAULT_HORIZONS,
+    PATCHTST_FEATURE_SET_VER,
+    PATCHTST_METADATA_NAME,
+    build_patchtst_metadata,
+    get_patchtst_feature_columns,
+    require_patchtst_feature_columns,
+    resolve_patchtst_metadata_path,
+    save_patchtst_metadata,
+    validate_patchtst_feature_columns,
+)
 from AI.modules.signal.core.data_loader import DataLoader as SISCDataLoader
 from AI.modules.features.legacy.technical_features import (
     add_technical_indicators,
@@ -70,13 +81,15 @@ CONFIG = {
     'weights_dir'    : 'AI/data/weights/patchtst',
     'model_name'     : 'patchtst_model.pt',
     'scaler_name'    : 'patchtst_scaler.pkl',
+    'metadata_name'  : PATCHTST_METADATA_NAME,
+    'feature_set_ver': PATCHTST_FEATURE_SET_VER,
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 피처 정의 (train.py와 wrapper.py가 동일한 순서를 공유)
 # architecture.py enc_in=17 과 반드시 일치
 # ─────────────────────────────────────────────────────────────────────────────
-FEATURE_COLUMNS = [
+LEGACY_PATCHTST_FEATURE_COLUMNS = [
     # 일봉 (11개)
     'log_return',
     'ma5_ratio', 'ma20_ratio', 'ma60_ratio',
@@ -91,7 +104,11 @@ FEATURE_COLUMNS = [
     'month_ma12_ratio', 'month_rsi',
 ]
 
-HORIZONS = [1, 3, 5, 7]  # wrapper.py와 공유
+# 실제 학습/추론 계약은 feature_contract.py에서 가져온다.
+FEATURE_COLUMNS = get_patchtst_feature_columns()
+HORIZONS = list(PATCHTST_DEFAULT_HORIZONS)
+CONFIG['feature_columns'] = FEATURE_COLUMNS
+validate_patchtst_feature_columns(FEATURE_COLUMNS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -104,10 +121,10 @@ def build_sequences(full_df: pd.DataFrame, scaler: MinMaxScaler, fit_scaler: boo
     horizons    = CONFIG['horizons']
     max_horizon = max(horizons)
 
-    available = [c for c in FEATURE_COLUMNS if c in full_df.columns]
-    missing   = set(FEATURE_COLUMNS) - set(available)
-    if missing:
-        print(f"[경고] 누락된 피처: {missing}")
+    available = require_patchtst_feature_columns(
+        full_df,
+        feature_columns=FEATURE_COLUMNS,
+    )
 
     full_df = full_df.dropna(subset=available).copy()
 
@@ -238,6 +255,8 @@ def train():
     X_val,   y_val   = build_sequences(val_df,   scaler, fit_scaler=False)
 
     print(f"\n>> Train: {X_train.shape}, Val: {X_val.shape}")
+    if len(X_train) == 0 or len(X_val) == 0:
+        raise ValueError("시퀀스 생성 결과가 비어 있습니다. 분할과 입력 데이터를 확인하세요.")
 
     # 3. DataLoader
     train_loader = DataLoader(
@@ -275,6 +294,10 @@ def train():
     os.makedirs(save_dir, exist_ok=True)
     model_path  = os.path.join(save_dir, CONFIG['model_name'])
     scaler_path = os.path.join(save_dir, CONFIG['scaler_name'])
+    metadata_path = resolve_patchtst_metadata_path(
+        model_path=model_path,
+        metadata_name=CONFIG['metadata_name'],
+    )
 
     best_val_loss    = float('inf')
     patience_counter = 0
@@ -330,9 +353,18 @@ def train():
     with open(scaler_path, 'wb') as f:
         pickle.dump(scaler, f)
 
-    print(f"\n>> 완료")
+    metadata = build_patchtst_metadata(
+        config=CONFIG,
+        model_path=model_path,
+        scaler_path=scaler_path,
+        feature_columns=FEATURE_COLUMNS,
+    )
+    save_patchtst_metadata(metadata_path, metadata)
+
+    print("\n>> 완료")
     print(f"   모델    : {model_path}")
     print(f"   스케일러: {scaler_path}")
+    print(f"   메타데이터: {metadata_path}")
 
 
 if __name__ == '__main__':

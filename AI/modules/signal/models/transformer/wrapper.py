@@ -14,6 +14,9 @@ from AI.modules.signal.core.base_model import BaseSignalModel
 from .architecture import build_transformer_model
 
 
+TRANSFORMER_HORIZONS = [1, 3, 5, 7]
+
+
 class TransformerSignalModel(BaseSignalModel):
     supports_model_load_before_build = True
 
@@ -23,16 +26,35 @@ class TransformerSignalModel(BaseSignalModel):
         self.seq_len = config.get("seq_len", 60)
         self.features = config.get("features", [])
         self.scaler = None
+        self.model_path = config.get("model_path")
+        self.scaler_path = config.get("scaler_path")
+        self.legacy_artifact = False
+        self.artifact_status = "unknown"
+        self.last_prediction_status = "ok"
+        self.last_error_message = ""
+
+    @property
+    def feature_count(self) -> int:
+        return len(self.features)
+
+    def _default_output(self) -> Dict[str, float]:
+        return {f"{self.model_name}_{horizon}d": 0.5 for horizon in TRANSFORMER_HORIZONS}
+
+    def _artifact_path(self) -> str:
+        return str(self.model_path or self.config.get("model_path") or "")
 
     def load_scaler(self, filepath: str):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Scaler file not found: {filepath}")
         with open(filepath, "rb") as f:
             self.scaler = pickle.load(f)
+        self.scaler_path = os.path.abspath(filepath)
 
         scaler_features = getattr(self.scaler, "feature_names_in_", None)
         if scaler_features is not None and len(scaler_features) > 0:
             self.features = list(scaler_features)
+            self.legacy_artifact = False
+            self.artifact_status = "scaler_feature_names"
             #print(f"[Transformer] Feature schema restored from scaler: {self.features}")
         elif hasattr(self.scaler, "n_features_in_") and len(self.features) != int(self.scaler.n_features_in_):
             n_features = int(self.scaler.n_features_in_)
@@ -42,7 +64,12 @@ class TransformerSignalModel(BaseSignalModel):
                 self.features = list(self.features) + [
                     f"feature_{idx}" for idx in range(len(self.features), n_features)
                 ]
+            self.legacy_artifact = True
+            self.artifact_status = "legacy_scaler_no_feature_names"
             #print("[Transformer] Feature schema inferred from scaler width: "f"{len(self.features)} columns")
+        else:
+            self.legacy_artifact = True
+            self.artifact_status = "legacy_scaler_no_feature_names"
 
         #print(f"[Transformer] Scaler loaded: {filepath}")
 
@@ -145,6 +172,44 @@ class TransformerSignalModel(BaseSignalModel):
             f"{self.model_name}_7d": float(probs[3]),
         }
 
+    def predict_with_status(
+        self,
+        df: pd.DataFrame,
+        ticker_id: int = 0,
+        sector_id: int = 0,
+    ) -> Dict[str, Any]:
+        """평가 경로에서 Transformer 예측 상태를 함께 반환한다."""
+        try:
+            output = self.get_signals(df, ticker_id=ticker_id, sector_id=sector_id)
+            if self.legacy_artifact:
+                status = "fallback"
+                error_message = (
+                    "Transformer scaler에 feature_names_in_이 없어 feature 순서를 검증할 수 없습니다. "
+                    "평가 기본 집계에서 제외해야 합니다."
+                )
+            else:
+                status = "ok"
+                error_message = ""
+        except Exception as exc:
+            output = self._default_output()
+            status = "fallback"
+            error_message = str(exc)
+
+        self.last_prediction_status = status
+        self.last_error_message = error_message
+        return {
+            "output": output,
+            "prediction_status": status,
+            "error_message": error_message,
+            "feature_set_ver": str(self.config.get("feature_set_ver", "transformer_technical_mtf_v1")),
+            "seq_len": self.seq_len,
+            "feature_count": self.feature_count,
+            "artifact_path": self._artifact_path(),
+            "scaler_path": str(self.scaler_path or ""),
+            "legacy_artifact": self.legacy_artifact,
+            "artifact_status": self.artifact_status,
+        }
+
     def save(self, filepath: str):
         if self.model is None:
             print("No model to save.")
@@ -158,6 +223,7 @@ class TransformerSignalModel(BaseSignalModel):
     def load(self, filepath: str):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Model file not found: {filepath}")
+        self.model_path = os.path.abspath(filepath)
         if zipfile.is_zipfile(filepath):
             self.model = tf.keras.models.load_model(filepath, compile=False)
             print(f"[Transformer] Model loaded from Keras archive: {filepath}")

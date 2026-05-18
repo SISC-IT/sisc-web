@@ -8,25 +8,19 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-from AI.modules.signal.core.dataset_builder import get_standard_training_data
 from AI.modules.signal.core.base_model import BaseSignalModel
 from AI.modules.signal.core.artifact_paths import resolve_model_artifacts
 from AI.modules.signal.models.TCN.architecture import TCNClassifier
+from AI.modules.signal.models.TCN.preprocessing import (
+    TECHNICAL_DAILY_V1,
+    get_tcn_feature_columns,
+    prepare_tcn_standard_data,
+    validate_tcn_feature_set_contract,
+)
 
 
-DEFAULT_FEATURE_COLUMNS = [
-    "log_return",
-    "open_ratio",
-    "high_ratio",
-    "low_ratio",
-    "vol_change",
-    "ma5_ratio",
-    "ma20_ratio",
-    "ma60_ratio",
-    "rsi",
-    "macd_ratio",
-    "bb_position",
-]
+DEFAULT_FEATURE_SET_VER = TECHNICAL_DAILY_V1
+DEFAULT_FEATURE_COLUMNS = get_tcn_feature_columns(DEFAULT_FEATURE_SET_VER)
 
 DEFAULT_HORIZONS = [1, 3, 5, 7]
 
@@ -41,7 +35,12 @@ class TCNWrapper(BaseSignalModel):
         super().__init__(config)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.seq_len = int(config.get("seq_len", 60))
-        self.feature_columns = config.get("feature_columns", DEFAULT_FEATURE_COLUMNS)
+        self.feature_set_ver, self.feature_columns = validate_tcn_feature_set_contract(
+            config.get("feature_set_ver", DEFAULT_FEATURE_SET_VER),
+            config.get("feature_columns"),
+            config.get("feature_count"),
+            stage_name="TCN wrapper config",
+        )
         self.horizons = config.get("horizons", DEFAULT_HORIZONS)
         self.channels = config.get("channels", [32, 64, 64])
         self.kernel_size = int(config.get("kernel_size", 3))
@@ -119,7 +118,13 @@ class TCNWrapper(BaseSignalModel):
         if self.metadata_path and os.path.exists(self.metadata_path):
             with open(self.metadata_path, "r", encoding="utf-8") as f:
                 self.metadata = json.load(f)
-            self.feature_columns = self.metadata.get("feature_columns", self.feature_columns)
+            # metadata가 없는 구버전 artifact는 technical_daily_v1로 해석한다.
+            self.feature_set_ver, self.feature_columns = validate_tcn_feature_set_contract(
+                self.metadata.get("feature_set_ver", self.feature_set_ver),
+                self.metadata.get("feature_columns"),
+                self.metadata.get("feature_count"),
+                stage_name="TCN metadata",
+            )
             self.horizons = self.metadata.get("horizons", self.horizons)
             self.seq_len = int(self.metadata.get("seq_len", self.seq_len))
             self.channels = self.metadata.get("channels", self.channels)
@@ -129,8 +134,13 @@ class TCNWrapper(BaseSignalModel):
         if self.scaler is None and os.path.exists(self.scaler_path):
             with open(self.scaler_path, "rb") as f:
                 self.scaler = pickle.load(f)
+            self._validate_scaler_contract()
+        elif self.scaler is None:
+            raise FileNotFoundError(f"TCN scaler file not found: {self.scaler_path}")
 
         if self.model is None:
+            if not os.path.exists(self.model_path):
+                raise FileNotFoundError(f"TCN model file not found: {self.model_path}")
             self.build((self.seq_len, len(self.feature_columns)))
 
         if self.model is not None and os.path.exists(self.model_path):
@@ -151,19 +161,77 @@ class TCNWrapper(BaseSignalModel):
         with open(filepath, "rb") as f:
             self.scaler = pickle.load(f)
         self.scaler_path = os.path.abspath(filepath)
+        self._validate_scaler_contract()
+
+    def _validate_scaler_contract(self):
+        if self.scaler is None:
+            return
+        n_features = getattr(self.scaler, "n_features_in_", None)
+        if n_features is not None and int(n_features) != len(self.feature_columns):
+            raise ValueError(
+                "TCN scaler feature 수가 metadata feature_columns와 다릅니다. "
+                f"scaler={int(n_features)}, metadata={len(self.feature_columns)}"
+            )
+        scaler_features = getattr(self.scaler, "feature_names_in_", None)
+        if scaler_features is not None and list(scaler_features) != list(self.feature_columns):
+            raise ValueError(
+                "TCN scaler feature 순서가 metadata feature_columns와 다릅니다. "
+                f"scaler={list(scaler_features)}, metadata={list(self.feature_columns)}"
+            )
 
     def _prepare_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         if df is None or df.empty:
             raise ValueError("Input dataframe is empty.")
-        prepared = get_standard_training_data(df.copy())
+        prepared = prepare_tcn_standard_data(
+            df.copy(),
+            stage_name="TCN wrapper",
+            feature_set_ver=self.feature_set_ver,
+            fill_missing_features=False,
+        )
         missing = [col for col in self.feature_columns if col not in prepared.columns]
         if missing:
             raise ValueError(f"Missing required TCN feature columns: {missing}")
-        prepared = prepared.replace([np.inf, -np.inf], np.nan).fillna(0)
-        return prepared
+        return prepared.copy()
+
+    def _validate_inference_window(self, feature_frame: pd.DataFrame) -> None:
+        """평가/추론용 최신 window에 NaN 또는 무한대가 있으면 정상 예측으로 처리하지 않는다."""
+        if feature_frame.isna().any().any():
+            nan_columns = feature_frame.columns[feature_frame.isna().any()].tolist()
+            raise ValueError(f"TCN 추론 feature window에 NaN이 있습니다: {nan_columns}")
+        values = feature_frame.to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError("TCN 추론 feature window에 무한대 값이 있습니다.")
+
+    def _default_output(self) -> Dict[str, float]:
+        """fallback 상황에서 평가 오염을 막기 위한 중립 확률을 반환한다."""
+        return {f"tcn_{horizon}d": 0.5 for horizon in self.horizons}
+
+    def _status_payload(
+        self,
+        *,
+        output: Dict[str, float],
+        prediction_status: str,
+        error_message: str = "",
+    ) -> Dict[str, Any]:
+        return {
+            "output": output,
+            "prediction_status": prediction_status,
+            "error_message": error_message,
+            "model_name": "tcn",
+            "feature_set_ver": self.feature_set_ver,
+            "feature_columns": list(self.feature_columns),
+            "feature_count": len(self.feature_columns),
+            "horizons": list(self.horizons),
+            "seq_len": self.seq_len,
+            "model_path": str(self.model_path or ""),
+            "scaler_path": str(self.scaler_path or ""),
+            "metadata_path": str(self.metadata_path or ""),
+        }
 
     def _prepare_input_tensor(self, df: pd.DataFrame) -> torch.Tensor:
         prepared = self._prepare_dataframe(df)
+        if prepared["ticker"].nunique() != 1:
+            raise ValueError("TCN predict()는 단일 ticker 입력만 허용합니다. 여러 ticker는 predict_batch()를 사용하세요.")
         feature_frame = prepared[self.feature_columns]
 
         if len(feature_frame) < self.seq_len:
@@ -171,7 +239,9 @@ class TCNWrapper(BaseSignalModel):
                 f"Not enough rows for TCN inference. Required {self.seq_len}, got {len(feature_frame)}."
             )
 
-        latest_window = feature_frame.tail(self.seq_len).to_numpy(dtype=np.float32)
+        feature_frame = feature_frame.tail(self.seq_len)
+        self._validate_inference_window(feature_frame)
+        latest_window = feature_frame.to_numpy(dtype=np.float32)
         if self.scaler is not None:
             latest_window = self.scaler.transform(latest_window).astype(np.float32)
 
@@ -190,6 +260,8 @@ class TCNWrapper(BaseSignalModel):
             array_x = np.asarray(X_input, dtype=np.float32)
             if array_x.ndim == 2:
                 array_x = np.expand_dims(array_x, axis=0)
+            if not np.isfinite(array_x).all():
+                raise ValueError("TCN 입력 배열에 NaN 또는 무한대가 있습니다.")
             tensor_x = torch.from_numpy(array_x).float().to(self.device)
 
         self.model.eval()
@@ -201,6 +273,18 @@ class TCNWrapper(BaseSignalModel):
             f"tcn_{horizon}d": float(prob)
             for horizon, prob in zip(self.horizons, probs)
         }
+
+    def predict_with_status(self, X_input: Union[pd.DataFrame, np.ndarray]) -> Dict[str, Any]:
+        """평가 경로에서 fallback/error 상태를 보존하는 TCN 예측 결과를 반환한다."""
+        try:
+            output = self.predict(X_input)
+            return self._status_payload(output=output, prediction_status="ok")
+        except Exception as exc:
+            return self._status_payload(
+                output=self._default_output(),
+                prediction_status="fallback",
+                error_message=str(exc),
+            )
 
     def get_signals(self, df: pd.DataFrame, ticker_id: int = 0, sector_id: int = 0) -> Dict[str, float]:
         return self.predict(df)
@@ -216,13 +300,15 @@ class TCNWrapper(BaseSignalModel):
 
         for ticker, df in ticker_data_map.items():
             try:
-                prepared = get_standard_training_data(df.copy())
+                prepared = self._prepare_dataframe(df.copy())
                 feature_frame = prepared[self.feature_columns]
 
                 if len(feature_frame) < self.seq_len:
                     continue
 
-                latest_window = feature_frame.tail(self.seq_len).to_numpy(dtype=np.float32)
+                feature_frame = feature_frame.tail(self.seq_len)
+                self._validate_inference_window(feature_frame)
+                latest_window = feature_frame.to_numpy(dtype=np.float32)
                 if self.scaler is not None:
                     latest_window = self.scaler.transform(latest_window).astype(np.float32)
 

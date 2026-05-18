@@ -54,27 +54,22 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.models.TCN.architecture import TCNClassifier
-from AI.modules.features.legacy.technical_features import (
-    add_technical_indicators,
-    add_multi_timeframe_features
+from AI.modules.signal.models.TCN.preprocessing import (
+    SUPPORTED_TCN_FEATURE_SET_VERS,
+    TECHNICAL_DAILY_V1,
+    get_tcn_feature_columns,
+    log_ticker_date_counts,
+    normalize_tcn_feature_set_ver,
+    prepare_tcn_feature_set,
+    validate_processed_row_count,
+    validate_unique_ticker_date,
 )
+from AI.modules.features.legacy.technical_features import add_technical_indicators
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 피처 정의 (train.py와 동일)
 # ─────────────────────────────────────────────────────────────────────────────
-FEATURE_COLUMNS = [
-    "log_return",
-    "open_ratio",
-    "high_ratio",
-    "low_ratio",
-    "vol_change",
-    "ma5_ratio",
-    "ma20_ratio",
-    "ma60_ratio",
-    "rsi",
-    "macd_ratio",
-    "bb_position",
-]
+FEATURE_COLUMNS = get_tcn_feature_columns(TECHNICAL_DAILY_V1)
 
 HORIZONS = [1, 3, 5, 7]
 
@@ -126,7 +121,14 @@ def build_sequences(
 # train.py: get_standard_training_data() → DB 연결 필요
 # train_kaggle.py: pd.read_parquet() → DB 연결 불필요
 # ─────────────────────────────────────────────────────────────────────────────
-def load_and_preprocess(parquet_dir: str, start_date: str, end_date: str) -> pd.DataFrame:
+def load_and_preprocess(
+    parquet_dir: str,
+    start_date: str,
+    end_date: str,
+    tickers: List[str] | None = None,
+    feature_set_ver: str = TECHNICAL_DAILY_V1,
+) -> pd.DataFrame:
+    feature_set_ver = normalize_tcn_feature_set_ver(feature_set_ver)
     parquet_path = os.path.join(parquet_dir, 'price_data.parquet')
     print(f">> parquet 로드 중: {parquet_path}")
 
@@ -138,6 +140,18 @@ def load_and_preprocess(parquet_dir: str, start_date: str, end_date: str) -> pd.
         (raw_df['date'] <= end_date)
     ].copy()
 
+    if tickers:
+        requested_tickers = {str(ticker) for ticker in tickers}
+        raw_df = raw_df[raw_df["ticker"].astype(str).isin(requested_tickers)].copy()
+        if raw_df.empty:
+            raise ValueError(f"--tickers 필터 결과 데이터가 비었습니다: {sorted(requested_tickers)}")
+        print(
+            ">> 티커 필터 적용: "
+            f"요청={sorted(requested_tickers)}, 선택={raw_df['ticker'].nunique()}개"
+        )
+
+    raw_df = validate_unique_ticker_date(raw_df, stage_name="TCN kaggle raw")
+    log_ticker_date_counts(raw_df, stage_name="TCN kaggle raw")
     print(f">> 로드 완료: {len(raw_df):,}행, {raw_df['ticker'].nunique()}개 종목")
 
     # 피처 계산
@@ -160,23 +174,35 @@ def load_and_preprocess(parquet_dir: str, start_date: str, end_date: str) -> pd.
         raise ValueError("전처리된 데이터가 없습니다. 날짜 범위나 parquet 파일을 확인하세요.")
 
     full_df = pd.concat(processed).reset_index(drop=True)
-    full_df[FEATURE_COLUMNS] = (
-        full_df[FEATURE_COLUMNS]
-        .replace([np.inf, -np.inf], np.nan)
-        .fillna(0)
-        .clip(-1e6, 1e6)
+    full_df = prepare_tcn_feature_set(
+        full_df,
+        feature_set_ver=feature_set_ver,
+        stage_name=f"TCN kaggle feature_set={feature_set_ver}",
     )
+    full_df = validate_unique_ticker_date(full_df, stage_name="TCN kaggle processed")
+    validate_processed_row_count(raw_df, full_df, stage_name="TCN kaggle processed")
+    log_ticker_date_counts(full_df, stage_name="TCN kaggle processed")
     print(f">> 피처 계산 완료: {len(full_df):,}행 (실패: {fail_count}개)")
     return full_df
 
 
 def train_model(args: argparse.Namespace):
+    _validate_train_args(args)
+    feature_set_ver = normalize_tcn_feature_set_ver(args.feature_set_ver)
+    feature_columns = get_tcn_feature_columns(feature_set_ver)
+
     print("=" * 50)
     print(" TCN 학습 시작 (Kaggle 크론잡 버전)")
     print("=" * 50)
 
     # 1. 데이터 로드
-    raw_df = load_and_preprocess(args.parquet_dir, args.start_date, args.end_date)
+    raw_df = load_and_preprocess(
+        args.parquet_dir,
+        args.start_date,
+        args.end_date,
+        args.tickers,
+        feature_set_ver,
+    )
 
     # 2. Train/Val 날짜 기준 분리
     dates          = raw_df['date'].sort_values().unique()
@@ -193,28 +219,29 @@ def train_model(args: argparse.Namespace):
             f"train/val 분할 결과가 비었습니다. train={len(train_df)}, val={len(val_df)}"
         )
     print(f">> Train: ~{split_date} 미만, Val: {split_date}~")
+    print(f">> Feature Set: {feature_set_ver}, feature_count={len(feature_columns)}")
 
     # 3. 스케일링 (train만 fit)
-    train_df[FEATURE_COLUMNS] = (
-        train_df[FEATURE_COLUMNS]
+    train_df[feature_columns] = (
+        train_df[feature_columns]
         .replace([np.inf, -np.inf], np.nan)
         .fillna(0)
         .clip(-1e6, 1e6)
     )
-    val_df[FEATURE_COLUMNS] = (
-        val_df[FEATURE_COLUMNS]
+    val_df[feature_columns] = (
+        val_df[feature_columns]
         .replace([np.inf, -np.inf], np.nan)
         .fillna(0)
         .clip(-1e6, 1e6)
     )
     scaler = StandardScaler()
-    scaler.fit(train_df[FEATURE_COLUMNS])
-    train_df[FEATURE_COLUMNS] = scaler.transform(train_df[FEATURE_COLUMNS])
-    val_df[FEATURE_COLUMNS]   = scaler.transform(val_df[FEATURE_COLUMNS])
+    scaler.fit(train_df[feature_columns])
+    train_df[feature_columns] = scaler.transform(train_df[feature_columns])
+    val_df[feature_columns]   = scaler.transform(val_df[feature_columns])
 
     # 4. 시퀀스 생성
-    X_train, y_train = build_sequences(train_df, args.seq_len, FEATURE_COLUMNS, HORIZONS)
-    X_val,   y_val   = build_sequences(val_df,   args.seq_len, FEATURE_COLUMNS, HORIZONS)
+    X_train, y_train = build_sequences(train_df, args.seq_len, feature_columns, HORIZONS)
+    X_val,   y_val   = build_sequences(val_df,   args.seq_len, feature_columns, HORIZONS)
 
     if len(X_train) == 0 or len(X_val) == 0:
         raise ValueError("시퀀스 생성 결과가 비어있습니다.")
@@ -236,7 +263,7 @@ def train_model(args: argparse.Namespace):
     print(f">> Device: {device}")
 
     model = TCNClassifier(
-        input_size  = len(FEATURE_COLUMNS),
+        input_size  = len(feature_columns),
         output_size = len(HORIZONS),
         num_channels = args.channels,
         kernel_size  = args.kernel_size,
@@ -251,9 +278,11 @@ def train_model(args: argparse.Namespace):
     )
 
     best_val_loss = float("inf")
+    best_train_loss = None
     best_state    = None
 
-    patience = args.patience
+    patience = int(args.patience)
+    early_stopping_enabled = patience > 0
     counter = 0
     # 6. 학습 루프
     print(f">> 학습 시작 (epochs={args.epochs})\n")
@@ -281,10 +310,14 @@ def train_model(args: argparse.Namespace):
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            best_train_loss = train_loss
             best_state    = copy.deepcopy(model.state_dict())
             counter = 0  # 성능이 개선되었으므로 카운터 초기화
             print("  saved")
         else:
+            if not early_stopping_enabled:
+                print()
+                continue
             counter += 1  # 성능 개선이 없으므로 카운터 증가
             print(f"  (Patience: {counter}/{patience})")
         
@@ -298,18 +331,33 @@ def train_model(args: argparse.Namespace):
     scaler_path   = os.path.join(args.output_dir, "scaler.pkl")
     metadata_path = os.path.join(args.output_dir, "metadata.json")
 
+    if best_train_loss is None:
+        best_train_loss = train_loss
+        best_val_loss = val_loss
+    train_val_loss_gap = float(best_val_loss - best_train_loss)
+
     torch.save(best_state or model.state_dict(), model_path)
 
     with open(scaler_path, "wb") as f:
         pickle.dump(scaler, f)
 
     metadata = {
-        "feature_columns": FEATURE_COLUMNS,
+        "feature_set_ver": feature_set_ver,
+        "feature_columns": feature_columns,
+        "feature_count": len(feature_columns),
         "horizons"       : HORIZONS,
         "seq_len"        : args.seq_len,
         "kernel_size"    : args.kernel_size,
         "dropout"        : args.dropout,
         "channels"       : args.channels,
+        "weight_decay"   : args.weight_decay,
+        "patience"       : args.patience,
+        "learning_rate"  : args.learning_rate,
+        "batch_size"     : args.batch_size,
+        "train_loss_best": float(best_train_loss),
+        "val_loss_best"  : float(best_val_loss),
+        "train_val_loss_gap": train_val_loss_gap,
+        "tickers"         : list(args.tickers) if args.tickers else None,
         "model_path"     : model_path,
         "scaler_path"    : scaler_path,
     }
@@ -320,6 +368,35 @@ def train_model(args: argparse.Namespace):
     print(f"   모델    : {model_path}")
     print(f"   스케일러: {scaler_path}")
     print(f"   메타데이터: {metadata_path}")
+
+
+def _validate_train_args(args: argparse.Namespace) -> None:
+    for option_name, value in [
+        ("--weight-decay", args.weight_decay),
+        ("--learning-rate", args.learning_rate),
+        ("--dropout", args.dropout),
+    ]:
+        if not np.isfinite(float(value)):
+            raise ValueError(f"{option_name}는 유한한 숫자여야 합니다.")
+    if args.weight_decay < 0:
+        raise ValueError("--weight-decay는 0 이상이어야 합니다.")
+    if not 0 <= args.dropout < 1:
+        raise ValueError("--dropout은 0 이상 1 미만이어야 합니다.")
+    if args.patience < 0:
+        raise ValueError("--patience는 0 이상이어야 합니다. 0이면 early stopping을 끕니다.")
+    if args.epochs <= 0:
+        raise ValueError("--epochs는 1 이상이어야 합니다.")
+    if args.batch_size <= 0:
+        raise ValueError("--batch-size는 1 이상이어야 합니다.")
+    if args.seq_len <= 0:
+        raise ValueError("--seq-len은 1 이상이어야 합니다.")
+    if args.learning_rate <= 0:
+        raise ValueError("--learning-rate는 0보다 커야 합니다.")
+    if args.kernel_size <= 0:
+        raise ValueError("--kernel-size는 1 이상이어야 합니다.")
+    if not args.channels or any(channel <= 0 for channel in args.channels):
+        raise ValueError("--channels는 1 이상의 정수 목록이어야 합니다.")
+    normalize_tcn_feature_set_ver(args.feature_set_ver)
 
 
 def _find_kaggle_dataset_path() -> str:
@@ -338,6 +415,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--parquet-dir",   default=os.environ.get("PARQUET_DIR", _find_kaggle_dataset_path()))
     parser.add_argument("--start-date",    default="2015-01-01")
     parser.add_argument("--end-date",      default=os.environ.get("END_DATE", date.today().isoformat()))
+    parser.add_argument("--tickers",       nargs="*", default=None)
     parser.add_argument("--seq-len",       type=int,   default=60)
     parser.add_argument("--epochs",        type=int,   default=20)
     parser.add_argument("--batch-size",    type=int,   default=64)
@@ -347,6 +425,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout",       type=float, default=0.2)
     parser.add_argument("--channels",      type=int, nargs="+", default=[32, 64, 64])
     parser.add_argument("--patience",      type=int,   default=7)
+    parser.add_argument(
+        "--feature-set-ver",
+        default=TECHNICAL_DAILY_V1,
+        choices=SUPPORTED_TCN_FEATURE_SET_VERS,
+        help="TCN 입력 피처셋 버전",
+    )
     parser.add_argument("--output-dir",    default=os.environ.get('WEIGHTS_DIR', '/kaggle/working/tcn'))
     return parser.parse_args()
 
@@ -362,6 +446,7 @@ def train():
         parquet_dir    = os.environ.get("PARQUET_DIR", _find_kaggle_dataset_path()),
         start_date     = "2015-01-01",
         end_date       = os.environ.get("END_DATE", date.today().isoformat()),
+        tickers        = None,
         seq_len        = 60,
         epochs         = 20,
         batch_size     = 64,
@@ -371,6 +456,7 @@ def train():
         dropout        = 0.2,
         channels       = [32, 64, 64],
         patience       = 7,
+        feature_set_ver= TECHNICAL_DAILY_V1,
         output_dir     = "/kaggle/working",
     )
     train_model(args)
