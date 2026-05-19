@@ -20,57 +20,11 @@ import {
   toAbsoluteImageUrl,
   dataUrlToFile,
 } from '../utils/imageUtils';
-
-// dataUrlToFile imported from utils
-
-const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
-const SAFE_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,8})$/;
-const SAFE_FONT_FAMILIES = new Set([
-  'Pretendard',
-  'Noto Sans KR',
-  'Apple SD Gothic Neo',
-  'Arial',
-  'Georgia',
-  'Courier New',
-]);
-const SAFE_FONT_SIZES = new Set([12, 14, 16, 18, 20, 24, 28, 32, 40]);
-
-const escapeHtmlAttribute = (value) => String(value)
-  .replace(/&/g, '&amp;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;');
-
-const sanitizeUrl = (value) => {
-  const raw = String(value || '').trim();
-  if (!raw || raw.startsWith('//') || /[\u0000-\u001F\u007F<>"']/.test(raw)) {
-    return null;
-  }
-
-  try {
-    const parsed = new URL(raw);
-    if (!SAFE_URL_PROTOCOLS.has(parsed.protocol)) return null;
-    return escapeHtmlAttribute(parsed.href);
-  } catch {
-    return null;
-  }
-};
-
-const sanitizeColor = (value) => {
-  const raw = String(value || '').trim();
-  return SAFE_COLOR_PATTERN.test(raw) ? raw.toLowerCase() : null;
-};
-
-const sanitizeFontFamily = (value) => {
-  const raw = String(value || '').trim().replaceAll('"', '').replaceAll("'", '');
-  return SAFE_FONT_FAMILIES.has(raw) ? raw : null;
-};
-
-const sanitizeFontSize = (value) => {
-  const size = Number.parseInt(String(value || '').trim(), 10);
-  return Number.isInteger(size) && SAFE_FONT_SIZES.has(size) ? String(size) : null;
-};
+import {
+  escapeHtmlAttribute,
+  jsonToHtml,
+  sanitizeHref,
+} from '../utils/richTextHtml';
 
 const replaceBase64ImagesWithUploadedUrls = async (contentJson, uploadImage) => {
   const uploadedMediaIds = [];
@@ -138,90 +92,6 @@ const getTextFromJson = (contentJson) => {
 
   walk(contentJson.content);
   return parts.join('').replace(/\n+/g, '\n').trim();
-};
-
-const jsonToHtml = (contentJson) => {
-  if (!contentJson || !Array.isArray(contentJson.content)) {
-    return '<p></p>';
-  }
-
-  const renderNode = (node) => {
-    if (!node) return '';
-    if (node.type === 'text') {
-      const text = String(node.text || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-      // apply marks if present
-      if (!Array.isArray(node.marks) || node.marks.length === 0) return text;
-
-      let content = text;
-      // apply simple formatting marks using tags
-      node.marks.forEach((mark) => {
-        if (!mark || !mark.type) return;
-        const t = String(mark.type || '');
-        if (t === 'bold') content = `<strong>${content}</strong>`;
-        if (t === 'italic') content = `<em>${content}</em>`;
-        if (t === 'underline') content = `<u>${content}</u>`;
-        if (t === 'strike' || t === 'strikeThrough' || t === 'strike_through') content = `<s>${content}</s>`;
-        if (t === 'link') {
-          const safeHref = sanitizeUrl(mark.attrs?.href);
-          if (safeHref) {
-            content = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${content}</a>`;
-          }
-        }
-        if (t === 'textStyle' || t === 'color' || t === 'highlight') {
-          const styles = [];
-          const color = sanitizeColor(mark.attrs?.color);
-          const highlightColor = t === 'highlight' ? (color || sanitizeColor(mark.attrs?.backgroundColor)) : null;
-          const fontFamily = sanitizeFontFamily(mark.attrs?.fontFamily);
-          const fontSize = sanitizeFontSize(mark.attrs?.fontSize);
-
-          if (color) styles.push(`color: ${color}`);
-          if (highlightColor) styles.push(`background-color: ${highlightColor}`);
-          if (fontFamily) styles.push(`font-family: ${fontFamily}`);
-          if (fontSize) styles.push(`font-size: ${fontSize}px`);
-
-          if (styles.length > 0) {
-            content = `<span style="${escapeHtmlAttribute(styles.join('; '))}">${content}</span>`;
-          }
-        }
-      });
-
-      return content;
-    }
-    if (node.type === 'paragraph') {
-      return `<p>${(node.content || []).map(renderNode).join('')}</p>`;
-    }
-    if (node.type === 'heading') {
-      const level = Math.min(Math.max(Number(node.attrs?.level || 1), 1), 6);
-      return `<h${level}>${(node.content || []).map(renderNode).join('')}</h${level}>`;
-    }
-    if (node.type === 'image') {
-      const src = String(node.attrs?.src || '').replace(/"/g, '&quot;');
-      const alt = String(node.attrs?.alt || '').replace(/"/g, '&quot;');
-      const width = String(node.attrs?.width || '').trim();
-      const height = String(node.attrs?.height || '').trim();
-      const align = String(node.attrs?.align || 'left').trim();
-      const alignStyle = align === 'center'
-        ? 'display: block; margin-left: auto; margin-right: auto;'
-        : align === 'right'
-          ? 'display: block; margin-left: auto; margin-right: 0;'
-          : 'display: block; margin-left: 0; margin-right: auto;';
-      const style = ` style="${alignStyle}${width ? ` width: ${width};` : ''}${height ? ` height: ${height};` : ' height: auto;'}"`;
-      const widthAttr = width ? ` width="${width.replace(/"/g, '&quot;')}"` : '';
-      const heightAttr = height ? ` height="${height.replace(/"/g, '&quot;')}"` : '';
-      const alignAttr = ` data-align="${align}"`;
-      return `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr}${alignAttr}${style} />`;
-    }
-    if (Array.isArray(node.content)) {
-      return node.content.map(renderNode).join('');
-    }
-    return '';
-  };
-
-  return contentJson.content.map(renderNode).join('') || '<p></p>';
 };
 
 const BoardWrite = () => {
