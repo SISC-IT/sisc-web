@@ -221,6 +221,9 @@ const PostDetail = () => {
     }
     return Array.from(urls);
   };
+
+  const getAttachmentIdentifier = (file) => file?.postAttachmentId || file?.mediaId || file?.id || '';
+
   const refreshPostAndComments = async () => {
     try {
       const updatedPost = await boardApi.getPost(postId);
@@ -420,7 +423,11 @@ const PostDetail = () => {
         if (newFiles && newFiles.length > 0) {
           try {
             const uploaded = await Promise.all(newFiles.map((f) => boardApi.uploadBoardFile(f)));
-            uploadedNewMediaIds = uploaded.map((u) => u?.mediaId).filter(Boolean);
+            const normalizedUploadedIds = uploaded.map((u) => getAttachmentIdentifier(u)).filter(Boolean);
+            if (normalizedUploadedIds.length !== uploaded.length) {
+              throw new Error('첨부파일 업로드 응답에서 식별자를 찾을 수 없습니다.');
+            }
+            uploadedNewMediaIds = normalizedUploadedIds;
             console.log('uploaded new files for edit:', uploaded);
           } catch (err) {
             console.error('새 첨부파일 업로드 실패:', err);
@@ -450,7 +457,7 @@ const PostDetail = () => {
             return parts.join('').replace(/\n+/g, '\n').trim();
           })(json),
           // attach existing attachment ids plus newly uploaded media ids
-          attachmentIds: Array.from(new Set([...(editFiles || []).map((f) => f.postAttachmentId || f.mediaId || f.id).filter(Boolean), ...(uploadedNewMediaIds || [])].filter(Boolean))),
+          attachmentIds: Array.from(new Set([...(editFiles || []).map((f) => getAttachmentIdentifier(f)).filter(Boolean), ...(uploadedNewMediaIds || [])].filter(Boolean))),
         };
 
         usedUpdate = await boardApi.updateRichPost(postId, payload);

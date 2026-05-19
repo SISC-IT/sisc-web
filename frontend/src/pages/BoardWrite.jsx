@@ -432,7 +432,7 @@ const BoardWrite = () => {
         contentText,
         anonymous: isAnonymous,
         inlineMediaIds: normalizedInlineMediaIds,
-        attachmentIds: attachmentFiles.map((file) => file.mediaId).filter(Boolean),
+        attachmentIds: attachmentFiles.map((file) => getAttachmentIdentifier(file)).filter(Boolean),
       };
 
       await boardApi.createRichPost(payload);
@@ -459,10 +459,9 @@ const BoardWrite = () => {
         })
       );
       console.log('attachment upload responses:', uploaded);
-      // warn if server didn't return mediaId for any uploaded file
-      const missing = uploaded.filter((u) => !u || (!u.mediaId && !u.postAttachmentId && !u.savedFilename));
+      const missing = uploaded.filter((u) => !getAttachmentIdentifier(u));
       if (missing.length > 0) {
-        console.warn('Some attachments did not return expected identifiers from server:', missing);
+        throw new Error('첨부파일 업로드 응답에서 식별자를 찾을 수 없습니다.');
       }
       setAttachmentFiles((prev) => [...prev, ...uploaded]);
     } catch (error) {
@@ -479,6 +478,10 @@ const BoardWrite = () => {
       const uploaded = await Promise.all(
         files.map(async (file) => boardApi.uploadBoardFile(file))
       );
+      const missing = uploaded.filter((u) => !getAttachmentIdentifier(u));
+      if (missing.length > 0) {
+        throw new Error('첨부파일 업로드 응답에서 식별자를 찾을 수 없습니다.');
+      }
       setAttachmentFiles((prev) => [...prev, ...uploaded]);
     } catch (error) {
       console.error('첨부파일 업로드 실패:', error);
@@ -487,7 +490,7 @@ const BoardWrite = () => {
     }
   };
 
-  const getAttachmentIdentifier = (file) => file?.mediaId || file?.url || file?.originalFilename || file?.name || '';
+  const getAttachmentIdentifier = (file) => file?.postAttachmentId || file?.mediaId || file?.id || file?.url || file?.originalFilename || file?.name || '';
 
   const handleRemoveAttachment = (identifier) => {
     setAttachmentFiles((prev) => (prev || []).filter((file) => getAttachmentIdentifier(file) !== identifier));
