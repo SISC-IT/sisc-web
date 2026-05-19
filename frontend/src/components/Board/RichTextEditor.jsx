@@ -11,6 +11,14 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import styles from './RichTextEditor.module.css';
+import toolboxImgIcon from '../../assets/toolbox-img-icon.svg';
+import toolboxVideoIcon from '../../assets/toolbox-video-icon.svg';
+import toolboxFileIcon from '../../assets/toolbox-file-icon.svg';
+import toolboxLeftIcon from '../../assets/toolbox-left-icon.svg';
+import toolboxMidIcon from '../../assets/toolbox-mid-icon.svg';
+import toolboxRightIcon from '../../assets/toolbox-right-icon.svg';
+import toolboxTextColorIcon from '../../assets/toolbox-textcolor-icon.svg';
+import toolboxTextBgIcon from '../../assets/toolbox-textBackgroundColor-icon.svg';
 
 import {
   isDataImageUrl,
@@ -362,10 +370,16 @@ const RichTextEditor = ({
   placeholder = '내용을 입력해주세요.',
   onUploadImage,
   onImageInserted,
+  onUploadFile,
+  onUploadVideo,
+  onAttachFiles,
 }) => {
   const onChangeRef = useRef(onChange);
   const imageInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [, setSelectionTick] = useState(0);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -523,35 +537,113 @@ const RichTextEditor = ({
         return true;
       },
       handleDrop: (_view, event) => {
-        if (!editable || !onUploadImage) return false;
+        if (!editable) return false;
 
-        const droppedFiles = Array.from(event.dataTransfer?.files || []).filter(isImageFile);
+        const allDropped = Array.from(event.dataTransfer?.files || []);
+        if (allDropped.length === 0) return false;
 
-        if ((event.dataTransfer?.files?.length || 0) > 0 && droppedFiles.length === 0) {
-          // Block filename text insertion when file metadata has empty MIME.
+        const imageFiles = allDropped.filter(isImageFile);
+        const otherFiles = allDropped.filter((f) => !isImageFile(f));
+
+        // If parent provided `onAttachFiles`, handle images inline and delegate
+        // non-image files to the parent so they become attachments.
+        if (onAttachFiles) {
           event.preventDefault();
+          window.setTimeout(() => {
+            Promise.resolve()
+              .then(async () => {
+                try {
+                  if (imageFiles.length > 0 && onUploadImage) {
+                    try {
+                      setIsUploadingImage(true);
+                      for (const file of imageFiles) {
+                        await insertImage(file);
+                      }
+                    } catch (err) {
+                      console.error('이미지 드래그 앤 드롭 실패:', err);
+                    } finally {
+                      setIsUploadingImage(false);
+                    }
+                  }
+
+                  if (otherFiles.length > 0) {
+                    try {
+                      await onAttachFiles(otherFiles);
+                    } catch (err) {
+                      console.error('파일 드롭 처리 실패 (onAttachFiles):', err);
+                    }
+                  }
+                } catch (error) {
+                  console.error('드롭 처리 실패:', error);
+                }
+              })
+              .catch((error) => {
+                console.error('드롭 처리 실패:', error);
+              });
+          }, 0);
+
           return true;
         }
 
-        if (droppedFiles.length === 0) {
-          return false;
-        }
+        // We'll handle both images and other files by inserting them into the editor content.
+        // Prevent the default only when we actually handle insertion here.
+        let willHandle = imageFiles.length > 0 || otherFiles.length > 0;
+        if (!willHandle) return false;
 
         event.preventDefault();
 
         window.setTimeout(() => {
           Promise.resolve()
             .then(async () => {
-              setIsUploadingImage(true);
-              for (const file of droppedFiles) {
-                await insertImage(file);
+              // images: use existing insertImage flow
+              if (imageFiles.length > 0 && onUploadImage) {
+                try {
+                  setIsUploadingImage(true);
+                  for (const file of imageFiles) {
+                    await insertImage(file);
+                  }
+                } catch (err) {
+                  console.error('이미지 드래그 앤 드롭 실패:', err);
+                } finally {
+                  setIsUploadingImage(false);
+                }
+              }
+
+              // non-image files: upload (prefer onUploadFile) and insert file links into editor
+              if (otherFiles.length > 0) {
+                try {
+                  // If a single-file uploader is available
+                  if (onUploadFile) {
+                    for (const file of otherFiles) {
+                      try {
+                        const uploaded = await onUploadFile(file);
+                        const normalizedUrl = toAbsoluteImageUrl(uploaded?.url || uploaded?.fileUrl || uploaded?.downloadUrl || uploaded?.savedUrl || file.name);
+                        insertFileLink(normalizedUrl || '', uploaded?.originalFilename || file.name);
+                      } catch (err) {
+                        console.error('파일 드롭 업로드 실패 (onUploadFile):', err);
+                      }
+                    }
+                  } else if (onAttachFiles) {
+                    // fallback: onAttachFiles may upload and return uploaded metadata array
+                    try {
+                      const uploadedArr = await onAttachFiles(otherFiles);
+                      if (Array.isArray(uploadedArr)) {
+                        for (const uploaded of uploadedArr) {
+                          const normalizedUrl = toAbsoluteImageUrl(uploaded?.url || uploaded?.fileUrl || uploaded?.downloadUrl || uploaded?.savedUrl || uploaded?.url);
+                          insertFileLink(normalizedUrl || '', uploaded?.originalFilename || uploaded?.name || '첨부파일');
+                        }
+                      }
+                    } catch (err) {
+                      console.error('파일 드롭 업로드 실패 (onAttachFiles):', err);
+                    }
+                  }
+                } catch (err) {
+                  console.error('파일 드롭 처리 실패:', err);
+                }
               }
             })
             .catch((error) => {
-              console.error('이미지 드래그 앤 드롭 실패:', error);
-            })
-            .finally(() => {
-              setIsUploadingImage(false);
+              console.error('드롭 처리 실패:', error);
             });
         }, 0);
 
@@ -594,6 +686,81 @@ const RichTextEditor = ({
     }
   };
 
+  const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  const insertFileLink = (url, filename) => {
+    if (!editor || !url) return;
+    const safeUrl = escapeHtml(url);
+    const safeName = escapeHtml(filename || url);
+    editor.chain().focus().insertContent(`<p><a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeName}</a></p>`).run();
+  };
+
+  const handleFileInputChange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      // If parent wants attachments, delegate files to it
+      if (onAttachFiles) {
+        try {
+          await onAttachFiles(files);
+        } catch (err) {
+          console.error('파일 업로드 처리 실패 (onAttachFiles):', err);
+        }
+        return;
+      }
+
+      for (const file of files) {
+        if (onUploadFile) {
+          const uploaded = await onUploadFile(file);
+          const normalizedUrl = toAbsoluteImageUrl(uploaded?.url);
+          insertFileLink(normalizedUrl || '', uploaded?.originalFilename || file.name);
+        }
+      }
+    } catch (e) {
+      console.error('파일 업로드 실패:', e);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleVideoInputChange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      // If parent wants attachments, delegate videos to it
+      if (onAttachFiles) {
+        try {
+          await onAttachFiles(files);
+        } catch (err) {
+          console.error('비디오 업로드 처리 실패 (onAttachFiles):', err);
+        }
+        return;
+      }
+
+      for (const file of files) {
+        if (onUploadVideo) {
+          const uploaded = await onUploadVideo(file);
+          const normalizedUrl = toAbsoluteImageUrl(uploaded?.url);
+          insertFileLink(normalizedUrl || '', uploaded?.originalFilename || file.name);
+        }
+      }
+    } catch (e) {
+      console.error('비디오 업로드 실패:', e);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const promptLink = () => {
     if (!editor || !editable) return;
 
@@ -627,6 +794,31 @@ const RichTextEditor = ({
     }
 
     editor.chain().focus().setColor(color).run();
+  };
+
+  const applyTextBackground = (color) => {
+    if (!editor || !editable) return;
+
+    if (!color) {
+      // prefer to unset Highlight, fallback to clearing textStyle background
+      try {
+        editor.chain().focus().unsetHighlight().run();
+      } catch {
+        try {
+          editor.chain().focus().setMark('textStyle', { backgroundColor: null }).run();
+        } catch {}
+      }
+      return;
+    }
+
+    // prefer Highlight (supports multicolor), fallback to textStyle mark
+    try {
+      editor.chain().focus().toggleHighlight({ color }).run();
+    } catch {
+      try {
+        editor.chain().focus().setMark('textStyle', { backgroundColor: color }).run();
+      } catch {}
+    }
   };
 
   const applyFontFamily = (fontFamily) => {
@@ -680,6 +872,23 @@ const RichTextEditor = ({
     editor.setEditable(editable);
   }, [editor, editable]);
 
+  // Re-render component when selection changes so toolbar reflects
+  // formatting of the currently selected text (bold/italic/align/etc.).
+  useEffect(() => {
+    if (!editor) return undefined;
+
+    const onSelection = () => {
+      setSelectionTick((t) => t + 1);
+    };
+
+    editor.on('selectionUpdate', onSelection);
+    return () => {
+      try {
+        editor.off('selectionUpdate', onSelection);
+      } catch {}
+    };
+  }, [editor]);
+
   useEffect(() => {
     if (!editor) return;
 
@@ -699,39 +908,44 @@ const RichTextEditor = ({
   return (
     <div className={styles.editorShell}>
       <div className={styles.toolbar}>
-        <div className={styles.toolbarGroup}>
-          <button type="button" onClick={() => editor.chain().focus().undo().run()} disabled={!editable || !editor.can().chain().focus().undo().run()}>
-            ↺
+        <div className={styles.mediaToolbar}>
+          <button type="button" title="이미지 업로드" onClick={() => imageInputRef.current?.click()} disabled={!editable || isUploadingImage} className={styles.iconButton}>
+            <img src={toolboxImgIcon} alt="이미지" className={styles.iconImg} />
           </button>
-          <button type="button" onClick={() => editor.chain().focus().redo().run()} disabled={!editable || !editor.can().chain().focus().redo().run()}>
-            ↻
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className={styles.hiddenFileInput}
+            onChange={handleImageInputChange}
+          />
+
+          <button type="button" title="비디오 업로드" onClick={() => videoInputRef.current?.click()} disabled={!editable} className={styles.iconButton}>
+            <img src={toolboxVideoIcon} alt="비디오" className={styles.iconImg} />
           </button>
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            multiple
+            className={styles.hiddenFileInput}
+            onChange={handleVideoInputChange}
+          />
+
+          <button type="button" title="파일 업로드" onClick={() => fileInputRef.current?.click()} disabled={!editable} className={styles.iconButton}>
+            <img src={toolboxFileIcon} alt="파일" className={styles.iconImg} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className={styles.hiddenFileInput}
+            onChange={handleFileInputChange}
+          />
         </div>
 
-        <div className={styles.toolbarDivider} />
-
-        <div className={styles.toolbarGroup}>
-          <select
-            className={styles.toolbarSelect}
-            value={editor.isActive('heading', { level: 1 }) ? 'h1' : editor.isActive('heading', { level: 2 }) ? 'h2' : 'p'}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              if (nextValue === 'h1') {
-                editor.chain().focus().toggleHeading({ level: 1 }).run();
-                return;
-              }
-              if (nextValue === 'h2') {
-                editor.chain().focus().toggleHeading({ level: 2 }).run();
-                return;
-              }
-              editor.chain().focus().setParagraph().run();
-            }}
-          >
-            <option value="p">본문</option>
-            <option value="h1">제목 1</option>
-            <option value="h2">제목 2</option>
-          </select>
-
+        <div className={styles.formatToolbar}>
           <select
             className={styles.toolbarSelect}
             value={FONT_SIZE_OPTIONS.includes(Number(editor.getAttributes('textStyle')?.fontSize)) ? Number(editor.getAttributes('textStyle')?.fontSize) : ''}
@@ -745,22 +959,6 @@ const RichTextEditor = ({
             ))}
           </select>
 
-          <select
-            className={styles.toolbarSelect}
-            value={editor.getAttributes('textStyle')?.fontFamily || ''}
-            onChange={(event) => applyFontFamily(event.target.value)}
-          >
-            {FONT_FAMILY_OPTIONS.map((font) => (
-              <option key={font.label} value={font.value} style={{ fontFamily: font.value || undefined }}>
-                {font.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.toolbarDivider} />
-
-        <div className={styles.toolbarGroup}>
           <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? styles.activeButton : ''} aria-label="굵게">
             <strong>B</strong>
           </button>
@@ -773,143 +971,43 @@ const RichTextEditor = ({
           <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} className={editor.isActive('strike') ? styles.activeButton : ''} aria-label="취소선">
             <span style={{textDecoration: 'line-through'}}>S</span>
           </button>
-          <button type="button" onClick={() => editor.chain().focus().toggleHighlight().run()} className={editor.isActive('highlight') ? styles.activeButton : ''} aria-label="형광">
-            <span className={styles.highlightLabel}>형광</span>
-          </button>
-        </div>
 
-        <div className={styles.toolbarDivider} />
+          <div className={styles.colorGroup}>
+              <label className={styles.colorLabel} title="글자 색상 선택">
+                <img src={toolboxTextColorIcon} alt="text color" className={styles.colorAsset} />
+                <input
+                  type="color"
+                  className={styles.colorInput}
+                  value={editor?.getAttributes('textStyle')?.color || '#222222'}
+                  onChange={(e) => applyTextColor(e.target.value)}
+                  aria-label="글자 색상 선택"
+                />
+              </label>
 
-        <div className={styles.toolbarGroup}>
-          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={editor.isActive('bulletList') ? styles.activeButton : ''}>
-            •
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={editor.isActive('orderedList') ? styles.activeButton : ''}>
-            1.
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={editor.isActive('blockquote') ? styles.activeButton : ''}>
-            ❝
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().toggleCodeBlock().run()} className={editor.isActive('codeBlock') ? styles.activeButton : ''}>
-            {'</>'}
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().setHorizontalRule().run()} disabled={!editable}>
-            ─
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().setHardBreak().run()} disabled={!editable}>
-            ↵
-          </button>
-        </div>
+            <label className={styles.colorLabel} title="글자 배경색 선택">
+              <img src={toolboxTextBgIcon} alt="text background" className={styles.colorAsset} />
+              <input
+                type="color"
+                className={styles.colorInput}
+                value={editor?.getAttributes('highlight')?.color || '#ffffff'}
+                onChange={(e) => applyTextBackground(e.target.value)}
+                aria-label="글자 배경색 선택"
+              />
+            </label>
 
-        <div className={styles.toolbarDivider} />
+            
+          </div>
 
-        <div className={styles.toolbarGroup}>
           <button type="button" onClick={() => editor.chain().focus().setTextAlign('left').run()} className={editor.isActive({ textAlign: 'left' }) ? styles.activeButton : ''} aria-label="왼쪽 정렬">
-            <span className={styles.alignIcon} data-align="left">
-              <span className={styles.alignLine} />
-              <span className={styles.alignLine} />
-              <span className={styles.alignLine} />
-            </span>
+            <img src={toolboxLeftIcon} alt="왼쪽정렬" className={styles.alignImg} />
           </button>
           <button type="button" onClick={() => editor.chain().focus().setTextAlign('center').run()} className={editor.isActive({ textAlign: 'center' }) ? styles.activeButton : ''} aria-label="가운데 정렬">
-            <span className={styles.alignIcon} data-align="center">
-              <span className={styles.alignLine} />
-              <span className={styles.alignLine} />
-              <span className={styles.alignLine} />
-            </span>
+            <img src={toolboxMidIcon} alt="가운데정렬" className={styles.alignImg} />
           </button>
           <button type="button" onClick={() => editor.chain().focus().setTextAlign('right').run()} className={editor.isActive({ textAlign: 'right' }) ? styles.activeButton : ''} aria-label="오른쪽 정렬">
-            <span className={styles.alignIcon} data-align="right">
-              <span className={styles.alignLine} />
-              <span className={styles.alignLine} />
-              <span className={styles.alignLine} />
-            </span>
+            <img src={toolboxRightIcon} alt="오른쪽정렬" className={styles.alignImg} />
           </button>
         </div>
-
-        <div className={styles.toolbarDivider} />
-
-        <div className={styles.toolbarGroup}>
-          <button type="button" onClick={promptLink} disabled={!editable} className={editor.isActive('link') ? styles.activeButton : ''}>
-            링크
-          </button>
-          <button type="button" onClick={clearFormatting} disabled={!editable}>
-            서식삭제
-          </button>
-        </div>
-
-        <div className={styles.toolbarDivider} />
-
-        <div className={styles.toolbarGroup}>
-          {/* Compact color picker for text color */}
-          <input
-            type="color"
-            className={styles.colorInput}
-            value={editor?.getAttributes('textStyle')?.color || '#222222'}
-            onChange={(e) => applyTextColor(e.target.value)}
-            title="글자 색상 선택"
-            aria-label="글자 색상 선택"
-          />
-          <button type="button" onClick={() => applyTextColor(null)} title="기본 색상으로" style={{ marginLeft: 8 }}>
-            ↺
-          </button>
-        </div>
-
-        <div className={styles.toolbarDivider} />
-
-        <div className={styles.toolbarGroup}>
-          <button type="button" title="이미지 업로드" onClick={() => imageInputRef.current?.click()} disabled={!editable || isUploadingImage}>
-            {isUploadingImage ? '⏳' : '🖼'}
-          </button>
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className={styles.hiddenFileInput}
-            onChange={handleImageInputChange}
-          />
-        </div>
-
-        {editor.isActive('image') ? (
-          <>
-            <div className={styles.toolbarDivider} />
-
-            <div className={styles.toolbarGroup}>
-              {IMAGE_ALIGN_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  title={option.label}
-                  onClick={() => applyImageAlignment(option.value)}
-                  className={currentImageAlignment === option.value ? styles.activeButton : ''}
-                >
-                  {option.value === 'left' ? 'L' : option.value === 'center' ? 'C' : 'R'}
-                </button>
-              ))}
-              <button type="button" title="원본 크기" onClick={resetSelectedImageSize} disabled={!currentImageWidth}>
-                ↺
-              </button>
-              <button type="button" title="이미지 삭제" onClick={deleteSelectedImage}>
-                🗑
-              </button>
-
-              <select
-                className={styles.toolbarSelect}
-                value={currentImageWidth}
-                onChange={(event) => applyImageWidth(event.target.value)}
-                aria-label="이미지 크기"
-                style={{ marginLeft: 8 }}
-              >
-                <option value="">크기</option>
-                <option value="25%">25%</option>
-                <option value="50%">50%</option>
-                <option value="75%">75%</option>
-                <option value="100%">100%</option>
-              </select>
-            </div>
-          </>
-        ) : null}
       </div>
       <div className={styles.editorBody}>
         <EditorContent editor={editor} />

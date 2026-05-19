@@ -208,7 +208,7 @@ const PostHtmlView = ({ html = '' }) => {
             FontFamily,
             FontSize,
             Color,
-            Highlight,
+            Highlight.configure({ multicolor: true }),
             ResizableImage.configure({
               inline: false,
               allowBase64: false,

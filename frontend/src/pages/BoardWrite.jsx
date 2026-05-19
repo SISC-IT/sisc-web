@@ -20,8 +20,11 @@ import {
   toAbsoluteImageUrl,
   dataUrlToFile,
 } from '../utils/imageUtils';
-
-// dataUrlToFile imported from utils
+import {
+  escapeHtmlAttribute,
+  jsonToHtml,
+  sanitizeHref,
+} from '../utils/richTextHtml';
 
 const replaceBase64ImagesWithUploadedUrls = async (contentJson, uploadImage) => {
   const uploadedMediaIds = [];
@@ -89,52 +92,6 @@ const getTextFromJson = (contentJson) => {
 
   walk(contentJson.content);
   return parts.join('').replace(/\n+/g, '\n').trim();
-};
-
-const jsonToHtml = (contentJson) => {
-  if (!contentJson || !Array.isArray(contentJson.content)) {
-    return '<p></p>';
-  }
-
-  const renderNode = (node) => {
-    if (!node) return '';
-    if (node.type === 'text') {
-      return String(node.text || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
-    if (node.type === 'paragraph') {
-      return `<p>${(node.content || []).map(renderNode).join('')}</p>`;
-    }
-    if (node.type === 'heading') {
-      const level = Math.min(Math.max(Number(node.attrs?.level || 1), 1), 6);
-      return `<h${level}>${(node.content || []).map(renderNode).join('')}</h${level}>`;
-    }
-    if (node.type === 'image') {
-      const src = String(node.attrs?.src || '').replace(/"/g, '&quot;');
-      const alt = String(node.attrs?.alt || '').replace(/"/g, '&quot;');
-      const width = String(node.attrs?.width || '').trim();
-      const height = String(node.attrs?.height || '').trim();
-      const align = String(node.attrs?.align || 'left').trim();
-      const alignStyle = align === 'center'
-        ? 'display: block; margin-left: auto; margin-right: auto;'
-        : align === 'right'
-          ? 'display: block; margin-left: auto; margin-right: 0;'
-          : 'display: block; margin-left: 0; margin-right: auto;';
-      const style = ` style="${alignStyle}${width ? ` width: ${width};` : ''}${height ? ` height: ${height};` : ' height: auto;'}"`;
-      const widthAttr = width ? ` width="${width.replace(/"/g, '&quot;')}"` : '';
-      const heightAttr = height ? ` height="${height.replace(/"/g, '&quot;')}"` : '';
-      const alignAttr = ` data-align="${align}"`;
-      return `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr}${alignAttr}${style} />`;
-    }
-    if (Array.isArray(node.content)) {
-      return node.content.map(renderNode).join('');
-    }
-    return '';
-  };
-
-  return contentJson.content.map(renderNode).join('') || '<p></p>';
 };
 
 const BoardWrite = () => {
@@ -312,7 +269,24 @@ const BoardWrite = () => {
     const contentHtml = jsonToHtml(normalizedContentJson);
     const contentText = getTextFromJson(normalizedContentJson);
 
-    if (!contentText) {
+    const containsImageNode = (doc) => {
+      try {
+        if (!doc || !doc.content) return false;
+        const walk = (nodes) => {
+          for (const node of nodes || []) {
+            if (!node) continue;
+            if (node.type === 'image') return true;
+            if (Array.isArray(node.content) && walk(node.content)) return true;
+          }
+          return false;
+        };
+        return walk(doc.content);
+      } catch (e) {
+        return false;
+      }
+    };
+
+    if (!contentText && !containsImageNode(normalizedContentJson)) {
       alert('내용을 입력해주세요.');
       return;
     }
@@ -328,7 +302,7 @@ const BoardWrite = () => {
         contentText,
         anonymous: isAnonymous,
         inlineMediaIds: normalizedInlineMediaIds,
-        attachmentIds: attachmentFiles.map((file) => file.mediaId).filter(Boolean),
+        attachmentIds: attachmentFiles.map((file) => getAttachmentIdentifier(file)).filter(Boolean),
       };
 
       await boardApi.createRichPost(payload);
@@ -354,6 +328,11 @@ const BoardWrite = () => {
           return boardApi.uploadBoardFile(file);
         })
       );
+      console.log('attachment upload responses:', uploaded);
+      const missing = uploaded.filter((u) => !getAttachmentIdentifier(u));
+      if (missing.length > 0) {
+        throw new Error('첨부파일 업로드 응답에서 식별자를 찾을 수 없습니다.');
+      }
       setAttachmentFiles((prev) => [...prev, ...uploaded]);
     } catch (error) {
       console.error('첨부파일 업로드 실패:', error);
@@ -363,13 +342,34 @@ const BoardWrite = () => {
     }
   };
 
+  const handleAttachFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    try {
+      const uploaded = await Promise.all(
+        files.map(async (file) => boardApi.uploadBoardFile(file))
+      );
+      const missing = uploaded.filter((u) => !getAttachmentIdentifier(u));
+      if (missing.length > 0) {
+        throw new Error('첨부파일 업로드 응답에서 식별자를 찾을 수 없습니다.');
+      }
+      setAttachmentFiles((prev) => [...prev, ...uploaded]);
+    } catch (error) {
+      console.error('첨부파일 업로드 실패:', error);
+      // bubble up or alert
+      throw error;
+    }
+  };
+
+  const getAttachmentIdentifier = (file) => file?.postAttachmentId || file?.mediaId || file?.id || file?.url || file?.originalFilename || file?.name || '';
+
+  const handleRemoveAttachment = (identifier) => {
+    setAttachmentFiles((prev) => (prev || []).filter((file) => getAttachmentIdentifier(file) !== identifier));
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.headerRow}>
-          <button type="button" className={styles.backButton} onClick={handleBack}>
-            ← 목록으로
-          </button>
           <div>
             <p className={styles.kicker}>새 글 작성</p>
             <h1 className={styles.title}>{currentBoardName} 글 작성하기</h1>
@@ -377,10 +377,10 @@ const BoardWrite = () => {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.fieldGroup}>
-            {Array.isArray(subBoardOptions) && subBoardOptions.length > 0 ? (
-              <div>
-                <label className={styles.label}>게시판 선택</label>
+          <div className={styles.boardHeaderRow}>
+            <div className={styles.boardHeaderLeft}>
+              <label className={styles.label} style={{ margin: 0, marginRight: 12 }}>게시판</label>
+              {Array.isArray(subBoardOptions) && subBoardOptions.length > 0 ? (
                 <select className={styles.select} value={selectedSubBoardId} onChange={(e) => handleSubBoardChange(e.target.value)}>
                   <option value="">(선택) 게시판 선택</option>
                   {subBoardOptions.map((board) => (
@@ -389,12 +389,14 @@ const BoardWrite = () => {
                     </option>
                   ))}
                 </select>
-              </div>
-            ) : null}
+              ) : (
+                <div className={styles.boardCurrentName}>{currentBoardName}</div>
+              )}
+            </div>
           </div>
 
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>제목</label>
+          <div className={styles.titleRow}>
+            <label className={styles.label} style={{ marginRight: 12 }}>제목</label>
             <input
               className={styles.input}
               value={title}
@@ -406,17 +408,16 @@ const BoardWrite = () => {
           <div className={styles.fieldGroup}>
             <div className={styles.fieldHeader}>
               <label className={styles.label}>내용</label>
-              <label className={styles.fileButton}>
-                첨부파일 추가
-                <input type="file" multiple className={styles.hiddenFileInput} onChange={handleAttachmentChange} />
-              </label>
             </div>
 
             <RichTextEditor
               value={contentJson}
               onChange={setContentJson}
               placeholder="내용을 입력해 주세요."
-              onUploadImage={boardApi.uploadBoardImage}
+                onUploadImage={boardApi.uploadBoardImage}
+                onUploadFile={boardApi.uploadBoardFile}
+                onUploadVideo={boardApi.uploadBoardFile}
+                  onAttachFiles={handleAttachFiles}
               onImageInserted={(media) => {
                 if (media?.mediaId) {
                   setInlineMediaIds((prev) => Array.from(new Set([...(prev || []), media.mediaId])));
@@ -430,9 +431,12 @@ const BoardWrite = () => {
               <p className={styles.attachmentTitle}>첨부 파일</p>
               <div className={styles.attachmentGrid}>
                 {attachmentFiles.map((file) => (
-                  <div key={file.mediaId} className={styles.attachmentItem}>
-                    <span>{file.originalFilename}</span>
-                    <span className={styles.attachmentMeta}>{file.mediaType}</span>
+                  <div key={getAttachmentIdentifier(file)} className={styles.attachmentItem}>
+                    <span>{file.originalFilename || file.name || '첨부파일'}</span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className={styles.attachmentMeta}>{file.mediaType || ''}</span>
+                      <button type="button" className={styles.attachmentRemove} onClick={() => handleRemoveAttachment(getAttachmentIdentifier(file))} aria-label="첨부파일 삭제">X</button>
+                    </div>
                   </div>
                 ))}
               </div>

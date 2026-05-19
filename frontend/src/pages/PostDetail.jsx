@@ -9,6 +9,7 @@ import { toBoardRouteSegment } from '../utils/boardRoute';
 import PostView from '../components/Board/PostDetail/PostView';
 import PostEditForm from '../components/Board/PostDetail/PostEditForm';
 import CommentSection from '../components/Board/PostDetail/CommentSection';
+import { jsonToHtml } from '../utils/richTextHtml';
 
 const FILE_DOWNLOAD_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(
   /\/$/,
@@ -122,12 +123,128 @@ const PostDetail = () => {
   );
 
   // 데이터 로드 로직
+  const normalizeAttachments = (source) => {
+    if (!source) return [];
+    // Possible locations/names for attachments in various backend versions
+    const candidates = [
+      source.attachments,
+      source.fileAttachments,
+      source.inlineImages,
+      source.files,
+      source.postAttachments,
+      source.postAttachmentDtos,
+      source.attachmentList,
+      source.attachment || source.attachments || null,
+    ];
+
+    let arr = null;
+    for (const c of candidates) {
+      if (Array.isArray(c) && c.length > 0) {
+        arr = c;
+        break;
+      }
+    }
+
+    if (!arr) return [];
+
+    // Normalize each item to commonly used keys
+    return arr.map((it) => {
+      if (!it || typeof it !== 'object') return null;
+      const savedFilename = it.savedFilename || it.savedFileName || it.fileName || it.saved_name || it.file_key || it.key || it.savedname;
+      const originalFilename = it.originalFilename || it.originalFileName || it.name || it.fileName || it.filename || it.original_name || it.original;
+      const postAttachmentId = it.postAttachmentId || it.id || it.attachmentId || it.postAttachmentId || null;
+      const mediaId = it.mediaId || it.id || it.media_id || null;
+      const mediaType = it.mediaType || it.contentType || it.mimeType || it.type || '';
+      const size = it.size || it.fileSize || it.fileSize || null;
+      const url = it.url || it.downloadUrl || it.fileUrl || it.savedUrl || it.publicPath || null;
+
+      // If item comes from inlineImages/fileAttachments shape, ensure originalFilename/savedFilename present
+      const normalizedOriginal = originalFilename || (it.originalFilename ? it.originalFilename : it.originalName || it.name);
+      const normalizedSaved = savedFilename || (it.savedFilename ? it.savedFilename : it.fileName || it.savedName);
+
+      return {
+        ...it,
+        savedFilename: normalizedSaved,
+        originalFilename: normalizedOriginal,
+        postAttachmentId,
+        mediaId,
+        mediaType,
+        size,
+        url,
+      };
+    }).filter(Boolean);
+  };
+
+  const extractInlineUrlsFromContent = (source) => {
+    const urls = new Set();
+    try {
+      const push = (href) => {
+        if (!href) return;
+        const u = String(href || '').trim();
+        if (!u) return;
+        // normalize by removing query string
+        urls.add(u.split('?')[0]);
+      };
+
+      const contentJson = source?.contentJson;
+      if (contentJson && typeof contentJson === 'object' && Array.isArray(contentJson.content)) {
+        const walk = (nodes) => {
+          for (const node of nodes || []) {
+            if (!node) continue;
+            if (node.type === 'image' && node.attrs && node.attrs.src) push(node.attrs.src);
+            if (node.type === 'text' && Array.isArray(node.marks)) {
+              for (const mark of node.marks) {
+                if (mark && mark.type === 'link' && mark.attrs && mark.attrs.href) push(mark.attrs.href);
+              }
+            }
+            if (Array.isArray(node.content)) walk(node.content);
+          }
+        };
+        walk(contentJson.content);
+      }
+
+      const html = source?.contentHtml || source?.content;
+      if (html && typeof DOMParser !== 'undefined') {
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(String(html || ''), 'text/html');
+          const imgs = Array.from(doc.querySelectorAll('img'));
+          imgs.forEach((img) => push(img.getAttribute('src')));
+          const anchors = Array.from(doc.querySelectorAll('a'));
+          anchors.forEach((a) => push(a.getAttribute('href')));
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return Array.from(urls);
+  };
+
+  const getAttachmentIdentifier = (file) => file?.postAttachmentId || file?.mediaId || file?.id || '';
+
   const refreshPostAndComments = async () => {
     try {
       const updatedPost = await boardApi.getPost(postId);
-      setPost(updatedPost);
-      setEditTitle(updatedPost.title);
-      setEditContent(updatedPost.contentJson || updatedPost.content || updatedPost.contentText || '');
+      // normalize attachments into `attachments` field for consistent rendering
+      const normalizedAttachments = normalizeAttachments(updatedPost);
+      const inlineUrls = extractInlineUrlsFromContent(updatedPost).map((u) => String(u || '').split('?')[0]);
+      // filter out attachments that are already inline in content
+      const filteredAttachments = (normalizedAttachments || []).filter((att) => {
+        const attUrl = String(att?.url || att?.publicPath || att?.savedFilename || '').split('?')[0];
+        const attSaved = String(att?.savedFilename || att?.originalFilename || '').split('?')[0];
+        if (!attUrl && !attSaved) return true;
+        // if attachment url or saved filename appears in inline urls, exclude
+        if (attUrl && inlineUrls.includes(attUrl)) return false;
+        if (attSaved && inlineUrls.some((u) => u.endsWith(attSaved))) return false;
+        return true;
+      });
+
+      const normalizedPost = { ...updatedPost, attachments: filteredAttachments };
+      setPost(normalizedPost);
+      setEditTitle(normalizedPost.title);
+      setEditContent(normalizedPost.contentJson || normalizedPost.content || normalizedPost.contentText || '');
       const raw = extractRawComments(updatedPost);
       setComments(buildCommentTree(raw));
       return updatedPost;
@@ -148,9 +265,20 @@ const PostDetail = () => {
         setLoading(true);
         const data = await boardApi.getPost(postId);
         try { console.log('fetched post data:', data); } catch (e) {}
-        setPost(data);
-        setEditTitle(data.title);
-        setEditContent(data.contentJson || data.content || data.contentText || '');
+        const normalizedAttachments = normalizeAttachments(data);
+        const inlineUrls = extractInlineUrlsFromContent(data).map((u) => String(u || '').split('?')[0]);
+        const filteredAttachments = (normalizedAttachments || []).filter((att) => {
+          const attUrl = String(att?.url || att?.publicPath || att?.savedFilename || '').split('?')[0];
+          const attSaved = String(att?.savedFilename || att?.originalFilename || '').split('?')[0];
+          if (!attUrl && !attSaved) return true;
+          if (attUrl && inlineUrls.includes(attUrl)) return false;
+          if (attSaved && inlineUrls.some((u) => u.endsWith(attSaved))) return false;
+          return true;
+        });
+        const normalizedPost = { ...data, attachments: filteredAttachments };
+        setPost(normalizedPost);
+        setEditTitle(normalizedPost.title);
+        setEditContent(normalizedPost.contentJson || normalizedPost.content || normalizedPost.contentText || '');
         const raw = extractRawComments(data);
         setComments(buildCommentTree(raw));
         setError(null);
@@ -249,7 +377,18 @@ const PostDetail = () => {
   const handleEditStart = async () => {
     const updatedPost = await refreshPostAndComments();
     if (updatedPost) {
-      setEditFiles(updatedPost.attachments || []);
+      // ensure editFiles uses normalized attachments (exclude inline ones)
+      const normalized = normalizeAttachments(updatedPost) || [];
+      const inlineUrls = extractInlineUrlsFromContent(updatedPost).map((u) => String(u || '').split('?')[0]);
+      const filtered = normalized.filter((att) => {
+        const attUrl = String(att?.url || att?.publicPath || att?.savedFilename || '').split('?')[0];
+        const attSaved = String(att?.savedFilename || att?.originalFilename || '').split('?')[0];
+        if (!attUrl && !attSaved) return true;
+        if (attUrl && inlineUrls.includes(attUrl)) return false;
+        if (attSaved && inlineUrls.some((u) => u.endsWith(attSaved))) return false;
+        return true;
+      });
+      setEditFiles(filtered || []);
       setNewFiles([]);
       setIsEdit(true);
       setShowMenu(false);
@@ -279,32 +418,24 @@ const PostDetail = () => {
       let usedUpdate;
       if (editContent && typeof editContent === 'object' && Array.isArray(editContent.content)) {
         const json = editContent;
-        // simple conversion to HTML for servers expecting contentHtml
-        const jsonToHtml = (contentJson) => {
-          if (!contentJson || !Array.isArray(contentJson.content)) return '<p></p>';
-          const renderNode = (node) => {
-            if (!node) return '';
-            if (node.type === 'text') return String(node.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            if (node.type === 'paragraph') return `<p>${(node.content || []).map(renderNode).join('')}</p>`;
-            if (node.type === 'heading') {
-              const level = Math.min(Math.max(Number(node.attrs?.level || 1), 1), 6);
-              return `<h${level}>${(node.content || []).map(renderNode).join('')}</h${level}>`;
+        // If there are newly added files (File objects), upload them first
+        let uploadedNewMediaIds = [];
+        if (newFiles && newFiles.length > 0) {
+          try {
+            const uploaded = await Promise.all(newFiles.map((f) => boardApi.uploadBoardFile(f)));
+            const normalizedUploadedIds = uploaded.map((u) => getAttachmentIdentifier(u)).filter(Boolean);
+            if (normalizedUploadedIds.length !== uploaded.length) {
+              throw new Error('첨부파일 업로드 응답에서 식별자를 찾을 수 없습니다.');
             }
-            if (node.type === 'image') {
-              const src = String(node.attrs?.src || '').replace(/"/g, '&quot;');
-              const alt = String(node.attrs?.alt || '').replace(/"/g, '&quot;');
-              const width = String(node.attrs?.width || '').trim();
-              const height = String(node.attrs?.height || '').trim();
-              const widthAttr = width ? ` width=\"${width.replace(/\"/g, '&quot;')}\"` : '';
-              const heightAttr = height ? ` height=\"${height.replace(/\"/g, '&quot;')}\"` : '';
-              const style = width || height ? ` style=\"${width ? `width: ${width};` : ''}${height ? `height: ${height};` : ''}\"` : '';
-              return `<img src=\"${src}\" alt=\"${alt}\"${widthAttr}${heightAttr}${style} />`;
-            }
-            if (Array.isArray(node.content)) return node.content.map(renderNode).join('');
-            return '';
-          };
-          return contentJson.content.map(renderNode).join('') || '<p></p>';
-        };
+            uploadedNewMediaIds = normalizedUploadedIds;
+            console.log('uploaded new files for edit:', uploaded);
+          } catch (err) {
+            console.error('새 첨부파일 업로드 실패:', err);
+            alert('첨부파일 업로드에 실패했습니다. 다시 시도해주세요.');
+            setIsSavingEdit(false);
+            return;
+          }
+        }
 
         const payload = {
           boardId,
@@ -325,7 +456,8 @@ const PostDetail = () => {
             walk(j.content);
             return parts.join('').replace(/\n+/g, '\n').trim();
           })(json),
-          files: newFiles,
+          // attach existing attachment ids plus newly uploaded media ids
+          attachmentIds: Array.from(new Set([...(editFiles || []).map((f) => getAttachmentIdentifier(f)).filter(Boolean), ...(uploadedNewMediaIds || [])].filter(Boolean))),
         };
 
         usedUpdate = await boardApi.updateRichPost(postId, payload);
