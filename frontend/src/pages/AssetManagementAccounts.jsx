@@ -32,7 +32,16 @@ const todayInputValue = () => {
 const toQueryDate = (inputDate) => String(inputDate || '').replaceAll('-', '');
 
 const parseNumber = (value) => {
-  const numeric = Number(String(value ?? '').replace(/[^0-9.-]/g, ''));
+  if (value === null || value === undefined) return null;
+  const rawValue = String(value).trim();
+  if (!rawValue) return null;
+
+  const normalizedValue = rawValue.replace(/[^0-9.-]/g, '');
+  if (!normalizedValue || normalizedValue === '-' || normalizedValue === '.') {
+    return null;
+  }
+
+  const numeric = Number(normalizedValue);
   return Number.isFinite(numeric) ? numeric : null;
 };
 
@@ -49,6 +58,15 @@ const formatRate = (value) => {
   const numeric = parseNumber(text);
   if (numeric === null) return text;
   return `${numeric.toFixed(2)}%`;
+};
+
+const formatQuantity = (value) => {
+  const numeric = parseNumber(value);
+  if (numeric === null) return value || '-';
+
+  return Number.isInteger(numeric)
+    ? numeric.toLocaleString()
+    : numeric.toLocaleString(undefined, { maximumFractionDigits: 4 });
 };
 
 const formatPlain = (value) => value || '-';
@@ -284,7 +302,7 @@ function AssetManagementAccounts() {
                             <strong>{formatPlain(stock.stockName)}</strong>
                             <span>{formatPlain(stock.stockCode)}</span>
                           </td>
-                          <td>{formatPlain(stock.remainderQuantity)}</td>
+                          <td>{formatQuantity(stock.remainderQuantity)}</td>
                           <td>{formatWon(stock.evaluationAmount)}</td>
                           <td className={getToneClass(stock.profitRate)}>
                             {formatRate(stock.profitRate)}
@@ -308,11 +326,13 @@ function AssetManagementAccounts() {
                 <strong>{formatWon(evaluation?.totalEstimatedAmount)}</strong>
               </div>
               <div className={styles.tableWrap}>
-                <table>
+                <table className={styles.evaluationTable}>
                   <thead>
                     <tr>
                       <th>종목</th>
                       <th>보유</th>
+                      <th>평균단가</th>
+                      <th>현재가</th>
                       <th>평가금액</th>
                       <th>손익</th>
                     </tr>
@@ -325,7 +345,9 @@ function AssetManagementAccounts() {
                             <strong>{formatPlain(stock.stockName)}</strong>
                             <span>{formatPlain(stock.stockCode)}</span>
                           </td>
-                          <td>{formatPlain(stock.remainingQuantity)}</td>
+                          <td>{formatQuantity(stock.remainingQuantity)}</td>
+                          <td>{formatWon(stock.averagePrice)}</td>
+                          <td>{formatWon(stock.currentPrice)}</td>
                           <td>{formatWon(stock.evaluationAmount)}</td>
                           <td className={getToneClass(stock.profitLossAmount)}>
                             {formatWon(stock.profitLossAmount)}
@@ -334,7 +356,7 @@ function AssetManagementAccounts() {
                         </tr>
                       ))
                     ) : (
-                      <EmptyRows colSpan={4} message="표시할 평가 데이터가 없습니다." />
+                      <EmptyRows colSpan={6} message="표시할 평가 데이터가 없습니다." />
                     )}
                   </tbody>
                 </table>

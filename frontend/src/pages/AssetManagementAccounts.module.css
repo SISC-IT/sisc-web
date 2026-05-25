@@ -302,6 +302,10 @@
   min-width: 560px;
 }
 
+.tableWrap .evaluationTable {
+  min-width: 780px;
+}
+
 .tableWrap th,
 .tableWrap td {
   padding: 13px 18px;
