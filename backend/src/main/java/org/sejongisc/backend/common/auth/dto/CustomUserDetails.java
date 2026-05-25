@@ -3,6 +3,7 @@ package org.sejongisc.backend.common.auth.dto;
 import lombok.Getter;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
+import org.sejongisc.backend.user.entity.UserStatus;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +21,8 @@ public class CustomUserDetails implements UserDetails {
     private final String password;          // TODO : 보안을 위해 password 필드 제거 고려
     private final String phoneNumber;       // TODO : 굳이 있어야하나? 제거 고려
     private final Role role;
+    private final String teamName;
+    private final UserStatus status;
     private final Integer point;            // TODO : 사용자 포인트는 가변적이기 때문에, 제거 고려
 
     public CustomUserDetails(User user) {
@@ -29,6 +32,8 @@ public class CustomUserDetails implements UserDetails {
         this.password = user.getPasswordHash();
         this.phoneNumber = user.getPhoneNumber();
         this.role = user.getRole();
+        this.teamName = user.getTeamName();
+        this.status = user.getStatus();
         this.point = user.getPoint();
     }
 

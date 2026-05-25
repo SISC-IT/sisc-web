@@ -395,7 +395,7 @@ public class PostServiceImpl implements PostService {
    * 그 외 정보 모두 null로
    */
   private UserInfoResponse getAnonymousUserInfo() {
-    return new UserInfoResponse(null, "익명", null, null, null, null, List.of());
+    return new UserInfoResponse(null, "익명", null, null, null, null, null, null, List.of());
   }
 
   private PostResponse mapToPostResponse(Post post, User user) {

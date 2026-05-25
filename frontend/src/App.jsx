@@ -14,6 +14,7 @@ import AttendanceManage from './pages/AttendanceManage';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import QuantTradingDashboard from './pages/QuantTradingDashboard';
+import AssetManagementAccounts from './pages/AssetManagementAccounts.jsx';
 import BacktestResult from './pages/BacktestResult.jsx';
 import AdminHome from './pages/AdminHome.jsx';
 import AdminMemberApproval from './pages/AdminMemberApproval.jsx';
@@ -85,6 +86,10 @@ function App() {
             <Route path="/board/:team/:postId" element={<PostDetail />} />
             <Route path="/board/:team/post/:postId" element={<PostDetail />} />
             <Route path="/quant-bot" element={<QuantTradingDashboard />} />
+            <Route
+              path="/asset-management/accounts"
+              element={<AssetManagementAccounts />}
+            />
             <Route path="/stock-game" element={<StockGame />} />
             <Route path="/backtest" element={<BackTest />} />
             <Route path="/backtest/result" element={<BacktestResult />} />

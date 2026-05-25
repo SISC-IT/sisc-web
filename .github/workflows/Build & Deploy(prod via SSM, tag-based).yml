@@ -140,6 +140,8 @@ jobs:
           echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> .env
           echo "UPLOAD_PUBLIC_BASE_URL=${{ secrets.UPLOAD_PUBLIC_BASE_URL }}" >> .env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "KIWOOM_APP_KEY=${{ secrets.KIWOOM_APP_KEY }}" >> .env
+          echo "KIWOOM_APP_SECRET=${{ secrets.KIWOOM_APP_SECRET }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
           echo "SBA_ADMIN_NAME=${{ secrets.SBA_ADMIN_NAME }}" >> .env

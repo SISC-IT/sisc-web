@@ -31,7 +31,7 @@ public class CommentResponse {
 
   private static UserInfoResponse getCommentUser(Comment comment) {
     if (comment.isAnonymous()) {
-      return new UserInfoResponse(null, "익명", null, null, null, null, List.of());
+      return new UserInfoResponse(null, "익명", null, null, null, null, null, null, List.of());
     }
     return UserInfoResponse.from(comment.getUser());
   }

@@ -53,6 +53,18 @@ public class UserInfoResponse {
     private String role;  // enum Role을 String으로 변환
 
     @Schema(
+            description = "사용자의 소속 팀",
+            example = "자산운용팀"
+    )
+    private String teamName;
+
+    @Schema(
+            description = "사용자 활동 상태",
+            example = "ACTIVE"
+    )
+    private String status;
+
+    @Schema(
             description = "부여된 권한 목록 (ROLE_USER, ROLE_ADMIN 등)",
             example = "[\"ROLE_USER\"]"
     )
@@ -70,6 +82,8 @@ public class UserInfoResponse {
         user.getPhoneNumber(),
         user.getPoint(),
         user.getRole().name(),
+        user.getTeamName(),
+        user.getStatus().name(),
         user.getAuthorities()
     );
   }

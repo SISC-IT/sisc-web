@@ -8,6 +8,29 @@ app:
   frontend-url: ${FRONTEND_URL}    # environment
   spring-api-url: ${SPRING_API_URL}
 
+asset-management:
+  time-zone: ${ASSET_MANAGEMENT_TIME_ZONE:Asia/Seoul}
+  account-viewer:
+    team-name: ${ASSET_ACCOUNT_VIEWER_TEAM_NAME:자산운용}
+    allow-system-admin: ${ASSET_ACCOUNT_ALLOW_SYSTEM_ADMIN:false}
+
+kiwoom:
+  api:
+    base-url: ${KIWOOM_API_BASE_URL:https://api.kiwoom.com}
+    app-key: ${KIWOOM_APP_KEY:}
+    app-secret: ${KIWOOM_APP_SECRET:}
+    token-expiry-zone: ${KIWOOM_TOKEN_EXPIRY_ZONE:Asia/Seoul}
+    token-refresh-skew-seconds: ${KIWOOM_TOKEN_REFRESH_SKEW_SECONDS:300}
+    timeout:
+      connect-ms: ${KIWOOM_CONNECT_TIMEOUT_MS:3000}
+      response-ms: ${KIWOOM_RESPONSE_TIMEOUT_MS:5000}
+      block-ms: ${KIWOOM_BLOCK_TIMEOUT_MS:7000}
+    pagination:
+      max-pages: ${KIWOOM_MAX_PAGES:20}
+    rate-limit:
+      max-concurrent: ${KIWOOM_MAX_CONCURRENT_REQUESTS:3}
+      min-interval-ms: ${KIWOOM_MIN_INTERVAL_MS:100}
+
 email:
   code:
     charset: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

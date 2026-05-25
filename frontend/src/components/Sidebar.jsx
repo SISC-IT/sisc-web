@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { getParentBoards } from '../utils/boardApi';
 import { isAllBoardName, normalizeBoardPath, toBoardPath } from '../utils/boardRoute';
+import { getAssetManagementAccountAccess } from '../utils/assetManagementAccountApi';
 import DropdownArrowIcon from '../assets/boardSelectArrow.svg';
 
 const ADMIN_VISIBLE_ROLES = ['SYSTEM_ADMIN', 'PRESIDENT', 'VICE_PRESIDENT'];
@@ -26,6 +27,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
   const { isLoggedIn, logout } = useAuth();
   const [canSeeAdminMenu, setCanSeeAdminMenu] = useState(false);
   const [canSeeAttendanceManageMenu, setCanSeeAttendanceManageMenu] = useState(false);
+  const [canSeeAssetManagementMenu, setCanSeeAssetManagementMenu] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
@@ -77,6 +79,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
       if (!isLoggedIn) {
         setCanSeeAdminMenu(false);
         setCanSeeAttendanceManageMenu(false);
+        setCanSeeAssetManagementMenu(false);
         return;
       }
 
@@ -90,6 +93,13 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
       } catch {
         setCanSeeAdminMenu(false);
         setCanSeeAttendanceManageMenu(false);
+      }
+
+      try {
+        const access = await getAssetManagementAccountAccess();
+        setCanSeeAssetManagementMenu(Boolean(access?.canView));
+      } catch {
+        setCanSeeAssetManagementMenu(false);
       }
     };
 
@@ -326,6 +336,25 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                 </li>
               </ul>
             </div>
+
+            {isLoggedIn && canSeeAssetManagementMenu && (
+              <div className={styles['menu-section']}>
+                <span className={styles['menu-title']}>자산운용</span>
+                <ul>
+                  <li>
+                    <NavLink
+                      to="/asset-management/accounts"
+                      className={({ isActive }) =>
+                        isActive ? styles['active-link'] : styles['inactive-link']
+                      }
+                      onClick={handleNavLinkClick}
+                    >
+                      자산운용팀 계좌 조회
+                    </NavLink>
+                  </li>
+                </ul>
+              </div>
+            )}
 
             <div className={styles['menu-section']}>
               <span className={styles['menu-title']}>계정</span>

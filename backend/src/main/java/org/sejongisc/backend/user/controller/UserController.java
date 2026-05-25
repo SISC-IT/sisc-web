@@ -48,7 +48,7 @@ public class UserController {
   @Operation(summary = "내 정보 조회")
   @GetMapping("/details")
   public ResponseEntity<UserInfoResponse> getUserInfo(@AuthenticationPrincipal CustomUserDetails user) {
-    return ResponseEntity.ok(new UserInfoResponse(user.getUserId(), user.getName(), user.getEmail(), user.getPhoneNumber(), user.getPoint(), user.getRole().name(), user.getAuthorities()));
+    return ResponseEntity.ok(UserInfoResponse.from(user));
   }
 
   @Operation(summary = "내 정보 수정")

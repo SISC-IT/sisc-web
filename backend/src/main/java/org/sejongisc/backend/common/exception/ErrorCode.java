@@ -86,6 +86,22 @@ public enum ErrorCode {
 
   XAI_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 XAI 리포트가 존재하지 않습니다."),
 
+  // ASSET MANAGEMENT / KIWOOM
+
+  ASSET_MANAGEMENT_ACCOUNT_FORBIDDEN(HttpStatus.FORBIDDEN, "자산운용팀 계좌 조회 권한이 없습니다."),
+
+  INVALID_KIWOOM_EXCHANGE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 국내거래소구분입니다. KRX 또는 NXT만 사용할 수 있습니다."),
+
+  INVALID_KIWOOM_QUERY_DATE(HttpStatus.BAD_REQUEST, "조회일은 yyyyMMdd 형식이어야 합니다."),
+
+  KIWOOM_AUTH_FAILED(HttpStatus.BAD_GATEWAY, "키움증권 인증에 실패했습니다."),
+
+  KIWOOM_API_FAILED(HttpStatus.BAD_GATEWAY, "키움증권 계좌 조회 중 오류가 발생했습니다."),
+
+  KIWOOM_EMPTY_RESPONSE(HttpStatus.BAD_GATEWAY, "키움증권 계좌 조회 응답이 비어 있습니다."),
+
+  KIWOOM_PAGING_LIMIT_EXCEEDED(HttpStatus.BAD_GATEWAY, "키움증권 계좌 조회 페이지 처리 한도를 초과했습니다."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
