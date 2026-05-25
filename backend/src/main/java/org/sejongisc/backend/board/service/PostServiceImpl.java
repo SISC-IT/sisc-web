@@ -26,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -159,15 +161,20 @@ public class PostServiceImpl implements PostService {
     applyContent(post, content);
     post.setAnonymous(request.isAnonymous());
 
-    // 기존 파일 조회 및 삭제
+    // 기존 파일 중 요청에서 유지하지 않은 파일만 삭제
     List<PostAttachment> existingAttachments = postAttachmentRepository.findAllByPostPostId(postId);
+    Set<UUID> retainedAttachmentIds = request.getExistingAttachmentIds() == null
+        ? Set.of()
+        : new HashSet<>(request.getExistingAttachmentIds());
+    List<PostAttachment> attachmentsToDelete = existingAttachments.stream()
+        .filter(attachment -> !retainedAttachmentIds.contains(attachment.getPostAttachmentId()))
+        .toList();
 
-    // DB에서 첨부파일 정보 일괄 삭제
-    postAttachmentRepository.deleteAllByPostPostId(postId);
+    postAttachmentRepository.deleteAll(attachmentsToDelete);
     postMediaService.deleteAllByPost(postId);
 
     // 물리적 파일 삭제
-    for (PostAttachment attachment : existingAttachments) {
+    for (PostAttachment attachment : attachmentsToDelete) {
       fileUploadService.delete(attachment.getSavedFilename());
     }
 

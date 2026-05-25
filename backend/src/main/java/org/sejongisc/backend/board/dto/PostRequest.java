@@ -32,5 +32,7 @@ public class PostRequest {
   @Builder.Default
   private boolean anonymous = false;
 
+  private List<UUID> existingAttachmentIds;
+
   private List<MultipartFile> files;
 }
