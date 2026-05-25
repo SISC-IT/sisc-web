@@ -250,6 +250,12 @@ export const updatePost = async (postId, boardId, postData) => {
     });
   }
 
+  if (postData.existingAttachmentIds && postData.existingAttachmentIds.length > 0) {
+    postData.existingAttachmentIds.forEach((attachmentId) => {
+      formData.append('existingAttachmentIds', attachmentId);
+    });
+  }
+
   const response = await api.put(`/api/board/post/${postId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });

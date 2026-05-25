@@ -222,7 +222,27 @@ const PostDetail = () => {
     return Array.from(urls);
   };
 
-  const getAttachmentIdentifier = (file) => file?.postAttachmentId || file?.mediaId || file?.id || '';
+  const getAttachmentIdentifier = (file) =>
+    file?.postAttachmentId ||
+    file?.mediaId ||
+    file?.id ||
+    file?.url ||
+    file?.savedFilename ||
+    file?.originalFilename ||
+    file?.name ||
+    '';
+
+  const toFileArray = (input) => {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.filter(Boolean);
+    if (typeof FileList !== 'undefined' && input instanceof FileList) {
+      return Array.from(input).filter(Boolean);
+    }
+    if (input?.target?.files) {
+      return Array.from(input.target.files).filter(Boolean);
+    }
+    return [];
+  };
 
   const refreshPostAndComments = async () => {
     try {
@@ -456,8 +476,11 @@ const PostDetail = () => {
             walk(j.content);
             return parts.join('').replace(/\n+/g, '\n').trim();
           })(json),
-          // attach existing attachment ids plus newly uploaded media ids
-          attachmentIds: Array.from(new Set([...(editFiles || []).map((f) => getAttachmentIdentifier(f)).filter(Boolean), ...(uploadedNewMediaIds || [])].filter(Boolean))),
+          // Rich update accepts PostMedia IDs. Legacy PostAttachment IDs stay in the legacy table.
+          attachmentIds: Array.from(new Set([
+            ...(editFiles || []).map((f) => f?.mediaId).filter(Boolean),
+            ...(uploadedNewMediaIds || []),
+          ].filter(Boolean))),
         };
 
         usedUpdate = await boardApi.updateRichPost(postId, payload);
@@ -466,6 +489,7 @@ const PostDetail = () => {
           title: editTitle,
           content: editContent,
           files: newFiles,
+          existingAttachmentIds: (editFiles || []).map((f) => f?.postAttachmentId).filter(Boolean),
         };
         usedUpdate = await boardApi.updatePost(postId, boardId, updateData);
       }
@@ -482,10 +506,18 @@ const PostDetail = () => {
   };
 
   const handleFileHandlers = {
-    add: (e) => setNewFiles((prev) => [...prev, ...Array.from(e.target.files)]),
+    add: (input) => {
+      const files = toFileArray(input);
+      if (files.length === 0) return [];
+      setNewFiles((prev) => [...prev, ...files]);
+      if (input?.target) {
+        input.target.value = '';
+      }
+      return files;
+    },
     removeNew: (idx) => setNewFiles((prev) => prev.filter((_, i) => i !== idx)),
     removeExisting: (id) =>
-      setEditFiles((prev) => prev.filter((f) => f.postAttachmentId !== id)),
+      setEditFiles((prev) => prev.filter((f) => getAttachmentIdentifier(f) !== id)),
   };
 
   const handleDelete = async () => {

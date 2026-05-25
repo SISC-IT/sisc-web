@@ -19,6 +19,18 @@ const PostEditForm = ({
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const getAttachmentIdentifier = (file) =>
+    file?.postAttachmentId ||
+    file?.mediaId ||
+    file?.id ||
+    file?.url ||
+    file?.savedFilename ||
+    file?.originalFilename ||
+    file?.name ||
+    '';
+
+  const isImageFile = (file) => String(file?.type || '').startsWith('image/');
+
 
   const handleDragEnter = (e) => {
     e.preventDefault();
@@ -43,6 +55,19 @@ const PostEditForm = ({
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
+
+    const isDroppedOnEditor =
+      e.target instanceof Element &&
+      e.target.closest(`.${styles.richEditorWrapper}`);
+    if (isDroppedOnEditor) {
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer?.files || []);
+    const attachmentFiles = files.filter((file) => !isImageFile(file));
+    if (attachmentFiles.length > 0) {
+      onAddNewFile?.(attachmentFiles);
+    }
   };
 
   return (
@@ -83,6 +108,12 @@ const PostEditForm = ({
               editable={true}
               placeholder="내용을 입력하세요"
               onUploadImage={boardApi.uploadBoardImage}
+              onAttachFiles={(files) => {
+                const selectedFiles = Array.from(files || []);
+                if (selectedFiles.length === 0) return [];
+                onAddNewFile?.(selectedFiles);
+                return selectedFiles;
+              }}
             />
           </div>
         </div>
@@ -95,22 +126,25 @@ const PostEditForm = ({
           </h4>
 
           <div className={styles.editFileOutsideList}>
-            {(editFiles || []).map((file) => (
-              <div
-                key={file.postAttachmentId}
-                className={styles.editFileOutsideItem}
-              >
-                <p className={styles.editFileInlineName}>{file.originalFilename}</p>
-                <button
-                  type="button"
-                  className={styles.editFileRemoveButton}
-                  onClick={() => onRemoveExistingFile(file.postAttachmentId)}
-                  aria-label={`${file.originalFilename} 삭제`}
+            {(editFiles || []).map((file, index) => {
+              const identifier = getAttachmentIdentifier(file) || `existing-${index}`;
+              return (
+                <div
+                  key={identifier}
+                  className={styles.editFileOutsideItem}
                 >
-                  X
-                </button>
-              </div>
-            ))}
+                  <p className={styles.editFileInlineName}>{file.originalFilename}</p>
+                  <button
+                    type="button"
+                    className={styles.editFileRemoveButton}
+                    onClick={() => onRemoveExistingFile(identifier)}
+                    aria-label={`${file.originalFilename} 삭제`}
+                  >
+                    X
+                  </button>
+                </div>
+              );
+            })}
 
             {(newFiles || []).map((file, index) => (
               <div
