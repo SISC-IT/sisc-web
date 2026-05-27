@@ -5,7 +5,6 @@ jwt:
     refreshToken: 1209600000
 
 app:
-  frontend-url: ${FRONTEND_URL}    # environment
   spring-api-url: ${SPRING_API_URL}
   club-frontend-url: ${CLUB_FRONTEND_URL}
   public-frontend-url: ${PUBLIC_FRONTEND_URL}
