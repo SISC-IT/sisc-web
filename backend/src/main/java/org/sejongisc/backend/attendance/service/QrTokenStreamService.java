@@ -38,7 +38,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 public class QrTokenStreamService {
 
-  @Value("${app.frontend-url}")
+  @Value("${app.club-frontend-url}")
   private String frontendUrl;
 
   private static final String ATTENDANCE_PATH = "/attendance";

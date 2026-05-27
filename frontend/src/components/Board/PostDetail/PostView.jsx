@@ -15,6 +15,9 @@ const PostView = ({
   setShowMenu,
   onEdit,
   onDelete,
+  canManagePublic,
+  onPublishToPublic,
+  onUnpublishFromPublic,
   onDownload,
   onMoveToBoard,
 }) => {
@@ -61,7 +64,12 @@ const PostView = ({
 
       <div className={styles.titleWrapper}>
         <h1 className={styles.title}>{post.title}</h1>
-        {canManagePost && (
+        <div className={styles.titleStatusColumn}>
+          {post.publicVisible && (
+            <span className={styles.publicBadge}>월간 세투연 공개 중</span>
+          )}
+        </div>
+        {(canManagePost || canManagePublic) && (
           <div className={styles.menuContainer}>
             <button
               className={styles.menuButton}
@@ -71,18 +79,32 @@ const PostView = ({
             </button>
             {showMenu && (
               <div className={styles.menuDropdown}>
-                <button onClick={onEdit}>
-                  <img src={EditIcon} className={styles.EditIcon} alt="수정" />
-                  수정하기
-                </button>
-                <button onClick={onDelete}>
-                  <img
-                    src={DeleteIcon}
-                    className={styles.DeleteIcon}
-                    alt="삭제"
-                  />
-                  삭제하기
-                </button>
+                {canManagePost && (
+                  <>
+                    <button onClick={onEdit}>
+                      <img src={EditIcon} className={styles.EditIcon} alt="수정" />
+                      수정하기
+                    </button>
+                    <button onClick={onDelete}>
+                      <img
+                        src={DeleteIcon}
+                        className={styles.DeleteIcon}
+                        alt="삭제"
+                      />
+                      삭제하기
+                    </button>
+                  </>
+                )}
+                {canManagePublic && !post.publicVisible && (
+                  <button onClick={onPublishToPublic}>
+                    월간 세투연 공개
+                  </button>
+                )}
+                {canManagePublic && post.publicVisible && (
+                  <button onClick={onUnpublishFromPublic}>
+                    월간 세투연 비공개
+                  </button>
+                )}
               </div>
             )}
           </div>

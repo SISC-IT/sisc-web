@@ -17,7 +17,7 @@ const formatDateTime = (value) => {
 const quickActions = [
   { id: 'upload', label: '엑셀로 회원 등록', to: '/admin/members/upload' },
   { id: 'attendance', label: '출석 체크 설정', to: '/admin/attendance' },
-  { id: 'notice', label: '공지사항 작성', to: '/admin/posts' },
+  { id: 'public-pages', label: '공개 페이지 관리', to: '/admin/public-pages' },
   { id: 'points', label: '포인트 규칙 설정', to: '/admin/points' },
 ];
 

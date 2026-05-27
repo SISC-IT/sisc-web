@@ -333,6 +333,24 @@
   flex-grow: 1;
 }
 
+.titleStatusColumn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.publicBadge {
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .menuContainer {
   margin-left: auto;
   position: relative;
@@ -358,7 +376,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 10;
-  width: 110px;
+  width: 170px;
   overflow: hidden;
 }
 

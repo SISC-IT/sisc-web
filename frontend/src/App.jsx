@@ -22,6 +22,7 @@ import AdminMemberManage from './pages/AdminMemberManage.jsx';
 import AdminExcelUpload from './pages/AdminExcelUpload.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import AdminFeedback from './pages/AdminFeedback.jsx';
+import AdminPublicPages from './pages/AdminPublicPages.jsx';
 
 // import CheckInPage from './components/attendancemanage/qrmanagement/CheckInPage.jsx';
 import QrRenderPage from './components/attendancemanage/qrmanagement/QrRenderPage.jsx';
@@ -110,6 +111,7 @@ function App() {
             />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/feedbacks" element={<AdminFeedback />} />
+            <Route path="/admin/public-pages" element={<AdminPublicPages />} />
           </Route>
         </Route>
       </Routes>

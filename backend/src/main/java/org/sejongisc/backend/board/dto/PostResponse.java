@@ -32,6 +32,8 @@ public class PostResponse {
   private String contentHtml;
   private String contentText;
   private boolean anonymous;
+  private boolean publicVisible;
+  private LocalDateTime publicPublishedAt;
   private Integer bookmarkCount;
   private Integer likeCount;
   private Integer commentCount;

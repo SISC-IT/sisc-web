@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import * as boardApi from '../utils/boardApi';
+import * as adminPublicApi from '../utils/adminPublicApi';
 import { api } from '../utils/axios';
 import styles from './PostDetail.module.css';
 import { toBoardRouteSegment } from '../utils/boardRoute';
@@ -120,6 +121,9 @@ const PostDetail = () => {
       postAuthorId &&
       currentUserId &&
       postAuthorId === currentUserId
+  );
+  const isAdmin = ['VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN'].includes(
+    currentUser?.role
   );
 
   // 데이터 로드 로직
@@ -532,6 +536,32 @@ const PostDetail = () => {
     }
   };
 
+  const handlePublishToPublic = async () => {
+    if (!window.confirm('이 게시글을 월간 세투연 외부 페이지에 공개할까요?')) return;
+    try {
+      await adminPublicApi.updatePublicPost(postId, { publicVisible: true });
+      await refreshPostAndComments();
+      setShowMenu(false);
+      alert('월간 세투연에 공개되었습니다.');
+    } catch (error) {
+      console.error('외부 공개 전환 실패:', error);
+      alert(error?.message || '외부 공개 전환에 실패했습니다.');
+    }
+  };
+
+  const handleUnpublishFromPublic = async () => {
+    if (!window.confirm('이 게시글을 월간 세투연 외부 페이지에서 내릴까요?')) return;
+    try {
+      await adminPublicApi.updatePublicPost(postId, { publicVisible: false });
+      await refreshPostAndComments();
+      setShowMenu(false);
+      alert('월간 세투연에서 비공개 처리되었습니다.');
+    } catch (error) {
+      console.error('외부 비공개 전환 실패:', error);
+      alert(error?.message || '외부 비공개 전환에 실패했습니다.');
+    }
+  };
+
   const handleMoveToBoard = () => {
     const targetTeamSegment =
       location.state?.originTeam || team || toBoardRouteSegment(boardName);
@@ -657,10 +687,13 @@ const PostDetail = () => {
             post={post}
             boardName={boardName}
             canManagePost={isPostOwner}
+            canManagePublic={isAdmin}
             showMenu={showMenu}
             setShowMenu={setShowMenu}
             onEdit={handleEditStart}
             onDelete={handleDelete}
+            onPublishToPublic={handlePublishToPublic}
+            onUnpublishFromPublic={handleUnpublishFromPublic}
             onDownload={handleAttachmentDownload}
             onMoveToBoard={handleMoveToBoard}
           />

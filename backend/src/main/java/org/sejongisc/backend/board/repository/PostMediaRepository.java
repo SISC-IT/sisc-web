@@ -2,6 +2,7 @@ package org.sejongisc.backend.board.repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.sejongisc.backend.board.entity.PostMedia;
 import org.sejongisc.backend.board.entity.PostMediaType;
@@ -14,6 +15,11 @@ public interface PostMediaRepository extends JpaRepository<PostMedia, UUID> {
   List<PostMedia> findAllByPostPostId(UUID postId);
 
   List<PostMedia> findAllByPostPostIdAndMediaTypeOrderBySortOrderAscCreatedDateAsc(
+      UUID postId,
+      PostMediaType mediaType
+  );
+
+  Optional<PostMedia> findFirstByPostPostIdAndMediaTypeOrderByCreatedDateAsc(
       UUID postId,
       PostMediaType mediaType
   );

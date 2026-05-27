@@ -29,6 +29,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 @Configuration
 @EnableWebSecurity
@@ -130,11 +131,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of(
+        config.setAllowedOriginPatterns(Stream.of(
                 "http://localhost:5173",
-                env.getProperty("app.spring-api-url"),  // 스웨거 요청 막으려면 주석화 or 삭제
-                env.getProperty("app.frontend-url")     // 환경변수에 해당하는 값 가져옴
-        ));
+                env.getProperty("app.spring-api-url"),       // 스웨거 요청 막으려면 주석화 or 삭제
+                env.getProperty("app.club-frontend-url"),         // 환경변수에 해당하는 값 가져옴
+                env.getProperty("app.public-frontend-url")
+            )
+            .filter(origin -> origin != null && !origin.isBlank())
+            .toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

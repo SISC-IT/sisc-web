@@ -14,6 +14,8 @@ public class SecurityConstants {
             "/favicon.ico",
             "/api/auth/password/reset/confirm",
             "/api/auth/password/reset/send",
+            "/api/public/**",
+            "/uploads/**",
             "/actuator",
             "/actuator/**",
             "/error"

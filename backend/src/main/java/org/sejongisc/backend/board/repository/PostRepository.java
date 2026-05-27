@@ -17,6 +17,8 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
   @Query("SELECT p FROM Post p LEFT JOIN FETCH p.board WHERE p.postId = :postId")
   Optional<Post> findByIdWithBoard(@Param("postId") UUID postId);
 
+  Optional<Post> findByPostIdAndPublicVisibleTrue(UUID postId);
+
   Page<Post> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
       String titleKeyword, String contentKeyword, Pageable pageable);
 
@@ -29,6 +31,36 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
       @Param("board") Board board,
       @Param("keyword") String keyword,
       Pageable pageable);
+
+  @Query(
+      value = """
+      select p
+      from Post p
+      where p.publicVisible = true
+        and (
+          :keyword is null
+          or :keyword = ''
+          or lower(p.title) like lower(concat('%', :keyword, '%'))
+          or lower(coalesce(p.contentText, p.content, '')) like lower(concat('%', :keyword, '%'))
+        )
+      order by coalesce(p.publicPublishedAt, p.createdDate) desc
+      """,
+      countQuery = """
+      select count(p)
+      from Post p
+      where p.publicVisible = true
+        and (
+          :keyword is null
+          or :keyword = ''
+          or lower(p.title) like lower(concat('%', :keyword, '%'))
+          or lower(coalesce(p.contentText, p.content, '')) like lower(concat('%', :keyword, '%'))
+        )
+      """
+  )
+  Page<Post> findPublicPosts(
+      @Param("keyword") String keyword,
+      Pageable pageable
+  );
 
   @Query("""
            select p.postId as postId, p.user.userId as userId

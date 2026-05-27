@@ -38,7 +38,7 @@ public class PostContentService {
   @Value("${app.upload.public-path-prefix:/uploads}")
   private String publicPathPrefix;
 
-  @Value("${app.upload.public-base-url:}")
+  @Value("${app.spring-api-url:}")
   private String publicBaseUrl;
 
   public NormalizedPostContent fromPlainText(String plainText) {

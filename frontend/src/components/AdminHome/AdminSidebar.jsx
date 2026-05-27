@@ -14,6 +14,7 @@ import {
   Settings,
   Shield,
   Upload,
+  Globe2,
 } from 'lucide-react';
 import styles from './AdminSidebar.module.css';
 
@@ -30,6 +31,7 @@ const presidentMenuItems = [
     category: '콘텐츠',
     items: [
       { label: '게시물 관리', href: '/admin/posts', icon: FileText },
+      { label: '공개 페이지 관리', href: '/admin/public-pages', icon: Globe2 },
       { label: '출석 관리', href: '/admin/attendance', icon: Calendar },
       { label: '포인트 관리', href: '/admin/points', icon: Star },
       { label: '피드백 확인하기', href: '/admin/feedbacks', icon: MessageSquare },

@@ -7,6 +7,8 @@ jwt:
 app:
   frontend-url: ${FRONTEND_URL}    # environment
   spring-api-url: ${SPRING_API_URL}
+  club-frontend-url: ${CLUB_FRONTEND_URL}
+  public-frontend-url: ${PUBLIC_FRONTEND_URL}
 
 asset-management:
   time-zone: ${ASSET_MANAGEMENT_TIME_ZONE:Asia/Seoul}

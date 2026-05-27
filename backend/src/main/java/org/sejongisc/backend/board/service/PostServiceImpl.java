@@ -388,6 +388,8 @@ public class PostServiceImpl implements PostService {
         .contentJson(postContentService.parseContentJson(post.getContentJson()))
         .contentHtml(postContentService.resolveContentHtml(post))
         .contentText(postContentService.resolveContentText(post))
+        .publicVisible(post.isPublicVisible())
+        .publicPublishedAt(post.getPublicPublishedAt())
         .bookmarkCount(post.getBookmarkCount())
         .likeCount(post.getLikeCount())
         .commentCount(post.getCommentCount())

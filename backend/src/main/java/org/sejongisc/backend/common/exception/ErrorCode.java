@@ -174,6 +174,8 @@ public enum ErrorCode {
 
   POST_MEDIA_NOT_FOUND(HttpStatus.NOT_FOUND, "업로드된 게시물 파일을 찾을 수 없습니다."),
 
+  PUBLIC_PAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "공개 페이지를 찾을 수 없습니다."),
+
   // ATTENDANCE
 
   SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 출석 세션이 존재하지 않습니다."),

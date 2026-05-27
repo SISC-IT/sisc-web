@@ -46,7 +46,7 @@ public class FileUploadService {
   @Value("${app.upload.public-path-prefix:/uploads}")
   private String publicPathPrefix;
 
-  @Value("${app.upload.public-base-url:}")
+  @Value("${app.spring-api-url:}")
   private String publicBaseUrl;
 
   // 서비스 생성 시 업로드 디렉토리가 없으면 생성
@@ -149,6 +149,10 @@ public class FileUploadService {
         : publicBaseUrl;
     String normalizedPublicPath = publicPath.startsWith("/") ? publicPath : "/" + publicPath;
     return baseUrl + normalizedPublicPath;
+  }
+
+  public String buildPublicPath(String savedFilename) {
+    return normalizePublicPathPrefix() + "/" + savedFilename;
   }
 
   // -------------- private helper 메서드 --------------
