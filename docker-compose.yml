@@ -104,7 +104,7 @@ services:
       # 외부망(공유기)에서 들어오는 80, 443 요청을 NPM이 모두 받음
       - '80:80'
       - '443:443'
-      #- '81:81' # NPM 관리자 페이지 (접속: http://서버IP:81)
+      - '81:81' # NPM 관리자 페이지 (접속: http://서버IP:81)
     volumes:
       - ./data/npm:/data               # NPM 설정 데이터 유지
       - ./data/letsencrypt:/etc/letsencrypt # SSL 인증서 데이터 유지
