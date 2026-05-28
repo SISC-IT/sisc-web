@@ -146,7 +146,7 @@ public class SecurityConfig {
         config.setMaxAge(3600L);    // 캐시 시간(초)
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        source.registerCorsConfiguration("/api/**", config);
 
         return source;
     }
