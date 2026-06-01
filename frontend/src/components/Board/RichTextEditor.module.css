@@ -19,6 +19,7 @@
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .formatToolbar {
@@ -54,6 +55,26 @@
   align-items: center;
   justify-content: center;
   padding: 0;
+}
+
+.iconTile {
+  width: 58px !important;
+  height: 56px !important;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px !important;
+  border-radius: 12px !important;
+}
+
+.iconTileLabel {
+  font-size: 11px;
+  line-height: 1;
+  color: #6b7280;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .alignIcon {
@@ -414,4 +435,8 @@
 .toolbar {
   padding-top: 8px;
   padding-bottom: 8px;
+}
+
+.formatToolbar .toolbarSelect:first-child {
+  min-width: 126px;
 }
