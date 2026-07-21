@@ -66,6 +66,11 @@ app:
   upload:
     root-location: ${UPLOAD_ROOT_LOCATION:${user.dir}/uploads}
     public-path-prefix: ${UPLOAD_PUBLIC_PATH_PREFIX:/uploads}
+    public-base-url: ${UPLOAD_PUBLIC_BASE_URL:${SPRING_API_URL:${app.spring-api-url:}}}
+    image-max-size: ${UPLOAD_IMAGE_MAX_SIZE:10MB}
+    attachment-max-size: ${UPLOAD_ATTACHMENT_MAX_SIZE:30MB}
+    video-max-size: ${UPLOAD_VIDEO_MAX_SIZE:100MB}
+    admin-excel-max-size: ${UPLOAD_ADMIN_EXCEL_MAX_SIZE:5MB}
 
 springdoc:
   swagger-ui:

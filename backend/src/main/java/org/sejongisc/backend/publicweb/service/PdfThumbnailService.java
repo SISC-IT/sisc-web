@@ -23,6 +23,7 @@ import org.sejongisc.backend.board.entity.PostMediaType;
 import org.sejongisc.backend.board.repository.PostAttachmentRepository;
 import org.sejongisc.backend.board.repository.PostMediaRepository;
 import org.sejongisc.backend.board.service.FileUploadService;
+import org.sejongisc.backend.common.config.UploadProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,6 +38,7 @@ public class PdfThumbnailService {
   private final PostMediaRepository postMediaRepository;
   private final PostAttachmentRepository postAttachmentRepository;
   private final FileUploadService fileUploadService;
+  private final UploadProperties uploadProperties;
 
   @Transactional
   public Optional<PostMedia> ensureThumbnail(Post post) {
@@ -58,6 +60,7 @@ public class PdfThumbnailService {
       PostMedia thumbnail = renderAndSave(post, source.get());
       return Optional.of(thumbnail);
     } catch (Exception e) {
+      // 썸네일 생성 실패 시 게시글 조회/공개 흐름 유지
       log.warn("PDF thumbnail generation failed. postId={}, source={}", post.getPostId(), source.get().filePath(), e);
       return Optional.empty();
     }
@@ -103,6 +106,10 @@ public class PdfThumbnailService {
     Path sourcePath = Path.of(source.filePath()).toAbsolutePath().normalize();
     if (!Files.exists(sourcePath)) {
       throw new IOException("PDF source file does not exist: " + sourcePath);
+    }
+    // 대용량 PDF 렌더링 건너뜀
+    if (Files.size(sourcePath) > uploadProperties.getAttachmentMaxSize().toBytes()) {
+      throw new IOException("PDF source file is too large for thumbnail generation: " + sourcePath);
     }
 
     try (PDDocument document = Loader.loadPDF(sourcePath.toFile())) {

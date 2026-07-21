@@ -15,9 +15,9 @@ import org.jsoup.safety.Safelist;
 import org.sejongisc.backend.board.dto.RichPostRequest;
 import org.sejongisc.backend.board.entity.Post;
 import org.sejongisc.backend.board.entity.PostContentFormat;
+import org.sejongisc.backend.common.config.UploadProperties;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
@@ -34,12 +34,7 @@ public class PostContentService {
   private static final List<String> TEXT_ALIGN_VALUES = List.of("left", "right", "center", "justify");
 
   private final ObjectMapper objectMapper;
-
-  @Value("${app.upload.public-path-prefix:/uploads}")
-  private String publicPathPrefix;
-
-  @Value("${app.spring-api-url:}")
-  private String publicBaseUrl;
+  private final UploadProperties uploadProperties;
 
   public NormalizedPostContent fromPlainText(String plainText) {
     String contentText = plainText == null ? "" : plainText;
@@ -120,6 +115,7 @@ public class PostContentService {
         .addProtocols("img", "src", "http", "https")
         .preserveRelativeLinks(true);
 
+    String publicBaseUrl = uploadProperties.getPublicBaseUrl();
     String baseUri = StringUtils.hasText(publicBaseUrl) ? publicBaseUrl : "https://local.invalid";
     String cleaned = Jsoup.clean(html, baseUri, safelist);
     Document document = Jsoup.parseBodyFragment(cleaned);
@@ -234,15 +230,16 @@ public class PostContentService {
       return false;
     }
 
-    String normalizedPrefix = normalizePath(publicPathPrefix);
+    String normalizedPrefix = normalizePath(uploadProperties.getPublicPathPrefix());
     if (src.startsWith(normalizedPrefix + "/images/")) {
       return true;
     }
 
-    if (StringUtils.hasText(publicBaseUrl)) {
-      String baseUrl = publicBaseUrl.endsWith("/")
-          ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1)
-          : publicBaseUrl;
+    String configuredPublicBaseUrl = uploadProperties.getPublicBaseUrl();
+    if (StringUtils.hasText(configuredPublicBaseUrl)) {
+      String baseUrl = configuredPublicBaseUrl.endsWith("/")
+          ? configuredPublicBaseUrl.substring(0, configuredPublicBaseUrl.length() - 1)
+          : configuredPublicBaseUrl;
       return src.startsWith(baseUrl + normalizedPrefix + "/images/");
     }
 
