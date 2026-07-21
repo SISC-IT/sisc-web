@@ -16,6 +16,8 @@ import toolboxFileIcon from '../../assets/toolbox-file-icon.svg';
 import toolboxLeftIcon from '../../assets/toolbox-left-icon.svg';
 import toolboxMidIcon from '../../assets/toolbox-mid-icon.svg';
 import toolboxRightIcon from '../../assets/toolbox-right-icon.svg';
+import toolboxLineIcon from '../../assets/toolbox-line-icon.svg';
+import toolboxColonIcon from '../../assets/toolbox-colon-icon.svg';
 import toolboxTextColorIcon from '../../assets/toolbox-textcolor-icon.svg';
 import toolboxTextBgIcon from '../../assets/toolbox-textBackgroundColor-icon.svg';
 
@@ -180,33 +182,6 @@ const ResizableImageNodeView = (props) => {
     };
 
     const onUp = () => {
-      // 드래그 종료 후 실제 DOM 크기 저장
-      try {
-        const imageEl = imageRef.current;
-        if (imageEl) {
-          const rectFinal = imageEl.getBoundingClientRect();
-          const finalWidth = Math.max(MIN_IMAGE_WIDTH, Math.round(rectFinal.width));
-          const finalHeight = Math.max(MIN_IMAGE_HEIGHT, Math.round(rectFinal.height));
-          const attrs = {};
-          if (isHorizontalOnly) attrs.width = `${finalWidth}px`;
-          else if (isVerticalOnly) attrs.height = `${finalHeight}px`;
-          else attrs.width = `${finalWidth}px`, attrs.height = `${finalHeight}px`;
-
-          // NodeView와 에디터 명령 동시 호출로 크기 유지
-          try {
-            updateAttributes?.(attrs);
-          } catch {}
-
-          try {
-            if (editor && editor.chain) {
-              editor.chain().focus().updateAttributes('image', attrs).run();
-            }
-          } catch {}
-        }
-      } catch (e) {
-        // 크기 동기화 실패 시 편집 흐름 유지
-      }
-
       stopResizing();
     };
 
@@ -583,8 +558,9 @@ const RichTextEditor = ({
           return true;
         }
 
-        // 첨부 목록 없을 때 드롭 파일 본문 링크 삽입
-        let willHandle = imageFiles.length > 0 || otherFiles.length > 0;
+        // We'll handle both images and other files by inserting them into the editor content.
+        // Prevent the default only when we actually handle insertion here.
+        const willHandle = imageFiles.length > 0 || otherFiles.length > 0;
         if (!willHandle) return false;
 
         event.preventDefault();
@@ -722,13 +698,40 @@ const RichTextEditor = ({
           insertFileLink(normalizedUrl || '', uploaded?.originalFilename || file.name);
         }
       }
-    } catch (e) {
-      console.error('파일 업로드 실패:', e);
+    } catch (error) {
+      console.error('파일 업로드 실패:', error);
     } finally {
       event.target.value = '';
     }
   };
 
+  const handleVideoInputChange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      // If parent wants attachments, delegate videos to it
+      if (onAttachFiles) {
+        try {
+          await onAttachFiles(files);
+        } catch (err) {
+          console.error('비디오 업로드 처리 실패 (onAttachFiles):', err);
+        }
+        return;
+      }
+
+      for (const file of files) {
+        if (onUploadVideo) {
+          const uploaded = await onUploadVideo(file);
+          const normalizedUrl = toAbsoluteImageUrl(uploaded?.url);
+          insertFileLink(normalizedUrl || '', uploaded?.originalFilename || file.name);
+        }
+      }
+    } catch (error) {
+      console.error('비디오 업로드 실패:', error);
+    } finally {
+      event.target.value = '';
+    }
   const promptLink = () => {
     if (!editor || !editable) return;
 
@@ -771,10 +774,13 @@ const RichTextEditor = ({
       // Highlight 해제 우선, 실패 시 textStyle 배경색 제거
       try {
         editor.chain().focus().unsetHighlight().run();
-      } catch {
+      } catch (error) {
+        console.error('배경색 해제 실패:', error);
         try {
           editor.chain().focus().setMark('textStyle', { backgroundColor: null }).run();
-        } catch {}
+        } catch (nestedError) {
+          console.error('배경색 해제 실패(textStyle):', nestedError);
+        }
       }
       return;
     }
@@ -782,17 +788,26 @@ const RichTextEditor = ({
     // 다색 배경용 Highlight 우선, 실패 시 textStyle mark 사용
     try {
       editor.chain().focus().toggleHighlight({ color }).run();
-    } catch {
+    } catch (error) {
+      console.error('배경색 적용 실패:', error);
       try {
         editor.chain().focus().setMark('textStyle', { backgroundColor: color }).run();
-      } catch {}
+      } catch (nestedError) {
+        console.error('배경색 적용 실패(textStyle):', nestedError);
+      }
     }
   };
 
-  const applyFontFamily = (fontFamily) => {
+  const insertDividerLine = () => {
     if (!editor || !editable) return;
 
-    editor.chain().focus().setMark('textStyle', { fontFamily }).run();
+    editor.chain().focus().setHorizontalRule().run();
+  };
+
+  const insertQuoteBlock = () => {
+    if (!editor || !editable) return;
+
+    editor.chain().focus().toggleBlockquote().run();
   };
 
   const applyFontSize = (fontSize) => {
@@ -806,33 +821,7 @@ const RichTextEditor = ({
     editor.chain().focus().setMark('textStyle', { fontSize: String(fontSize) }).run();
   };
 
-  const applyImageWidth = (width) => {
-    if (!editor || !editable || !editor.isActive('image')) return;
-
-    const nextWidth = width ? String(width) : null;
-    editor.chain().focus().updateAttributes('image', { width: nextWidth }).run();
-  };
-
-  const applyImageAlignment = (align) => {
-    if (!editor || !editable || !editor.isActive('image')) return;
-
-    editor.chain().focus().updateAttributes('image', { align }).run();
-  };
-
-  const resetSelectedImageSize = () => {
-    if (!editor || !editable || !editor.isActive('image')) return;
-
-    editor.chain().focus().updateAttributes('image', { width: null }).run();
-  };
-
-  const deleteSelectedImage = () => {
-    if (!editor || !editable || !editor.isActive('image')) return;
-
-    editor.chain().focus().deleteSelection().run();
-  };
-
-  const currentImageAlignment = editor?.isActive('image') ? editor.getAttributes('image')?.align || DEFAULT_IMAGE_ALIGN : DEFAULT_IMAGE_ALIGN;
-  const currentImageWidth = editor?.isActive('image') ? editor.getAttributes('image')?.width || '' : '';
+  const currentFontSize = editor?.getAttributes('textStyle')?.fontSize || DEFAULT_FONT_SIZE;
 
   useEffect(() => {
     if (!editor) return;
@@ -852,7 +841,9 @@ const RichTextEditor = ({
     return () => {
       try {
         editor.off('selectionUpdate', onSelection);
-      } catch {}
+      } catch (error) {
+        console.error('selectionUpdate 해제 실패:', error);
+      }
     };
   }, [editor]);
 
@@ -876,8 +867,9 @@ const RichTextEditor = ({
     <div className={styles.editorShell}>
       <div className={styles.toolbar}>
         <div className={styles.mediaToolbar}>
-          <button type="button" title="이미지 업로드" onClick={() => imageInputRef.current?.click()} disabled={!editable || isUploadingImage} className={styles.iconButton}>
+          <button type="button" title="이미지 업로드" onClick={() => imageInputRef.current?.click()} disabled={!editable || isUploadingImage} className={styles.iconTile}>
             <img src={toolboxImgIcon} alt="이미지" className={styles.iconImg} />
+            <span className={styles.iconTileLabel}>사진</span>
           </button>
           <input
             ref={imageInputRef}
@@ -888,8 +880,22 @@ const RichTextEditor = ({
             onChange={handleImageInputChange}
           />
 
-          <button type="button" title="파일 업로드" onClick={() => fileInputRef.current?.click()} disabled={!editable} className={styles.iconButton}>
+          <button type="button" title="비디오 업로드" onClick={() => videoInputRef.current?.click()} disabled={!editable} className={styles.iconTile}>
+            <img src={toolboxVideoIcon} alt="비디오" className={styles.iconImg} />
+            <span className={styles.iconTileLabel}>동영상</span>
+          </button>
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            multiple
+            className={styles.hiddenFileInput}
+            onChange={handleVideoInputChange}
+          />
+
+          <button type="button" title="파일 업로드" onClick={() => fileInputRef.current?.click()} disabled={!editable} className={styles.iconTile}>
             <img src={toolboxFileIcon} alt="파일" className={styles.iconImg} />
+            <span className={styles.iconTileLabel}>파일</span>
           </button>
           <input
             ref={fileInputRef}
@@ -899,15 +905,25 @@ const RichTextEditor = ({
             className={styles.hiddenFileInput}
             onChange={handleFileInputChange}
           />
+
+          <button type="button" title="구분선 삽입" onClick={insertDividerLine} disabled={!editable} className={styles.iconTile}>
+            <img src={toolboxLineIcon} alt="구분선" className={styles.iconImg} />
+            <span className={styles.iconTileLabel}>구분선</span>
+          </button>
+
+          <button type="button" title="인용구 삽입" onClick={insertQuoteBlock} disabled={!editable} className={styles.iconTile}>
+            <img src={toolboxColonIcon} alt="인용구" className={styles.iconImg} />
+            <span className={styles.iconTileLabel}>인용구</span>
+          </button>
         </div>
 
         <div className={styles.formatToolbar}>
           <select
             className={styles.toolbarSelect}
-            value={FONT_SIZE_OPTIONS.includes(Number(editor.getAttributes('textStyle')?.fontSize)) ? Number(editor.getAttributes('textStyle')?.fontSize) : ''}
-            onChange={(event) => applyFontSize(event.target.value ? Number(event.target.value) : null)}
+            value={FONT_SIZE_OPTIONS.includes(Number(currentFontSize)) ? Number(currentFontSize) : DEFAULT_FONT_SIZE}
+            onChange={(event) => applyFontSize(event.target.value ? Number(event.target.value) : DEFAULT_FONT_SIZE)}
+            aria-label="글씨 크기 선택"
           >
-            <option value="">크기</option>
             {FONT_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size}>
                 {size}px
@@ -929,16 +945,16 @@ const RichTextEditor = ({
           </button>
 
           <div className={styles.colorGroup}>
-              <label className={styles.colorLabel} title="글자 색상 선택">
-                <img src={toolboxTextColorIcon} alt="text color" className={styles.colorAsset} />
-                <input
-                  type="color"
-                  className={styles.colorInput}
-                  value={editor?.getAttributes('textStyle')?.color || '#222222'}
-                  onChange={(e) => applyTextColor(e.target.value)}
-                  aria-label="글자 색상 선택"
-                />
-              </label>
+            <label className={styles.colorLabel} title="글자 색상 선택">
+              <img src={toolboxTextColorIcon} alt="text color" className={styles.colorAsset} />
+              <input
+                type="color"
+                className={styles.colorInput}
+                value={editor?.getAttributes('textStyle')?.color || '#222222'}
+                onChange={(e) => applyTextColor(e.target.value)}
+                aria-label="글자 색상 선택"
+              />
+            </label>
 
             <label className={styles.colorLabel} title="글자 배경색 선택">
               <img src={toolboxTextBgIcon} alt="text background" className={styles.colorAsset} />
@@ -950,8 +966,6 @@ const RichTextEditor = ({
                 aria-label="글자 배경색 선택"
               />
             </label>
-
-            
           </div>
 
           <button type="button" onClick={() => editor.chain().focus().setTextAlign('left').run()} className={editor.isActive({ textAlign: 'left' }) ? styles.activeButton : ''} aria-label="왼쪽 정렬">
