@@ -90,6 +90,7 @@ spring:
     admin:
       context-path: /admin/dev
       client:
+        enabled: false
         url: "http://localhost:8080/admin/dev"
         username: ${SBA_ADMIN_NAME}
         password: ${SBA_ADMIN_PASSWORD}

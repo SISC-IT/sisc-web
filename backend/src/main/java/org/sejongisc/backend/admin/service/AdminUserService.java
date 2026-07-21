@@ -9,6 +9,7 @@ import org.sejongisc.backend.admin.dto.AdminUserResponse;
 import org.sejongisc.backend.admin.dto.ExcelSyncResponse;
 import org.sejongisc.backend.admin.dto.UserExcelRow;
 import org.sejongisc.backend.admin.repository.AdminUserRepository;
+import org.sejongisc.backend.common.config.UploadProperties;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.point.entity.AccountType;
@@ -18,16 +19,26 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminUserService {
+    private static final int MAX_EXCEL_DATA_ROWS = 1000;
+    private static final int MAX_EXCEL_ZIP_ENTRIES = 5000;
+
     private final AdminUserRepository adminUserRepository;
     private final AdminUserSyncService adminUserSyncService;
     private final UserService userService;
+    private final UploadProperties uploadProperties;
 
     /**
      * 엑셀 파일을 읽어 동기화 프로세스 시작
@@ -36,11 +47,14 @@ public class AdminUserService {
         DataFormatter formatter = new DataFormatter();
 
         // 엑셀 파일 검증
-        validateFile(file);
+        byte[] uploadBytes = validateFile(file);
         List<UserExcelRow> excelRows = new ArrayList<>();
 
-        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+        try (InputStream is = new ByteArrayInputStream(uploadBytes); Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
+            if (sheet.getLastRowNum() > MAX_EXCEL_DATA_ROWS) {
+                throw new CustomException(ErrorCode.INVALID_EXCEL_STRUCTURE);
+            }
 
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
@@ -58,6 +72,9 @@ public class AdminUserService {
 
                 // 필수값 검증 및 UserExcelRow 리스트에 추가
                 excelRows.add(buildExcelRow(row, studentId, i, formatter));
+                if (excelRows.size() > MAX_EXCEL_DATA_ROWS) {
+                    throw new CustomException(ErrorCode.INVALID_EXCEL_STRUCTURE);
+                }
             }
 
             // 추가할 내용이 없는 빈 파일의 경우 예외
@@ -69,7 +86,7 @@ public class AdminUserService {
             throw e;
         } catch (Exception e) {
             log.error("엑셀 동기화 중 오류 발생: ", e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
         }
 
         return adminUserSyncService.syncMemberData(excelRows);
@@ -139,11 +156,107 @@ public class AdminUserService {
     /**
      * 엑셀 파일 검증
      */
-    private void validateFile(MultipartFile file) {
+    private byte[] validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new CustomException(ErrorCode.EMPTY_FILE);
+        long maxExcelFileSize = uploadProperties.getAdminExcelMaxSize().toBytes();
+        if (file.getSize() <= 0 || file.getSize() > maxExcelFileSize) {
+            throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+        }
 
+        // 관리자 명단 업로드 .xlsx만 허용
         String fileName = file.getOriginalFilename();
         if (fileName == null || !fileName.toLowerCase(Locale.ROOT).endsWith(".xlsx")) throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+
+        try {
+            byte[] bytes = file.getBytes();
+            if (bytes.length == 0 || bytes.length > maxExcelFileSize) {
+                throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+            }
+            validateXlsxPackage(bytes);
+            return bytes;
+        } catch (CustomException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+        }
+    }
+
+    private void validateXlsxPackage(byte[] bytes) {
+        if (!startsWithZip(bytes)) {
+            throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+        }
+
+        // xlsx ZIP 구조와 위험 내부 항목 확인
+        boolean hasContentTypes = false;
+        boolean hasWorkbook = false;
+        int entryCount = 0;
+
+        try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+            ZipEntry entry;
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                entryCount++;
+                if (entryCount > MAX_EXCEL_ZIP_ENTRIES) {
+                    throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+                }
+
+                String name = entry.getName().replace('\\', '/').toLowerCase(Locale.ROOT);
+                // 경로 조작, 매크로, ActiveX/OLE, 실행 가능한 웹 문서 차단
+                if (name.contains("../")
+                    || name.contains("vbaproject")
+                    || name.contains("activex/")
+                    || name.contains("embeddings/oleobject")
+                    || name.endsWith(".exe")
+                    || name.endsWith(".js")
+                    || name.endsWith(".html")
+                    || name.endsWith(".htm")
+                    || name.endsWith(".svg")) {
+                    throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+                }
+                if ("[content_types].xml".equals(name)) {
+                    hasContentTypes = true;
+                    String contentTypesXml = readZipEntryText(zipInputStream).toLowerCase(Locale.ROOT);
+                    if (contentTypesXml.contains("macroenabled")
+                        || contentTypesXml.contains("vbaproject")
+                        || contentTypesXml.contains("application/vnd.ms-office.vbaproject")) {
+                        throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+                    }
+                }
+                if ("xl/workbook.xml".equals(name)) {
+                    hasWorkbook = true;
+                }
+            }
+        } catch (CustomException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+        }
+
+        if (!hasContentTypes || !hasWorkbook) {
+            throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+        }
+    }
+
+    private String readZipEntryText(ZipInputStream zipInputStream) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        byte[] buffer = new byte[4096];
+        int totalBytes = 0;
+        int read;
+        while ((read = zipInputStream.read(buffer)) != -1) {
+            totalBytes += read;
+            if (totalBytes > 1024 * 1024) {
+                throw new CustomException(ErrorCode.INVALID_FILE_FORMAT);
+            }
+            outputStream.write(buffer, 0, read);
+        }
+        return outputStream.toString(StandardCharsets.UTF_8);
+    }
+
+    private boolean startsWithZip(byte[] bytes) {
+        return bytes.length >= 4
+            && bytes[0] == 0x50
+            && bytes[1] == 0x4B
+            && (bytes[2] == 0x03 || bytes[2] == 0x05 || bytes[2] == 0x07)
+            && (bytes[3] == 0x04 || bytes[3] == 0x06 || bytes[3] == 0x08);
     }
 
     /**

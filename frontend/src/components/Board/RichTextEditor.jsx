@@ -12,7 +12,6 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import styles from './RichTextEditor.module.css';
 import toolboxImgIcon from '../../assets/toolbox-img-icon.svg';
-import toolboxVideoIcon from '../../assets/toolbox-video-icon.svg';
 import toolboxFileIcon from '../../assets/toolbox-file-icon.svg';
 import toolboxLeftIcon from '../../assets/toolbox-left-icon.svg';
 import toolboxMidIcon from '../../assets/toolbox-mid-icon.svg';
@@ -43,8 +42,19 @@ const hasClipboardImage = async () => {
   }
 };
 
-const DEFAULT_FONT_SIZE = 15;
-const FONT_SIZE_OPTIONS = [12, 14, 15, 16, 18, 20, 24, 28, 32, 40];
+const FONT_FAMILY_OPTIONS = [
+  { label: '기본', value: '' },
+  { label: 'Pretendard', value: 'Pretendard' },
+  { label: 'Noto Sans KR', value: 'Noto Sans KR' },
+  { label: 'Apple SD Gothic Neo', value: 'Apple SD Gothic Neo' },
+  { label: 'Arial', value: 'Arial' },
+  { label: 'Georgia', value: 'Georgia' },
+  { label: 'Courier New', value: 'Courier New' },
+];
+
+const FONT_SIZE_OPTIONS = [12, 14, 16, 18, 20, 24, 28, 32, 40];
+const IMAGE_UPLOAD_ACCEPT = '.jpg,.jpeg,.png,.webp,.gif';
+const FILE_UPLOAD_ACCEPT = '.pdf,.docx,.xlsx,.pptx,.csv,.txt,.mp4,.webm,.mov';
 
 const FontFamily = Extension.create({
   name: 'fontFamily',
@@ -163,7 +173,7 @@ const ResizableImageNodeView = (props) => {
       }
 
       if (isCorner) {
-        // proportional scaling: base on x movement and apply to both axes
+        // 대각선 핸들 가로 이동량 기준 비율 유지
         const nextWidth = Math.max(MIN_IMAGE_WIDTH, Math.round(startWidth + xDelta));
         const scale = nextWidth / Math.max(1, startWidth);
         const nextHeight = Math.max(MIN_IMAGE_HEIGHT, Math.round(startHeight * scale));
@@ -337,12 +347,10 @@ const RichTextEditor = ({
   onUploadImage,
   onImageInserted,
   onUploadFile,
-  onUploadVideo,
   onAttachFiles,
 }) => {
   const onChangeRef = useRef(onChange);
   const imageInputRef = useRef(null);
-  const videoInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [, setSelectionTick] = useState(0);
@@ -427,10 +435,10 @@ const RichTextEditor = ({
         const hasHandledImage = imageFiles.length > 0 || hasHtmlImage;
 
         if (!hasHandledImage) {
-          // Prevent fallback plain-text insertion like "xxx.png" even when MIME is missing.
+          // MIME 누락 시 파일명 텍스트 삽입 방지
           event.preventDefault();
 
-          // Windows 일부 환경에서는 paste event에 파일이 없고 navigator.clipboard.read()에만 이미지가 있음.
+          // Windows paste event 파일 누락 대응
           if (navigator.clipboard?.read) {
             window.setTimeout(() => {
               Promise.resolve()
@@ -511,8 +519,7 @@ const RichTextEditor = ({
         const imageFiles = allDropped.filter(isImageFile);
         const otherFiles = allDropped.filter((f) => !isImageFile(f));
 
-        // If parent provided `onAttachFiles`, handle images inline and delegate
-        // non-image files to the parent so they become attachments.
+        // 이미지 본문 삽입, 일반 파일 첨부 목록 위임
         if (onAttachFiles) {
           event.preventDefault();
           window.setTimeout(() => {
@@ -561,7 +568,7 @@ const RichTextEditor = ({
         window.setTimeout(() => {
           Promise.resolve()
             .then(async () => {
-              // images: use existing insertImage flow
+              // 이미지 업로드 흐름 사용
               if (imageFiles.length > 0 && onUploadImage) {
                 try {
                   setIsUploadingImage(true);
@@ -575,10 +582,10 @@ const RichTextEditor = ({
                 }
               }
 
-              // non-image files: upload (prefer onUploadFile) and insert file links into editor
+              // 일반 파일 업로드 후 본문 링크 삽입
               if (otherFiles.length > 0) {
                 try {
-                  // If a single-file uploader is available
+                  // 단일 파일 업로더로 파일별 업로드
                   if (onUploadFile) {
                     for (const file of otherFiles) {
                       try {
@@ -590,7 +597,7 @@ const RichTextEditor = ({
                       }
                     }
                   } else if (onAttachFiles) {
-                    // fallback: onAttachFiles may upload and return uploaded metadata array
+                    // 첨부 처리기 업로드 결과 배열 지원
                     try {
                       const uploadedArr = await onAttachFiles(otherFiles);
                       if (Array.isArray(uploadedArr)) {
@@ -643,7 +650,7 @@ const RichTextEditor = ({
     try {
       setIsUploadingImage(true);
       for (const file of files) {
-        // Insert images one by one so each lands at the current cursor position.
+        // 여러 이미지 현재 커서 위치에 순서대로 삽입
         await insertImage(file);
       }
     } finally {
@@ -674,7 +681,7 @@ const RichTextEditor = ({
     if (files.length === 0) return;
 
     try {
-      // If parent wants attachments, delegate files to it
+      // 첨부 목록 관리 화면이면 파일 처리 부모에게 맡김
       if (onAttachFiles) {
         try {
           await onAttachFiles(files);
@@ -725,6 +732,28 @@ const RichTextEditor = ({
     } finally {
       event.target.value = '';
     }
+  const promptLink = () => {
+    if (!editor || !editable) return;
+
+    const previousUrl = editor.getAttributes('link').href || '';
+    const nextUrl = window.prompt('링크 주소를 입력하세요.', previousUrl);
+
+    if (nextUrl === null) return;
+
+    const trimmedUrl = nextUrl.trim();
+
+    if (!trimmedUrl) {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange('link').setLink({ href: trimmedUrl }).run();
+  };
+
+  const clearFormatting = () => {
+    if (!editor || !editable) return;
+
+    editor.chain().focus().unsetAllMarks().clearNodes().setParagraph().run();
   };
 
   const applyTextColor = (color) => {
@@ -742,7 +771,7 @@ const RichTextEditor = ({
     if (!editor || !editable) return;
 
     if (!color) {
-      // prefer to unset Highlight, fallback to clearing textStyle background
+      // Highlight 해제 우선, 실패 시 textStyle 배경색 제거
       try {
         editor.chain().focus().unsetHighlight().run();
       } catch (error) {
@@ -756,7 +785,7 @@ const RichTextEditor = ({
       return;
     }
 
-    // prefer Highlight (supports multicolor), fallback to textStyle mark
+    // 다색 배경용 Highlight 우선, 실패 시 textStyle mark 사용
     try {
       editor.chain().focus().toggleHighlight({ color }).run();
     } catch (error) {
@@ -800,8 +829,7 @@ const RichTextEditor = ({
     editor.setEditable(editable);
   }, [editor, editable]);
 
-  // Re-render component when selection changes so toolbar reflects
-  // formatting of the currently selected text (bold/italic/align/etc.).
+  // 선택 영역 변경 시 툴바 스타일 상태 갱신
   useEffect(() => {
     if (!editor) return undefined;
 
@@ -846,7 +874,7 @@ const RichTextEditor = ({
           <input
             ref={imageInputRef}
             type="file"
-            accept="image/*"
+            accept={IMAGE_UPLOAD_ACCEPT}
             multiple
             className={styles.hiddenFileInput}
             onChange={handleImageInputChange}
@@ -872,6 +900,7 @@ const RichTextEditor = ({
           <input
             ref={fileInputRef}
             type="file"
+            accept={FILE_UPLOAD_ACCEPT}
             multiple
             className={styles.hiddenFileInput}
             onChange={handleFileInputChange}

@@ -147,7 +147,7 @@ const BoardWrite = () => {
         setIdToSegment((prev) => ({ ...prev, ...idSegmentMap }));
         const initialBoardId = currentBoardId || location.state?.boardId || options[0]?.id || '';
         setSelectedParentId(initialBoardId);
-        // if location.state.boardId is a child id we will select it after loading children
+        // 하위 게시판 ID 진입 상태는 하위 목록 로드 후 선택
       } catch (error) {
         console.error('게시판 목록 로드 실패:', error);
       }
@@ -156,7 +156,7 @@ const BoardWrite = () => {
     loadBoards();
   }, [currentBoardId, location.state?.boardId]);
 
-  // load sub-boards when parent selection changes
+  // 부모 게시판 선택 변경 시 하위 게시판 로드
   useEffect(() => {
     if (!selectedParentId) {
       setSubBoardOptions([]);
@@ -177,19 +177,19 @@ const BoardWrite = () => {
 
         setSubBoardOptions(subOptions);
 
-        // map id -> segment for navigation
+        // 게시판 ID별 라우트 세그먼트 매핑
         const idSeg = {};
         subOptions.forEach((s) => (idSeg[s.id] = s.segment));
         setIdToSegment((prev) => ({ ...prev, ...idSeg }));
 
-        // If user navigated here with a specific boardId in state, prefer that
+        // 진입 상태에 지정된 게시판 우선 선택
         const incomingBoardId = location.state?.boardId;
         if (incomingBoardId && subOptions.some((s) => s.id === incomingBoardId)) {
           setSelectedSubBoardId(incomingBoardId);
           return;
         }
 
-        // default: clear child selection
+        // 기본 하위 게시판 선택 해제
         setSelectedSubBoardId('');
       } catch (err) {
         console.error('하위 게시판 로드 실패:', err);
@@ -206,7 +206,7 @@ const BoardWrite = () => {
   const computedSelectedBoardId = useMemo(() => selectedSubBoardId || selectedParentId || '', [selectedParentId, selectedSubBoardId]);
 
   const currentBoardPath = useMemo(() => {
-    // When a sub-board is selected, navigate to the parent board route and include subBoardId query
+    // 하위 게시판 선택 시 부모 게시판 경로와 subBoardId 쿼리 사용
     if (!computedSelectedBoardId) return '/board';
 
     if (selectedSubBoardId) {
@@ -227,7 +227,7 @@ const BoardWrite = () => {
   };
 
   const handleBoardChange = (boardId) => {
-    // when user changes the top-level select, treat it as parent selection and clear child
+    // 상위 게시판 변경 시 하위 선택 초기화
     setSelectedParentId(boardId);
     setSelectedSubBoardId('');
   };
@@ -355,7 +355,7 @@ const BoardWrite = () => {
       setAttachmentFiles((prev) => [...prev, ...uploaded]);
     } catch (error) {
       console.error('첨부파일 업로드 실패:', error);
-      // bubble up or alert
+      // 상위 저장 흐름에서 업로드 실패 처리
       throw error;
     }
   };
@@ -416,7 +416,6 @@ const BoardWrite = () => {
               placeholder="내용을 입력해 주세요."
                 onUploadImage={boardApi.uploadBoardImage}
                 onUploadFile={boardApi.uploadBoardFile}
-                onUploadVideo={boardApi.uploadBoardFile}
                   onAttachFiles={handleAttachFiles}
               onImageInserted={(media) => {
                 if (media?.mediaId) {

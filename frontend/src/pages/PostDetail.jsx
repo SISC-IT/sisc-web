@@ -1,4 +1,3 @@
-// components/Board/PostDetail.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import * as boardApi from '../utils/boardApi';
@@ -16,6 +15,27 @@ const FILE_DOWNLOAD_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(
   /\/$/,
   ''
 );
+
+const toAbsoluteFileUrl = (value = '') => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('/')) return `${FILE_DOWNLOAD_BASE_URL}${raw}`;
+  return `${FILE_DOWNLOAD_BASE_URL}/${raw.replace(/^\/+/, '')}`;
+};
+
+const buildAttachmentDownloadUrl = (file) => {
+  const directUrl = file?.url || file?.downloadUrl || file?.fileUrl || file?.savedUrl || file?.publicPath;
+  if (directUrl) return toAbsoluteFileUrl(directUrl);
+
+  const savedFilename = String(file?.savedFilename || '').trim();
+  if (!savedFilename) return '';
+  const encodedPath = savedFilename
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+  return `${FILE_DOWNLOAD_BASE_URL}/uploads/${encodedPath}`;
+};
 
 const buildCommentTree = (flatComments) => {
   const map = new Map();
@@ -129,7 +149,7 @@ const PostDetail = () => {
   // 데이터 로드 로직
   const normalizeAttachments = (source) => {
     if (!source) return [];
-    // Possible locations/names for attachments in various backend versions
+    // 백엔드 버전별 첨부파일 필드명 후보 확인
     const candidates = [
       source.attachments,
       source.fileAttachments,
@@ -151,7 +171,7 @@ const PostDetail = () => {
 
     if (!arr) return [];
 
-    // Normalize each item to commonly used keys
+    // 화면 렌더링용 첨부파일 공통 키 정규화
     return arr.map((it) => {
       if (!it || typeof it !== 'object') return null;
       const savedFilename = it.savedFilename || it.savedFileName || it.fileName || it.saved_name || it.file_key || it.key || it.savedname;
@@ -162,7 +182,7 @@ const PostDetail = () => {
       const size = it.size || it.fileSize || it.fileSize || null;
       const url = it.url || it.downloadUrl || it.fileUrl || it.savedUrl || it.publicPath || null;
 
-      // If item comes from inlineImages/fileAttachments shape, ensure originalFilename/savedFilename present
+      // inlineImages/fileAttachments 응답 파일명 보정
       const normalizedOriginal = originalFilename || (it.originalFilename ? it.originalFilename : it.originalName || it.name);
       const normalizedSaved = savedFilename || (it.savedFilename ? it.savedFilename : it.fileName || it.savedName);
 
@@ -186,7 +206,7 @@ const PostDetail = () => {
         if (!href) return;
         const u = String(href || '').trim();
         if (!u) return;
-        // normalize by removing query string
+        // 캐시 쿼리스트링 제거 후 첨부 비교
         urls.add(u.split('?')[0]);
       };
 
@@ -217,11 +237,11 @@ const PostDetail = () => {
           const anchors = Array.from(doc.querySelectorAll('a'));
           anchors.forEach((a) => push(a.getAttribute('href')));
         } catch (e) {
-          // ignore
+          // 오래된 HTML 파싱 실패 시 첨부 렌더링 유지
         }
       }
     } catch (e) {
-      // ignore
+      // 본문 분석 실패 시 게시글 조회 유지
     }
     return Array.from(urls);
   };
@@ -251,15 +271,15 @@ const PostDetail = () => {
   const refreshPostAndComments = async () => {
     try {
       const updatedPost = await boardApi.getPost(postId);
-      // normalize attachments into `attachments` field for consistent rendering
+      // attachments 필드로 첨부파일 정규화
       const normalizedAttachments = normalizeAttachments(updatedPost);
       const inlineUrls = extractInlineUrlsFromContent(updatedPost).map((u) => String(u || '').split('?')[0]);
-      // filter out attachments that are already inline in content
+      // 본문 인라인 이미지/링크와 하단 첨부 중복 제거
       const filteredAttachments = (normalizedAttachments || []).filter((att) => {
         const attUrl = String(att?.url || att?.publicPath || att?.savedFilename || '').split('?')[0];
         const attSaved = String(att?.savedFilename || att?.originalFilename || '').split('?')[0];
         if (!attUrl && !attSaved) return true;
-        // if attachment url or saved filename appears in inline urls, exclude
+        // URL 또는 저장 파일명 기준 인라인 첨부 판단
         if (attUrl && inlineUrls.includes(attUrl)) return false;
         if (attSaved && inlineUrls.some((u) => u.endsWith(attSaved))) return false;
         return true;
@@ -367,16 +387,14 @@ const PostDetail = () => {
 
   const handleAttachmentDownload = async (file) => {
     try {
-      const serverFileName = file?.savedFilename;
+      const downloadUrl = buildAttachmentDownloadUrl(file);
 
-      if (!serverFileName) {
-        alert('다운로드할 savedFilename을 찾을 수 없습니다.');
+      if (!downloadUrl) {
+        alert('다운로드할 파일 경로를 찾을 수 없습니다.');
         return;
       }
 
-      const downloadUrl = `${FILE_DOWNLOAD_BASE_URL}/uploads/${encodeURIComponent(
-        serverFileName
-      )}`;
+      const serverFileName = file?.savedFilename;
 
       const fileName =
         file?.originalFilename ||
@@ -401,7 +419,7 @@ const PostDetail = () => {
   const handleEditStart = async () => {
     const updatedPost = await refreshPostAndComments();
     if (updatedPost) {
-      // ensure editFiles uses normalized attachments (exclude inline ones)
+      // 수정 폼 첨부 목록도 본문 인라인 파일 제외
       const normalized = normalizeAttachments(updatedPost) || [];
       const inlineUrls = extractInlineUrlsFromContent(updatedPost).map((u) => String(u || '').split('?')[0]);
       const filtered = normalized.filter((att) => {
@@ -438,11 +456,11 @@ const PostDetail = () => {
 
     try {
       const boardId = post.boardId || post.board?.boardId;
-      // If editContent appears to be TipTap JSON, use updateRichPost
+      // TipTap JSON 본문은 리치 게시글 수정 API 사용
       let usedUpdate;
       if (editContent && typeof editContent === 'object' && Array.isArray(editContent.content)) {
         const json = editContent;
-        // If there are newly added files (File objects), upload them first
+        // 새 File 객체 선업로드
         let uploadedNewMediaIds = [];
         if (newFiles && newFiles.length > 0) {
           try {
@@ -480,7 +498,7 @@ const PostDetail = () => {
             walk(j.content);
             return parts.join('').replace(/\n+/g, '\n').trim();
           })(json),
-          // Rich update accepts PostMedia IDs. Legacy PostAttachment IDs stay in the legacy table.
+          // 리치 수정 API용 PostMedia ID만 전달
           attachmentIds: Array.from(new Set([
             ...(editFiles || []).map((f) => f?.mediaId).filter(Boolean),
             ...(uploadedNewMediaIds || []),
