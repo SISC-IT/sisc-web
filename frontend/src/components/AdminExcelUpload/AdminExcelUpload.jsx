@@ -5,7 +5,7 @@ import { uploadAdminUsersExcel } from '../../utils/adminUserApi';
 import AdminExcelUploadHeader from './AdminExcelUploadHeader';
 import styles from './AdminExcelUpload.module.css';
 
-const ALLOWED_EXTENSIONS = ['.xlsx', '.xls'];
+const ALLOWED_EXTENSIONS = ['.xlsx'];
 
 const isExcelFile = (targetFile) => {
   if (!targetFile) return false;
@@ -23,7 +23,7 @@ const AdminExcelUpload = () => {
     if (!file) return;
 
     if (!isExcelFile(file)) {
-      toast.error('엑셀 파일(.xlsx, .xls)만 업로드할 수 있습니다.');
+      toast.error('엑셀 파일(.xlsx)만 업로드할 수 있습니다.');
       return;
     }
 
@@ -98,13 +98,13 @@ const AdminExcelUpload = () => {
           onDrop={handleDrop}
         >
           <FileSpreadsheet size={40} />
-          <p className={styles.uploadText}>.xlsx 또는 .xls 파일을 드래그 앤 드롭하거나 선택하세요.</p>
+          <p className={styles.uploadText}>.xlsx 파일을 드래그 앤 드롭하거나 선택하세요.</p>
 
           <label className={styles.fileLabel}>
             파일 선택
             <input
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx"
               onChange={handleInputChange}
               className={styles.fileInput}
             />

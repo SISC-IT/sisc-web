@@ -43,12 +43,12 @@ export const toAbsoluteImageUrl = (value = '') => {
   return `${API_IMAGE_ORIGIN}${normalizedPath}`;
 };
 
-export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'heic', 'heif'];
+export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 
 export const isImageFile = (file) => {
   if (!file) return false;
   const mimeType = String(file.type || '').toLowerCase();
-  if (mimeType.startsWith('image/')) return true;
+  if (['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(mimeType)) return true;
   const filename = String(file.name || '').toLowerCase();
   const extension = filename.includes('.') ? filename.split('.').pop() : '';
   return IMAGE_EXTENSIONS.includes(extension);
