@@ -1,0 +1,13 @@
+{
+  "source": "fdr",
+  "markets": ["KOSPI", "KOSDAQ"],
+  "start_date": "2015-01-01",
+  "end_date": null,
+  "storage": "both",
+  "file_format": "csv",
+  "data_dir": "AI/modules/data_collector/storage/korea_ohlcv",
+  "log_dir": "AI/modules/data_collector/logs",
+  "db_name": "db",
+  "sleep_seconds": 0.2,
+  "batch_limit": null
+}
