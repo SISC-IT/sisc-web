@@ -15,6 +15,7 @@ groq
 google-genai
 fredapi
 yfinance
+finance-datareader
 
 # --- AI & 강화학습 ---
 scikit-learn

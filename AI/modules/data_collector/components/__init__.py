@@ -10,6 +10,7 @@ from .market_breadth_data import MarketBreadthCollector
 from .market_breadth_stats import MarketBreadthStatsCollector
 from .ticker_updater import TickerUpdater
 from .company_name_korean_updater import CompanyNameKoreanUpdater
+from .korea_stock_data import KoreaStockCollectorConfig, KoreaStockDataCollector
 # from .news_data import NewsDataCollector  # 뉴스 모듈 구현 시 주석 해제
 
 __all__ = [
@@ -23,5 +24,7 @@ __all__ = [
     "MarketBreadthStatsCollector",
     "TickerUpdater",
     "CompanyNameKoreanUpdater",
+    "KoreaStockCollectorConfig",
+    "KoreaStockDataCollector",
     # "NewsDataCollector",  # 뉴스 모듈 구현 시 주석 해제
 ]
