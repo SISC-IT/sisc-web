@@ -2,6 +2,56 @@
 
 `data_collector`는 AI/트레이딩 파이프라인이 사용하는 원천 데이터를 수집하는 작업 공간입니다. 국내 주식 일봉 OHLCV 수집은 `components/korea_stock_data.py`와 `scripts/collect_korea_stocks.py`에서 담당합니다.
 
+## 미국 기업 뉴스 수집 (#377)
+
+`components/news/`는 SEC 이벤트 저장 여부와 관계없이 미국 기업별 최신 뉴스를
+수집합니다. 현재 universe는 2026-07-27 기준 S&P 100 snapshot이며, 복수
+주식 클래스를 회사 단위로 합쳐 100개 issuer와 101개 ticker를 포함합니다.
+예를 들어 `GOOG`와 `GOOGL`은 같은 Alphabet `company_key`와 CIK에 연결됩니다.
+
+Google News RSS 수집기는 정식 회사명·승인 별칭·`{ticker} stock`을 하나의
+OR 검색식으로 조회합니다. 게시 시각 원문과 UTC 시각을 함께 보존하고,
+회사 관련도 규칙, URL 정규화, 정확 중복 제거, 신디케이션 후보 그룹을
+적용합니다. 최상위 `collection_status`는 `success`, `partial_success`,
+`failed` 생명주기로 유지하고, `collection_outcome`에서 `no_results`,
+`no_relevant_news`, `provider_error`를 구분합니다. 여러 회사 중 일부가
+실패하면 `partial_success`와 non-zero 종료 코드로 알립니다.
+
+Apple 한 회사의 최근 2시간을 stdout JSON으로 확인:
+
+```bash
+python AI/modules/data_collector/scripts/collect_company_news.py \
+  --tickers AAPL \
+  --lookback-hours 2
+```
+
+S&P 100 전체 결과를 파일로 저장:
+
+```bash
+python AI/modules/data_collector/scripts/collect_company_news.py \
+  --output AI/modules/data_collector/storage/company_news/latest.json
+```
+
+Google RSS는 역사 archive의 완전성·pagination을 보장하지 않으므로 이
+실행기의 조회 범위는 최대 72시간입니다. 최근 5년 백필은 역사 조회 계약이
+확인된 Infomax 같은 별도 provider가 있어야 구현할 수 있습니다. 현재 출력의
+`company_relevance_score`는 규칙 기반 회사 관련도이며 SEC 공시 관련도나
+확률이 아닙니다. 정답 기사 집합이 없으므로 `article_omission_rate`는
+`null`로 남기고, 대신 request/invalid item 비율과 feed 포화 의심 여부를
+관측 지표로 기록합니다.
+
+이 단계에서는 DB migration, cron, SEC 이벤트 연결, 원문 본문 다운로드,
+AI 요약을 수행하지 않습니다. 공급자가 제공한 snippet이 있으면 사용하고,
+없으면 제목만 남깁니다. 향후 SEC 담당자가 `accepted_at`을 제공하면
+`event_news_window()`로 공시 전 24시간~후 48시간 구간을 계산해 별도
+linker에서 기존 기사와 연결합니다.
+
+네트워크·DB 없이 RSS 파싱, 시각 변환, 관련도, 중복, 장애 격리를 검증:
+
+```bash
+python AI/tests/verify_company_news.py -v
+```
+
 ## 국내 주식 OHLCV 수집
 
 - 기본 소스: `FinanceDataReader`
@@ -67,13 +117,26 @@ python AI/modules/data_collector/scripts/collect_korea_stocks.py --tickers 00593
 ```text
 AI/modules/data_collector/
   components/
+    news/
+      providers/
+        google_news_rss.py
+      config.py
+      contracts.py
+      dedup.py
+      pipeline.py
+      relevance.py
+      windows.py
+    news_data.py
     korea_stock_data.py
   config/
+    news_collection.json
+    sp100_companies.json
     korea_stocks.json
   logs/
     failed_tickers_YYYYMMDD_HHMMSS.csv
     korea_stock_data_YYYYMMDD.log
   scripts/
+    collect_company_news.py
     collect_korea_stocks.py
   storage/
     korea_ohlcv/
