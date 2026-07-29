@@ -2,8 +2,6 @@ package org.sejongisc.backend.board.service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,13 +17,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sejongisc.backend.activity.event.ActivityEvent;
 import org.sejongisc.backend.board.dto.CommentRequest;
-import org.sejongisc.backend.board.entity.Board;
 import org.sejongisc.backend.board.entity.Comment;
 import org.sejongisc.backend.board.entity.Post;
 import org.sejongisc.backend.board.entity.PostBookmark;
@@ -39,7 +34,6 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.repository.UserRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
-import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PostInteractionServiceTest {
@@ -57,14 +51,11 @@ class PostInteractionServiceTest {
   private PostLikeRepository postLikeRepository;
   @Mock
   private PostBookmarkRepository postBookmarkRepository;
-  @Mock
-  private ApplicationEventPublisher eventPublisher;
 
   // 테스트용 공유 객체
   private User mockUser;
   private User mockAdmin;
   private User mockOtherUser;
-  private Board mockBoard;
   private Post mockPost;
   private Comment mockParentComment;
   private Comment mockChildComment;
@@ -89,24 +80,12 @@ class PostInteractionServiceTest {
     childCommentId = UUID.randomUUID();
 
     // Mock 사용자 객체
-    mockUser = User.builder().userId(userId).name("테스트 유저").role(Role.TEAM_MEMBER).build();
-    mockAdmin = User.builder().userId(adminId).name("관리자").role(Role.PRESIDENT).build();
-    mockOtherUser = User.builder().userId(otherUserId).name("다른 유저").role(Role.TEAM_MEMBER).build();
-
-    mockBoard = Board.builder()
-        .boardId(UUID.randomUUID())
-        .boardName("자유게시판")
-        .build();
+    mockUser = User.builder().userId(userId).role(Role.TEAM_MEMBER).build();
+    mockAdmin = User.builder().userId(adminId).role(Role.PRESIDENT).build();
+    mockOtherUser = User.builder().userId(otherUserId).role(Role.TEAM_MEMBER).build();
 
     // Mock 엔티티 객체 (모든 카운트를 Integer 0으로 초기화)
-    mockPost = Post.builder()
-        .postId(postId)
-        .board(mockBoard)
-        .title("동시성 테스트 글")
-        .likeCount(0)
-        .commentCount(0)
-        .bookmarkCount(0)
-        .build();
+    mockPost = Post.builder().postId(postId).likeCount(0).commentCount(0).bookmarkCount(0).build();
 
     mockParentComment = Comment.builder()
         .commentId(parentCommentId)
@@ -127,11 +106,11 @@ class PostInteractionServiceTest {
   @DisplayName("댓글 작성 - 성공 (원댓글)")
   void createComment_Success_Parent() {
     // given
-    CommentRequest request = new CommentRequest(postId, "새 댓글", false, null);
+    CommentRequest request = new CommentRequest(postId, "새 댓글", null);
     mockPost.setCommentCount(5); // 초기 댓글 수 (Integer)
 
     // Mocking
-    when(postRepository.findByIdWithBoard(postId)).thenReturn(Optional.of(mockPost));
+    when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
     when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
 
     // when
@@ -154,11 +133,11 @@ class PostInteractionServiceTest {
   @DisplayName("댓글 작성 - 성공 (대댓글)")
   void createComment_Success_Child() {
     // given
-    CommentRequest request = new CommentRequest(postId, "대댓글", false, parentCommentId);
+    CommentRequest request = new CommentRequest(postId, "대댓글", parentCommentId);
     mockPost.setCommentCount(5); // (Integer)
 
     // Mocking
-    when(postRepository.findByIdWithBoard(postId)).thenReturn(Optional.of(mockPost));
+    when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
     when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
     when(commentRepository.findById(parentCommentId)).thenReturn(Optional.of(mockParentComment));
 
@@ -180,10 +159,10 @@ class PostInteractionServiceTest {
   void createComment_Fail_ReplyToReply() {
     // given
     // mockChildComment는 parentComment를 부모로 가짐 (즉, 1-depth 대댓글임)
-    CommentRequest request = new CommentRequest(postId, "대대댓글", false, childCommentId);
+    CommentRequest request = new CommentRequest(postId, "대대댓글", childCommentId);
 
     // Mocking
-    when(postRepository.findByIdWithBoard(postId)).thenReturn(Optional.of(mockPost));
+    when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
     when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
     when(commentRepository.findById(childCommentId)).thenReturn(Optional.of(mockChildComment));
 
@@ -200,7 +179,7 @@ class PostInteractionServiceTest {
   @DisplayName("댓글 수정 - 성공")
   void updateComment_Success() {
     // given
-    CommentRequest request = new CommentRequest(null, "수정된 내용", false, null);
+    CommentRequest request = new CommentRequest(null, "수정된 내용", null);
 
     // Mocking
     when(commentRepository.findById(parentCommentId)).thenReturn(Optional.of(mockParentComment));
@@ -216,7 +195,7 @@ class PostInteractionServiceTest {
   @DisplayName("댓글 수정 - 실패 (작성자 불일치)")
   void updateComment_Fail_InvalidOwner() {
     // given
-    CommentRequest request = new CommentRequest(null, "수정 시도", false, null);
+    CommentRequest request = new CommentRequest(null, "수정 시도", null);
 
     // Mocking
     when(commentRepository.findById(parentCommentId)).thenReturn(Optional.of(mockParentComment));
@@ -282,88 +261,41 @@ class PostInteractionServiceTest {
   @DisplayName("좋아요 토글 - 성공 (좋아요 추가)")
   void toggleLike_Success_AddLike() {
     // given
-    when(postRepository.findByIdWithBoard(postId)).thenReturn(Optional.of(mockPost));
+    mockPost.setLikeCount(5); // (Integer)
+
+    // Mocking
+    when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
     when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
-    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId)).thenReturn(Optional.empty());
-    when(postLikeRepository.insertIgnore(any(UUID.class), eq(postId), eq(userId))).thenReturn(1);
+    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId)).thenReturn(Optional.empty()); // 좋아요 없음
 
     // when
     postInteractionService.toggleLike(postId, userId);
 
     // then
-    InOrder inOrder = inOrder(postLikeRepository);
-    inOrder.verify(postLikeRepository).acquirePostUserLikeToggleLock(postId, userId);
-    inOrder.verify(postLikeRepository).findByPostPostIdAndUserUserId(postId, userId);
-    inOrder.verify(postLikeRepository).insertIgnore(any(UUID.class), eq(postId), eq(userId));
-
-    verify(postRepository).incrementLikeCount(postId);
-    verify(postLikeRepository, never()).deleteByPostIdAndUserId(any(), any());
-    verify(eventPublisher).publishEvent(any(ActivityEvent.class));
+    verify(postLikeRepository).save(any(PostLike.class));
+    verify(postLikeRepository, never()).delete(any());
+    assertThat(mockPost.getLikeCount()).isEqualTo(6); // (Integer)
   }
 
   @Test
   @DisplayName("좋아요 토글 - 성공 (좋아요 취소)")
   void toggleLike_Success_RemoveLike() {
     // given
+    mockPost.setLikeCount(5); // (Integer)
     PostLike existingLike = PostLike.builder().post(mockPost).user(mockUser).build();
 
-    when(postRepository.findByIdWithBoard(postId)).thenReturn(Optional.of(mockPost));
+    // Mocking
+    when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
     when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
-    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId)).thenReturn(Optional.of(existingLike));
-    when(postLikeRepository.deleteByPostIdAndUserId(postId, userId)).thenReturn(1);
+    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId)).thenReturn(Optional.of(existingLike)); // 좋아요 있음
 
     // when
     postInteractionService.toggleLike(postId, userId);
 
     // then
-    InOrder inOrder = inOrder(postLikeRepository);
-    inOrder.verify(postLikeRepository).acquirePostUserLikeToggleLock(postId, userId);
-    inOrder.verify(postLikeRepository).findByPostPostIdAndUserUserId(postId, userId);
-    inOrder.verify(postLikeRepository).deleteByPostIdAndUserId(postId, userId);
-
-    verify(postRepository).decrementLikeCount(postId);
-    verify(postLikeRepository, never()).insertIgnore(any(), any(), any());
-    verify(eventPublisher, never()).publishEvent(any(ActivityEvent.class));
-  }
-
-  @Test
-  @DisplayName("좋아요 토글 - 동시 추가 경합에서 insert가 무시되면 카운트 증가 없음")
-  void toggleLike_ConcurrentInsertIgnored_DoesNotIncrementCount() {
-    // given
-    when(postRepository.findByIdWithBoard(postId)).thenReturn(Optional.of(mockPost));
-    when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
-    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId)).thenReturn(Optional.empty());
-    when(postLikeRepository.insertIgnore(any(UUID.class), eq(postId), eq(userId))).thenReturn(0);
-
-    // when
-    postInteractionService.toggleLike(postId, userId);
-
-    // then
-    verify(postLikeRepository).acquirePostUserLikeToggleLock(postId, userId);
-    verify(postRepository, never()).incrementLikeCount(any());
-    verify(postRepository, never()).decrementLikeCount(any());
-    verify(eventPublisher, never()).publishEvent(any(ActivityEvent.class));
-  }
-
-  @Test
-  @DisplayName("좋아요 토글 - 동시 취소 경합에서 삭제된 행이 없으면 카운트 감소 없음")
-  void toggleLike_ConcurrentDeleteMiss_DoesNotDecrementCount() {
-    // given
-    PostLike existingLike = PostLike.builder().post(mockPost).user(mockUser).build();
-
-    when(postRepository.findByIdWithBoard(postId)).thenReturn(Optional.of(mockPost));
-    when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
-    when(postLikeRepository.findByPostPostIdAndUserUserId(postId, userId)).thenReturn(Optional.of(existingLike));
-    when(postLikeRepository.deleteByPostIdAndUserId(postId, userId)).thenReturn(0);
-
-    // when
-    postInteractionService.toggleLike(postId, userId);
-
-    // then
-    verify(postLikeRepository).acquirePostUserLikeToggleLock(postId, userId);
-    verify(postRepository, never()).decrementLikeCount(any());
-    verify(postRepository, never()).incrementLikeCount(any());
-    verify(eventPublisher, never()).publishEvent(any(ActivityEvent.class));
+    verify(postLikeRepository, never()).save(any(PostLike.class));
+    verify(postLikeRepository).delete(existingLike);
+    assertThat(mockPost.getLikeCount()).isEqualTo(4); // (Integer)
   }
 
   @Test

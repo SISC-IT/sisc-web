@@ -177,34 +177,29 @@ public class PostInteractionService {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-    // 토글은 같은 사용자-게시글 조합 안에서 순서가 의미를 가지므로 해당 조합만 직렬화합니다.
-    postLikeRepository.acquirePostUserLikeToggleLock(postId, userId);
-
+    // 이미 좋아요를 눌렀는지 확인
     Optional<PostLike> existingLike = postLikeRepository.findByPostPostIdAndUserUserId(postId, userId);
 
     if (existingLike.isPresent()) {
-      int deletedRows = postLikeRepository.deleteByPostIdAndUserId(postId, userId);
-      if (deletedRows > 0) {
-        // 실제 좋아요 row가 삭제된 경우에만 캐시 카운트를 원자적으로 감소시킵니다.
-        postRepository.decrementLikeCount(postId);
-      }
-      return;
+      // 좋아요가 이미 있으면 -> 삭제 (좋아요 취소)
+      postLikeRepository.delete(existingLike.get());
+      post.setLikeCount(post.getLikeCount() - 1); // Post 엔티티 카운트 감소
+    } else {
+      // 좋아요가 없으면 -> 생성 (좋아요)
+      PostLike newLike = PostLike.builder()
+          .post(post)
+          .user(user)
+          .build();
+      postLikeRepository.save(newLike);
+      post.setLikeCount(post.getLikeCount() + 1); // Post 엔티티 카운트 증가
+      eventPublisher.publishEvent(new ActivityEvent(
+              user.getUserId(),
+              user.getName(),
+              ActivityType.BOARD_LIKE,
+              "[" + post.getTitle() + "]에 좋아요를 눌렀습니다.",
+              post.getPostId(),
+              post.getBoard().getBoardName()));
     }
-
-    int insertedRows = postLikeRepository.insertIgnore(UUID.randomUUID(), postId, userId);
-    if (insertedRows == 0) {
-      return;
-    }
-
-    // 실제 좋아요 row가 추가된 경우에만 캐시 카운트를 원자적으로 증가시킵니다.
-    postRepository.incrementLikeCount(postId);
-    eventPublisher.publishEvent(new ActivityEvent(
-            user.getUserId(),
-            user.getName(),
-            ActivityType.BOARD_LIKE,
-            "[" + post.getTitle() + "]에 좋아요를 눌렀습니다.",
-            post.getPostId(),
-            post.getBoard().getBoardName()));
   }
 
   // 북마크 등록/삭제

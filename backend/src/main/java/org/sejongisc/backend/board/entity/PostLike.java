@@ -7,8 +7,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,15 +17,6 @@ import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 import org.sejongisc.backend.user.entity.User;
 
 @Entity
-@Table(
-    name = "post_like",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            name = "uk_post_like_post_user",
-            columnNames = {"post_id", "user_id"}
-        )
-    }
-)
 @Getter
 @Setter
 @NoArgsConstructor
