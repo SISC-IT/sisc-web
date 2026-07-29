@@ -9,6 +9,7 @@ import org.sejongisc.backend.board.repository.projection.PostIdUserIdProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -22,7 +23,21 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
   Page<Post> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
       String titleKeyword, String contentKeyword, Pageable pageable);
 
-  Page<Post> findAllByBoard(Board board, Pageable pageable);
+  @Query(
+      value = """
+      select p
+      from Post p
+      join fetch p.board
+      left join fetch p.user
+      where p.board = :board
+      """,
+      countQuery = """
+      select count(p)
+      from Post p
+      where p.board = :board
+      """
+  )
+  Page<Post> findAllByBoard(@Param("board") Board board, Pageable pageable);
 
   @Query("SELECT p FROM Post p WHERE p.board = :board AND (" +
          "LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
@@ -68,4 +83,24 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
            where p.board.boardId = :boardId
            """)
   List<PostIdUserIdProjection> findPostIdAndUserIdByBoardId(@Param("boardId") UUID boardId);
+
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("""
+      update Post p
+      set p.likeCount = p.likeCount + 1
+      where p.postId = :postId
+      """)
+  int incrementLikeCount(@Param("postId") UUID postId);
+
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query("""
+      update Post p
+      set p.likeCount = case
+          when p.likeCount > 0 then p.likeCount - 1
+          else 0
+      end
+      where p.postId = :postId
+      """)
+  int decrementLikeCount(@Param("postId") UUID postId);
+
 }
