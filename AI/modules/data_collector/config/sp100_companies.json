@@ -738,7 +738,7 @@
       "tickers": ["PM"],
       "aliases": ["Philip Morris International"],
       "enabled": true,
-      "ambiguous_tickers": []
+      "ambiguous_tickers": ["PM"]
     },
     {
       "company_key": "qualcomm",
@@ -922,8 +922,8 @@
     },
     {
       "company_key": "exxonmobil",
-      "cik": "0002115436",
-      "legal_name": "ExxonMobil Holdings Corp",
+      "cik": "0000034088",
+      "legal_name": "Exxon Mobil Corporation",
       "tickers": ["XOM"],
       "aliases": ["ExxonMobil", "Exxon Mobil"],
       "enabled": true,

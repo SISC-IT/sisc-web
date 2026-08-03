@@ -14,7 +14,6 @@ from typing import Iterable, Optional, Tuple
 
 from .contracts import CompanyTarget, ProviderArticle, SerializableContract
 
-
 COMPANY_RELEVANCE_VERSION = "company-relevance-v1"
 DEFAULT_RELEVANCE_THRESHOLD = 0.60
 
@@ -289,7 +288,17 @@ def score_company_relevance(
         score = min(1.0, score + 0.15)
         reasons.append("name_and_ticker:corroborated")
 
-    if score > 0.0 and _contains_market_context((article.title, snippet)):
+    market_context_already_used = bool(
+        best_ticker_reason
+        and best_ticker_reason.startswith(
+            "ambiguous_ticker:uppercase_business_context:"
+        )
+    )
+    if (
+        score > 0.0
+        and not market_context_already_used
+        and _contains_market_context((article.title, snippet))
+    ):
         score = min(1.0, score + 0.20)
         reasons.append("business_or_market_context")
 

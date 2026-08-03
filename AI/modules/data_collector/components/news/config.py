@@ -6,7 +6,6 @@ from pathlib import Path
 
 from .contracts import CompanyTarget
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 DEFAULT_CONFIG_PATH = (
     PROJECT_ROOT / "AI/modules/data_collector/config/news_collection.json"
@@ -128,7 +127,21 @@ def load_company_universe(path: str | Path) -> CompanyUniverse:
     companies: list[CompanyTarget] = []
     company_keys: set[str] = set()
     seen_tickers: dict[str, str] = {}
-    for item in raw.get("companies", []):
+    raw_companies = raw.get("companies", [])
+    if not isinstance(raw_companies, list):
+        raise ValueError("universe companies must be a list")
+
+    for index, item in enumerate(raw_companies):
+        if not isinstance(item, dict):
+            raise ValueError(f"universe companies[{index}] must be an object")
+        missing_fields = [
+            key for key in ("company_key", "legal_name") if not item.get(key)
+        ]
+        if missing_fields:
+            raise ValueError(
+                f"universe companies[{index}] missing required fields: "
+                f"{', '.join(missing_fields)}"
+            )
         company = CompanyTarget(
             company_key=str(item["company_key"]),
             cik=str(item["cik"]).zfill(10) if item.get("cik") else None,

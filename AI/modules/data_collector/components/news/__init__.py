@@ -37,11 +37,22 @@ from .relevance import (
     score_company_relevance,
 )
 from .pipeline import CompanyNewsCollector
+from .repository import CollectionAlreadyRunningError, NewsRepository
+from .event_linker import (
+    EVENT_RELEVANCE_VERSION,
+    EventArticleCandidate,
+    EventNewsRepository,
+    EventRelationship,
+    EventRelevanceResult,
+    SecEvent,
+    score_event_relevance,
+)
 from .windows import event_news_window, forward_collection_window
 
 __all__ = [
     "COMPANY_RELEVANCE_VERSION",
     "DEFAULT_RELEVANCE_THRESHOLD",
+    "EVENT_RELEVANCE_VERSION",
     "SYNDICATION_BUCKET_HOURS",
     "SYNDICATION_GROUP_VERSION",
     "DEFAULT_CONFIG_PATH",
@@ -51,11 +62,17 @@ __all__ = [
     "CompanyTarget",
     "CompanyUniverse",
     "CompanyNewsCollector",
+    "CollectionAlreadyRunningError",
+    "EventArticleCandidate",
+    "EventNewsRepository",
+    "EventRelationship",
+    "EventRelevanceResult",
     "ExactDeduplicationResult",
     "ExactIdentity",
     "ExactIdentityMethod",
     "ProviderArticle",
     "NewsCollectionConfig",
+    "NewsRepository",
     "RelevanceResult",
     "SerializableContract",
     "build_exact_identity",
@@ -69,6 +86,8 @@ __all__ = [
     "normalize_title",
     "normalize_url",
     "score_company_relevance",
+    "score_event_relevance",
+    "SecEvent",
     "syndication_candidate_group_id",
     "to_serializable",
 ]

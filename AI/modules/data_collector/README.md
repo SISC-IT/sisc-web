@@ -40,16 +40,55 @@ Google RSS는 역사 archive의 완전성·pagination을 보장하지 않으므�
 `null`로 남기고, 대신 request/invalid item 비율과 feed 포화 의심 여부를
 관측 지표로 기록합니다.
 
-이 단계에서는 DB migration, cron, SEC 이벤트 연결, 원문 본문 다운로드,
-AI 요약을 수행하지 않습니다. 공급자가 제공한 snippet이 있으면 사용하고,
-없으면 제목만 남깁니다. 향후 SEC 담당자가 `accepted_at`을 제공하면
-`event_news_window()`로 공시 전 24시간~후 48시간 구간을 계산해 별도
-linker에서 기존 기사와 연결합니다.
+수집 코어 자체는 DB나 SEC 수집기에 의존하지 않습니다. 후속 저장 계층은
+`--persist`를 선택했을 때만 사용하며, SEC 이벤트 연결도 별도 one-shot
+linker로 실행합니다. 원문 본문 다운로드와 AI 요약은 수행하지 않습니다.
+공급자가 제공한 snippet이 있으면 사용하고, 없으면 제목만 남깁니다.
 
 네트워크·DB 없이 RSS 파싱, 시각 변환, 관련도, 중복, 장애 격리를 검증:
 
 ```bash
 python AI/tests/verify_company_news.py -v
+```
+
+### PostgreSQL 저장 및 SEC 이벤트 연결
+
+백엔드 시작 시 Flyway의 `V5__company_news_storage.sql`이 뉴스·수집 실행·SEC
+이벤트·이벤트-뉴스 연결 테이블을 생성합니다. DB 환경변수(`DB_HOST`,
+`DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`)를 설정한 뒤 `--persist`를
+사용하면 기사 identity와 회사 연결을 멱등 upsert합니다.
+
+```bash
+python AI/modules/data_collector/scripts/collect_company_news.py \
+  --lookback-hours 2 \
+  --persist
+```
+
+수집기는 PostgreSQL advisory lock을 사용하므로 이전 실행이 끝나지 않았으면
+종료 코드 `5`와 `already_running` 결과를 반환합니다. DB 저장 실패는 종료
+코드 `6`입니다. 서버에서는 다음 one-shot 서비스를 매시간 실행합니다.
+
+```bash
+docker compose --profile jobs run --rm ai-news
+```
+
+SEC 수집기의 `sec_filings`와 `sec_filing_documents`를 `sec_events` 계약으로
+가져오고, CIK 우선으로 공시 전 24시간부터 후 48시간까지 기사를 연결합니다.
+같은 명령을 반복해도 `(event_id, article_id)`가 갱신될 뿐 중복되지 않습니다.
+
+```bash
+docker compose --profile jobs run --rm ai-event-news
+```
+
+공시 후 48시간이 지나기 전인 이벤트는 한 시간 간격으로 다시 계산됩니다.
+공시 원문·Exhibit 99.1·기사 제목·snippet의 규칙 기반 근거를 사용해
+`DIRECT`, `CONTEXT`, `UNRELATED`를 구분합니다.
+
+PostgreSQL 통합 테스트는 격리된 임시 schema를 생성하고 제거합니다.
+
+```bash
+NEWS_TEST_DATABASE_URL=postgresql://... \
+  python AI/tests/verify_company_news_storage.py -v
 ```
 
 ## 국내 주식 OHLCV 수집

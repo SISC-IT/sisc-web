@@ -16,7 +16,6 @@ from typing import Any
 
 import requests
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
@@ -32,7 +31,6 @@ from AI.modules.data_collector.components.news.providers.base import ProviderFet
 from AI.modules.data_collector.components.news.providers.google_news_rss import (
     GoogleNewsRssProvider,
 )
-
 
 AMBIGUOUS_TICKERS = frozenset({"A", "AI", "ON"})
 
@@ -50,22 +48,24 @@ def _temporary_target(
     symbol = ticker.strip().upper()
     if not symbol:
         raise ValueError("ticker는 비어 있을 수 없습니다.")
-    if company_name is None:
-        config = NewsCollectionConfig.from_file(DEFAULT_CONFIG_PATH)
-        universe = load_company_universe(config.universe_file)
-        for company in universe.companies:
-            if symbol in company.tickers:
-                if not aliases:
-                    return company
-                return CompanyTarget(
-                    company_key=company.company_key,
-                    cik=company.cik,
-                    legal_name=company.legal_name,
-                    tickers=company.tickers,
-                    aliases=(*company.aliases, *aliases),
-                    enabled=company.enabled,
-                    ambiguous_tickers=company.ambiguous_tickers,
-                )
+    config = NewsCollectionConfig.from_file(DEFAULT_CONFIG_PATH)
+    universe = load_company_universe(config.universe_file)
+    for company in universe.companies:
+        if symbol in company.tickers:
+            extra_aliases = aliases
+            if company_name and company_name != company.legal_name:
+                extra_aliases = (company_name, *extra_aliases)
+            if not extra_aliases:
+                return company
+            return CompanyTarget(
+                company_key=company.company_key,
+                cik=company.cik,
+                legal_name=company.legal_name,
+                tickers=company.tickers,
+                aliases=(*company.aliases, *extra_aliases),
+                enabled=company.enabled,
+                ambiguous_tickers=company.ambiguous_tickers,
+            )
     return CompanyTarget(
         company_key=symbol.casefold(),
         cik=None,

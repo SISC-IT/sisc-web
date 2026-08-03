@@ -3,13 +3,14 @@ from __future__ import annotations
 # ruff: noqa: E402
 
 import unittest
+import json
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
 from unittest.mock import MagicMock
 
 import requests
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -45,9 +46,9 @@ from AI.modules.data_collector.components.news.windows import event_news_window
 from AI.modules.data_collector.components.news_data import _temporary_target
 from AI.modules.data_collector.scripts.collect_company_news import (
     _resolve_window,
+    main,
     parse_args,
 )
-
 
 FIXTURE_PATH = PROJECT_ROOT / "AI/tests/fixtures/news/google_news_rss.xml"
 UTC = timezone.utc
@@ -303,6 +304,8 @@ class NormalizationAndRelevanceTest(unittest.TestCase):
         )
         self.assertEqual(normal_word.score, 0)
         self.assertGreaterEqual(uppercase_stock.score, 0.6)
+        self.assertEqual(uppercase_stock.score, 0.6)
+        self.assertNotIn("business_or_market_context", uppercase_stock.reasons)
 
 
 class DeduplicationTest(unittest.TestCase):
@@ -488,6 +491,65 @@ class UniverseConfigTest(unittest.TestCase):
         legacy_target = _temporary_target("GOOGL")
         self.assertEqual(legacy_target.company_key, "alphabet")
         self.assertEqual(legacy_target.tickers, ("GOOG", "GOOGL"))
+
+        named_legacy_target = _temporary_target(
+            "GOOGL",
+            company_name="Google LLC",
+        )
+        self.assertEqual(named_legacy_target.company_key, "alphabet")
+        self.assertEqual(named_legacy_target.cik, "0001652044")
+        self.assertEqual(named_legacy_target.tickers, ("GOOG", "GOOGL"))
+        self.assertIn("Google LLC", named_legacy_target.aliases)
+
+        philip_morris = next(
+            item
+            for item in universe.companies
+            if item.company_key == "philip-morris-international"
+        )
+        self.assertEqual(philip_morris.ambiguous_tickers, ("PM",))
+
+        exxonmobil = next(
+            item for item in universe.companies if item.company_key == "exxonmobil"
+        )
+        self.assertEqual(exxonmobil.cik, "0000034088")
+        self.assertEqual(exxonmobil.legal_name, "Exxon Mobil Corporation")
+
+    def test_universe_missing_required_company_field_is_value_error(self) -> None:
+        payload = {
+            "universe_name": "test",
+            "universe_mode": "snapshot",
+            "as_of": "2026-07-27",
+            "source_url": "https://example.com",
+            "companies": [
+                {
+                    "company_key": "apple",
+                    "tickers": ["AAPL"],
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            universe_path = Path(temp_dir) / "universe.json"
+            universe_path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"companies\[0\].*legal_name",
+            ):
+                load_company_universe(universe_path)
+
+    def test_cli_invalid_config_preserves_output_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "result.json"
+            exit_code = main(
+                [
+                    "--config",
+                    str(Path(temp_dir) / "missing.json"),
+                    "--output",
+                    str(output_path),
+                ]
+            )
+            self.assertEqual(exit_code, 4)
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["collection_outcome"], "invalid_config")
 
     def test_Google_RSS_CLI는_0시간과_5년조회요청을_거부한다(self) -> None:
         config = NewsCollectionConfig.from_file(DEFAULT_CONFIG_PATH)

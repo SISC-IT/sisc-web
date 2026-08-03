@@ -9,6 +9,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
+from psycopg2 import Error as DatabaseError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 if str(PROJECT_ROOT) not in sys.path:
@@ -24,16 +25,21 @@ from AI.modules.data_collector.components.news.pipeline import CompanyNewsCollec
 from AI.modules.data_collector.components.news.providers.google_news_rss import (
     GoogleNewsRssProvider,
 )
+from AI.modules.data_collector.components.news.repository import (
+    CollectionAlreadyRunningError,
+    NewsRepository,
+)
 from AI.modules.data_collector.components.news.windows import (
     forward_collection_window,
     require_aware_utc,
 )
 
-
 EXIT_SUCCESS = 0
 EXIT_PARTIAL_SUCCESS = 2
 EXIT_PROVIDER_ERROR = 3
 EXIT_INVALID_CONFIG = 4
+EXIT_ALREADY_RUNNING = 5
+EXIT_PERSISTENCE_ERROR = 6
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -78,6 +84,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--output",
         help="결과 JSON 파일 경로(생략하면 stdout)",
+    )
+    parser.add_argument(
+        "--persist",
+        action="store_true",
+        help="수집 결과를 PostgreSQL에 idempotent upsert",
+    )
+    parser.add_argument(
+        "--db-name",
+        default="db",
+        help="DB 환경변수 prefix 이름(기본 db -> DB_*)",
     )
     return parser.parse_args(argv)
 
@@ -158,7 +174,7 @@ def _exit_code(status: CollectionStatus) -> int:
     return EXIT_SUCCESS
 
 
-def run(args: argparse.Namespace) -> tuple[dict, int]:
+def collect_result(args: argparse.Namespace):
     config = NewsCollectionConfig.from_file(args.config)
     universe = load_company_universe(args.universe or config.universe_file)
     companies = _select_companies(universe.companies, args.tickers)
@@ -208,13 +224,48 @@ def run(args: argparse.Namespace) -> tuple[dict, int]:
             },
         },
     )
-    return result.to_dict(), _exit_code(result.status)
+    return result
+
+
+def run(args: argparse.Namespace) -> tuple[dict, int]:
+    run_id = None
+    if args.persist:
+        repository = NewsRepository(args.db_name)
+        with repository.collection_lock():
+            result = collect_result(args)
+            run_id = repository.save_collection(result)
+    else:
+        result = collect_result(args)
+
+    payload = result.to_dict()
+    if run_id is not None:
+        payload["persistence"] = {
+            "status": "saved",
+            "run_id": str(run_id),
+        }
+    return payload, _exit_code(result.status)
 
 
 def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     try:
-        args = parse_args(argv)
         payload, exit_code = run(args)
+    except CollectionAlreadyRunningError as exc:
+        payload = {
+            "collection_status": "failed",
+            "collection_outcome": "already_running",
+            "failure_reason": str(exc),
+            "relevant_article_count": None,
+        }
+        exit_code = EXIT_ALREADY_RUNNING
+    except DatabaseError as exc:
+        payload = {
+            "collection_status": "failed",
+            "collection_outcome": "persistence_error",
+            "failure_reason": f"{type(exc).__name__}: {exc}",
+            "relevant_article_count": None,
+        }
+        exit_code = EXIT_PERSISTENCE_ERROR
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         payload = {
             "collection_status": "failed",
