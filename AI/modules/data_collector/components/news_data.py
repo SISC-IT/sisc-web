@@ -1,169 +1,163 @@
-# AI/modules/collector/news_data.py
-"""
-[뉴스 데이터 수집기]
-- Google News RSS를 통해 종목 관련 최신 뉴스를 수집합니다.
-- 수집된 뉴스의 본문을 스크래핑하고, LLM을 사용하여 핵심 내용을 요약합니다.
-- 기존 libs/utils/news_processing.py 의 기능을 대체 및 고도화했습니다.
+"""미국 기업 뉴스 수집 호환 façade.
+
+실제 provider/파싱/중복/관련도 로직은 ``components.news`` 패키지에 있습니다.
+이 모듈은 기존 import 경로를 유지하되, 뉴스 담당 범위가 아닌 LLM 요약과
+안전하지 않은 임의 URL 본문 스크래핑은 수행하지 않습니다.
 """
 
+from __future__ import annotations
+
+# ruff: noqa: E402
+
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import sys
-import os
+from typing import Any
+
 import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
-from typing import List, Dict
 
-# 프로젝트 루트 경로 추가
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
-if project_root not in sys.path:
-    sys.path.append(project_root)
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
-# LLM 클라이언트 (요약용)
-# 만약 LLM 설정이 안 되어 있다면 요약은 건너뛰도록 처리합니다.
-try:
-    from AI.libs.llm import GroqClient
-    LLM_AVAILABLE = True
-except ImportError:
-    LLM_AVAILABLE = False
+from AI.modules.data_collector.components.news.contracts import CompanyTarget
+from AI.modules.data_collector.components.news.config import (
+    DEFAULT_CONFIG_PATH,
+    NewsCollectionConfig,
+    load_company_universe,
+)
+from AI.modules.data_collector.components.news.pipeline import CompanyNewsCollector
+from AI.modules.data_collector.components.news.providers.base import ProviderFetchStatus
+from AI.modules.data_collector.components.news.providers.google_news_rss import (
+    GoogleNewsRssProvider,
+)
 
-def fetch_news_links(ticker: str, limit: int = 3) -> List[Dict]:
-    """
-    Google News RSS에서 최신 뉴스 링크와 제목을 가져옵니다.
-    """
-    # 검색 쿼리: Ticker + "stock" (예: AAPL stock)
-    query = f"{ticker} stock"
-    url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
-    
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        
-        # XML 파싱
-        soup = BeautifulSoup(response.content, features="xml")
-        items = soup.findAll('item')
-        
-        news_list = []
-        for item in items[:limit]:
-            news_item = {
-                'title': item.title.text,
-                'link': item.link.text,
-                'pubDate': item.pubDate.text
-            }
-            news_list.append(news_item)
-            
-        return news_list
-    except Exception as e:
-        print(f"[NewsCollector] RSS 수집 실패 ({ticker}): {e}")
-        return []
+AMBIGUOUS_TICKERS = frozenset({"A", "AI", "ON"})
 
-def fetch_article_content(url: str) -> str:
+
+class NewsCollectionError(RuntimeError):
+    """정상 0건과 구분되어야 하는 provider 수집 실패."""
+
+
+def _temporary_target(
+    ticker: str,
+    *,
+    company_name: str | None = None,
+    aliases: tuple[str, ...] = (),
+) -> CompanyTarget:
+    symbol = ticker.strip().upper()
+    if not symbol:
+        raise ValueError("ticker는 비어 있을 수 없습니다.")
+    config = NewsCollectionConfig.from_file(DEFAULT_CONFIG_PATH)
+    universe = load_company_universe(config.universe_file)
+    for company in universe.companies:
+        if symbol in company.tickers:
+            extra_aliases = aliases
+            if company_name and company_name != company.legal_name:
+                extra_aliases = (company_name, *extra_aliases)
+            if not extra_aliases:
+                return company
+            return CompanyTarget(
+                company_key=company.company_key,
+                cik=company.cik,
+                legal_name=company.legal_name,
+                tickers=company.tickers,
+                aliases=(*company.aliases, *extra_aliases),
+                enabled=company.enabled,
+                ambiguous_tickers=company.ambiguous_tickers,
+            )
+    return CompanyTarget(
+        company_key=symbol.casefold(),
+        cik=None,
+        legal_name=company_name or symbol,
+        tickers=(symbol,),
+        aliases=aliases,
+        ambiguous_tickers=(symbol,) if symbol in AMBIGUOUS_TICKERS else (),
+    )
+
+
+def fetch_news_links(
+    ticker: str,
+    limit: int = 3,
+    *,
+    company_name: str | None = None,
+    aliases: tuple[str, ...] = (),
+    session: requests.Session | None = None,
+) -> list[dict[str, Any]]:
+    """최근 72시간 Google RSS 메타데이터를 가져오는 호환 함수.
+
+    공급자 장애를 빈 목록으로 숨기지 않고 ``NewsCollectionError``로 올립니다.
+    빈 목록은 피드 호출은 성공했지만 조회 구간에 기사가 없다는 뜻입니다.
     """
-    뉴스 URL에 접속하여 본문 텍스트를 추출합니다.
-    (간단한 스크래핑 로직으로, 사이트 구조에 따라 실패할 수 있음)
-    """
-    try:
-        # 헤더 설정 (봇 차단 방지)
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+
+    if limit <= 0:
+        raise ValueError("limit은 0보다 커야 합니다.")
+    target = _temporary_target(
+        ticker,
+        company_name=company_name,
+        aliases=aliases,
+    )
+    end_at = datetime.now(timezone.utc)
+    provider = GoogleNewsRssProvider(session=session)
+    result = provider.fetch_company_news(
+        target,
+        start_at=end_at - timedelta(hours=72),
+        end_at=end_at,
+        limit=limit,
+    )
+    if result.status == ProviderFetchStatus.ERROR:
+        raise NewsCollectionError("; ".join(result.errors) or "Google RSS 수집 실패")
+
+    return [
+        {
+            "title": article.title,
+            "link": article.provider_url,
+            "pubDate": article.published_at_raw,
+            "published_at_utc": article.published_at_utc.isoformat(),
+            "source": article.source,
+            "provider": article.provider,
+            "provider_article_id": article.provider_article_id,
+            # provider가 준 snippet이며 AI가 생성한 요약이 아닙니다.
+            "snippet": article.snippet,
         }
-        # 구글 뉴스 링크는 리다이렉트가 발생하므로 allow_redirects=True
-        response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # 본문 추정 (p 태그 수집)
-        paragraphs = soup.find_all('p')
-        text_content = " ".join([p.get_text() for p in paragraphs])
-        
-        # 내용이 너무 짧으면 실패로 간주 (광고나 네비게이션일 수 있음)
-        if len(text_content) < 200:
-            return ""
-            
-        return text_content[:3000] # LLM 입력 제한(토큰) 고려하여 3000자 절삭
-    except Exception:
-        return ""
+        for article in result.articles
+    ]
 
-def summarize_news(content: str, llm_client) -> str:
-    """
-    수집된 뉴스 본문을 LLM을 사용하여 3줄로 요약합니다.
-    """
-    if not content:
-        return "본문 수집 실패로 요약 불가"
-        
-    prompt = f"""
-    아래 뉴스 기사를 투자자 관점에서 핵심만 3줄로 요약해주세요. 
-    반드시 '한국어'로 번역하여 출력하세요.
-    
-    [기사 본문]
-    {content}
-    """
-    
-    try:
-        summary = llm_client.generate_text(prompt, temperature=0.3)
-        return summary
-    except Exception as e:
-        return f"요약 중 에러 발생: {e}"
 
-def collect_news(ticker: str) -> List[Dict]:
-    """
-    [메인 함수] 특정 종목의 뉴스를 수집하고 요약하여 반환합니다.
-    
-    Args:
-        ticker (str): 종목 코드 (예: AAPL)
-        
-    Returns:
-        List[Dict]: 뉴스 정보 리스트 [{'title', 'link', 'summary', ...}, ...]
-    """
-    print(f"[NewsCollector] {ticker} 뉴스 수집 및 분석 시작...")
-    
-    # 1. 링크 수집
-    news_items = fetch_news_links(ticker)
-    if not news_items:
-        print(f"   - {ticker} 관련 최신 뉴스가 없습니다.")
-        return []
-    
-    # 2. LLM 초기화 (요약용)
-    llm = None
-    can_summarize = False
-    
-    if LLM_AVAILABLE:
-        try:
-            # Groq가 빠르므로 우선 사용
-            llm = GroqClient(model_name="llama-3.3-70b-versatile")
-            can_summarize = True
-        except Exception:
-            print("   [Warning] LLM 클라이언트 초기화 실패 (API Key 확인 필요). 요약 없이 진행합니다.")
+def collect_news(
+    ticker: str,
+    *,
+    company_name: str | None = None,
+    aliases: tuple[str, ...] = (),
+    limit: int = 20,
+    lookback_hours: int = 2,
+    session: requests.Session | None = None,
+) -> dict[str, Any]:
+    """SEC 이벤트 없이 기업 관련 뉴스를 수집하고 명시적 상태를 반환합니다."""
 
-    results = []
-    
-    # 3. 본문 스크래핑 및 요약
-    for item in news_items:
-        print(f"   - 뉴스 분석 중: {item['title'][:30]}...")
-        
-        summary = "요약 기능 비활성화"
-        if can_summarize:
-            content = fetch_article_content(item['link'])
-            if content:
-                summary = summarize_news(content, llm)
-            else:
-                summary = "본문 접근 불가 (보안 또는 구조 문제)"
-        
-        results.append({
-            "ticker": ticker,
-            "title": item['title'],
-            "link": item['link'],
-            "pub_date": item['pubDate'],
-            "summary": summary
-        })
-        
-    print(f"   - {len(results)}건 뉴스 처리 완료.")
-    return results
+    if lookback_hours <= 0 or lookback_hours > 72:
+        raise ValueError("lookback_hours는 1~72시간이어야 합니다.")
+    target = _temporary_target(
+        ticker,
+        company_name=company_name,
+        aliases=aliases,
+    )
+    end_at = datetime.now(timezone.utc)
+    collector = CompanyNewsCollector(
+        GoogleNewsRssProvider(session=session),
+        # ticker만 받은 legacy 호출도 동작하되, 모호 ticker는 회사명이 필요합니다.
+        company_relevance_threshold=0.60,
+    )
+    result = collector.collect_company(
+        target,
+        start_at=end_at - timedelta(hours=lookback_hours),
+        end_at=end_at,
+        limit=limit,
+    )
+    return result.to_dict()
+
 
 if __name__ == "__main__":
-    # 테스트 실행
-    print("=== 뉴스 수집 테스트 ===")
-    res = collect_news("AAPL")
-    for r in res:
-        print(f"\n[Title] {r['title']}")
-        print(f"[Summary] {r['summary']}")
-        print("-" * 30)
+    import json
+
+    print(json.dumps(collect_news("AAPL", company_name="Apple Inc."), indent=2))

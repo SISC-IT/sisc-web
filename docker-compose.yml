@@ -96,6 +96,57 @@ services:
   #        memory: 2G                 # AI 모델 로드 시 필요한 메모리 확보
   #      reservations:
   #        memory: 512M
+  # One-shot company news collection job. Run from cron/systemd with:
+  # docker compose --profile jobs run --rm ai-news
+  ai-news:
+    profiles: ["jobs"]
+    image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
+    env_file:
+      - .env
+    environment:
+      - TZ=UTC
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=sisc_db
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    command:
+      - python
+      - AI/modules/data_collector/scripts/collect_company_news.py
+      - --lookback-hours
+      - "2"
+      - --persist
+    networks:
+      - sisc-net
+    depends_on:
+      - db
+    restart: "no"
+
+  # Import SEC filings and reconcile event-news links until accepted_at + 48h.
+  ai-event-news:
+    profiles: ["jobs"]
+    image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
+    env_file:
+      - .env
+    environment:
+      - TZ=UTC
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=sisc_db
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+    command:
+      - python
+      - AI/modules/data_collector/scripts/link_event_news.py
+      - --sync-sec-filings
+      - --limit
+      - "100"
+    networks:
+      - sisc-net
+    depends_on:
+      - db
+    restart: "no"
+
   npm:
     image: 'jc21/nginx-proxy-manager:latest'
     container_name: npm

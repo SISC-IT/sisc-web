@@ -2,6 +2,95 @@
 
 `data_collector`는 AI/트레이딩 파이프라인이 사용하는 원천 데이터를 수집하는 작업 공간입니다. 국내 주식 일봉 OHLCV 수집은 `components/korea_stock_data.py`와 `scripts/collect_korea_stocks.py`에서 담당합니다.
 
+## 미국 기업 뉴스 수집 (#377)
+
+`components/news/`는 SEC 이벤트 저장 여부와 관계없이 미국 기업별 최신 뉴스를
+수집합니다. 현재 universe는 2026-07-27 기준 S&P 100 snapshot이며, 복수
+주식 클래스를 회사 단위로 합쳐 100개 issuer와 101개 ticker를 포함합니다.
+예를 들어 `GOOG`와 `GOOGL`은 같은 Alphabet `company_key`와 CIK에 연결됩니다.
+
+Google News RSS 수집기는 정식 회사명·승인 별칭·`{ticker} stock`을 하나의
+OR 검색식으로 조회합니다. 게시 시각 원문과 UTC 시각을 함께 보존하고,
+회사 관련도 규칙, URL 정규화, 정확 중복 제거, 신디케이션 후보 그룹을
+적용합니다. 최상위 `collection_status`는 `success`, `partial_success`,
+`failed` 생명주기로 유지하고, `collection_outcome`에서 `no_results`,
+`no_relevant_news`, `provider_error`를 구분합니다. 여러 회사 중 일부가
+실패하면 `partial_success`와 non-zero 종료 코드로 알립니다.
+
+Apple 한 회사의 최근 2시간을 stdout JSON으로 확인:
+
+```bash
+python AI/modules/data_collector/scripts/collect_company_news.py \
+  --tickers AAPL \
+  --lookback-hours 2
+```
+
+S&P 100 전체 결과를 파일로 저장:
+
+```bash
+python AI/modules/data_collector/scripts/collect_company_news.py \
+  --output AI/modules/data_collector/storage/company_news/latest.json
+```
+
+Google RSS는 역사 archive의 완전성·pagination을 보장하지 않으므로 이
+실행기의 조회 범위는 최대 72시간입니다. 최근 5년 백필은 역사 조회 계약이
+확인된 Infomax 같은 별도 provider가 있어야 구현할 수 있습니다. 현재 출력의
+`company_relevance_score`는 규칙 기반 회사 관련도이며 SEC 공시 관련도나
+확률이 아닙니다. 정답 기사 집합이 없으므로 `article_omission_rate`는
+`null`로 남기고, 대신 request/invalid item 비율과 feed 포화 의심 여부를
+관측 지표로 기록합니다.
+
+수집 코어 자체는 DB나 SEC 수집기에 의존하지 않습니다. 후속 저장 계층은
+`--persist`를 선택했을 때만 사용하며, SEC 이벤트 연결도 별도 one-shot
+linker로 실행합니다. 원문 본문 다운로드와 AI 요약은 수행하지 않습니다.
+공급자가 제공한 snippet이 있으면 사용하고, 없으면 제목만 남깁니다.
+
+네트워크·DB 없이 RSS 파싱, 시각 변환, 관련도, 중복, 장애 격리를 검증:
+
+```bash
+python AI/tests/verify_company_news.py -v
+```
+
+### PostgreSQL 저장 및 SEC 이벤트 연결
+
+백엔드 시작 시 Flyway의 `V5__company_news_storage.sql`이 뉴스·수집 실행·SEC
+이벤트·이벤트-뉴스 연결 테이블을 생성합니다. DB 환경변수(`DB_HOST`,
+`DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`)를 설정한 뒤 `--persist`를
+사용하면 기사 identity와 회사 연결을 멱등 upsert합니다.
+
+```bash
+python AI/modules/data_collector/scripts/collect_company_news.py \
+  --lookback-hours 2 \
+  --persist
+```
+
+수집기는 PostgreSQL advisory lock을 사용하므로 이전 실행이 끝나지 않았으면
+종료 코드 `5`와 `already_running` 결과를 반환합니다. DB 저장 실패는 종료
+코드 `6`입니다. 서버에서는 다음 one-shot 서비스를 매시간 실행합니다.
+
+```bash
+docker compose --profile jobs run --rm ai-news
+```
+
+SEC 수집기의 `sec_filings`와 `sec_filing_documents`를 `sec_events` 계약으로
+가져오고, CIK 우선으로 공시 전 24시간부터 후 48시간까지 기사를 연결합니다.
+같은 명령을 반복해도 `(event_id, article_id)`가 갱신될 뿐 중복되지 않습니다.
+
+```bash
+docker compose --profile jobs run --rm ai-event-news
+```
+
+공시 후 48시간이 지나기 전인 이벤트는 한 시간 간격으로 다시 계산됩니다.
+공시 원문·Exhibit 99.1·기사 제목·snippet의 규칙 기반 근거를 사용해
+`DIRECT`, `CONTEXT`, `UNRELATED`를 구분합니다.
+
+PostgreSQL 통합 테스트는 격리된 임시 schema를 생성하고 제거합니다.
+
+```bash
+NEWS_TEST_DATABASE_URL=postgresql://... \
+  python AI/tests/verify_company_news_storage.py -v
+```
+
 ## 국내 주식 OHLCV 수집
 
 - 기본 소스: `FinanceDataReader`
@@ -67,13 +156,26 @@ python AI/modules/data_collector/scripts/collect_korea_stocks.py --tickers 00593
 ```text
 AI/modules/data_collector/
   components/
+    news/
+      providers/
+        google_news_rss.py
+      config.py
+      contracts.py
+      dedup.py
+      pipeline.py
+      relevance.py
+      windows.py
+    news_data.py
     korea_stock_data.py
   config/
+    news_collection.json
+    sp100_companies.json
     korea_stocks.json
   logs/
     failed_tickers_YYYYMMDD_HHMMSS.csv
     korea_stock_data_YYYYMMDD.log
   scripts/
+    collect_company_news.py
     collect_korea_stocks.py
   storage/
     korea_ohlcv/
