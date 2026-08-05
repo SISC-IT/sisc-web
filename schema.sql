@@ -313,6 +313,112 @@ CREATE TABLE IF NOT EXISTS "sector_returns" (
     CONSTRAINT "pk_sector_returns" PRIMARY KEY ("date", "sector")
 ) TABLESPACE ts_ai_hdd;
 
+----------------------------------------------------------------------
+-- 15. SEC EDGAR 공시 데이터
+--    - SEC CIK↔Ticker 매핑, 공시 메타데이터, 원문 문서, Form 4 거래 저장
+--    - accession_number를 공시의 안정적인 고유 키로 사용
+--    - 운영 DB에는 이 절의 시작부터 종료 표시까지 한 번 적용
+----------------------------------------------------------------------
+-- [SEC EDGAR 스키마 적용 범위 시작]
+CREATE TABLE IF NOT EXISTS "sec_company_tickers" (
+    "ticker" varchar(16) PRIMARY KEY,            -- 미국 주식 티커
+    "cik" varchar(10) NOT NULL,                  -- 10자리 zero-padding SEC CIK
+    "company_name" text NOT NULL,                -- SEC 등록 회사명
+    "exchange" varchar(32),                      -- 거래소명
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+) TABLESPACE ts_ai_hdd;
+
+CREATE TABLE IF NOT EXISTS "sec_filings" (
+    "accession_number" varchar(25) PRIMARY KEY,  -- SEC 공시 고유 번호
+    "cik" varchar(10) NOT NULL,
+    "ticker" varchar(16),                        -- 티커가 없는 발행사는 NULL 허용
+    "company_name" text NOT NULL,
+    "form_type" varchar(20) NOT NULL,            -- 8-K, 8-K/A, 4, 4/A
+    "filing_date" date NOT NULL,
+    "accepted_at" timestamp with time zone,      -- SEC 접수 시각
+    "report_date" date,
+    "primary_document" text NOT NULL,
+    "primary_doc_description" text,
+    "item_codes" text DEFAULT '' NOT NULL,       -- 쉼표로 구분한 8-K Item 코드
+    "event_type" varchar(64) NOT NULL,           -- 정규화 이벤트 유형
+    "sec_url" text NOT NULL,
+    "metadata_json" jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+) TABLESPACE ts_ai_hdd;
+
+CREATE TABLE IF NOT EXISTS "sec_filing_documents" (
+    "document_id" bigserial PRIMARY KEY,
+    "accession_number" varchar(25) NOT NULL,
+    "sequence_number" integer NOT NULL,
+    "document_name" text NOT NULL,
+    "document_type" varchar(64) NOT NULL,        -- 8-K, 4, EX-99.1 등
+    "description" text,
+    "source_url" text NOT NULL,
+    "local_path" text,
+    "content_type" varchar(255),
+    "content_text" text,                         -- AI 검색·요약용 평문
+    "content_hash" char(64),                     -- SHA-256
+    "is_primary" boolean DEFAULT false NOT NULL,
+    "is_exhibit" boolean DEFAULT false NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT "fk_sec_filing_documents_filing"
+        FOREIGN KEY ("accession_number")
+        REFERENCES "sec_filings"("accession_number") ON DELETE CASCADE,
+    CONSTRAINT "uq_sec_filing_document"
+        UNIQUE ("accession_number", "document_name")
+) TABLESPACE ts_ai_hdd;
+
+CREATE TABLE IF NOT EXISTS "sec_insider_transactions" (
+    "transaction_id" bigserial PRIMARY KEY,
+    "accession_number" varchar(25) NOT NULL,
+    "transaction_index" integer NOT NULL,        -- 원문 내 거래 순서
+    "security_category" varchar(20) NOT NULL,    -- NON_DERIVATIVE / DERIVATIVE
+    "reporting_owner_cik" varchar(10),
+    "reporting_owner_name" text,
+    "is_director" boolean DEFAULT false NOT NULL,
+    "is_officer" boolean DEFAULT false NOT NULL,
+    "is_ten_percent_owner" boolean DEFAULT false NOT NULL,
+    "is_other" boolean DEFAULT false NOT NULL,
+    "officer_title" text,
+    "security_title" text,
+    "transaction_date" date,
+    "transaction_code" varchar(8),               -- P, S, M, A 등
+    "transaction_type" varchar(16) NOT NULL,     -- PURCHASE / SALE / OTHER
+    "acquired_disposed_code" varchar(8),
+    "shares" numeric(24, 6),
+    "price_per_share" numeric(24, 6),
+    "shares_owned_after" numeric(24, 6),
+    "ownership_form" varchar(8),                 -- D(직접) / I(간접)
+    "is_derivative" boolean DEFAULT false NOT NULL,
+    "is_signal" boolean DEFAULT false NOT NULL,  -- 비파생 P·S만 true
+    "footnote_ids" text DEFAULT '' NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT "fk_sec_insider_transactions_filing"
+        FOREIGN KEY ("accession_number")
+        REFERENCES "sec_filings"("accession_number") ON DELETE CASCADE,
+    CONSTRAINT "uq_sec_insider_transaction"
+        UNIQUE ("accession_number", "security_category", "transaction_index")
+) TABLESPACE ts_ai_hdd;
+
+CREATE INDEX IF NOT EXISTS "idx_sec_company_tickers_cik"
+    ON "sec_company_tickers" ("cik") TABLESPACE ts_ai_hdd;
+
+CREATE INDEX IF NOT EXISTS "idx_sec_filings_ticker_accepted"
+    ON "sec_filings" ("ticker", "accepted_at" DESC) TABLESPACE ts_ai_hdd;
+
+CREATE INDEX IF NOT EXISTS "idx_sec_filings_event_type_accepted"
+    ON "sec_filings" ("event_type", "accepted_at" DESC) TABLESPACE ts_ai_hdd;
+
+CREATE INDEX IF NOT EXISTS "idx_sec_filing_documents_accession"
+    ON "sec_filing_documents" ("accession_number", "sequence_number") TABLESPACE ts_ai_hdd;
+
+CREATE INDEX IF NOT EXISTS "idx_sec_insider_signal_date"
+    ON "sec_insider_transactions" ("is_signal", "transaction_date" DESC) TABLESPACE ts_ai_hdd;
+-- [SEC EDGAR 스키마 적용 범위 종료]
+
 -- 1. price_data: 종목별 시세 히스토리 단독 조회용
 CREATE INDEX IF NOT EXISTS "idx_price_data_ticker" ON "price_data" ("ticker") TABLESPACE ts_ai_hdd;
 CREATE INDEX IF NOT EXISTS "idx_crypto_price_data_ticker" ON "crypto_price_data" ("ticker") TABLESPACE ts_ai_hdd;
