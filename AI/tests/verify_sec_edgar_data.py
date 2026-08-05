@@ -37,10 +37,38 @@ from AI.modules.data_collector.components.sec_edgar_query import (
 from AI.modules.data_collector.components.sec_edgar_repository import (
     SecFilingRepository,
 )
+from AI.modules.data_collector.scripts.collect_sec_edgar import (
+    _load_universe_tickers,
+    parse_args as parse_collect_args,
+)
 from AI.modules.data_collector.scripts.query_sec_filings import main as query_cli_main
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures/sec"
+
+
+class SecCollectorCliTest(unittest.TestCase):
+    def test_universe에서_활성_티커만_중복없이_읽는다(self):
+        payload = {
+            "companies": [
+                {"enabled": True, "tickers": ["aapl", "GOOG"]},
+                {"enabled": True, "tickers": ["GOOG", "GOOGL"]},
+                {"enabled": False, "tickers": ["DISABLED"]},
+            ]
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            universe_path = Path(temp_dir) / "universe.json"
+            universe_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            tickers = _load_universe_tickers(universe_path)
+
+        self.assertEqual(["AAPL", "GOOG", "GOOGL"], tickers)
+
+    def test_start와_lookback_days는_함께_사용할_수_없다(self):
+        with self.assertRaises(SystemExit):
+            parse_collect_args(
+                ["--tickers", "AAPL", "--start", "2026-08-01", "--lookback-days", "7"]
+            )
 
 
 class FakeSecClient:

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
+DEFAULT_UNIVERSE_PATH = (
+    PROJECT_ROOT / "AI/modules/data_collector/config/sp100_companies.json"
+)
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
@@ -17,7 +22,7 @@ from AI.modules.data_collector.components.sec_edgar_data import (
 )
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="SEC EDGAR에서 8-K와 Form 4 공시를 수집합니다."
     )
@@ -37,6 +42,10 @@ def parse_args() -> argparse.Namespace:
         help="티커가 없는 발행사를 위한 SEC CIK",
     )
     parser.add_argument(
+        "--universe-file",
+        help="companies 배열의 tickers를 수집 대상으로 사용할 JSON 파일",
+    )
+    parser.add_argument(
         "--forms",
         nargs="*",
         choices=["8-K", "8-K/A", "4", "4/A"],
@@ -51,6 +60,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--start", dest="start_date", help="수집 시작일(YYYY-MM-DD)")
     parser.add_argument("--end", dest="end_date", help="수집 종료일(YYYY-MM-DD)")
+    parser.add_argument(
+        "--lookback-days",
+        type=_positive_int,
+        help="오늘을 포함한 최근 N일을 수집(주기 실행용)",
+    )
     parser.add_argument(
         "--storage",
         choices=["file", "db", "both"],
@@ -89,17 +103,31 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Submissions API의 최근 공시만 조회",
     )
-    return parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.start_date and args.lookback_days:
+        parser.error("--start와 --lookback-days는 함께 사용할 수 없습니다.")
+    return args
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    requested_tickers = list(args.tickers or ())
+    if args.universe_file:
+        requested_tickers.extend(_load_universe_tickers(args.universe_file))
+    requested_tickers = list(dict.fromkeys(requested_tickers))
+
+    start_date = args.start_date
+    if args.lookback_days:
+        start_date = (
+            date.today() - timedelta(days=args.lookback_days - 1)
+        ).isoformat()
+
     user_agent = args.user_agent or os.getenv("SEC_USER_AGENT")
     config = SecEdgarCollectorConfig.from_file(args.config).with_overrides(
         user_agent=user_agent,
         forms=args.forms,
         item_codes=args.item_codes,
-        start_date=args.start_date,
+        start_date=start_date,
         end_date=args.end_date,
         storage=args.storage,
         data_dir=args.data_dir,
@@ -113,11 +141,44 @@ def main() -> None:
 
     with SecEdgarDataCollector(config) as collector:
         stats = collector.collect(
-            tickers=args.tickers,
+            tickers=requested_tickers,
             ciks=args.ciks,
             limit=args.limit,
         )
     print(f"[SEC EDGAR 수집기] 수집 완료: {stats}")
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("1 이상의 정수를 지정해야 합니다.")
+    return parsed
+
+
+def _load_universe_tickers(path: str | Path) -> list[str]:
+    """회사 universe에서 활성화된 발행사의 티커를 중복 없이 읽습니다."""
+
+    universe_path = Path(path)
+    if not universe_path.is_absolute():
+        universe_path = PROJECT_ROOT / universe_path
+    payload = json.loads(universe_path.read_text(encoding="utf-8"))
+    companies = payload.get("companies")
+    if not isinstance(companies, list):
+        raise ValueError("universe JSON에 companies 배열이 필요합니다.")
+
+    tickers: list[str] = []
+    for company in companies:
+        if not isinstance(company, dict) or not company.get("enabled", True):
+            continue
+        tickers.extend(
+            str(ticker).strip().upper()
+            for ticker in company.get("tickers", [])
+            if str(ticker).strip()
+        )
+    tickers = list(dict.fromkeys(tickers))
+    if not tickers:
+        raise ValueError("universe JSON에 활성화된 티커가 없습니다.")
+    return tickers
 
 
 if __name__ == "__main__":

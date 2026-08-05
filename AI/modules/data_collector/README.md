@@ -140,6 +140,36 @@ python AI/modules/data_collector/scripts/collect_sec_edgar.py \
   --recent-only
 ```
 
+S&P 100 universe 전체의 최근 7일을 재수집:
+
+```bash
+python AI/modules/data_collector/scripts/collect_sec_edgar.py \
+  --universe-file AI/modules/data_collector/config/sp100_companies.json \
+  --lookback-days 7 \
+  --recent-only \
+  --storage both
+```
+
+서버에서는 원문·캐시·로그를 `/mnt/storage/sec-edgar`에 보존하는
+Compose one-shot 작을 실행합니다.
+
+```bash
+docker compose --profile jobs run --rm ai-sec
+```
+
+최초 5년 백필은 정기 작과 분리해 한 번만 실행합니다.
+
+```bash
+docker compose --profile jobs run --rm ai-sec \
+  python AI/modules/data_collector/scripts/collect_sec_edgar.py \
+  --universe-file AI/modules/data_collector/config/sp100_companies.json \
+  --start 2021-01-01 \
+  --storage both \
+  --data-dir /mnt/sec-edgar/storage \
+  --cache-dir /mnt/sec-edgar/cache \
+  --log-dir /mnt/sec-edgar/logs
+```
+
 SEC 응답 캐시와 수집 원문은 다음 경로에 생성되며 Git에는 포함되지 않습니다.
 
 ```text
