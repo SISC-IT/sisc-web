@@ -96,6 +96,45 @@ services:
   #        memory: 2G                 # AI 모델 로드 시 필요한 메모리 확보
   #      reservations:
   #        memory: 512M
+  # SEC EDGAR one-shot job. 최초 5년 백필은 --start 2021-01-01로 수동 실행하고,
+  # 정기 실행은 최근 7일을 재수집해 지연·정정 공시를 멱등 반영합니다.
+  ai-sec:
+    profiles: ["jobs"]
+    image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
+    env_file:
+      - .env
+    environment:
+      - TZ=UTC
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=sisc_db
+      - DB_USER=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SEC_USER_AGENT=${SEC_USER_AGENT}
+    volumes:
+      - /mnt/storage/sec-edgar:/mnt/sec-edgar
+    command:
+      - python
+      - AI/modules/data_collector/scripts/collect_sec_edgar.py
+      - --universe-file
+      - AI/modules/data_collector/config/sp100_companies.json
+      - --lookback-days
+      - "7"
+      - --storage
+      - both
+      - --data-dir
+      - /mnt/sec-edgar/storage
+      - --cache-dir
+      - /mnt/sec-edgar/cache
+      - --log-dir
+      - /mnt/sec-edgar/logs
+      - --recent-only
+    networks:
+      - sisc-net
+    depends_on:
+      - db
+    restart: "no"
+
   # One-shot company news collection job. Run from cron/systemd with:
   # docker compose --profile jobs run --rm ai-news
   ai-news:

@@ -91,6 +91,171 @@ NEWS_TEST_DATABASE_URL=postgresql://... \
   python AI/tests/verify_company_news_storage.py -v
 ```
 
+## SEC EDGAR 공식 공시 수집
+
+SEC 수집기는 다음 공시를 공식 EDGAR 원문 기준으로 수집합니다.
+
+- `8-K Item 2.02`: 본문과 Exhibit 99 계열
+- `8-K Item 5.02`: 본문과 Exhibit 99 계열
+- `Form 4`: 비파생·파생 거래 XML 전체
+- Form 4 신호: 비파생 증권의 거래코드 `P`와 `S`만 사용
+
+주식 보상, 옵션 행사, 파생증권 거래는 원본 데이터로 보존하지만 매수·매도 신호에는 포함하지 않습니다.
+
+### SEC User-Agent 설정
+
+SEC는 자동 요청의 운영 주체와 연락처를 식별할 수 있는 User-Agent를 요구합니다. 비밀값은 아니지만 개인 연락처가 저장소에 커밋되지 않도록 환경변수로 설정합니다.
+
+PowerShell:
+
+```powershell
+$env:SEC_USER_AGENT="SISC Event Alpha Lab contact@example.com"
+```
+
+Bash:
+
+```bash
+export SEC_USER_AGENT="SISC Event Alpha Lab contact@example.com"
+```
+
+### 실행 예시
+
+AAPL의 8-K 실적 공시와 Form 4를 파일과 DB에 저장:
+
+```bash
+python AI/modules/data_collector/scripts/collect_sec_edgar.py \
+  --tickers AAPL \
+  --start 2021-01-01 \
+  --storage both
+```
+
+CIK를 직접 지정하고 Form 4만 파일로 검증:
+
+```bash
+python AI/modules/data_collector/scripts/collect_sec_edgar.py \
+  --ciks 0000320193 \
+  --forms 4 4/A \
+  --start 2026-01-01 \
+  --storage file \
+  --recent-only
+```
+
+S&P 100 universe 전체의 최근 7일을 재수집:
+
+```bash
+python AI/modules/data_collector/scripts/collect_sec_edgar.py \
+  --universe-file AI/modules/data_collector/config/sp100_companies.json \
+  --lookback-days 7 \
+  --recent-only \
+  --storage both
+```
+
+서버에서는 원문·캐시·로그를 `/mnt/storage/sec-edgar`에 보존하는
+Compose one-shot 작을 실행합니다.
+
+```bash
+docker compose --profile jobs run --rm ai-sec
+```
+
+최초 5년 백필은 정기 작과 분리해 한 번만 실행합니다.
+
+```bash
+docker compose --profile jobs run --rm ai-sec \
+  python AI/modules/data_collector/scripts/collect_sec_edgar.py \
+  --universe-file AI/modules/data_collector/config/sp100_companies.json \
+  --start 2021-01-01 \
+  --storage both \
+  --data-dir /mnt/sec-edgar/storage \
+  --cache-dir /mnt/sec-edgar/cache \
+  --log-dir /mnt/sec-edgar/logs
+```
+
+SEC 응답 캐시와 수집 원문은 다음 경로에 생성되며 Git에는 포함되지 않습니다.
+
+```text
+AI/modules/data_collector/
+  cache/sec_edgar/
+  logs/sec_edgar_YYYYMMDD.log
+  storage/sec_edgar/{CIK}/{ACCESSION_NUMBER}/
+    filing.json
+    원문 HTML·XML
+    첨부 Exhibit
+```
+
+### 요청 및 재실행 정책
+
+- 전체 요청 속도는 기본 초당 8회이며 설정상 최대 10회를 넘길 수 없습니다.
+- `403`, `429`, `5xx` 응답은 지수 백오프로 재시도합니다.
+- API 응답은 TTL 캐시를 사용하고, accession number 아래의 원문은 불변 캐시로 재사용합니다.
+- accession number를 공시 기본키로 사용합니다.
+- 문서는 `(accession_number, document_name)`으로 중복을 방지합니다.
+- Form 4 거래는 `(accession_number, security_category, transaction_index)`로 중복을 방지합니다.
+- 개별 공시 오류는 로그로 남기고 다음 공시 수집을 계속합니다.
+
+### DB와 Python 조회
+
+DB 저장 모드를 사용하기 전에 루트 `schema.sql`의
+`[SEC EDGAR 스키마 적용 범위 시작]`부터
+`[SEC EDGAR 스키마 적용 범위 종료]`까지 운영 DB에 적용해야 합니다.
+Python 수집기는 테이블을 자동 생성하지 않고 다음 테이블의 데이터만 추가·수정·조회합니다.
+
+- `sec_company_tickers`
+- `sec_filings`
+- `sec_filing_documents`
+- `sec_insider_transactions`
+
+기존 운영 DB에는 전체 `schema.sql`을 다시 실행하지 말고 SEC EDGAR 적용 범위만 실행합니다. 전체 파일에는 기존 테이블과 tablespace 생성문도 포함되어 있습니다.
+
+백엔드 프로젝트를 수정하지 않고 Python CLI로 DB 또는 파일 저장분을 조회할 수 있습니다.
+
+DB에서 AAPL 8-K 목록 조회:
+
+```bash
+python AI/modules/data_collector/scripts/query_sec_filings.py \
+  --source db \
+  --ticker AAPL \
+  --form 8-K
+```
+
+파일 저장분에서 단일 공시 상세 조회:
+
+```bash
+python AI/modules/data_collector/scripts/query_sec_filings.py \
+  --source file \
+  --accession 0000320193-26-000001 \
+  --include-content
+```
+
+Form 4의 내부자 매수 `P` 신호만 조회:
+
+```bash
+python AI/modules/data_collector/scripts/query_sec_filings.py \
+  --source db \
+  --signals-only \
+  --signal-code P
+```
+
+특정 문서 원문 조회:
+
+```bash
+python AI/modules/data_collector/scripts/query_sec_filings.py \
+  --source db \
+  --accession 0000320193-26-000001 \
+  --document-name ownership.xml
+```
+
+목록 조회는 `ticker`, `form`, `event-type`, `start`, `end`, `signals-only`, `signal-code`, `limit`, `offset` 필터를 지원합니다. `--output result.json`을 지정하면 콘솔 대신 JSON 파일로 저장합니다.
+
+다른 Python 모듈에서는 `create_sec_filing_query()`를 import해 동일한 조회 기능을 사용할 수 있습니다.
+
+### SEC 수집기 검증
+
+저장된 HTML·XML fixture로 네트워크 없이 파서, 캐시, 재시도, 문서 저장을 검증합니다.
+
+```bash
+python AI/tests/verify_sec_edgar_data.py -v
+```
+
 ## 국내 주식 OHLCV 수집
 
 - 기본 소스: `FinanceDataReader`

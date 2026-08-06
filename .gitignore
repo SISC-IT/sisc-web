@@ -38,6 +38,7 @@ AI/data/weights/tcn/
 AI/data/kaggle_data/
 AI/modules/data_collector/logs/
 AI/modules/data_collector/storage/
+AI/modules/data_collector/cache/
 
 AI/data/weights/itransformer/*
 !AI/data/weights/itransformer/.gitkeep

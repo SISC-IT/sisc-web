@@ -40,6 +40,22 @@ _EXPORTS = {
         ".korea_stock_data",
         "KoreaStockDataCollector",
     ),
+    "SecEdgarCollectorConfig": (
+        ".sec_edgar_data",
+        "SecEdgarCollectorConfig",
+    ),
+    "SecEdgarDataCollector": (
+        ".sec_edgar_data",
+        "SecEdgarDataCollector",
+    ),
+    "SecFilingFileQuery": (
+        ".sec_edgar_query",
+        "SecFilingFileQuery",
+    ),
+    "create_sec_filing_query": (
+        ".sec_edgar_query",
+        "create_sec_filing_query",
+    ),
 }
 
 __all__ = list(_EXPORTS)
