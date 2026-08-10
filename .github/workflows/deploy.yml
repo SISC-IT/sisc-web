@@ -26,6 +26,7 @@ jobs:
     outputs:
       back: ${{ steps.filter.outputs.back }}
       front: ${{ steps.filter.outputs.front }}
+      compose: ${{ steps.filter.outputs.compose }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v4
@@ -39,16 +40,14 @@ jobs:
           filters: |
             back:
               - 'backend/**'
-              - 'docker-compose.yml'              # ⬅ 추가
-              - '.github/workflows/deploy.yml'     # ⬅ 추가
             front:
               - 'frontend/**'
-              - 'docker-compose.yml'              # ⬅ 추가
-              - '.github/workflows/deploy.yml'     # ⬅ 추가
+            compose:
+              - 'docker-compose.yml'
   # 2. 백엔드 빌드
   build-back:
     needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
-    #if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.changes.outputs.back == 'true' || github.event_name == 'workflow_dispatch' }}
     environment: development
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
@@ -87,7 +86,7 @@ jobs:
 
   build-front:
     needs: [changes]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
-    #if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.changes.outputs.front == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     environment: development # development 이라는 environment에 있는 secrets 들을 쓰기 위함
     permissions: { contents: read, packages: write }
@@ -127,7 +126,18 @@ jobs:
           #cache-to: type=gha,mode=max
 
   deploy:
-    #if: ${{ always() && (needs.build-back.result == 'success' || needs.build-front.result == 'success') }}
+    if: >-
+      ${{
+        always() &&
+        !cancelled() &&
+        needs.build-back.result != 'failure' &&
+        needs.build-front.result != 'failure' &&
+        (
+          needs.build-back.result == 'success' ||
+          needs.build-front.result == 'success' ||
+          needs.changes.outputs.compose == 'true'
+        )
+      }}
     needs: [changes, build-back, build-front]     # deploy는 job 들이 병렬 처리가 되므로, 리스트 항목이 모두 끝나야 시작된다는 조건 추가
     # - manual 실행(workflow_dispatch)이면 무조건 실행
     # - push일 때는 둘 중 하나라도 성공한 경우에만 실행 (둘 다 failure가 아닌 이상 OK)
