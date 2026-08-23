@@ -64,33 +64,61 @@
 ## 시스템 아키텍처
 
 ```mermaid
-flowchart LR
-    User["사용자"]
-    Admin["관리자"]
+flowchart TB
+    subgraph Users["사용자 영역"]
+        User["동아리원 / 관리자"]
+    end
 
-    User --> Web["React Frontend"]
-    Admin --> Web
+    subgraph Service["웹 서비스"]
+        Proxy["Nginx Proxy Manager"]
+        Frontend["React + Vite"]
+        Backend["Spring Boot API"]
+    end
 
-    Web --> Api["Spring Boot API"]
+    subgraph Data["데이터 저장소"]
+        DB[("PostgreSQL<br/>서비스 데이터 + 퀀트 데이터")]
+        Redis[("Redis<br/>캐시 / 인증 상태")]
+    end
 
-    Api --> Postgres["PostgreSQL"]
-    Api --> Redis["Redis"]
-    Api --> Storage["Uploads / Logs"]
-    Api --> Kiwoom["External Brokerage API"]
+    subgraph Quant["AI · 퀀트"]
+        Pipeline["AI Quant Pipeline<br/>데이터 수집 · 모델 추론 · XAI 리포트"]
+        LLM["LLM Provider"]
+    end
 
-    AI["AI Pipeline"] --> Postgres
-    AI --> Kaggle["Kaggle Training"]
-    AI --> LLM["LLM Providers"]
+    subgraph Ops["배포 · 운영"]
+        Actions["GitHub Actions"]
+        Registry["GHCR"]
+        Server["Docker Compose Server"]
+    end
 
-    Postgres --> Dashboard["Quant Bot Dashboard"]
-    Dashboard --> Web
+    User --> Proxy
+    Proxy --> Frontend
+    Frontend --> Backend
 
-    GHA["GitHub Actions"] --> GHCR["GHCR Docker Images"]
-    GHCR --> Server["Docker Compose Server"]
-    Server --> Web
-    Server --> Api
-    Server --> Postgres
-    Server --> Redis
+    Backend --> DB
+    Backend --> Redis
+    Backend --> Pipeline
+
+    Pipeline --> DB
+    Pipeline --> LLM
+
+    Actions --> Registry
+    Registry --> Server
+    Server --> Proxy
+    Server --> Backend
+    Server --> Pipeline
+
+    classDef users fill:#EEF6FF,stroke:#2563EB,color:#0F172A;
+    classDef service fill:#ECFDF5,stroke:#059669,color:#064E3B;
+    classDef data fill:#FFF7ED,stroke:#EA580C,color:#7C2D12;
+    classDef quant fill:#F5F3FF,stroke:#7C3AED,color:#2E1065;
+    classDef ops fill:#F0FDFA,stroke:#0D9488,color:#134E4A;
+
+    class User users;
+    class Proxy,Frontend,Backend service;
+    class DB,Redis data;
+    class Pipeline,LLM quant;
+    class Actions,Registry,Server ops;
 ```
 
 ## 기술 스택
