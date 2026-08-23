@@ -1,9 +1,24 @@
-# 세종투자연구회 웹사이트 프로젝트
+<div align="center">
+
 <img width="225" height="225" alt="image" src="https://github.com/user-attachments/assets/6b4be44f-6f50-4b49-a7ee-047340004a21" />
+
+
+# 세종투자연구회 웹사이트 프로젝트
 
 이 프로젝트는 동아리 운영에 필요한 웹 서비스와 금융 데이터 기반 AI/퀀트 시스템을 하나의 제품으로 통합한 프로젝트입니다.
 
 기존 네이버 카페와 수기 출석 관리를 대체하는 내부 서비스에서 시작해, 게시판, 출석, 포인트, 모의 트레이딩, 백테스팅, 관리자 기능, AI 퀀트봇까지 확장하고 있습니다. 실제 동아리 구성원이 사용하는 서비스를 운영하며, 기능 개발, 리팩토링, 성능 개선, 배포, 모니터링, 코드 리뷰 경험을 함께 쌓는 것을 목표로 합니다.
+
+<br />
+
+![Java](https://img.shields.io/badge/Java_21-007396?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![React](https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+
+</div>
 
 ## 핵심 가치
 
