@@ -64,61 +64,36 @@
 ## 시스템 아키텍처
 
 ```mermaid
+---
+config:
+  layout: fixed
+---
 flowchart TB
-    subgraph Users["사용자 영역"]
-        User["동아리원 / 관리자"]
-    end
+    User["동아리원 / 관리자"] --> Proxy["Nginx Proxy Manager"]
+    Proxy --> Frontend["React + Vite"]
+    Frontend --> Backend["Spring Boot API"]
+    Backend --> DB[("PostgreSQL<br>서비스 데이터 + 퀀트 데이터")] & Redis[("Redis<br>캐시 / 인증 상태")] & Pipeline["AI Quant Pipeline<br>데이터 수집 · 모델 추론 · XAI 리포트"]
+    Pipeline --> DB & LLM["LLM Provider"]
+    Actions["GitHub Actions"] --> Registry["GHCR"]
+    Registry --> Server["Docker Compose Server"]
+    Server --> Proxy & Backend & Pipeline
 
-    subgraph Service["웹 서비스"]
-        Proxy["Nginx Proxy Manager"]
-        Frontend["React + Vite"]
-        Backend["Spring Boot API"]
-    end
-
-    subgraph Data["데이터 저장소"]
-        DB[("PostgreSQL<br/>서비스 데이터 + 퀀트 데이터")]
-        Redis[("Redis<br/>캐시 / 인증 상태")]
-    end
-
-    subgraph Quant["AI · 퀀트"]
-        Pipeline["AI Quant Pipeline<br/>데이터 수집 · 모델 추론 · XAI 리포트"]
-        LLM["LLM Provider"]
-    end
-
-    subgraph Ops["배포 · 운영"]
-        Actions["GitHub Actions"]
-        Registry["GHCR"]
-        Server["Docker Compose Server"]
-    end
-
-    User --> Proxy
-    Proxy --> Frontend
-    Frontend --> Backend
-
-    Backend --> DB
-    Backend --> Redis
-    Backend --> Pipeline
-
-    Pipeline --> DB
-    Pipeline --> LLM
-
-    Actions --> Registry
-    Registry --> Server
-    Server --> Proxy
-    Server --> Backend
-    Server --> Pipeline
-
-    classDef users fill:#EEF6FF,stroke:#2563EB,color:#0F172A;
-    classDef service fill:#ECFDF5,stroke:#059669,color:#064E3B;
-    classDef data fill:#FFF7ED,stroke:#EA580C,color:#7C2D12;
-    classDef quant fill:#F5F3FF,stroke:#7C3AED,color:#2E1065;
-    classDef ops fill:#F0FDFA,stroke:#0D9488,color:#134E4A;
-
-    class User users;
-    class Proxy,Frontend,Backend service;
-    class DB,Redis data;
-    class Pipeline,LLM quant;
-    class Actions,Registry,Server ops;
+     User:::users
+     Proxy:::service
+     Frontend:::service
+     Backend:::service
+     DB:::data
+     Redis:::data
+     Pipeline:::quant
+     LLM:::quant
+     Actions:::ops
+     Registry:::ops
+     Server:::ops
+    classDef users fill:#EEF6FF,stroke:#2563EB,color:#0F172A
+    classDef service fill:#ECFDF5,stroke:#059669,color:#064E3B
+    classDef data fill:#FFF7ED,stroke:#EA580C,color:#7C2D12
+    classDef quant fill:#F5F3FF,stroke:#7C3AED,color:#2E1065
+    classDef ops fill:#F0FDFA,stroke:#0D9488,color:#134E4A
 ```
 
 ## 기술 스택
