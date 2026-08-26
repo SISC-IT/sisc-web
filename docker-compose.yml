@@ -103,6 +103,9 @@ services:
     image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
     env_file:
       - .env
+      # 배포가 덮어쓰지 않는 AI 전용 비밀값 파일입니다.
+      - path: .env.ai
+        required: false
     environment:
       - TZ=UTC
       - DB_HOST=db
@@ -110,7 +113,6 @@ services:
       - DB_NAME=sisc_db
       - DB_USER=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      - SEC_USER_AGENT=${SEC_USER_AGENT}
     volumes:
       - /mnt/storage/sec-edgar:/mnt/sec-edgar
     command:
@@ -142,6 +144,8 @@ services:
     image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
     env_file:
       - .env
+      - path: .env.ai
+        required: false
     environment:
       - TZ=UTC
       - DB_HOST=db
@@ -167,6 +171,8 @@ services:
     image: ghcr.io/sisc-it/sisc-web-xai:${TAG:-latest}
     env_file:
       - .env
+      - path: .env.ai
+        required: false
     environment:
       - TZ=UTC
       - DB_HOST=db
