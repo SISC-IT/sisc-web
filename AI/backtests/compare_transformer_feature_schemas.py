@@ -14,7 +14,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 
@@ -22,6 +21,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
+from AI.modules.signal.core.time_split import chronological_split
 from AI.modules.signal.core.data_loader import DataLoader
 from AI.modules.signal.models.transformer.architecture import build_transformer_model
 
@@ -170,7 +170,10 @@ def _fit_single_schema(
     if raw_df.empty:
         raise ValueError(f"[{schema_name}] no rows found in selected training range.")
 
-    X_ts, X_ticker, X_sector, y_class, _, info = loader.create_dataset(raw_df, feature_columns=requested_features)
+    X_ts, X_ticker, X_sector, y_class, _, info = loader.create_dataset(
+        raw_df, feature_columns=requested_features, validation_fraction=test_size
+    )
+    rows = info['rows']
     if len(y_class) == 0:
         raise ValueError(f"[{schema_name}] dataset is empty after preprocessing.")
     raw_n_samples = int(len(y_class))
@@ -182,13 +185,14 @@ def _fit_single_schema(
             f"{missing_features}"
         )
     if max_samples is not None and max_samples > 0 and raw_n_samples > max_samples:
-        rng = np.random.default_rng(global_seed)
+        rng = np.random.default_rng(split_seed)
         sampled_indices = rng.choice(raw_n_samples, size=max_samples, replace=False)
         sampled_indices.sort()
         X_ts = X_ts[sampled_indices]
         X_ticker = X_ticker[sampled_indices]
         X_sector = X_sector[sampled_indices]
         y_class = y_class[sampled_indices]
+        rows = rows.iloc[sampled_indices]
         print(f"[SchemaCompare] {schema_name}: downsampled samples {raw_n_samples} -> {len(y_class)}")
 
     # Minimize extra conversion copies during model.fit.
@@ -197,24 +201,20 @@ def _fit_single_schema(
     X_sector = np.asarray(X_sector, dtype=np.int32)
     y_class = np.asarray(y_class, dtype=np.float32)
 
-    (
-        X_ts_train,
-        X_ts_val,
-        X_tick_train,
-        X_tick_val,
-        X_sec_train,
-        X_sec_val,
-        y_train,
-        y_val,
-    ) = train_test_split(
-        X_ts,
-        X_ticker,
-        X_sector,
-        y_class,
-        test_size=test_size,
-        shuffle=True,
-        random_state=split_seed,
+    train_mask, val_mask = chronological_split(
+        rows['asof_date'], rows['label_end_max'], info['split_summary']['validation_start']
     )
+    split_summary = dict(info['split_summary'],
+                         full_candidate_samples=raw_n_samples,
+                         selected_candidate_samples=len(rows),
+                         train_samples=int(train_mask.sum()),
+                         validation_samples=int(val_mask.sum()),
+                         purged_samples=int((~(train_mask | val_mask)).sum()),
+                         train_label_end_max=str(rows.loc[train_mask, 'label_end_max'].max().date()))
+    X_ts_train, X_ts_val = X_ts[train_mask], X_ts[val_mask]
+    X_tick_train, X_tick_val = X_ticker[train_mask], X_ticker[val_mask]
+    X_sec_train, X_sec_val = X_sector[train_mask], X_sector[val_mask]
+    y_train, y_val = y_class[train_mask], y_class[val_mask]
 
     model = build_transformer_model(
         input_shape=(X_ts.shape[1], X_ts.shape[2]),
@@ -230,6 +230,7 @@ def _fit_single_schema(
     )
 
     case_output_dir.mkdir(parents=True, exist_ok=True)
+    (case_output_dir / 'split.json').write_text(json.dumps(split_summary, indent=2), encoding='utf-8')
     model_path = case_output_dir / "multi_horizon_model.keras"
     scaler_path = case_output_dir / "multi_horizon_scaler.pkl"
 
@@ -436,7 +437,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--epochs", type=int, default=50, help="Max epochs.")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size.")
     parser.add_argument("--test-size", type=float, default=0.2, help="Validation split ratio.")
-    parser.add_argument("--split-seed", type=int, default=42, help="Seed for train/val split.")
+    parser.add_argument("--split-seed", type=int, default=42, help="Seed for optional sample selection; split is chronological.")
     parser.add_argument("--global-seed", type=int, default=42, help="Global random seed.")
     parser.add_argument("--patience", type=int, default=10, help="EarlyStopping patience.")
     parser.add_argument("--lr-patience", type=int, default=5, help="ReduceLROnPlateau patience.")
