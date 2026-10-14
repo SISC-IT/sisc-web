@@ -266,6 +266,116 @@ class TimeSplitRegressionTests(unittest.TestCase):
         model.fit.assert_called_once()
         self.assertEqual(len(model.fit.call_args.kwargs["y"]), 63)
         self.assertEqual(len(model.fit.call_args.kwargs["validation_data"][1]), 101)
+        self.assertTrue(model.fit.call_args.kwargs["shuffle"])
+
+    def test_schema_compare_samples_each_date_partition_and_keeps_arrays_aligned(self):
+        """Small caps retain both partitions, exclude purged rows and preserve row identity."""
+        from AI.backtests import compare_transformer_feature_schemas as compare
+
+        frame = fixture_frame()
+        _, dataset = create_offline_dataset(frame)
+        x, ticker, sector, labels, _, info = dataset
+        # Encode row identity to check every model input against its original row.
+        x[:, 0, 0] = np.arange(len(x))
+        loader = Mock()
+        loader.load_data_from_db.return_value = frame
+        loader.create_dataset.return_value = dataset
+        previous_ids = None
+        for cap, seed in ((2, 0), (2, 1), (20, 0), (20, 1), (20, 1), (None, 0), (0, 0), (999, 0), (1, 0)):
+            model = Mock()
+            model.fit.return_value.history = {"loss": [0.7], "val_loss": [0.7]}
+            with (
+                self.subTest(cap=cap, seed=seed),
+                tempfile.TemporaryDirectory() as output_dir,
+                patch.object(compare, "DataLoader", return_value=loader),
+                patch.object(compare, "build_transformer_model", return_value=model),
+                redirect_stdout(io.StringIO()),
+            ):
+                arguments = dict(
+                    schema_name="offline", requested_features=["log_return"],
+                    case_output_dir=Path(output_dir), db_name="unused", lookback=LOOKBACK,
+                    horizons=HORIZONS, data_start_date=str(DATES[0].date()),
+                    train_end_date=str(DATES[-1].date()), test_size=0.2, split_seed=seed,
+                    global_seed=42, epochs=1, batch_size=32, patience=1,
+                    lr_patience=1, lr_factor=0.5, min_lr=1e-6, max_samples=cap,
+                    verbose=0, deterministic=False,
+                )
+                if cap == 1:
+                    with self.assertRaisesRegex(ValueError, "max_samples.*2"):
+                        compare._fit_single_schema(**arguments)
+                    model.fit.assert_not_called()
+                    continue
+                artifacts = compare._fit_single_schema(**arguments)
+                metadata = json.loads((Path(output_dir) / "split.json").read_text())
+                fit = model.fit.call_args.kwargs
+                train_ids = fit["x"][0][:, 0, 0].astype(int)
+                val_ids = fit["validation_data"][0][0][:, 0, 0].astype(int)
+                expected_counts = {2: (1, 1), 20: (7, 13)}.get(cap, (63, 101))
+                self.assertEqual((len(train_ids), len(val_ids)), expected_counts)
+                self.assertTrue(info["train_mask"][train_ids].all())
+                self.assertTrue(info["val_mask"][val_ids].all())
+                self.assertEqual(len(set(train_ids) | set(val_ids)), sum(expected_counts))
+                for ids, inputs, targets in (
+                    (train_ids, fit["x"], fit["y"]),
+                    (val_ids, *fit["validation_data"]),
+                ):
+                    for actual, original in zip(inputs, (x, ticker, sector)):
+                        np.testing.assert_array_equal(actual, original[ids].astype(actual.dtype))
+                    np.testing.assert_array_equal(targets, labels[ids])
+                self.assertTrue(fit["shuffle"])
+                self.assertEqual(artifacts.n_samples, sum(expected_counts))
+                self.assertEqual(metadata["full_candidate_samples"], 178)
+                self.assertEqual(metadata["full_purged_samples"], 14)
+                self.assertEqual(metadata["selected_candidate_samples"], sum(expected_counts))
+                self.assertEqual(metadata["purged_samples"], 0)
+                self.assertEqual((metadata["train_samples"], metadata["validation_samples"]), expected_counts)
+                if cap == 20 and seed == 1:
+                    if previous_ids is not None:
+                        np.testing.assert_array_equal(train_ids, previous_ids[0])
+                        np.testing.assert_array_equal(val_ids, previous_ids[1])
+                    previous_ids = (train_ids.copy(), val_ids.copy())
+
+    def test_oos_evaluation_boundaries_and_train_independence(self):
+        """Evaluation uses past context and the train scaler, without entering fit/validation."""
+        frame = fixture_frame()
+        frame["date"] += pd.Timedelta(days=350)
+        config = oos.build_oos2024_config({
+            "train_start": str(frame["date"].min().date()),
+            "validation_start": "2024-11-25",
+            "train_cutoff": "2024-12-13", "eval_start": "2024-12-16",
+            "eval_end": "2024-12-31", "holdout_start": "2025-01-01",
+            "seq_len": LOOKBACK,
+        })
+        scaler = oos._fit_scaler(frame, ["log_return"], config)
+        def build(source, purpose):
+            return oos._build_supervised_sequences(
+                source, feature_columns=["log_return"], scaler=scaler,
+                ticker_to_id={"A": 0, "B": 1}, sector_to_id={"Unknown": 0},
+                config=config, purpose=purpose,
+            )
+        with patch.object(scaler, "fit", side_effect=AssertionError("must reuse train scaler")):
+            dataset, evaluation = build(frame, "train"), build(frame, "eval")
+        with redirect_stdout(io.StringIO()):
+            train, validation = oos._split_train_val(dataset, config)
+        for partition in (train, validation):
+            self.assertTrue((partition["rows"]["label_end_max"] <= pd.Timestamp(config["train_cutoff"])).all())
+        rows = evaluation["rows"]
+        self.assertEqual(rows["asof_date"].min(), pd.Timestamp(config["eval_start"]))
+        self.assertTrue((rows["label_end_max"] <= pd.Timestamp(config["eval_end"])).all())
+        self.assertTrue((rows["label_end_max"] < pd.Timestamp(config["holdout_start"])).all())
+        first = rows.iloc[0]
+        history = frame.loc[(frame["ticker"] == first["ticker"]) & (frame["date"] <= first["asof_date"])].tail(LOOKBACK)
+        self.assertEqual(int((history["date"] < pd.Timestamp(config["eval_start"])).sum()), LOOKBACK - 1)
+        np.testing.assert_allclose(evaluation["x"][0], scaler.transform(history[["log_return"]]), rtol=1e-6)
+        changed = frame.copy()
+        changed.loc[changed["date"] >= config["eval_start"], ["close", "log_return"]] *= 1000
+        changed_scaler = oos._fit_scaler(changed, ["log_return"], config)
+        np.testing.assert_array_equal(scaler.mean_, changed_scaler.mean_)
+        for key in ("x", "y"):
+            np.testing.assert_array_equal(dataset[key], build(changed, "train")[key])
+        for invalid in ({"train_cutoff": config["eval_start"]}, {"eval_end": config["holdout_start"]}):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                oos.validate_oos2024_config(dict(config, **invalid))
 
 
 if __name__ == "__main__":

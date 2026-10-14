@@ -5,6 +5,7 @@ import pandas as pd
 
 
 def resolve_validation_start(dates, validation_start=None, validation_fraction=0.2):
+    """Use one calendar boundary for all tickers, inferred from unique dates if omitted."""
     dates = pd.DatetimeIndex(pd.to_datetime(dates)).normalize()
     if dates.hasnans or not 0 < validation_fraction < 1:
         raise ValueError("유효한 날짜와 0~1 사이 validation_fraction이 필요합니다.")
@@ -22,6 +23,11 @@ def resolve_validation_start(dates, validation_start=None, validation_fraction=0
 
 
 def chronological_split(asof_dates, label_end_dates, validation_start):
+    """Return train/validation masks, excluding train labels that reach validation.
+
+    Both partitions must be nonempty. Callers must separately cap label dates
+    before any reserved final evaluation period; this helper has no test boundary.
+    """
     asof = pd.DatetimeIndex(pd.to_datetime(asof_dates)).normalize()
     label_end = pd.DatetimeIndex(pd.to_datetime(label_end_dates)).normalize()
     boundary = pd.Timestamp(validation_start)
