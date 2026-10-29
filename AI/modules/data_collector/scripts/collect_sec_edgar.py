@@ -146,6 +146,8 @@ def main(argv: list[str] | None = None) -> None:
             limit=args.limit,
         )
     print(f"[SEC EDGAR 수집기] 수집 완료: {stats}")
+    if stats["failed"]:
+        raise SystemExit(1)
 
 
 def _positive_int(value: str) -> int:

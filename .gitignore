@@ -6,6 +6,7 @@
 .DS_Store
 # 환경 변수 & 민감 정보
 .env
+.env.ai
 *.secret
 *.key
 *.pem
