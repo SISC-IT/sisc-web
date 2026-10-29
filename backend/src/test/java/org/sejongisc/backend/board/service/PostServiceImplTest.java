@@ -40,6 +40,7 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -74,6 +75,8 @@ class PostServiceImplTest {
   private PostContentService postContentService;
   @Mock
   private PostMediaService postMediaService;
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   // 테스트용 공유 객체
   private User mockUser;
@@ -203,7 +206,10 @@ class PostServiceImplTest {
         .files(Collections.emptyList())
         .build();
 
-    PostAttachment oldAttachment = PostAttachment.builder().savedFilename("old_file.txt").build();
+    PostAttachment oldAttachment = PostAttachment.builder()
+        .postAttachmentId(UUID.randomUUID())
+        .savedFilename("old_file.txt")
+        .build();
 
     // Mocking
     when(postRepository.findById(postId)).thenReturn(Optional.of(mockPost));
@@ -213,7 +219,7 @@ class PostServiceImplTest {
     postService.updatePost(request, postId, userId);
 
     // then
-    verify(postAttachmentRepository).deleteAllByPostPostId(postId);
+    verify(postAttachmentRepository).deleteAll(List.of(oldAttachment));
     verify(fileUploadService).delete("old_file.txt");
     assertThat(mockPost.getTitle()).isEqualTo("Updated Title");
     assertThat(mockPost.getContent()).isEqualTo("Updated Content");

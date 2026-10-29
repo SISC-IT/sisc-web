@@ -1,0 +1,933 @@
+{
+  "schema_version": 1,
+  "universe_name": "S&P 100",
+  "universe_mode": "static_snapshot",
+  "as_of": "2026-07-27",
+  "source_url": "https://www.ishares.com/us/products/239723/ishares-s-p-100-etf/latest-holdings.csv",
+  "retrieved_at": "2026-07-29",
+  "company_count": 100,
+  "security_count": 101,
+  "sources": [
+    {
+      "role": "index_authority",
+      "name": "S&P Dow Jones Indices - S&P 100",
+      "url": "https://www.spglobal.com/spdji/en/indices/equity/sp-100/"
+    },
+    {
+      "role": "full_constituent_operational_source",
+      "name": "iShares S&P 100 ETF holdings",
+      "url": "https://www.ishares.com/us/products/239723/ishares-s-p-100-etf/latest-holdings.csv",
+      "as_of": "2026-07-27",
+      "sha256": "aff4f2814bfa80dfa4b4e4ae86c5148ec3bb43d8581afc52bcd95aedacd42123"
+    },
+    {
+      "role": "cik_mapping",
+      "name": "SEC company_tickers.json",
+      "url": "https://www.sec.gov/files/company_tickers.json",
+      "retrieved_at": "2026-07-29",
+      "sha256": "6a4f83335f24e07200fe7a323fb9b16811ee4967ca881035e1d78dd16e387955"
+    }
+  ],
+  "companies": [
+    {
+      "company_key": "apple",
+      "cik": "0000320193",
+      "legal_name": "Apple Inc.",
+      "tickers": ["AAPL"],
+      "aliases": ["Apple"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "abbvie",
+      "cik": "0001551152",
+      "legal_name": "AbbVie Inc.",
+      "tickers": ["ABBV"],
+      "aliases": ["AbbVie"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "abbott-laboratories",
+      "cik": "0000001800",
+      "legal_name": "Abbott Laboratories",
+      "tickers": ["ABT"],
+      "aliases": ["Abbott"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "accenture",
+      "cik": "0001467373",
+      "legal_name": "Accenture plc",
+      "tickers": ["ACN"],
+      "aliases": ["Accenture"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "adobe",
+      "cik": "0000796343",
+      "legal_name": "Adobe Inc.",
+      "tickers": ["ADBE"],
+      "aliases": ["Adobe"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "applied-materials",
+      "cik": "0000006951",
+      "legal_name": "Applied Materials, Inc.",
+      "tickers": ["AMAT"],
+      "aliases": ["Applied Materials"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "advanced-micro-devices",
+      "cik": "0000002488",
+      "legal_name": "Advanced Micro Devices, Inc.",
+      "tickers": ["AMD"],
+      "aliases": ["Advanced Micro Devices"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "amgen",
+      "cik": "0000318154",
+      "legal_name": "Amgen Inc.",
+      "tickers": ["AMGN"],
+      "aliases": ["Amgen"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "american-tower",
+      "cik": "0001053507",
+      "legal_name": "American Tower Corporation",
+      "tickers": ["AMT"],
+      "aliases": ["American Tower"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "amazon",
+      "cik": "0001018724",
+      "legal_name": "Amazon.com, Inc.",
+      "tickers": ["AMZN"],
+      "aliases": ["Amazon"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "broadcom",
+      "cik": "0001730168",
+      "legal_name": "Broadcom Inc.",
+      "tickers": ["AVGO"],
+      "aliases": ["Broadcom"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "american-express",
+      "cik": "0000004962",
+      "legal_name": "American Express Company",
+      "tickers": ["AXP"],
+      "aliases": ["American Express"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "boeing",
+      "cik": "0000012927",
+      "legal_name": "The Boeing Company",
+      "tickers": ["BA"],
+      "aliases": ["Boeing"],
+      "enabled": true,
+      "ambiguous_tickers": ["BA"]
+    },
+    {
+      "company_key": "bank-of-america",
+      "cik": "0000070858",
+      "legal_name": "Bank of America Corporation",
+      "tickers": ["BAC"],
+      "aliases": ["Bank of America"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "booking-holdings",
+      "cik": "0001075531",
+      "legal_name": "Booking Holdings Inc.",
+      "tickers": ["BKNG"],
+      "aliases": ["Booking Holdings"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "blackrock",
+      "cik": "0002012383",
+      "legal_name": "BlackRock, Inc.",
+      "tickers": ["BLK"],
+      "aliases": ["BlackRock"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "bristol-myers-squibb",
+      "cik": "0000014272",
+      "legal_name": "Bristol-Myers Squibb Company",
+      "tickers": ["BMY"],
+      "aliases": ["Bristol Myers Squibb"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "bank-of-new-york-mellon",
+      "cik": "0001390777",
+      "legal_name": "The Bank of New York Mellon Corporation",
+      "tickers": ["BNY"],
+      "aliases": ["BNY Mellon"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "berkshire-hathaway",
+      "cik": "0001067983",
+      "legal_name": "Berkshire Hathaway Inc.",
+      "tickers": ["BRK-B"],
+      "aliases": ["Berkshire Hathaway"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "citigroup",
+      "cik": "0000831001",
+      "legal_name": "Citigroup Inc.",
+      "tickers": ["C"],
+      "aliases": ["Citigroup"],
+      "enabled": true,
+      "ambiguous_tickers": ["C"]
+    },
+    {
+      "company_key": "caterpillar",
+      "cik": "0000018230",
+      "legal_name": "Caterpillar Inc.",
+      "tickers": ["CAT"],
+      "aliases": ["Caterpillar"],
+      "enabled": true,
+      "ambiguous_tickers": ["CAT"]
+    },
+    {
+      "company_key": "colgate-palmolive",
+      "cik": "0000021665",
+      "legal_name": "Colgate-Palmolive Company",
+      "tickers": ["CL"],
+      "aliases": ["Colgate-Palmolive"],
+      "enabled": true,
+      "ambiguous_tickers": ["CL"]
+    },
+    {
+      "company_key": "comcast",
+      "cik": "0001166691",
+      "legal_name": "Comcast Corporation",
+      "tickers": ["CMCSA"],
+      "aliases": ["Comcast"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "capital-one",
+      "cik": "0000927628",
+      "legal_name": "Capital One Financial Corporation",
+      "tickers": ["COF"],
+      "aliases": ["Capital One"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "conocophillips",
+      "cik": "0001163165",
+      "legal_name": "ConocoPhillips",
+      "tickers": ["COP"],
+      "aliases": [],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "costco",
+      "cik": "0000909832",
+      "legal_name": "Costco Wholesale Corporation",
+      "tickers": ["COST"],
+      "aliases": ["Costco"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "salesforce",
+      "cik": "0001108524",
+      "legal_name": "Salesforce, Inc.",
+      "tickers": ["CRM"],
+      "aliases": ["Salesforce"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "cisco",
+      "cik": "0000858877",
+      "legal_name": "Cisco Systems, Inc.",
+      "tickers": ["CSCO"],
+      "aliases": ["Cisco"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "cvs-health",
+      "cik": "0000064803",
+      "legal_name": "CVS Health Corporation",
+      "tickers": ["CVS"],
+      "aliases": ["CVS Health"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "chevron",
+      "cik": "0000093410",
+      "legal_name": "Chevron Corporation",
+      "tickers": ["CVX"],
+      "aliases": ["Chevron"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "deere",
+      "cik": "0000315189",
+      "legal_name": "Deere & Company",
+      "tickers": ["DE"],
+      "aliases": ["Deere", "John Deere"],
+      "enabled": true,
+      "ambiguous_tickers": ["DE"]
+    },
+    {
+      "company_key": "danaher",
+      "cik": "0000313616",
+      "legal_name": "Danaher Corporation",
+      "tickers": ["DHR"],
+      "aliases": ["Danaher"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "walt-disney",
+      "cik": "0001744489",
+      "legal_name": "The Walt Disney Company",
+      "tickers": ["DIS"],
+      "aliases": ["Walt Disney", "Disney"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "duke-energy",
+      "cik": "0001326160",
+      "legal_name": "Duke Energy Corporation",
+      "tickers": ["DUK"],
+      "aliases": ["Duke Energy"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "emerson-electric",
+      "cik": "0000032604",
+      "legal_name": "Emerson Electric Co.",
+      "tickers": ["EMR"],
+      "aliases": ["Emerson Electric"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "fedex",
+      "cik": "0001048911",
+      "legal_name": "FedEx Corporation",
+      "tickers": ["FDX"],
+      "aliases": ["FedEx"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "general-dynamics",
+      "cik": "0000040533",
+      "legal_name": "General Dynamics Corporation",
+      "tickers": ["GD"],
+      "aliases": ["General Dynamics"],
+      "enabled": true,
+      "ambiguous_tickers": ["GD"]
+    },
+    {
+      "company_key": "ge-aerospace",
+      "cik": "0000040545",
+      "legal_name": "General Electric Company",
+      "tickers": ["GE"],
+      "aliases": ["GE Aerospace"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "ge-vernova",
+      "cik": "0001996810",
+      "legal_name": "GE Vernova Inc.",
+      "tickers": ["GEV"],
+      "aliases": ["GE Vernova"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "gilead-sciences",
+      "cik": "0000882095",
+      "legal_name": "Gilead Sciences, Inc.",
+      "tickers": ["GILD"],
+      "aliases": ["Gilead Sciences"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "general-motors",
+      "cik": "0001467858",
+      "legal_name": "General Motors Company",
+      "tickers": ["GM"],
+      "aliases": ["General Motors"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "alphabet",
+      "cik": "0001652044",
+      "legal_name": "Alphabet Inc.",
+      "tickers": ["GOOG", "GOOGL"],
+      "aliases": ["Alphabet", "Google"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "goldman-sachs",
+      "cik": "0000886982",
+      "legal_name": "The Goldman Sachs Group, Inc.",
+      "tickers": ["GS"],
+      "aliases": ["Goldman Sachs"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "home-depot",
+      "cik": "0000354950",
+      "legal_name": "The Home Depot, Inc.",
+      "tickers": ["HD"],
+      "aliases": ["Home Depot"],
+      "enabled": true,
+      "ambiguous_tickers": ["HD"]
+    },
+    {
+      "company_key": "honeywell-aerospace",
+      "cik": "0002089271",
+      "legal_name": "Honeywell Aerospace Inc.",
+      "tickers": ["HONA"],
+      "aliases": ["Honeywell Aerospace"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "ibm",
+      "cik": "0000051143",
+      "legal_name": "International Business Machines Corporation",
+      "tickers": ["IBM"],
+      "aliases": ["IBM"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "intel",
+      "cik": "0000050863",
+      "legal_name": "Intel Corporation",
+      "tickers": ["INTC"],
+      "aliases": ["Intel"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "intuit",
+      "cik": "0000896878",
+      "legal_name": "Intuit Inc.",
+      "tickers": ["INTU"],
+      "aliases": ["Intuit"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "intuitive-surgical",
+      "cik": "0001035267",
+      "legal_name": "Intuitive Surgical, Inc.",
+      "tickers": ["ISRG"],
+      "aliases": ["Intuitive Surgical"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "johnson-and-johnson",
+      "cik": "0000200406",
+      "legal_name": "Johnson & Johnson",
+      "tickers": ["JNJ"],
+      "aliases": [],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "jpmorgan-chase",
+      "cik": "0000019617",
+      "legal_name": "JPMorgan Chase & Co.",
+      "tickers": ["JPM"],
+      "aliases": ["JPMorgan Chase"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "coca-cola",
+      "cik": "0000021344",
+      "legal_name": "The Coca-Cola Company",
+      "tickers": ["KO"],
+      "aliases": ["Coca-Cola"],
+      "enabled": true,
+      "ambiguous_tickers": ["KO"]
+    },
+    {
+      "company_key": "linde",
+      "cik": "0001707925",
+      "legal_name": "Linde plc",
+      "tickers": ["LIN"],
+      "aliases": ["Linde"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "eli-lilly",
+      "cik": "0000059478",
+      "legal_name": "Eli Lilly and Company",
+      "tickers": ["LLY"],
+      "aliases": ["Eli Lilly"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "lockheed-martin",
+      "cik": "0000936468",
+      "legal_name": "Lockheed Martin Corporation",
+      "tickers": ["LMT"],
+      "aliases": ["Lockheed Martin"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "lowes",
+      "cik": "0000060667",
+      "legal_name": "Lowe's Companies, Inc.",
+      "tickers": ["LOW"],
+      "aliases": ["Lowe's"],
+      "enabled": true,
+      "ambiguous_tickers": ["LOW"]
+    },
+    {
+      "company_key": "lam-research",
+      "cik": "0000707549",
+      "legal_name": "Lam Research Corporation",
+      "tickers": ["LRCX"],
+      "aliases": ["Lam Research"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "mastercard",
+      "cik": "0001141391",
+      "legal_name": "Mastercard Incorporated",
+      "tickers": ["MA"],
+      "aliases": ["Mastercard"],
+      "enabled": true,
+      "ambiguous_tickers": ["MA"]
+    },
+    {
+      "company_key": "mcdonalds",
+      "cik": "0000063908",
+      "legal_name": "McDonald's Corporation",
+      "tickers": ["MCD"],
+      "aliases": ["McDonald's"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "mondelez",
+      "cik": "0001103982",
+      "legal_name": "Mondelez International, Inc.",
+      "tickers": ["MDLZ"],
+      "aliases": ["Mondelez International", "Mondelez"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "medtronic",
+      "cik": "0001613103",
+      "legal_name": "Medtronic plc",
+      "tickers": ["MDT"],
+      "aliases": ["Medtronic"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "meta-platforms",
+      "cik": "0001326801",
+      "legal_name": "Meta Platforms, Inc.",
+      "tickers": ["META"],
+      "aliases": ["Meta Platforms", "Meta", "Facebook"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "3m",
+      "cik": "0000066740",
+      "legal_name": "3M Company",
+      "tickers": ["MMM"],
+      "aliases": ["3M"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "altria",
+      "cik": "0000764180",
+      "legal_name": "Altria Group, Inc.",
+      "tickers": ["MO"],
+      "aliases": ["Altria"],
+      "enabled": true,
+      "ambiguous_tickers": ["MO"]
+    },
+    {
+      "company_key": "merck",
+      "cik": "0000310158",
+      "legal_name": "Merck & Co., Inc.",
+      "tickers": ["MRK"],
+      "aliases": ["Merck"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "morgan-stanley",
+      "cik": "0000895421",
+      "legal_name": "Morgan Stanley",
+      "tickers": ["MS"],
+      "aliases": [],
+      "enabled": true,
+      "ambiguous_tickers": ["MS"]
+    },
+    {
+      "company_key": "microsoft",
+      "cik": "0000789019",
+      "legal_name": "Microsoft Corporation",
+      "tickers": ["MSFT"],
+      "aliases": ["Microsoft"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "micron-technology",
+      "cik": "0000723125",
+      "legal_name": "Micron Technology, Inc.",
+      "tickers": ["MU"],
+      "aliases": ["Micron Technology", "Micron"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "nextera-energy",
+      "cik": "0000753308",
+      "legal_name": "NextEra Energy, Inc.",
+      "tickers": ["NEE"],
+      "aliases": ["NextEra Energy"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "netflix",
+      "cik": "0001065280",
+      "legal_name": "Netflix, Inc.",
+      "tickers": ["NFLX"],
+      "aliases": ["Netflix"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "nike",
+      "cik": "0000320187",
+      "legal_name": "NIKE, Inc.",
+      "tickers": ["NKE"],
+      "aliases": ["Nike"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "servicenow",
+      "cik": "0001373715",
+      "legal_name": "ServiceNow, Inc.",
+      "tickers": ["NOW"],
+      "aliases": ["ServiceNow"],
+      "enabled": true,
+      "ambiguous_tickers": ["NOW"]
+    },
+    {
+      "company_key": "nvidia",
+      "cik": "0001045810",
+      "legal_name": "NVIDIA Corporation",
+      "tickers": ["NVDA"],
+      "aliases": ["NVIDIA"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "oracle",
+      "cik": "0001341439",
+      "legal_name": "Oracle Corporation",
+      "tickers": ["ORCL"],
+      "aliases": ["Oracle"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "pepsico",
+      "cik": "0000077476",
+      "legal_name": "PepsiCo, Inc.",
+      "tickers": ["PEP"],
+      "aliases": ["PepsiCo"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "pfizer",
+      "cik": "0000078003",
+      "legal_name": "Pfizer Inc.",
+      "tickers": ["PFE"],
+      "aliases": ["Pfizer"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "procter-and-gamble",
+      "cik": "0000080424",
+      "legal_name": "The Procter & Gamble Company",
+      "tickers": ["PG"],
+      "aliases": ["Procter & Gamble"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "palantir",
+      "cik": "0001321655",
+      "legal_name": "Palantir Technologies Inc.",
+      "tickers": ["PLTR"],
+      "aliases": ["Palantir Technologies", "Palantir"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "philip-morris-international",
+      "cik": "0001413329",
+      "legal_name": "Philip Morris International Inc.",
+      "tickers": ["PM"],
+      "aliases": ["Philip Morris International"],
+      "enabled": true,
+      "ambiguous_tickers": ["PM"]
+    },
+    {
+      "company_key": "qualcomm",
+      "cik": "0000804328",
+      "legal_name": "QUALCOMM Incorporated",
+      "tickers": ["QCOM"],
+      "aliases": ["Qualcomm"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "rtx",
+      "cik": "0000101829",
+      "legal_name": "RTX Corporation",
+      "tickers": ["RTX"],
+      "aliases": ["RTX", "Raytheon Technologies"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "starbucks",
+      "cik": "0000829224",
+      "legal_name": "Starbucks Corporation",
+      "tickers": ["SBUX"],
+      "aliases": ["Starbucks"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "charles-schwab",
+      "cik": "0000316709",
+      "legal_name": "The Charles Schwab Corporation",
+      "tickers": ["SCHW"],
+      "aliases": ["Charles Schwab"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "southern-company",
+      "cik": "0000092122",
+      "legal_name": "The Southern Company",
+      "tickers": ["SO"],
+      "aliases": ["Southern Company"],
+      "enabled": true,
+      "ambiguous_tickers": ["SO"]
+    },
+    {
+      "company_key": "simon-property-group",
+      "cik": "0001063761",
+      "legal_name": "Simon Property Group, Inc.",
+      "tickers": ["SPG"],
+      "aliases": ["Simon Property Group"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "att",
+      "cik": "0000732717",
+      "legal_name": "AT&T Inc.",
+      "tickers": ["T"],
+      "aliases": ["AT&T"],
+      "enabled": true,
+      "ambiguous_tickers": ["T"]
+    },
+    {
+      "company_key": "thermo-fisher-scientific",
+      "cik": "0000097745",
+      "legal_name": "Thermo Fisher Scientific Inc.",
+      "tickers": ["TMO"],
+      "aliases": ["Thermo Fisher Scientific"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "t-mobile-us",
+      "cik": "0001283699",
+      "legal_name": "T-Mobile US, Inc.",
+      "tickers": ["TMUS"],
+      "aliases": ["T-Mobile"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "tesla",
+      "cik": "0001318605",
+      "legal_name": "Tesla, Inc.",
+      "tickers": ["TSLA"],
+      "aliases": ["Tesla"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "texas-instruments",
+      "cik": "0000097476",
+      "legal_name": "Texas Instruments Incorporated",
+      "tickers": ["TXN"],
+      "aliases": ["Texas Instruments"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "uber",
+      "cik": "0001543151",
+      "legal_name": "Uber Technologies, Inc.",
+      "tickers": ["UBER"],
+      "aliases": ["Uber"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "unitedhealth-group",
+      "cik": "0000731766",
+      "legal_name": "UnitedHealth Group Incorporated",
+      "tickers": ["UNH"],
+      "aliases": ["UnitedHealth Group"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "union-pacific",
+      "cik": "0000100885",
+      "legal_name": "Union Pacific Corporation",
+      "tickers": ["UNP"],
+      "aliases": ["Union Pacific"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "united-parcel-service",
+      "cik": "0001090727",
+      "legal_name": "United Parcel Service, Inc.",
+      "tickers": ["UPS"],
+      "aliases": ["UPS"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "us-bancorp",
+      "cik": "0000036104",
+      "legal_name": "U.S. Bancorp",
+      "tickers": ["USB"],
+      "aliases": ["US Bancorp"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "visa",
+      "cik": "0001403161",
+      "legal_name": "Visa Inc.",
+      "tickers": ["V"],
+      "aliases": ["Visa"],
+      "enabled": true,
+      "ambiguous_tickers": ["V"]
+    },
+    {
+      "company_key": "verizon",
+      "cik": "0000732712",
+      "legal_name": "Verizon Communications Inc.",
+      "tickers": ["VZ"],
+      "aliases": ["Verizon"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "wells-fargo",
+      "cik": "0000072971",
+      "legal_name": "Wells Fargo & Company",
+      "tickers": ["WFC"],
+      "aliases": ["Wells Fargo"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "walmart",
+      "cik": "0000104169",
+      "legal_name": "Walmart Inc.",
+      "tickers": ["WMT"],
+      "aliases": ["Walmart"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    },
+    {
+      "company_key": "exxonmobil",
+      "cik": "0000034088",
+      "legal_name": "Exxon Mobil Corporation",
+      "tickers": ["XOM"],
+      "aliases": ["ExxonMobil", "Exxon Mobil"],
+      "enabled": true,
+      "ambiguous_tickers": []
+    }
+  ]
+}

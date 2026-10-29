@@ -18,6 +18,7 @@ import toolboxMidIcon from '../../assets/toolbox-mid-icon.svg';
 import toolboxRightIcon from '../../assets/toolbox-right-icon.svg';
 import toolboxLineIcon from '../../assets/toolbox-line-icon.svg';
 import toolboxColonIcon from '../../assets/toolbox-colon-icon.svg';
+import toolboxVideoIcon from '../../assets/toolbox-video-icon.svg';
 import toolboxTextColorIcon from '../../assets/toolbox-textcolor-icon.svg';
 import toolboxTextBgIcon from '../../assets/toolbox-textBackgroundColor-icon.svg';
 
@@ -53,6 +54,7 @@ const FONT_FAMILY_OPTIONS = [
 ];
 
 const FONT_SIZE_OPTIONS = [12, 14, 16, 18, 20, 24, 28, 32, 40];
+const DEFAULT_FONT_SIZE = 16;
 const IMAGE_UPLOAD_ACCEPT = '.jpg,.jpeg,.png,.webp,.gif';
 const FILE_UPLOAD_ACCEPT = '.pdf,.docx,.xlsx,.pptx,.csv,.txt,.mp4,.webm,.mov';
 
@@ -347,11 +349,13 @@ const RichTextEditor = ({
   onUploadImage,
   onImageInserted,
   onUploadFile,
+  onUploadVideo,
   onAttachFiles,
 }) => {
   const onChangeRef = useRef(onChange);
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [, setSelectionTick] = useState(0);
 
@@ -732,28 +736,6 @@ const RichTextEditor = ({
     } finally {
       event.target.value = '';
     }
-  const promptLink = () => {
-    if (!editor || !editable) return;
-
-    const previousUrl = editor.getAttributes('link').href || '';
-    const nextUrl = window.prompt('링크 주소를 입력하세요.', previousUrl);
-
-    if (nextUrl === null) return;
-
-    const trimmedUrl = nextUrl.trim();
-
-    if (!trimmedUrl) {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-
-    editor.chain().focus().extendMarkRange('link').setLink({ href: trimmedUrl }).run();
-  };
-
-  const clearFormatting = () => {
-    if (!editor || !editable) return;
-
-    editor.chain().focus().unsetAllMarks().clearNodes().setParagraph().run();
   };
 
   const applyTextColor = (color) => {

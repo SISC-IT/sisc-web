@@ -1,0 +1,18 @@
+{
+  "user_agent": "",
+  "forms": ["8-K", "8-K/A", "4", "4/A"],
+  "item_codes": ["2.02", "5.02"],
+  "start_date": "2021-01-01",
+  "end_date": null,
+  "storage": "both",
+  "data_dir": "AI/modules/data_collector/storage/sec_edgar",
+  "cache_dir": "AI/modules/data_collector/cache/sec_edgar",
+  "log_dir": "AI/modules/data_collector/logs",
+  "db_name": "db",
+  "max_requests_per_second": 8.0,
+  "timeout_seconds": 20.0,
+  "max_retries": 3,
+  "cache_ttl_seconds": 86400,
+  "include_historical_files": true,
+  "include_all_exhibits": false
+}

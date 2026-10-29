@@ -39,6 +39,8 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'io.projectreactor:reactor-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.testcontainers:postgresql'
+	testRuntimeOnly 'jakarta.persistence:jakarta.persistence-api:3.2.0'
 
 
 	// Lombok
@@ -112,6 +114,11 @@ jacoco {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	systemProperty 'api.version', '1.40'
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		showStandardStreams = true
+	}
 	finalizedBy tasks.jacocoTestReport   // 리포트는 테스트 후
 	ignoreFailures = false
 }

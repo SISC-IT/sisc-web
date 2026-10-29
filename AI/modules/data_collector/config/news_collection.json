@@ -1,0 +1,23 @@
+{
+  "universe_file": "AI/modules/data_collector/config/sp100_companies.json",
+  "provider": {
+    "name": "google_news_rss",
+    "language": "en-US",
+    "country": "US",
+    "edition": "US:en",
+    "connect_timeout_seconds": 3.05,
+    "read_timeout_seconds": 10.0,
+    "request_interval_seconds": 0.25,
+    "max_response_bytes": 2000000
+  },
+  "collection": {
+    "default_lookback_hours": 2,
+    "max_recovery_hours": 72,
+    "per_company_limit": 100,
+    "company_relevance_threshold": 0.6
+  },
+  "limitations": {
+    "history": "Google News RSS is forward best-effort only; it does not satisfy the five-year archive requirement.",
+    "omission_rate": "A true article omission rate requires a gold corpus or a second provider."
+  }
+}

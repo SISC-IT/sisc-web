@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Apple Inc. - Google News</title>
+    <item>
+      <title>Apple raises iPhone production outlook - Reuters</title>
+      <link>https://news.google.com/rss/articles/apple-production?utm_source=rss&amp;id=42</link>
+      <guid isPermaLink="false">apple-production-001</guid>
+      <pubDate>Tue, 28 Jul 2026 14:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <a href="https://example.com/apple">Apple raised its production outlook.</a>
+      ]]></description>
+      <source url="https://www.reuters.com">Reuters</source>
+    </item>
+    <item>
+      <title>Apple expands services business - Example Wire</title>
+      <link>https://news.google.com/rss/articles/apple-services</link>
+      <guid isPermaLink="false">apple-services-002</guid>
+      <pubDate>Tue, 28 Jul 2026 13:30:00 -0400</pubDate>
+      <description>Apple Inc. announced a services expansion.</description>
+      <source url="https://example.com">Example Wire</source>
+    </item>
+    <item>
+      <title>Old Apple article outside the requested window</title>
+      <link>https://news.google.com/rss/articles/apple-old</link>
+      <guid isPermaLink="false">apple-old-003</guid>
+      <pubDate>Mon, 20 Jul 2026 10:00:00 GMT</pubDate>
+      <source url="https://example.com">Example Wire</source>
+    </item>
+    <item>
+      <title>Invalid item without a publication time</title>
+      <link>https://news.google.com/rss/articles/apple-invalid</link>
+      <guid isPermaLink="false">apple-invalid-004</guid>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,36 @@
+{
+  "cik": "0000320193",
+  "entityType": "operating",
+  "name": "Sample Corporation",
+  "tickers": ["SAMP"],
+  "exchanges": ["Nasdaq"],
+  "filings": {
+    "recent": {
+      "accessionNumber": [
+        "0000320193-26-000001",
+        "0000320193-26-000002",
+        "0000320193-26-000003"
+      ],
+      "filingDate": ["2026-07-20", "2026-07-21", "2026-07-22"],
+      "reportDate": ["2026-06-30", "2026-07-20", "2026-07-21"],
+      "acceptanceDateTime": [
+        "20260720161230",
+        "20260721103015",
+        "20260722170000"
+      ],
+      "form": ["8-K", "4", "8-K"],
+      "primaryDocument": [
+        "sample-20260720.htm",
+        "ownership.xml",
+        "sample-20260722.htm"
+      ],
+      "primaryDocDescription": [
+        "CURRENT REPORT",
+        "FORM 4",
+        "CURRENT REPORT"
+      ],
+      "items": ["2.02,9.01", "", "1.01"]
+    },
+    "files": []
+  }
+}
