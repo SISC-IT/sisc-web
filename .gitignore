@@ -28,6 +28,10 @@ __pycache__/
 /env
 /.vs
 /.venv/
+/.venv-ingestion/
+AI/data/bronze/
+.pytest_cache/
+.ruff_cache/
 /venv310/
 SISC_개인메모.md
 wandb
@@ -51,6 +55,7 @@ AI/local_notes/
 
 SISC_*.md
 test_*.py
+!AI/tests/ingestion/test_*.py
 AI/data/kaggle_data/
 *.parquet
 *.pt

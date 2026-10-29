@@ -98,3 +98,9 @@ AI/modules/data_collector/
 - Parquet 저장: 모델 학습/대량 데이터셋 배포에 적합합니다. `pyarrow` 또는 `fastparquet`가 필요합니다.
 
 현재 기본값은 `storage=both`, `file_format=csv`입니다. Kaggle/모델 학습용 단일 `price_data.parquet`는 기존 `AI/scripts/extract_to_parquet.py` 흐름으로 DB에서 추출하는 편이 기존 파이프라인과 가장 잘 맞습니다.
+# V2 운영 기반
+
+실행 이력, 거래일 기반 누락 탐지, 미국/암호화폐 일봉의 멱등 복구 및 scheduler는
+[V2 운영 가이드](../../orchestration/README.md)를 참조하세요.
+기존 crawler는 옵션을 유지하며 `--track-runs`로 migration 이후 실행 이력을 기록합니다.
+기존 재무·거시 데이터가 PIT 데이터로 변환된 것은 아닙니다.

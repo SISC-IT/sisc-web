@@ -1,0 +1,40 @@
+name: Ingestion foundation tests
+on:
+  pull_request:
+    paths:
+      - 'AI/orchestration/**'
+      - 'AI/migrations/**'
+      - 'AI/tests/ingestion/**'
+      - 'AI/requirements.ingestion.txt'
+      - 'AI/modules/data_collector/crawler_bot.py'
+      - '.github/workflows/ingestion-tests.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'AI/orchestration/**'
+      - 'AI/migrations/**'
+      - 'AI/tests/ingestion/**'
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: ingestion_test_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      INGESTION_TEST_DSN: postgresql://test:test@localhost:5432/ingestion_test_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r AI/requirements.ingestion.txt pytest ruff pglast
+      - run: python -m pytest AI/tests/ingestion -q
+      - run: ruff check --isolated --select E4,E7,E9,F,I AI/orchestration AI/tests/ingestion AI/modules/data_collector/crawler_bot.py
