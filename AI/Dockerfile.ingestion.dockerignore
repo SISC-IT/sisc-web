@@ -1,0 +1,10 @@
+**
+!AI/
+!AI/orchestration/
+!AI/orchestration/*.py
+!AI/migrations/
+!AI/migrations/*.sql
+!AI/libs/
+!AI/libs/database/
+!AI/libs/database/connection.py
+!AI/requirements.ingestion.txt

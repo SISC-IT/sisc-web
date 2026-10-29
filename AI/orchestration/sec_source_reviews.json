@@ -1,0 +1,508 @@
+{
+  "version": "sec_source_reviews_v1",
+  "debt": [
+    {
+      "cik": "0000789019",
+      "period_end": "2018-06-30",
+      "expected": {
+        "short_term_debt": "0",
+        "current_long_term_debt": "3998000000",
+        "long_term_debt": "72242000000",
+        "long_term_debt_including_current": "76200000000"
+      },
+      "resolution": "prefer_balance_sheet_components",
+      "reason": "rounded_aggregate_disclosure",
+      "evidence": {
+        "url": "https://www.microsoft.com/investor/reports/ar18/index.html",
+        "sha256": "f87bdac0d22dbe6118b27b71336828c4c65d3ee943ae90b26ce4be9bc58d3065",
+        "archive_path": "review/msft2018.html"
+      }
+    },
+    {
+      "cik": "0001018724",
+      "period_end": "2024-12-31",
+      "expected": {
+        "short_term_debt": "151000000",
+        "current_long_term_debt": "5017000000",
+        "long_term_debt": "52623000000",
+        "long_term_debt_including_current": "58000000000"
+      },
+      "resolution": "prefer_balance_sheet_components",
+      "reason": "face_value_versus_carrying_value",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000004/amzn-20241231.htm",
+        "sha256": "b3105f50195169a971aeb4c8ae408e4cf7831ced3b1a67ca1f916dbed2f7aab2",
+        "archive_path": "review/amzn2024.html"
+      }
+    },
+    {
+      "cik": "0001018724",
+      "period_end": "2025-12-31",
+      "expected": {
+        "short_term_debt": "455000000",
+        "current_long_term_debt": "2748000000",
+        "long_term_debt": "65648000000",
+        "long_term_debt_including_current": "68836000000"
+      },
+      "resolution": "prefer_balance_sheet_components",
+      "reason": "face_value_versus_carrying_value",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000004/amzn-20251231.htm",
+        "sha256": "62414dcb0fe5733d53953d90491fd47aa35da1ddc8823be35b4071adcf827c3a",
+        "archive_path": "review/amzn2025.html"
+      }
+    },
+    {
+      "cik": "0000093410",
+      "period_end": "2019-12-31",
+      "expected": {
+        "short_term_debt": "3282000000",
+        "long_term_debt_including_current": "18730000000",
+        "noncurrent_debt_and_finance_leases": "23691000000",
+        "finance_lease_noncurrent": "282000000",
+        "finance_lease_current": "18000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "balance_sheet_refinancing_reclassification_includes_current_maturities",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/93410/000009341020000010/cvx12312019-10kdoc.htm",
+        "sha256": "14771884172db60b44eaf18c2a8b44b4f7cc6086119a02d91611c3441df37582",
+        "archive_path": "review/cvx2019.html"
+      }
+    },
+    {
+      "cik": "0000093410",
+      "period_end": "2020-12-31",
+      "expected": {
+        "short_term_debt": "1548000000",
+        "long_term_debt_including_current": "25676000000",
+        "noncurrent_debt_and_finance_leases": "42767000000",
+        "finance_lease_noncurrent": "447000000",
+        "finance_lease_current": "186000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "balance_sheet_refinancing_reclassification_includes_current_maturities",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/93410/000009341021000009/cvx-20201231.htm",
+        "sha256": "213b8b7d97244100dd0986403a2201ce7a1f955690a41457f0c2cdaab3798f19",
+        "archive_path": "review/cvx2020.html"
+      }
+    },
+    {
+      "cik": "0000093410",
+      "period_end": "2021-12-31",
+      "expected": {
+        "short_term_debt": "256000000",
+        "long_term_debt_including_current": "25676000000",
+        "noncurrent_debt_and_finance_leases": "31113000000",
+        "finance_lease_noncurrent": "449000000",
+        "finance_lease_current": "48000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "balance_sheet_refinancing_reclassification_includes_current_maturities",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/93410/000009341022000019/cvx-20211231.htm",
+        "sha256": "089fa0e4b6818ed9f68526fba457f6592f98df70ca7c3a41502f4eb892e0c50a",
+        "archive_path": "review/cvx2021.html"
+      }
+    },
+    {
+      "cik": "0000773840",
+      "period_end": "2019-12-31",
+      "expected": {
+        "short_term_debt": "3516000000",
+        "long_term_debt_including_current": "12486000000",
+        "noncurrent_debt_and_finance_leases": "11110000000",
+        "finance_lease_noncurrent": "156000000",
+        "finance_lease_current": "59000000",
+        "current_debt_and_finance_leases": "1376000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384020000009/hon1231201910k.htm",
+        "sha256": "e56d9bffcdb6a3208e3e26e80ddc59a7848d6821608d8556af0d3248b0b91ad0",
+        "archive_path": "review/hon2019.html"
+      }
+    },
+    {
+      "cik": "0000773840",
+      "period_end": "2020-12-31",
+      "expected": {
+        "short_term_debt": "3597000000",
+        "long_term_debt_including_current": "18787000000",
+        "noncurrent_debt_and_finance_leases": "16342000000",
+        "finance_lease_noncurrent": "124000000",
+        "finance_lease_current": "60000000",
+        "current_debt_and_finance_leases": "2445000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384021000015/hon-20201231.htm",
+        "sha256": "e19728509fd63cde8eafb82b356754054c979e3bd18ddfbb81a5094d1649c6ef",
+        "archive_path": "review/hon2020.html"
+      }
+    },
+    {
+      "cik": "0000773840",
+      "period_end": "2021-12-31",
+      "expected": {
+        "short_term_debt": "3542000000",
+        "long_term_debt_including_current": "16057000000",
+        "noncurrent_debt_and_finance_leases": "14254000000",
+        "finance_lease_noncurrent": "99000000",
+        "finance_lease_current": "57000000",
+        "current_debt_and_finance_leases": "1803000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384022000018/hon-20211231.htm",
+        "sha256": "c32376629f1caa17154725c030f60ca45e361cc525c57b2e595202ccc08d825f",
+        "archive_path": "review/hon2021.html"
+      }
+    },
+    {
+      "cik": "0000773840",
+      "period_end": "2022-12-31",
+      "expected": {
+        "short_term_debt": "2717000000",
+        "long_term_debt_including_current": "16853000000",
+        "noncurrent_debt_and_finance_leases": "15123000000",
+        "finance_lease_noncurrent": "145000000",
+        "finance_lease_current": "77000000",
+        "current_debt_and_finance_leases": "1730000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384023000013/hon-20221231.htm",
+        "sha256": "8248729483df0f9f1685cd9ea40cd75816d1404d54609b5c4c5a205ef58bf613",
+        "archive_path": "review/hon2022.html"
+      }
+    },
+    {
+      "cik": "0000773840",
+      "period_end": "2023-12-31",
+      "expected": {
+        "short_term_debt": "2085000000",
+        "long_term_debt_including_current": "18358000000",
+        "noncurrent_debt_and_finance_leases": "16562000000",
+        "finance_lease_noncurrent": "99000000",
+        "finance_lease_current": "86000000",
+        "current_debt_and_finance_leases": "1796000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384024000014/hon-20231231.htm",
+        "sha256": "b5930c0c7fce99f9e8141f88905914fa7e9da094517b15dadf21d1867ca7db15",
+        "archive_path": "review/hon2023.html"
+      }
+    },
+    {
+      "cik": "0000773840",
+      "period_end": "2024-12-31",
+      "expected": {
+        "short_term_debt": "4273000000",
+        "long_term_debt_including_current": "27265000000",
+        "noncurrent_debt_and_finance_leases": "25479000000",
+        "finance_lease_noncurrent": "85000000",
+        "finance_lease_current": "69000000",
+        "current_debt_and_finance_leases": "1347000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384025000010/hon-20241231.htm",
+        "sha256": "b120369b8d91bf21894fa27fbdf826d7210f3d552ae8956bebb335a9bbb6de7c",
+        "archive_path": "review/hon2024.html"
+      }
+    },
+    {
+      "cik": "0000773840",
+      "period_end": "2025-12-31",
+      "expected": {
+        "short_term_debt": "5893000000",
+        "long_term_debt_including_current": "29046000000",
+        "noncurrent_debt_and_finance_leases": "27141000000",
+        "finance_lease_noncurrent": "27000000",
+        "finance_lease_current": "37000000",
+        "current_debt_and_finance_leases": "1546000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384026000013/hon-20251231.htm",
+        "sha256": "4a017a3616c4017182db1451db01b10e7ca57fd14b755b28af3124006fcd4d64",
+        "archive_path": "review/hon2025.html"
+      }
+    },
+    {
+      "cik": "0001551152",
+      "period_end": "2021-12-31",
+      "expected": {
+        "short_term_debt": "14000000",
+        "long_term_debt_including_current": "75962000000",
+        "noncurrent_debt_and_finance_leases": "64189000000",
+        "finance_lease_noncurrent": "25000000",
+        "finance_lease_current": "9000000",
+        "current_debt_and_finance_leases": "12481000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1551152/000155115222000007/abbv-20211231.htm",
+        "sha256": "f91ac6b8c361f57fc81c2a87e2977adbddde7b8a37b60425e798e815dd1e51f5",
+        "archive_path": "review/abbv2021.html"
+      }
+    },
+    {
+      "cik": "0001551152",
+      "period_end": "2022-12-31",
+      "expected": {
+        "short_term_debt": "1000000",
+        "long_term_debt_including_current": "63128000000",
+        "noncurrent_debt_and_finance_leases": "59135000000",
+        "finance_lease_noncurrent": "17000000",
+        "finance_lease_current": "17000000",
+        "current_debt_and_finance_leases": "4135000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1551152/000155115223000011/abbv-20221231.htm",
+        "sha256": "a869b4bb220cbf0e1d2b95f32a8fe07a625cf3189499d986409fcff168a3eeec",
+        "archive_path": "review/abbv2022.html"
+      }
+    },
+    {
+      "cik": "0001551152",
+      "period_end": "2023-12-31",
+      "expected": {
+        "short_term_debt": "0",
+        "long_term_debt_including_current": "59245000000",
+        "noncurrent_debt_and_finance_leases": "52194000000",
+        "finance_lease_noncurrent": "27000000",
+        "finance_lease_current": "15000000",
+        "current_debt_and_finance_leases": "7191000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1551152/000155115224000011/abbv-20231231.htm",
+        "sha256": "20d6ee059d513135f462d30ba1fb0e81a27f27b75ed3077c412e2bac75cc36f1",
+        "archive_path": "review/abbv2023.html"
+      }
+    },
+    {
+      "cik": "0001551152",
+      "period_end": "2025-12-31",
+      "expected": {
+        "short_term_debt": "2499000000",
+        "long_term_debt_including_current": "64503000000",
+        "noncurrent_debt_and_finance_leases": "58941000000",
+        "finance_lease_noncurrent": "22000000",
+        "finance_lease_current": "19000000",
+        "current_debt_and_finance_leases": "6056000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_noncurrent": -1,
+        "finance_lease_current": -1,
+        "current_debt_and_finance_leases": 1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "aggregate_contractual_or_face_amount_differs_from_carrying_value_and_lease_scope",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1551152/000155115226000008/abbv-20251231.htm",
+        "sha256": "2bae7e82fda412791c5cb827be6f09c6a05f28c657a21c516901d85dae161d30",
+        "archive_path": "review/abbv2025.html"
+      }
+    },
+    {
+      "cik": "0001551152",
+      "period_end": "2020-12-31",
+      "expected": {
+        "short_term_debt": "34000000",
+        "current_debt_and_finance_leases": "8468000000",
+        "noncurrent_debt_and_finance_leases": "77554000000",
+        "finance_lease_current": "8000000",
+        "finance_lease_noncurrent": "21000000",
+        "long_term_debt_including_current": "84948000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "current_debt_and_finance_leases": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_current": -1,
+        "finance_lease_noncurrent": -1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "contractual_principal_differs_from_carrying_value_in_comparative_balance_sheet",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1551152/000155115221000008/abbv-20201231.htm",
+        "sha256": "744491ee49f2db069039bc25e61e371be8a4cba57958d6f9e2d2315d6ab0ae1f",
+        "archive_path": "review/abbv2020.html"
+      }
+    },
+    {
+      "cik": "0001551152",
+      "period_end": "2024-12-31",
+      "expected": {
+        "short_term_debt": "0",
+        "current_debt_and_finance_leases": "6804000000",
+        "noncurrent_debt_and_finance_leases": "60340000000",
+        "finance_lease_current": "17000000",
+        "finance_lease_noncurrent": "23000000",
+        "long_term_debt_including_current": "66841000000"
+      },
+      "weights": {
+        "short_term_debt": 1,
+        "current_debt_and_finance_leases": 1,
+        "noncurrent_debt_and_finance_leases": 1,
+        "finance_lease_current": -1,
+        "finance_lease_noncurrent": -1
+      },
+      "resolution": "reviewed_balance_sheet_carrying_value_less_explicit_finance_leases",
+      "reason": "contractual_principal_differs_from_carrying_value_in_comparative_balance_sheet",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1551152/000155115225000020/abbv-20241231.htm",
+        "sha256": "5ca70071ac27565ded51701c5d1a5994061a0e33027fd6c1dc1af7a392b9dd64",
+        "archive_path": "review/abbv2024.html"
+      }
+    }
+  ],
+  "fiscal_year": [
+    {
+      "cik": "0000773840",
+      "accession": "0000773840-22-000018",
+      "period_end": "2021-12-31",
+      "source_fy": 2020,
+      "reviewed_fy": 2021,
+      "reason": "Cover page annual year and document period end are 2021; DEI year focus and companyfacts FY incorrectly say 2020.",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/773840/000077384022000018/hon-20211231.htm",
+        "sha256": "c32376629f1caa17154725c030f60ca45e361cc525c57b2e595202ccc08d825f",
+        "archive_path": "review/hon2021.html"
+      }
+    },
+    {
+      "cik": "0001108524",
+      "accession": "0001108524-26-000060",
+      "period_end": "2026-01-31",
+      "source_fy": 2025,
+      "reviewed_fy": 2026,
+      "reason": "Cover page annual year and document period end are FY2026; electronic fiscal year focus is stale FY2025.",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1108524/000110852426000060/crm-20260131.htm",
+        "sha256": "56eacede9fe13179a89dc5f8e8f3a84faea32df59997b5a2b0b300a11200608d",
+        "archive_path": "review/crm2026.html"
+      }
+    },
+    {
+      "cik": "0001108524",
+      "accession": "0001108524-21-000014",
+      "period_end": "2021-01-31",
+      "source_fy": 2020,
+      "reviewed_fy": 2021,
+      "reason": "Recovered original 10-K cover and DEI fiscal year identify FY2021; companyfacts reports stale FY2020.",
+      "evidence": {
+        "url": "https://www.sec.gov/Archives/edgar/Feed/2021/QTR1/20210317.nc.tar.gz",
+        "member": "./0001108524-21-000014.nc",
+        "sha256": "ffeae1e2dd0026c8364722d93d63e1f389fae78a4b7088d2d10b741c20ca34ca",
+        "archive_path": "review/crm-original-2021.nc"
+      }
+    }
+  ]
+}
