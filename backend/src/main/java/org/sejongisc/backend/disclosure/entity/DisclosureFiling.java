@@ -10,6 +10,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -44,23 +46,37 @@ public class DisclosureFiling extends BasePostgresEntity {
   @Column(name = "rcept_dt", nullable = false)
   private LocalDate receivedDate;
 
+  @Column(name = "business_year")
+  private Integer businessYear;
+
+  @Column(name = "report_code", length = 5)
+  private String reportCode;
+
   @Column(name = "rm", columnDefinition = "text")
   private String remarks;
 
   @Column(name = "raw_payload", nullable = false, columnDefinition = "jsonb")
+  @JdbcTypeCode(SqlTypes.JSON)
   private String rawPayload;
 
   @Column(name = "collected_at", nullable = false)
   private LocalDateTime collectedAt;
 
+  public void setFinancialReport(int businessYear, String reportCode) {
+    this.businessYear = businessYear;
+    this.reportCode = reportCode;
+  }
+
   public DisclosureFiling(DisclosureCompany company, String receiptNo, String title,
-      String submitterName, LocalDate receivedDate, String remarks, String rawPayload,
-      LocalDateTime collectedAt) {
+      String submitterName, LocalDate receivedDate, Integer businessYear, String reportCode,
+      String remarks, String rawPayload, LocalDateTime collectedAt) {
     this.company = company;
     this.receiptNo = receiptNo;
     this.title = title;
     this.submitterName = submitterName;
     this.receivedDate = receivedDate;
+    this.businessYear = businessYear;
+    this.reportCode = reportCode;
     this.remarks = remarks;
     this.rawPayload = rawPayload;
     this.collectedAt = collectedAt;

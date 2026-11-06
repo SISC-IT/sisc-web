@@ -11,6 +11,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
@@ -38,8 +40,8 @@ public class DisclosureFinancialMetric extends BasePostgresEntity {
   @Column(name = "account_nm", nullable = false, columnDefinition = "text")
   private String accountName;
 
-  @Column(name = "statement_type", nullable = false, length = 3)
-  private String statementType;
+  @Column(name = "basis", nullable = false, length = 3)
+  private String basis;
 
   @Column(name = "period_type", nullable = false, length = 20)
   private String periodType;
@@ -51,5 +53,20 @@ public class DisclosureFinancialMetric extends BasePostgresEntity {
   private String currency;
 
   @Column(name = "raw_payload", nullable = false, columnDefinition = "jsonb")
+  @JdbcTypeCode(SqlTypes.JSON)
   private String rawPayload;
+
+  public DisclosureFinancialMetric(DisclosureFiling filing, String metricType, String accountId,
+      String accountName, String basis, String periodType, BigDecimal amount, String currency,
+      String rawPayload) {
+    this.filing = filing;
+    this.metricType = metricType;
+    this.accountId = accountId;
+    this.accountName = accountName;
+    this.basis = basis;
+    this.periodType = periodType;
+    this.amount = amount;
+    this.currency = currency;
+    this.rawPayload = rawPayload;
+  }
 }

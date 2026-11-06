@@ -44,8 +44,32 @@ public class OpenDartClient {
         .block();
   }
 
+  public DartFinancialResponse financialStatements(String corpCode, int businessYear,
+      String reportCode, String basis) {
+    if (properties.key() == null || properties.key().isBlank()) {
+      throw new IllegalStateException("OPENDART_API_KEY is not configured");
+    }
+    return webClient.get().uri(uri -> uri.path("/fnlttSinglAcntAll.json")
+            .queryParam("crtfc_key", properties.key())
+            .queryParam("corp_code", corpCode)
+            .queryParam("bsns_year", businessYear)
+            .queryParam("reprt_code", reportCode)
+            .queryParam("fs_div", basis)
+            .build())
+        .retrieve()
+        .bodyToMono(DartFinancialResponse.class)
+        .timeout(Duration.ofMillis(Math.max(properties.timeoutMs(), 1000)))
+        .onErrorMap(error -> new OpenDartClientException("OpenDART financial request failed", error))
+        .onErrorResume(OpenDartClientException.class, Mono::error)
+        .block();
+  }
+
   public record DartDisclosurePage(String status, String message, Integer page_no,
       Integer page_count, Integer total_count, Integer total_page,
+      java.util.List<Map<String, String>> list) {
+  }
+
+  public record DartFinancialResponse(String status, String message,
       java.util.List<Map<String, String>> list) {
   }
 }

@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sisc_db}
+    username: ${DB_USERNAME:sisc_local}
+    password: ${DB_PASSWORD:sisc_local}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    locations: classpath:db/disclosure-local
+  mail:
+    host: localhost
+    port: 1025
+    username: ${MAIL_USERNAME:local@example.invalid}
+    password: ${MAIL_PASSWORD:local-only}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  security:
+    user:
+      name: local-admin
+      password: local-only
+
+jwt:
+  secret: ${JWT_SECRET:local-only-secret-change-before-any-shared-deployment}
+  expireDate:
+    accessToken: 3600000
+    refreshToken: 1209600000
+
+app:
+  spring-api-url: http://localhost:8080
+  club-frontend-url: http://localhost:5173
+  public-frontend-url: http://localhost:5173
+
+opendart:
+  api:
+    base-url: ${OPENDART_API_BASE_URL:https://opendart.fss.or.kr/api}
+    key: ${OPENDART_API_KEY:}
+    timeout-ms: ${OPENDART_TIMEOUT_MS:30000}
