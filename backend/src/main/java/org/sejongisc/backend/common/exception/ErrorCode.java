@@ -102,6 +102,14 @@ public enum ErrorCode {
 
   KIWOOM_PAGING_LIMIT_EXCEEDED(HttpStatus.BAD_GATEWAY, "키움증권 계좌 조회 페이지 처리 한도를 초과했습니다."),
 
+  INVALID_KIWOOM_US_EXCHANGE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 미국거래소구분입니다. AMEX, NASDAQ, NYSE만 사용할 수 있습니다."),
+
+  INVALID_KIWOOM_STOCK_CODE(HttpStatus.BAD_REQUEST, "종목코드는 비어 있을 수 없습니다."),
+
+  KIWOOM_CHART_API_FAILED(HttpStatus.BAD_GATEWAY, "키움증권 차트 조회 중 오류가 발생했습니다."),
+
+  KIWOOM_CHART_MALFORMED_RESPONSE(HttpStatus.BAD_GATEWAY, "키움증권 차트 응답 형식이 올바르지 않습니다."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
