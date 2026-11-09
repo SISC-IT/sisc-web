@@ -6,20 +6,16 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * usa06012 미국주식 일 차트 요청 본문.
- */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class UsDailyChartRequest {
-  /** 수정주가 적용. */
   private static final String ADJUSTED_PRICE_APPLIED = "1";
 
   /**
-   * 환율 미적용. 종가를 USD 원본으로 받아 환산은 운영진이 설정한 환율로 서버에서 처리한다.
-   * 키움 환율을 쓰면 기준 시각을 통제할 수 없어 수익률 재계산이 불가능해진다.
+   * 환율 미적용. USD 원본으로 받아 환산은 서버에서 처리
+   * - 키움 환율은 기준 시각을 통제할 수 없어 수익률 재계산 불가
    */
   private static final String EXCHANGE_RATE_NOT_APPLIED = "0";
 

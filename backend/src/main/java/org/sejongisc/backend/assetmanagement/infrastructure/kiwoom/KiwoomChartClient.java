@@ -29,12 +29,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-/**
- * 키움 차트 API 클라이언트. 국내 일봉(ka10081)과 미국 일봉(usa06012)을 조회한다.
- *
- * <p>토큰 관리와 레이트 리밋은 계좌 조회와 동일한 빈을 공유하므로, 차트 조회가 늘어나도
- * 키움 전체 호출량이 설정된 한도 안에서 유지된다.
- */
+/** 토큰·레이트 리밋 빈을 계좌 조회와 공유해 키움 전체 호출량을 한도 안에서 유지한다. */
 @Slf4j
 @Component
 public class KiwoomChartClient implements MarketDataClient {
@@ -177,13 +172,8 @@ public class KiwoomChartClient implements MarketDataClient {
   }
 
   /**
-   * 종가를 파싱한다. 종가는 필수값이다.
-   *
-   * <p>이 클라이언트는 확정 종가를 조회하는 용도이므로, 종가가 비었거나 누락된 응답은
-   * 체결 근거로 쓸 수 없다. {@code null}을 반환하면 호출자에서 NPE가 나거나 잘못된 값이
-   * 저장될 수 있어 0 이하 가격과 동일하게 거절한다.
-   *
-   * <p>시가·고가·저가는 키움이 생략해 보내는 경우가 있어 {@code null}을 허용한다.
+   * 종가를 파싱한다. 확정 종가 조회가 목적이므로 비어 있으면 거절한다.
+   * 시가·고가·저가는 키움이 생략해 보내는 경우가 있어 {@code null}을 허용한다.
    */
   private BigDecimal requireClosePrice(String value) {
     BigDecimal price = parsePrice(value);
@@ -195,15 +185,9 @@ public class KiwoomChartClient implements MarketDataClient {
   }
 
   /**
-   * 가격을 파싱한다.
-   *
-   * <p>키움 응답에서 부호가 붙는 필드는 "대비" 성격의 값(국내 {@code pred_pre},
-   * {@code trde_tern_rt} / 미국 {@code pred_pre}, {@code flu_rt})이며, 가격 필드
-   * ({@code cur_prc}, {@code open_pric}, {@code high_pric}, {@code low_pric})는 양수로 온다.
-   * (2026-11-06 운영 환경에서 ka10081·usa06012 실제 응답으로 확인)
-   *
-   * <p>따라서 가격을 절댓값으로 보정하지 않는다. 0 이하 값이 오면 체결 근거로 쓸 수 없는
-   * 응답이므로 거절한다. 조용히 보정하면 잘못된 가격으로 거래가 체결될 수 있다.
+   * 가격은 양수로 온다. 부호는 pred_pre 같은 대비 필드에만 붙는다
+   * - 2026-11-06 운영 ka10081·usa06012 실제 응답으로 확인
+   * - 절댓값 보정 대신 0 이하면 거절
    */
   private BigDecimal parsePrice(String value) {
     if (!StringUtils.hasText(value)) {

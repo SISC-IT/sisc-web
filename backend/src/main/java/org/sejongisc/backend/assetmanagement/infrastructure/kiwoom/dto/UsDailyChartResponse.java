@@ -6,11 +6,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * usa06012 미국주식 일 차트 응답.
- *
- * <p>국내 일봉과 달리 응답에 종목코드가 없어, 호출 시 사용한 종목코드를 그대로 쓴다.
- */
+/** 응답에 종목코드가 없어, 호출 시 사용한 종목코드를 그대로 쓴다. */
 @Getter
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
