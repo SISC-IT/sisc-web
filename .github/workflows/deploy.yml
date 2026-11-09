@@ -195,7 +195,7 @@ jobs:
           debug: true
           command_timeout: 20m
           script: |
-            set -euo pipefail
+            set -euxo pipefail
             # 필수 폴더 생성 및 권한 설정 (최초 1회 혹은 누락 대비)
             # sudo mkdir -p /mnt/storage/pg_ai_data /mnt/storage/logs /mnt/storage/uploads ./data/postgres
             # sudo chown -R 70:70 /mnt/storage/pg_ai_data ./data/postgres # DB 전용
