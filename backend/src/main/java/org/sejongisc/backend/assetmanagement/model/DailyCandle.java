@@ -13,10 +13,10 @@ import lombok.Builder;
  *
  * @param ticker      종목코드 (국내: 005930, 미국: AAPL)
  * @param date        일자 (KST 기준 거래일)
- * @param closePrice  종가 (항상 양수)
- * @param openPrice   시가
- * @param highPrice   고가
- * @param lowPrice    저가
+ * @param closePrice  종가 (필수. 누락되거나 0 이하면 클라이언트가 거절한다)
+ * @param openPrice   시가 (키움이 생략해 보내면 {@code null})
+ * @param highPrice   고가 (키움이 생략해 보내면 {@code null})
+ * @param lowPrice    저가 (키움이 생략해 보내면 {@code null})
  * @param volume      거래량
  * @param currency    통화 (KRW / USD)
  */

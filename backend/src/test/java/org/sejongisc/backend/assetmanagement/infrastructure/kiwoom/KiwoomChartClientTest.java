@@ -148,6 +148,71 @@ class KiwoomChartClientTest {
   }
 
   @Test
+  @DisplayName("종가가 누락되면 거절한다")
+  void rejectsMissingClosePrice() {
+    // 종가가 null인 캔들이 흘러가면 호출자에서 NPE가 나거나 잘못된 값이 저장된다.
+    enqueueJson("""
+        {
+          "stk_cd": "005930",
+          "stk_dt_pole_chart_qry": [
+            {"dt":"20261104","open_pric":"59000","high_pric":"60200","low_pric":"58900","trde_qty":"9000000"}
+          ],
+          "return_code": "0"
+        }
+        """);
+
+    assertThatThrownBy(() ->
+        chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 4)))
+        .isInstanceOf(CustomException.class)
+        .extracting(e -> ((CustomException) e).getErrorCode())
+        .isEqualTo(ErrorCode.KIWOOM_CHART_MALFORMED_RESPONSE);
+  }
+
+  @Test
+  @DisplayName("종가가 빈 문자열이면 거절한다")
+  void rejectsBlankClosePrice() {
+    enqueueJson("""
+        {
+          "stk_cd": "005930",
+          "stk_dt_pole_chart_qry": [
+            {"dt":"20261104","cur_prc":"   ","open_pric":"59000","trde_qty":"9000000"}
+          ],
+          "return_code": "0"
+        }
+        """);
+
+    assertThatThrownBy(() ->
+        chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 4)))
+        .isInstanceOf(CustomException.class)
+        .extracting(e -> ((CustomException) e).getErrorCode())
+        .isEqualTo(ErrorCode.KIWOOM_CHART_MALFORMED_RESPONSE);
+  }
+
+  @Test
+  @DisplayName("종가만 있으면 시가·고가·저가는 null로 조회된다")
+  void allowsMissingOhlcWhenClosePriceExists() {
+    // 키움이 시가·고가·저가를 생략해 보내는 경우가 있어 종가만 필수로 둔다.
+    enqueueJson("""
+        {
+          "stk_cd": "005930",
+          "stk_dt_pole_chart_qry": [
+            {"dt":"20261104","cur_prc":"60000"}
+          ],
+          "return_code": "0"
+        }
+        """);
+
+    List<DailyCandle> candles =
+        chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 4));
+
+    DailyCandle candle = candles.getFirst();
+    assertThat(candle.closePrice()).isEqualByComparingTo("60000");
+    assertThat(candle.openPrice()).isNull();
+    assertThat(candle.highPrice()).isNull();
+    assertThat(candle.lowPrice()).isNull();
+  }
+
+  @Test
   @DisplayName("미국 일봉은 USD 원본 종가로 조회된다")
   void fetchesUsDailyCandlesInUsd() throws Exception {
     enqueueJson("""

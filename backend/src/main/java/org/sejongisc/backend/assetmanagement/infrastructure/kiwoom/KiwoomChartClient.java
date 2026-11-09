@@ -154,7 +154,7 @@ public class KiwoomChartClient implements MarketDataClient {
     return DailyCandle.builder()
         .ticker(ticker)
         .date(parseDate(date))
-        .closePrice(parsePrice(closePrice))
+        .closePrice(requireClosePrice(closePrice))
         .openPrice(parsePrice(openPrice))
         .highPrice(parsePrice(highPrice))
         .lowPrice(parsePrice(lowPrice))
@@ -174,6 +174,24 @@ public class KiwoomChartClient implements MarketDataClient {
       log.warn("[KiwoomChart] 일자 파싱 실패: value={}", value);
       throw new CustomException(ErrorCode.KIWOOM_CHART_MALFORMED_RESPONSE);
     }
+  }
+
+  /**
+   * 종가를 파싱한다. 종가는 필수값이다.
+   *
+   * <p>이 클라이언트는 확정 종가를 조회하는 용도이므로, 종가가 비었거나 누락된 응답은
+   * 체결 근거로 쓸 수 없다. {@code null}을 반환하면 호출자에서 NPE가 나거나 잘못된 값이
+   * 저장될 수 있어 0 이하 가격과 동일하게 거절한다.
+   *
+   * <p>시가·고가·저가는 키움이 생략해 보내는 경우가 있어 {@code null}을 허용한다.
+   */
+  private BigDecimal requireClosePrice(String value) {
+    BigDecimal price = parsePrice(value);
+    if (price == null) {
+      log.warn("[KiwoomChart] 종가가 비어 있습니다: value={}", value);
+      throw new CustomException(ErrorCode.KIWOOM_CHART_MALFORMED_RESPONSE);
+    }
+    return price;
   }
 
   /**
