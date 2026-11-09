@@ -39,7 +39,7 @@ public class DomesticDailyChartResponse implements KiwoomResponse {
   @NoArgsConstructor
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Candle {
-    /** 종가. 하락일에는 {@code -60000} 처럼 부호가 붙어 오므로 절댓값 처리가 필요하다. */
+    /** 종가. 하락일에도 양수로 오고, 부호는 {@code pred_pre}(전일대비)에만 붙는다. */
     @JsonProperty("cur_prc")
     private String closePrice;
 
