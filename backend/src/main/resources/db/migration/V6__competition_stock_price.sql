@@ -20,6 +20,3 @@ create table daily_close_price (
     constraint uk_daily_close_price_stock_date unique (stock_id, price_date),
     constraint ck_daily_close_price_positive check (close_price > 0)
 );
-
-create index idx_daily_close_price_stock_available
-    on daily_close_price (stock_id, available_date desc);

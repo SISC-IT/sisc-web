@@ -107,6 +107,17 @@ class CompetitionPriceRepositoryTest {
   }
 
   @Test
+  void 여러_날짜를_한_번에_적재해_공개_시각이_같아도_날짜순으로_가져온다() {
+    CompetitionStock samsung = saveStock("005930");
+    LocalDateTime sameOpen = MON.atTime(OPEN);
+    savePrice(samsung, MON, "102", sameOpen);
+    savePrice(samsung, FRI, "101", sameOpen); // 대회 시작 전날 종가를 월요일에 함께 적재
+
+    assertThat(latestTwo(samsung, MON.atTime(17, 0)))
+        .extracting(DailyClosePrice::getPriceDate).containsExactly(MON, FRI);
+  }
+
+  @Test
   void 종가가_1건이면_1건_없으면_빈_결과다() {
     CompetitionStock samsung = saveStock("005930");
     CompetitionStock hynix = saveStock("000660");
@@ -162,16 +173,21 @@ class CompetitionPriceRepositoryTest {
   }
 
   private DailyClosePrice savePrice(CompetitionStock stock, LocalDate priceDate, String closePrice) {
+    return savePrice(stock, priceDate, closePrice, priceDate.atTime(OPEN));
+  }
+
+  private DailyClosePrice savePrice(CompetitionStock stock, LocalDate priceDate, String closePrice,
+      LocalDateTime availableDate) {
     return priceRepository.saveAndFlush(DailyClosePrice.builder()
         .stock(stock)
         .priceDate(priceDate)
-        .availableDate(priceDate.atTime(OPEN))
+        .availableDate(availableDate)
         .closePrice(new BigDecimal(closePrice))
         .build());
   }
 
   private List<DailyClosePrice> latestTwo(CompetitionStock stock, LocalDateTime now) {
-    return priceRepository.findTop2ByStockAndAvailableDateLessThanEqualOrderByAvailableDateDesc(stock, now);
+    return priceRepository.findTop2ByStockAndAvailableDateLessThanEqualOrderByPriceDateDesc(stock, now);
   }
 
   @Configuration
