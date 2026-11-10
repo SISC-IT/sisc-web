@@ -13,7 +13,7 @@ create table daily_close_price (
     close_price_id uuid primary key,
     stock_id uuid not null references competition_stock (stock_id),
     price_date date not null,
-    available_date timestamp not null,
+    available_at timestamp not null,
     close_price numeric(18, 4) not null,
     created_date timestamp not null,
     updated_date timestamp not null,

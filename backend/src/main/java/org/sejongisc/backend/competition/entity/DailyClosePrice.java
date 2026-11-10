@@ -29,7 +29,7 @@ public class DailyClosePrice extends BasePostgresEntity {
     private LocalDate priceDate;
 
     @Column(nullable = false)
-    private LocalDateTime availableDate;
+    private LocalDateTime availableAt;
 
     @Column(nullable = false, precision = 18, scale = 4)
     private BigDecimal closePrice;

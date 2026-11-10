@@ -65,7 +65,7 @@ class CompetitionPriceRepositoryTest {
 
     DailyClosePrice found = priceRepository.findById(saved.getClosePriceId()).orElseThrow();
     assertThat(found.getPriceDate()).isEqualTo(MON);
-    assertThat(found.getAvailableDate()).isEqualTo(MON.atTime(OPEN));
+    assertThat(found.getAvailableAt()).isEqualTo(MON.atTime(OPEN));
     assertThat(found.getClosePrice()).isEqualByComparingTo("71000.1234");
     assertThat(found.getStock().getTicker()).isEqualTo("005930");
     assertThat(found.getCreatedDate()).isNotNull();
@@ -177,17 +177,17 @@ class CompetitionPriceRepositoryTest {
   }
 
   private DailyClosePrice savePrice(CompetitionStock stock, LocalDate priceDate, String closePrice,
-      LocalDateTime availableDate) {
+      LocalDateTime availableAt) {
     return priceRepository.saveAndFlush(DailyClosePrice.builder()
         .stock(stock)
         .priceDate(priceDate)
-        .availableDate(availableDate)
+        .availableAt(availableAt)
         .closePrice(new BigDecimal(closePrice))
         .build());
   }
 
   private List<DailyClosePrice> latestTwo(CompetitionStock stock, LocalDateTime now) {
-    return priceRepository.findTop2ByStockAndAvailableDateLessThanEqualOrderByPriceDateDesc(stock, now);
+    return priceRepository.findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(stock, now);
   }
 
   @Configuration
