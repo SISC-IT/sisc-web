@@ -32,6 +32,13 @@ kiwoom:
       max-concurrent: ${KIWOOM_MAX_CONCURRENT_REQUESTS:3}
       min-interval-ms: ${KIWOOM_MIN_INTERVAL_MS:100}
 
+competition:
+  price-collection:
+    # 평일 16:00. 장 마감(15:30) 이후, 주문 접수 시작(16:30) 전에 수집한다.
+    cron: ${COMPETITION_PRICE_COLLECTION_CRON:0 0 16 * * MON-FRI}
+    # 수집한 종가로 거래할 수 있는 시각
+    available-at: ${COMPETITION_PRICE_AVAILABLE_AT:16:30}
+
 email:
   code:
     charset: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
