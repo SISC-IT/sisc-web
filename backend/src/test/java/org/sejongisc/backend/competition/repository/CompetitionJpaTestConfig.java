@@ -4,8 +4,8 @@ import jakarta.persistence.EntityManagerFactory;
 import java.util.Properties;
 import javax.sql.DataSource;
 import org.sejongisc.backend.competition.entity.CompetitionStock;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
@@ -23,7 +23,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * 수익률 대결 마이그레이션(V6, V7)을 그대로 실행한 DB에 운영과 같은 hbm2ddl=validate로 엔티티를 띄운다.
  * 엔티티와 마이그레이션이 어긋나면 컨텍스트 로딩 단계에서 실패한다.
  */
-@Configuration
+@TestConfiguration
 @EnableTransactionManagement
 @EnableJpaAuditing
 @EnableJpaRepositories(basePackageClasses = CompetitionJpaTestConfig.class)
