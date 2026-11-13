@@ -4,48 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Properties;
-import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.competition.entity.CompetitionStock;
 import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Market;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
 
-/**
- * V6 마이그레이션으로 만든 테이블에 엔티티·레포지토리가 맞는지 검증한다.
- * 운영과 같은 hbm2ddl=validate로 띄우므로, 엔티티와 V6가 어긋나면 컨텍스트 로딩 단계에서 실패한다.
- */
-@SpringJUnitConfig(CompetitionPriceRepositoryTest.JpaTestConfig.class)
+@SpringJUnitConfig(CompetitionJpaTestConfig.class)
 @Transactional
 class CompetitionPriceRepositoryTest {
-
-  private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-      .withDatabaseName("sisc_test")
-      .withUsername("sisc")
-      .withPassword("sisc");
 
   private static final LocalDate THU = LocalDate.of(2026, 11, 5);
   private static final LocalDate FRI = LocalDate.of(2026, 11, 6);
@@ -188,50 +163,5 @@ class CompetitionPriceRepositoryTest {
 
   private List<DailyClosePrice> latestTwo(CompetitionStock stock, LocalDateTime now) {
     return priceRepository.findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(stock, now);
-  }
-
-  @Configuration
-  @EnableTransactionManagement
-  @EnableJpaAuditing
-  @EnableJpaRepositories(basePackageClasses = DailyClosePriceRepository.class)
-  static class JpaTestConfig {
-
-    @Bean
-    DataSource dataSource() {
-      if (!POSTGRES.isRunning()) {
-        POSTGRES.start();
-      }
-      DriverManagerDataSource dataSource = new DriverManagerDataSource(
-          POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
-      // V1 기본 스키마가 레포에 없어 전체 마이그레이션은 빈 DB에서 실패한다. V6는 다른 테이블을 참조하지 않으므로 단독 실행한다.
-      new ResourceDatabasePopulator(new ClassPathResource("db/migration/V6__competition_stock_price.sql"))
-          .execute(dataSource);
-      return dataSource;
-    }
-
-    @Bean
-    LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource) {
-      HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
-      vendorAdapter.setDatabasePlatform("org.hibernate.dialect.PostgreSQLDialect");
-
-      LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
-      factory.setDataSource(dataSource);
-      factory.setJpaVendorAdapter(vendorAdapter);
-      factory.setEntityManagerFactoryInterface(EntityManagerFactory.class);
-      factory.setPackagesToScan(CompetitionStock.class.getPackageName());
-
-      Properties jpaProperties = new Properties();
-      jpaProperties.put("hibernate.hbm2ddl.auto", "validate"); // 운영과 같은 검사
-      // Spring Boot 기본값과 같게: closePriceId -> close_price_id
-      jpaProperties.put("hibernate.physical_naming_strategy",
-          "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
-      factory.setJpaProperties(jpaProperties);
-      return factory;
-    }
-
-    @Bean
-    PlatformTransactionManager transactionManager(EntityManagerFactory entityManagerFactory) {
-      return new JpaTransactionManager(entityManagerFactory);
-    }
   }
 }
