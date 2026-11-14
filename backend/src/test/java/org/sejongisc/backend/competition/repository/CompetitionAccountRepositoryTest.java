@@ -159,36 +159,41 @@ class CompetitionAccountRepositoryTest {
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void 같은_계좌를_동시에_수정하면_늦게_저장한_쪽이_실패한다() {
-    UUID accountId = inNewTransaction(em -> {
-      Competition competition = competitionBuilder(CompetitionStatus.READY).build();
-      em.persist(competition);
-      CompetitionParticipant participant = participantBuilder(competition, saveUser(), "매크로팀").build();
-      em.persist(participant);
-      CompetitionAccount account = accountBuilder(participant, "1000000", "0").build();
-      em.persist(account);
-      return account.getAccountId();
-    });
-
     EntityManager requestA = entityManagerFactory.createEntityManager();
     EntityManager requestB = entityManagerFactory.createEntityManager();
-    requestA.getTransaction().begin();
-    requestB.getTransaction().begin();
-    CompetitionAccount readByA = requestA.find(CompetitionAccount.class, accountId); // 100만, version 0
-    CompetitionAccount readByB = requestB.find(CompetitionAccount.class, accountId); // 100만, version 0
+    try {
+      UUID accountId = inNewTransaction(em -> {
+        Competition competition = competitionBuilder(CompetitionStatus.READY).build();
+        em.persist(competition);
+        CompetitionParticipant participant = participantBuilder(competition, saveUser(), "매크로팀").build();
+        em.persist(participant);
+        CompetitionAccount account = accountBuilder(participant, "1000000", "0").build();
+        em.persist(account);
+        return account.getAccountId();
+      });
 
-    ReflectionTestUtils.setField(readByA, "cash", new BigDecimal("200000")); // 80만 매수
-    requestA.getTransaction().commit(); // version 0 -> 1
+      requestA.getTransaction().begin();
+      requestB.getTransaction().begin();
+      CompetitionAccount readByA = requestA.find(CompetitionAccount.class, accountId); // 100만, version 0
+      CompetitionAccount readByB = requestB.find(CompetitionAccount.class, accountId); // 100만, version 0
 
-    ReflectionTestUtils.setField(readByB, "cash", new BigDecimal("200000")); // 같은 잔고를 보고 80만 매수
-    assertThatThrownBy(() -> requestB.getTransaction().commit())
-        .isInstanceOf(RollbackException.class)
-        .hasCauseInstanceOf(OptimisticLockException.class);
-    requestA.close();
-    requestB.close();
+      ReflectionTestUtils.setField(readByA, "cash", new BigDecimal("200000")); // 80만 매수
+      requestA.getTransaction().commit(); // version 0 -> 1
 
-    CompetitionAccount result = inNewTransaction(em -> em.find(CompetitionAccount.class, accountId));
-    assertThat(result.getCash()).isEqualByComparingTo("200000");
-    assertThat(result.getVersion()).isEqualTo(1L);
+      ReflectionTestUtils.setField(readByB, "cash", new BigDecimal("200000")); // 같은 잔고를 보고 80만 매수
+      assertThatThrownBy(() -> requestB.getTransaction().commit())
+          .isInstanceOf(RollbackException.class)
+          .hasCauseInstanceOf(OptimisticLockException.class);
+
+      CompetitionAccount result = inNewTransaction(em -> em.find(CompetitionAccount.class, accountId));
+      assertThat(result.getCash()).isEqualByComparingTo("200000");
+      assertThat(result.getVersion()).isEqualTo(1L);
+    } finally {
+      requestA.close();
+      requestB.close();
+      // 이 테스트는 실제로 커밋해서 롤백되지 않으므로 만든 데이터를 직접 지운다
+      new JdbcTemplate(dataSource).execute("truncate table users, competition cascade");
+    }
   }
 
   private Competition saveCompetition(CompetitionStatus status) {
