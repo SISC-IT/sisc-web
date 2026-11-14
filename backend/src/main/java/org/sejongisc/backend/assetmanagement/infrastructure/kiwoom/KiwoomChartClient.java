@@ -280,9 +280,14 @@ public class KiwoomChartClient implements MarketDataClient {
     } catch (WebClientResponseException.Unauthorized e) {
       tokenManager.invalidateIfCurrent(token);
       log.warn("[KiwoomChart] 인증 실패 후 토큰 재발급 재시도: apiId={}", apiId);
-      return request(
-          endpoint, apiId, requestBody, responseType, contYn, nextKey,
-          tokenManager.getValidToken());
+      try {
+        return request(
+            endpoint, apiId, requestBody, responseType, contYn, nextKey,
+            tokenManager.getValidToken());
+      } catch (WebClientResponseException.Unauthorized retryFailure) {
+        log.warn("[KiwoomChart] 재발급 토큰으로도 인증 실패: apiId={}", apiId);
+        throw new CustomException(ErrorCode.KIWOOM_AUTH_FAILED);
+      }
     }
   }
 

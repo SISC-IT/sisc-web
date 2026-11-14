@@ -218,7 +218,12 @@ public class KiwoomAccountClient implements AssetManagementAccountClient {
     } catch (WebClientResponseException.Unauthorized e) {
       tokenManager.invalidateIfCurrent(token);
       log.warn("[KiwoomAccount] 인증 실패 후 토큰 재발급 재시도: apiId={}", apiId);
-      return request(apiId, requestBody, responseType, contYn, nextKey, tokenManager.getValidToken());
+      try {
+        return request(apiId, requestBody, responseType, contYn, nextKey, tokenManager.getValidToken());
+      } catch (WebClientResponseException.Unauthorized retryFailure) {
+        log.warn("[KiwoomAccount] 재발급 토큰으로도 인증 실패: apiId={}", apiId);
+        throw new CustomException(ErrorCode.KIWOOM_AUTH_FAILED);
+      }
     }
   }
 

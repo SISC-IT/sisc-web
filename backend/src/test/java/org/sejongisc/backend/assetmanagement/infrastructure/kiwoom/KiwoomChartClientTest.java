@@ -286,6 +286,36 @@ class KiwoomChartClientTest {
   }
 
   @Test
+  @DisplayName("재발급 토큰으로 재시도해도 401이면 KIWOOM_AUTH_FAILED로 변환한다")
+  void convertsSecondUnauthorizedToAuthFailed() {
+    mockWebServer.enqueue(new MockResponse().setResponseCode(401));
+    mockWebServer.enqueue(new MockResponse().setResponseCode(401));
+
+    assertThatThrownBy(() ->
+        chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 4)))
+        .isInstanceOf(CustomException.class)
+        .extracting(e -> ((CustomException) e).getErrorCode())
+        .isEqualTo(ErrorCode.KIWOOM_AUTH_FAILED);
+
+    assertThat(mockWebServer.getRequestCount()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("첫 요청만 401이면 토큰 재발급 후 재시도해 성공한다")
+  void retriesOnceAfterUnauthorizedAndSucceeds() {
+    mockWebServer.enqueue(new MockResponse().setResponseCode(401));
+    enqueueJson("""
+        {"stk_cd":"005930","stk_dt_pole_chart_qry":[{"dt":"20261104","cur_prc":"60000"}],"return_code":"0"}
+        """);
+
+    List<DailyCandle> candles =
+        chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 4));
+
+    assertThat(candles).hasSize(1);
+    assertThat(mockWebServer.getRequestCount()).isEqualTo(2);
+  }
+
+  @Test
   @DisplayName("종목코드가 비어 있으면 호출 전에 거절한다")
   void rejectsBlankStockCodeWithoutCallingApi() {
     assertThatThrownBy(() -> chartClient.fetchDomesticDailyCandles("  ", LocalDate.of(2026, 11, 4)))
