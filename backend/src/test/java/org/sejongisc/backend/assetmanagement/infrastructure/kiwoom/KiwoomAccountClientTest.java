@@ -2,6 +2,8 @@ package org.sejongisc.backend.assetmanagement.infrastructure.kiwoom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -69,6 +71,8 @@ class KiwoomAccountClientTest {
         .isEqualTo(ErrorCode.KIWOOM_AUTH_FAILED);
 
     assertThat(mockWebServer.getRequestCount()).isEqualTo(2);
+    // 캐시된 토큰을 무효화하고 새로 발급받아 재시도했는지 확인한다
+    verify(authClient, times(2)).issueAccessToken();
   }
 
   @Test
@@ -81,5 +85,7 @@ class KiwoomAccountClientTest {
 
     assertThat(accountClient.fetchAccounts()).hasSize(1);
     assertThat(mockWebServer.getRequestCount()).isEqualTo(2);
+    // 캐시된 토큰을 무효화하고 새로 발급받아 재시도했는지 확인한다
+    verify(authClient, times(2)).issueAccessToken();
   }
 }
