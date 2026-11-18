@@ -79,8 +79,8 @@ class CompetitionServiceTest {
     verify(competitionRepository).saveAndFlush(competition.capture());
     assertThat(competition.getValue().getStatus()).isEqualTo(CompetitionStatus.READY);
     assertThat(competition.getValue().getInitialCash()).isEqualByComparingTo("10000000");
-    assertThat(competition.getValue().getFeeRate()).isEqualByComparingTo("0.001");
-    assertThat(competition.getValue().getDepositInterestRate()).isEqualByComparingTo("0.0001");
+    assertThat(competition.getValue().getFeeRate()).isEqualByComparingTo("0.0001");
+    assertThat(competition.getValue().getDepositInterestRate()).isEqualByComparingTo("0.03");
 
     ArgumentCaptor<List<CompetitionParticipant>> participants = ArgumentCaptor.forClass(List.class);
     verify(participantRepository).saveAll(participants.capture());

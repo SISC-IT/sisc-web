@@ -35,8 +35,8 @@ public class CompetitionService {
 
   // 대회마다 DB에 저장되며, 여기 값은 생성 시 기본값으로만 쓴다.
   static final BigDecimal DEFAULT_INITIAL_CASH = new BigDecimal("10000000");
-  static final BigDecimal DEFAULT_FEE_RATE = new BigDecimal("0.001");          // 0.1%
-  static final BigDecimal DEFAULT_DEPOSIT_INTEREST_RATE = new BigDecimal("0.0001"); // 일 0.01%
+  static final BigDecimal DEFAULT_FEE_RATE = new BigDecimal("0.0001");             // 0.01%
+  static final BigDecimal DEFAULT_DEPOSIT_INTEREST_RATE = new BigDecimal("0.03"); // 연 3%, 매일 ÷365로 지급
 
   private final CompetitionRepository competitionRepository;
   private final CompetitionParticipantRepository participantRepository;
