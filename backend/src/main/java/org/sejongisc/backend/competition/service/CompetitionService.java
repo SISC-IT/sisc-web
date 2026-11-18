@@ -6,7 +6,11 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
 import org.sejongisc.backend.competition.dto.CompetitionCreateResponse;
-import org.sejongisc.backend.competition.entity.*;
+import org.sejongisc.backend.competition.entity.Competition;
+import org.sejongisc.backend.competition.entity.CompetitionAccount;
+import org.sejongisc.backend.competition.entity.CompetitionParticipant;
+import org.sejongisc.backend.competition.entity.CompetitionStatus;
+import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.repository.CompetitionAccountRepository;
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
@@ -14,10 +18,13 @@ import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,19 +42,23 @@ public class CompetitionService {
   private final CompetitionParticipantRepository participantRepository;
   private final CompetitionAccountRepository accountRepository;
   private final UserRepository userRepository;
+  private final Clock clock;
 
   // 대회를 READY로 만들고 활동 회원 전원을 참가자로 등록해 계좌를 만든다.
   @Transactional
   public CompetitionCreateResponse create(CompetitionCreateRequest request) {
+    if (request.startDate().isBefore(LocalDate.now(clock))) {
+      throw new CustomException(ErrorCode.COMPETITION_START_DATE_PAST);
+    }
     if (request.endDate().isBefore(request.startDate())) {
       throw new CustomException(ErrorCode.INVALID_COMPETITION_PERIOD);
     }
-    // 평소엔 여기서 막고, 동시 요청은 uk_competition_single_open 인덱스가 막는다.
+    // 평소엔 여기서 막고, 동시 요청은 saveOpenCompetition에서 막는다.
     if (competitionRepository.existsByStatusIn(List.of(CompetitionStatus.READY, CompetitionStatus.ACTIVE))) {
       throw new CustomException(ErrorCode.COMPETITION_ALREADY_OPEN);
     }
 
-    // 승인 대기 회원은 status가 ACTIVE여도 서비스를 쓸 수 없어 제외한다
+    // 승인 대기 회원은 status가 ACTIVE여도 서비스를 쓸 수 없어 제외한다.
     List<User> members = userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER);
     if (members.isEmpty()) {
       throw new CustomException(ErrorCode.COMPETITION_NO_PARTICIPANTS);
@@ -61,7 +72,7 @@ public class CompetitionService {
       throw new CustomException(ErrorCode.COMPETITION_TEAM_UNASSIGNED);
     }
 
-    Competition competition = competitionRepository.save(Competition.builder()
+    Competition competition = saveOpenCompetition(Competition.builder()
         .name(request.name())
         .status(CompetitionStatus.READY)
         .startDate(request.startDate())
@@ -89,5 +100,15 @@ public class CompetitionService {
         .toList());
 
     return CompetitionCreateResponse.of(competition, participants.size());
+  }
+
+  // 동시 요청이 위 확인을 함께 통과하면 uk_competition_single_open 인덱스가 막는다.
+  // 그냥 save면 커밋 시점에 insert되어 여기서 잡을 수 없으므로 바로 flush한다.
+  private Competition saveOpenCompetition(Competition competition) {
+    try {
+      return competitionRepository.saveAndFlush(competition);
+    } catch (DataIntegrityViolationException e) {
+      throw new CustomException(ErrorCode.COMPETITION_ALREADY_OPEN);
+    }
   }
 }

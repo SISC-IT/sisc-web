@@ -116,6 +116,8 @@ public enum ErrorCode {
 
   INVALID_COMPETITION_PERIOD(HttpStatus.BAD_REQUEST, "대회 종료일은 시작일보다 빠를 수 없습니다."),
 
+  COMPETITION_START_DATE_PAST(HttpStatus.BAD_REQUEST, "대회 시작일은 오늘 이후여야 합니다."),
+
   COMPETITION_NO_PARTICIPANTS(HttpStatus.BAD_REQUEST, "참가할 활동 회원이 없습니다."),
 
   COMPETITION_TEAM_UNASSIGNED(HttpStatus.BAD_REQUEST, "팀이 배정되지 않은 활동 회원이 있습니다. 회원 관리에서 팀을 배정해 주세요."),

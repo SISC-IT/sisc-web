@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -17,11 +21,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
@@ -38,25 +39,27 @@ import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class CompetitionServiceTest {
 
   @Mock CompetitionRepository competitionRepository;
   @Mock CompetitionParticipantRepository participantRepository;
   @Mock CompetitionAccountRepository accountRepository;
   @Mock UserRepository userRepository;
-  @InjectMocks CompetitionService competitionService;
+  CompetitionService competitionService;
 
   private final CompetitionCreateRequest request =
       new CompetitionCreateRequest("2026 2학기 수익률 대결", LocalDate.of(2026, 11, 23), LocalDate.of(2026, 12, 4));
 
   @BeforeEach
   void setUp() {
-    // 저장한 엔티티를 그대로 돌려준다
-    given(competitionRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
-    given(participantRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+    // 오늘은 2026-11-18 (서울)
+    Clock clock = Clock.fixed(ZonedDateTime.of(2026, 11, 18, 10, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant(),
+        ZoneId.of("Asia/Seoul"));
+    competitionService = new CompetitionService(
+        competitionRepository, participantRepository, accountRepository, userRepository, clock);
   }
 
   @Test
@@ -66,11 +69,14 @@ class CompetitionServiceTest {
     User kim = user("매크로팀");
     User lee = user("리서치팀");
     given(userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER)).willReturn(List.of(kim, lee));
+    // 저장한 엔티티를 그대로 돌려준다
+    given(competitionRepository.saveAndFlush(any())).willAnswer(invocation -> invocation.getArgument(0));
+    given(participantRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
 
     CompetitionCreateResponse response = competitionService.create(request);
 
     ArgumentCaptor<Competition> competition = ArgumentCaptor.forClass(Competition.class);
-    verify(competitionRepository).save(competition.capture());
+    verify(competitionRepository).saveAndFlush(competition.capture());
     assertThat(competition.getValue().getStatus()).isEqualTo(CompetitionStatus.READY);
     assertThat(competition.getValue().getInitialCash()).isEqualByComparingTo("10000000");
     assertThat(competition.getValue().getFeeRate()).isEqualByComparingTo("0.001");
@@ -81,8 +87,8 @@ class CompetitionServiceTest {
     assertThat(participants.getValue())
         .extracting(CompetitionParticipant::getUserId, CompetitionParticipant::getTeamName, CompetitionParticipant::getStatus)
         .containsExactly(
-            org.assertj.core.groups.Tuple.tuple(kim.getUserId(), "매크로팀", ParticipantStatus.ACTIVE),
-            org.assertj.core.groups.Tuple.tuple(lee.getUserId(), "리서치팀", ParticipantStatus.ACTIVE));
+            tuple(kim.getUserId(), "매크로팀", ParticipantStatus.ACTIVE),
+            tuple(lee.getUserId(), "리서치팀", ParticipantStatus.ACTIVE));
     assertThat(participants.getValue()).allSatisfy(p -> assertThat(p.getCompetition()).isSameAs(competition.getValue()));
 
     ArgumentCaptor<List<CompetitionAccount>> accounts = ArgumentCaptor.forClass(List.class);
@@ -132,14 +138,39 @@ class CompetitionServiceTest {
     assertThatThrownBy(() -> competitionService.create(reversed))
         .isInstanceOf(CustomException.class)
         .extracting("errorCode").isEqualTo(ErrorCode.INVALID_COMPETITION_PERIOD);
-    verify(competitionRepository, never()).save(any());
+    verify(competitionRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  @DisplayName("시작일이 오늘보다 과거면 만들지 않는다")
+  void rejectPastStartDate() {
+    CompetitionCreateRequest past =
+        new CompetitionCreateRequest("대회", LocalDate.of(2026, 11, 17), LocalDate.of(2026, 11, 28));
+
+    assertThatThrownBy(() -> competitionService.create(past))
+        .isInstanceOf(CustomException.class)
+        .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_START_DATE_PAST);
+    verify(competitionRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  @DisplayName("동시 요청으로 인덱스에 막히면 열린 대회 에러로 바꾸고 참가자를 만들지 않는다")
+  void translateUniqueViolation() {
+    given(userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER))
+        .willReturn(List.of(user("매크로팀")));
+    given(competitionRepository.saveAndFlush(any())).willThrow(new DataIntegrityViolationException("uk_competition_single_open"));
+
+    assertThatThrownBy(() -> competitionService.create(request))
+        .isInstanceOf(CustomException.class)
+        .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_ALREADY_OPEN);
+    verify(participantRepository, never()).saveAll(anyList());
   }
 
   private void assertError(ErrorCode expected) {
     assertThatThrownBy(() -> competitionService.create(request))
         .isInstanceOf(CustomException.class)
         .extracting("errorCode").isEqualTo(expected);
-    verify(competitionRepository, never()).save(any());
+    verify(competitionRepository, never()).saveAndFlush(any());
     verify(participantRepository, never()).saveAll(anyList());
     verify(accountRepository, never()).saveAll(anyList());
   }
