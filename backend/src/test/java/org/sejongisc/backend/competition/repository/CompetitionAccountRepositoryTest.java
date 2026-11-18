@@ -84,6 +84,22 @@ class CompetitionAccountRepositoryTest {
   }
 
   @Test
+  void 진행_중인_대회가_있으면_시작_전_대회를_만들_수_없다() {
+    saveCompetition(CompetitionStatus.ACTIVE);
+
+    assertThatThrownBy(() -> saveCompetition(CompetitionStatus.READY))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 시작_전_대회는_하나만_있을_수_있다() {
+    saveCompetition(CompetitionStatus.READY);
+
+    assertThatThrownBy(() -> saveCompetition(CompetitionStatus.READY))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
   void 같은_상태의_대회가_여럿이면_시작일이_가장_늦은_대회를_가져온다() {
     competitionRepository.saveAndFlush(competitionBuilder(CompetitionStatus.ENDED)
         .startDate(LocalDate.of(2026, 3, 2)).endDate(LocalDate.of(2026, 3, 13)).build());
