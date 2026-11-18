@@ -18,6 +18,7 @@ import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,13 +103,20 @@ public class CompetitionService {
     return CompetitionCreateResponse.of(competition, participants.size());
   }
 
+  private static final String SINGLE_OPEN_INDEX = "uk_competition_single_open";
+
   // 동시 요청이 위 확인을 함께 통과하면 uk_competition_single_open 인덱스가 막는다.
   // 그냥 save면 커밋 시점에 insert되어 여기서 잡을 수 없으므로 바로 flush한다.
+  // 그 인덱스 위반만 409로 바꾸고, 다른 DB 오류는 그대로 올린다.
   private Competition saveOpenCompetition(Competition competition) {
     try {
       return competitionRepository.saveAndFlush(competition);
     } catch (DataIntegrityViolationException e) {
-      throw new CustomException(ErrorCode.COMPETITION_ALREADY_OPEN);
+      if (e.getCause() instanceof ConstraintViolationException violation
+          && SINGLE_OPEN_INDEX.equals(violation.getConstraintName())) {
+        throw new CustomException(ErrorCode.COMPETITION_ALREADY_OPEN);
+      }
+      throw e;
     }
   }
 }

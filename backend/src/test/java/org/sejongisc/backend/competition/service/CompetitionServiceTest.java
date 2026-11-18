@@ -39,6 +39,7 @@ import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
@@ -158,12 +159,29 @@ class CompetitionServiceTest {
   void translateUniqueViolation() {
     given(userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER))
         .willReturn(List.of(user("매크로팀")));
-    given(competitionRepository.saveAndFlush(any())).willThrow(new DataIntegrityViolationException("uk_competition_single_open"));
+    given(competitionRepository.saveAndFlush(any())).willThrow(integrityViolation("uk_competition_single_open"));
 
     assertThatThrownBy(() -> competitionService.create(request))
         .isInstanceOf(CustomException.class)
         .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_ALREADY_OPEN);
     verify(participantRepository, never()).saveAll(anyList());
+  }
+
+  @Test
+  @DisplayName("열린 대회 인덱스가 아닌 DB 오류는 그대로 올린다")
+  void rethrowOtherIntegrityViolation() {
+    given(userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER))
+        .willReturn(List.of(user("매크로팀")));
+    DataIntegrityViolationException other = integrityViolation("ck_competition_initial_cash");
+    given(competitionRepository.saveAndFlush(any())).willThrow(other);
+
+    assertThatThrownBy(() -> competitionService.create(request)).isSameAs(other);
+    verify(participantRepository, never()).saveAll(anyList());
+  }
+
+  private static DataIntegrityViolationException integrityViolation(String constraintName) {
+    return new DataIntegrityViolationException("violation",
+        new ConstraintViolationException("violation", null, constraintName));
   }
 
   private void assertError(ErrorCode expected) {

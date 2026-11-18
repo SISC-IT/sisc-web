@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
@@ -79,24 +81,30 @@ class CompetitionAccountRepositoryTest {
     saveCompetition(CompetitionStatus.ENDED); // 종료된 대회는 여러 개여도 된다
     saveCompetition(CompetitionStatus.ACTIVE);
 
-    assertThatThrownBy(() -> saveCompetition(CompetitionStatus.ACTIVE))
-        .isInstanceOf(DataIntegrityViolationException.class);
+    assertSingleOpenViolation(() -> saveCompetition(CompetitionStatus.ACTIVE));
   }
 
   @Test
   void 진행_중인_대회가_있으면_시작_전_대회를_만들_수_없다() {
     saveCompetition(CompetitionStatus.ACTIVE);
 
-    assertThatThrownBy(() -> saveCompetition(CompetitionStatus.READY))
-        .isInstanceOf(DataIntegrityViolationException.class);
+    assertSingleOpenViolation(() -> saveCompetition(CompetitionStatus.READY));
   }
 
   @Test
   void 시작_전_대회는_하나만_있을_수_있다() {
     saveCompetition(CompetitionStatus.READY);
 
-    assertThatThrownBy(() -> saveCompetition(CompetitionStatus.READY))
-        .isInstanceOf(DataIntegrityViolationException.class);
+    assertSingleOpenViolation(() -> saveCompetition(CompetitionStatus.READY));
+  }
+
+  // 다른 제약(이름 등)이 아니라 열린 대회 인덱스 때문에 실패했는지 확인한다
+  private static void assertSingleOpenViolation(ThrowingCallable save) {
+    assertThatThrownBy(save)
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .cause()
+        .isInstanceOf(ConstraintViolationException.class)
+        .extracting("constraintName").isEqualTo("uk_competition_single_open");
   }
 
   @Test
