@@ -21,7 +21,7 @@ import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 @Entity
 @Table(name = "disclosure_filing", uniqueConstraints =
-    @UniqueConstraint(name = "uq_disclosure_filing_rcept_no", columnNames = "rcept_no"))
+    @UniqueConstraint(name = "uq_disclosure_filing_dart_rcept_no", columnNames = "dart_rcept_no"))
 @Getter
 @NoArgsConstructor
 public class DisclosureFiling extends BasePostgresEntity {
@@ -34,25 +34,25 @@ public class DisclosureFiling extends BasePostgresEntity {
   @JoinColumn(name = "company_id", nullable = false)
   private DisclosureCompany company;
 
-  @Column(name = "rcept_no", nullable = false, length = 14)
+  @Column(name = "dart_rcept_no", nullable = false, length = 14)
   private String receiptNo;
 
-  @Column(name = "report_nm", nullable = false, columnDefinition = "text")
+  @Column(name = "report_title", nullable = false, columnDefinition = "text")
   private String title;
 
-  @Column(name = "flr_nm", columnDefinition = "text")
+  @Column(name = "dart_submitter_name", columnDefinition = "text")
   private String submitterName;
 
-  @Column(name = "rcept_dt", nullable = false)
+  @Column(name = "received_date", nullable = false)
   private LocalDate receivedDate;
 
-  @Column(name = "business_year")
+  @Column(name = "fiscal_year")
   private Integer businessYear;
 
-  @Column(name = "report_code", length = 5)
+  @Column(name = "dart_report_code", length = 5)
   private String reportCode;
 
-  @Column(name = "rm", columnDefinition = "text")
+  @Column(name = "dart_remarks", columnDefinition = "text")
   private String remarks;
 
   @Column(name = "raw_payload", nullable = false, columnDefinition = "jsonb")

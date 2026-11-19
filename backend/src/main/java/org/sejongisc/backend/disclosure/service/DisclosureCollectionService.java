@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.disclosure.client.OpenDartClient;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
@@ -14,6 +17,8 @@ import org.sejongisc.backend.disclosure.entity.DisclosureFinancialMetric;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
+import org.sejongisc.backend.disclosure.service.DisclosureEarningsCollectionService.FinancialReport;
+import org.sejongisc.backend.disclosure.service.DisclosureEarningsCollectionService.RegularReport;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +31,63 @@ public class DisclosureCollectionService {
   private final DisclosureFilingRepository filingRepository;
   private final DisclosureFinancialMetricRepository metricRepository;
   private final ObjectMapper objectMapper;
+
+  @Transactional
+  public Counts saveEarnings(String corpCode, int closingMonth, List<RegularReport> regularReports,
+      List<FinancialReport> financialReports) {
+    if (regularReports.isEmpty()) {
+      return new Counts(0, 0);
+    }
+    Map<String, String> example = regularReports.getFirst().metadata();
+    String stockCode = blankToNull(example.get("stock_code"));
+    String companyName = example.get("corp_name");
+    String corporationClass = blankToNull(example.get("corp_cls"));
+    DisclosureCompany company = companyRepository.findForUpdate(corpCode).orElseGet(() ->
+        companyRepository.saveAndFlush(new DisclosureCompany(corpCode,
+            stockCode, companyName, corporationClass, closingMonth)));
+    company.updateProfile(stockCode, companyName, corporationClass, closingMonth);
+    Map<String, DisclosureFiling> byReceipt = new HashMap<>();
+    int filings = 0;
+    for (RegularReport report : regularReports) {
+      var existing = filingRepository.findByReceiptNo(report.receiptNo());
+      DisclosureFiling filing = existing.orElseGet(() -> filingRepository.save(toEntity(company, report.metadata())));
+      if (!corpCode.equals(filing.getCompany().getCorpCode())) {
+        throw new IllegalStateException("Disclosure receipt belongs to another company");
+      }
+      if (!Objects.equals(report.quarter().fiscalYear(), filing.getBusinessYear())
+          || !report.quarter().reportCode().equals(filing.getReportCode())) {
+        filing.setFinancialReport(report.quarter().fiscalYear(), report.quarter().reportCode());
+      }
+      byReceipt.put(report.receiptNo(), filing);
+      if (existing.isEmpty()) {
+        filings++;
+      }
+    }
+    int metrics = 0;
+    for (FinancialReport financial : financialReports) {
+      DisclosureFiling filing = Objects.requireNonNull(byReceipt.get(financial.receiptNo()),
+          "Missing regular report for financial receipt: " + financial.receiptNo());
+      filing.setFinancialReport(financial.businessYear(), financial.quarter().reportCode());
+      String current = financial.quarter().number() == 4 ? EarningsAccount.ANNUAL : EarningsAccount.CURRENT;
+      for (EarningsAccount account : EarningsAccount.values()) {
+        Map<String, String> currentRow = account.select(financial.rows(), "thstrm_amount");
+        if (currentRow != null) {
+          metrics += saveMetric(filing, currentRow, financial.basis(), current, "thstrm_amount", account.name());
+        }
+        if (financial.quarter().number() == 3) {
+          Map<String, String> cumulativeRow = account.select(financial.rows(), "thstrm_add_amount");
+          if (cumulativeRow != null) {
+            metrics += saveMetric(filing, cumulativeRow, financial.basis(), EarningsAccount.YEAR_TO_DATE,
+                "thstrm_add_amount", account.name());
+          }
+        }
+      }
+    }
+    return new Counts(filings, metrics);
+  }
+
+  public record Counts(int filingsInserted, int metricsInserted) {
+  }
 
   @Transactional
   public int collect(String corpCode, LocalDate from, LocalDate to, int maxPages) {
@@ -87,10 +149,15 @@ public class DisclosureCollectionService {
 
   private int saveMetric(DisclosureFiling filing, Map<String, String> row, String basis,
       String periodType, String amountField) {
+    return saveMetric(filing, row, basis, periodType, amountField,
+        metricType(row.get("account_id"), row.getOrDefault("account_nm", "")));
+  }
+
+  private int saveMetric(DisclosureFiling filing, Map<String, String> row, String basis,
+      String periodType, String amountField, String metricType) {
     String amountValue = row.get(amountField);
     if (amountValue == null || amountValue.isBlank() || "-".equals(amountValue.trim())) return 0;
     String accountName = row.getOrDefault("account_nm", "");
-    String metricType = metricType(row.get("account_id"), accountName);
     String accountId = blankToNull(row.get("account_id"));
     if (metricRepository.existsByFiling_FilingIdAndMetricTypeAndBasisAndPeriodTypeAndAccountId(
         filing.getFilingId(), metricType, basis, periodType, accountId)) return 0;

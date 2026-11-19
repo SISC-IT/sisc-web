@@ -34,10 +34,10 @@ public class DisclosureFinancialMetric extends BasePostgresEntity {
   @Column(name = "metric_type", nullable = false, length = 40)
   private String metricType;
 
-  @Column(name = "account_id", length = 200)
+  @Column(name = "dart_account_id", length = 200)
   private String accountId;
 
-  @Column(name = "account_nm", nullable = false, columnDefinition = "text")
+  @Column(name = "account_name", nullable = false, columnDefinition = "text")
   private String accountName;
 
   @Column(name = "basis", nullable = false, length = 3)

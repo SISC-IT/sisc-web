@@ -1,6 +1,7 @@
 package org.sejongisc.backend.disclosure.service;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -15,10 +16,44 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "disclosure.collection.run", havingValue = "true")
 public class DisclosureCollectionRunner implements ApplicationRunner {
   private final DisclosureCollectionService collectionService;
+  private final DisclosureEarningsCollectionService earningsCollectionService;
   private final ConfigurableApplicationContext applicationContext;
 
   @Override
   public void run(ApplicationArguments args) {
+    try {
+      if (args.containsOption("from") || args.containsOption("financial-year") || args.containsOption("report-code")) {
+        collectByDate(args);
+      } else {
+        collectEarnings(args);
+      }
+    } finally {
+      applicationContext.close();
+    }
+  }
+
+  private void collectEarnings(ApplicationArguments args) {
+    String corpCode = requiredOption(args, "corp-code");
+    LocalDate through = args.containsOption("to") ? LocalDate.parse(requiredOption(args, "to"))
+        : LocalDate.now(ZoneId.of("Asia/Seoul"));
+    var result = earningsCollectionService.collect(corpCode, through);
+    result.earnings().ifPresentOrElse(earnings -> {
+      for (var quarter : earnings.quarters()) {
+        log.info("Quarterly earnings: corpCode={}, fiscalYear={}, quarter={}, periodEnd={}, "
+                + "basis={}, currency={}, revenue={}, operatingProfit={}, netIncome={}, sources={}",
+            corpCode, quarter.fiscalYear(), quarter.quarter(), quarter.periodEnd(), quarter.basis(),
+            quarter.currency(), quarter.revenue(), quarter.operatingProfit(), quarter.netIncome(),
+            quarter.sources().stream().map(source -> source.url()).toList());
+      }
+    }, () -> log.info("No regular reports: corpCode={}, through={}", corpCode, through));
+    log.info("Quarterly earnings collection: corpCode={}, filingsInserted={}, metricsInserted={}",
+        corpCode, result.counts().filingsInserted(), result.counts().metricsInserted());
+    if (!result.pendingPeriods().isEmpty()) {
+      log.warn("Quarterly earnings pending: corpCode={}, periods={}", corpCode, result.pendingPeriods());
+    }
+  }
+
+  private void collectByDate(ApplicationArguments args) {
     String corpCode = requiredOption(args, "corp-code");
     LocalDate from = LocalDate.parse(requiredOption(args, "from"));
     LocalDate to = LocalDate.parse(requiredOption(args, "to"));
@@ -28,21 +63,17 @@ public class DisclosureCollectionRunner implements ApplicationRunner {
     int maxPages = args.containsOption("max-pages")
         ? Integer.parseInt(args.getOptionValues("max-pages").getFirst()) : 5;
 
-    try {
-      int inserted = collectionService.collect(corpCode, from, to, maxPages);
-      log.info("Disclosure collection finished: corpCode={}, from={}, to={}, inserted={}",
-          corpCode, from, to, inserted);
-      if (args.containsOption("financial-year") && args.containsOption("report-code")) {
-        int year = Integer.parseInt(args.getOptionValues("financial-year").getFirst());
-        String reportCode = args.getOptionValues("report-code").getFirst();
-        String basis = args.containsOption("basis")
-            ? args.getOptionValues("basis").getFirst() : "CFS";
-        int metrics = collectionService.collectFinancialMetrics(corpCode, year, reportCode, basis);
-        log.info("Financial metric collection finished: corpCode={}, year={}, reportCode={}, basis={}, inserted={}",
-            corpCode, year, reportCode, basis, metrics);
-      }
-    } finally {
-      applicationContext.close();
+    int inserted = collectionService.collect(corpCode, from, to, maxPages);
+    log.info("Disclosure collection finished: corpCode={}, from={}, to={}, inserted={}",
+        corpCode, from, to, inserted);
+    if (args.containsOption("financial-year") && args.containsOption("report-code")) {
+      int year = Integer.parseInt(args.getOptionValues("financial-year").getFirst());
+      String reportCode = args.getOptionValues("report-code").getFirst();
+      String basis = args.containsOption("basis")
+          ? args.getOptionValues("basis").getFirst() : "CFS";
+      int metrics = collectionService.collectFinancialMetrics(corpCode, year, reportCode, basis);
+      log.info("Financial metric collection finished: corpCode={}, year={}, reportCode={}, basis={}, inserted={}",
+          corpCode, year, reportCode, basis, metrics);
     }
   }
 
