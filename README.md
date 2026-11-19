@@ -173,12 +173,13 @@ npm run build
   - 재무제표(`/fnlttSinglAcntAll.json`)는 연결(`CFS`)을 우선 조회하고 연결재무제표가 없는 경우 별도(`OFS`)를 사용합니다.
   - 손익계산서(`IS`/`CIS`)에서 XBRL 표준계정 ID 우선순위로 매출액·영업이익·당기순이익을 추출하며, 실제 `0`과 결측(`null`)을 구분합니다.
   - 4분기 실적은 동일 회계연도·회계 기준·통화의 연간값(`11011`)에서 3분기 누적값(`11014`)을 차감해 산출하며, 비교 근거가 불충분하거나 사후 정정으로 비교 불가한 경우 `null`로 처리합니다.
+  - 공시 기본 정보를 먼저 저장하고, 조회에 성공한 재무 데이터는 분기별로 저장합니다. 재무 API 장애로 실행이 멈춰도 이미 저장한 값은 유지됩니다.
   - 재무 API 미반영 분기는 `pending`으로 남겨 다음 실행 시 재조회합니다.
 - **단일 기업 최근 4분기 실적 조회 API** (`DisclosureEarningsController`, `DisclosureEarningsQueryService`)
   - `GET /api/disclosures/companies/{corpCode}/financials` (정회원 이상 `TEAM_MEMBER` 권한 필요)
   - 분기별 회계연도·분기·결산연월, 연결/별도 기준, 통화, 매출액·영업이익·당기순이익(정밀도 보존 십진 문자열, 결측 `null`), DART 원문 링크를 반환합니다.
   - 잘못된 8자리 고유번호 형식은 `400`, 미저장 기업은 `404`를 반환합니다.
-- **DB 스키마 (PostgreSQL / Flyway)** (`V8__disclosure_research.sql`, `disclosure-local/V1__disclosure_local_schema.sql`)
+- **DB 스키마 (PostgreSQL / Flyway)** (공용 `V8__disclosure_research.sql`, 로컬 `disclosure-local/V1~V3`)
   - `disclosure_company`: DART 고유번호(`dart_corp_code` unique), 종목코드, 기업명, 법인구분, 결산월(`closing_month`)
   - `disclosure_filing`: 접수번호(`dart_rcept_no` unique), 보고서명, 접수일, 회계연도, 보고서 코드, 원본 `jsonb`
   - `disclosure_financial_metric`: 지표 유형, 계정 ID/명, 회계 기준(`CFS`/`OFS`), 기간 유형(`CURRENT_PERIOD`/`ANNUAL`/`YEAR_TO_DATE`), 금액(`numeric(30,4)`), 통화, `unique nulls not distinct` 중복 방지 제약

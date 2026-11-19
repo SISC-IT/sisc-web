@@ -52,6 +52,6 @@ class OpenDartClientTest {
 
   private OpenDartClient client(WebClient.Builder builder) {
     return new OpenDartClient(builder.baseUrl(BASE_URL).build(),
-        new OpenDartProperties(BASE_URL, "fixture-only", 1000));
+        new OpenDartProperties(BASE_URL, "fixture-only", 10000));
   }
 }

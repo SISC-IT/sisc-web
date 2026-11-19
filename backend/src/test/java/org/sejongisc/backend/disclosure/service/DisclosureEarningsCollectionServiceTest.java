@@ -206,6 +206,23 @@ class DisclosureEarningsCollectionServiceTest {
     assertThat(storedFilings).isEmpty();
   }
 
+  @Test
+  void keepsFilingsAndEarlierMetricsWhenALaterFinancialRequestFails() {
+    setReports(List.of(
+        filing(FIRST_2026, "분기보고서 (2026.03)", "연"),
+        filing(SECOND_2026, "반기보고서 (2026.06)", "연")));
+    financial(2026, "11013", FIRST_2026, "CFS", "40", null);
+    when(client.financialStatements(COMPANY, 2026, "11012", "CFS"))
+        .thenReturn(new DartFinancialResponse("020", null, null));
+
+    assertThatThrownBy(() -> collection.collect(COMPANY, THROUGH))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("020");
+    assertThat(storedFilings).containsKeys(FIRST_2026, SECOND_2026);
+    assertThat(storedMetrics).isNotEmpty().allSatisfy(metric ->
+        assertThat(metric.getFiling().getReceiptNo()).isEqualTo(FIRST_2026));
+  }
+
   private void setReports(List<Map<String, String>> reports) {
     when(client.searchRegularReports(eq(COMPANY), any(), eq(THROUGH), eq(1), eq(100)))
         .thenReturn(page(1, 1, reports));

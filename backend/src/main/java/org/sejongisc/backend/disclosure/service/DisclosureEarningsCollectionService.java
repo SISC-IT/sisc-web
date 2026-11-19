@@ -2,7 +2,6 @@ package org.sejongisc.backend.disclosure.service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -43,10 +42,10 @@ public class DisclosureEarningsCollectionService {
 
     Map<ReportingQuarter, List<StoredFiling>> previous = query.storedReports(corpCode, through);
     TargetQuarters targets = selectTargetQuarters(available, previous);
-    FetchOutcome outcome = fetchMissingFinancials(corpCode, closingMonth, targets, previous);
-
     List<RegularReport> selectedReports = targets.byQuarter().values().stream().flatMap(List::stream).toList();
-    Counts counts = storage.saveEarnings(corpCode, closingMonth, selectedReports, outcome.financials());
+    int filingsInserted = storage.saveReports(corpCode, closingMonth, selectedReports);
+    FetchOutcome outcome = fetchMissingFinancials(corpCode, closingMonth, targets, previous);
+    Counts counts = new Counts(filingsInserted, outcome.metricsInserted());
     return new CollectionResult(counts, List.copyOf(outcome.pendingPeriods()), query.latest(corpCode, through));
   }
 
@@ -81,7 +80,7 @@ public class DisclosureEarningsCollectionService {
 
   private FetchOutcome fetchMissingFinancials(String corpCode, int closingMonth, TargetQuarters targets,
       Map<ReportingQuarter, List<StoredFiling>> previous) {
-    List<FinancialReport> financials = new ArrayList<>();
+    int metricsInserted = 0;
     Set<String> pending = new LinkedHashSet<>();
 
     for (var entry : targets.byQuarter().entrySet()) {
@@ -110,13 +109,15 @@ public class DisclosureEarningsCollectionService {
 
       Optional<FinancialReport> result = fetchFinancialReport(corpCode, quarter, candidates, titles,
           consolidated, closingMonth != 12);
-      result.ifPresent(financials::add);
+      if (result.isPresent()) {
+        metricsInserted += storage.saveFinancialReport(corpCode, result.get());
+      }
       if (result.filter(financial -> financial.receiptNo().equals(expected.receiptNo())
           && financial.hasAmounts(needsCumulative)).isEmpty()) {
         pending.add(quarter.end().toString());
       }
     }
-    return new FetchOutcome(financials, pending);
+    return new FetchOutcome(metricsInserted, pending);
   }
 
   private boolean isAlreadyStored(List<StoredFiling> stored, String receiptNo,
@@ -203,7 +204,7 @@ public class DisclosureEarningsCollectionService {
       Set<ReportingQuarter> cumulativePeriods) {
   }
 
-  private record FetchOutcome(List<FinancialReport> financials, Set<String> pendingPeriods) {
+  private record FetchOutcome(int metricsInserted, Set<String> pendingPeriods) {
   }
 
   public record CollectionResult(Counts counts, List<String> pendingPeriods,
