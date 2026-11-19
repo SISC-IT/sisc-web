@@ -37,20 +37,11 @@ public class DisclosureCompany extends BasePostgresEntity {
   private Integer closingMonth;
 
   public DisclosureCompany(String corpCode, String stockCode, String companyName,
-      String corporationClass) {
-    this(corpCode, stockCode, companyName, corporationClass, 12);
-  }
-
-  public DisclosureCompany(String corpCode, String stockCode, String companyName,
       String corporationClass, int closingMonth) {
     this.corpCode = corpCode;
     this.stockCode = stockCode;
     this.companyName = companyName;
     this.corporationClass = corporationClass;
-    this.closingMonth = closingMonth;
-  }
-
-  public void updateClosingMonth(int closingMonth) {
     this.closingMonth = closingMonth;
   }
 

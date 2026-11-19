@@ -23,30 +23,17 @@ public class OpenDartClient {
     this.properties = properties;
   }
 
-  public DartDisclosurePage search(String corpCode, LocalDate from, LocalDate to,
-      int page, int size) {
-    return search(corpCode, from, to, page, size, false);
-  }
-
   public DartDisclosurePage searchRegularReports(String corpCode, LocalDate from, LocalDate to,
       int page, int size) {
-    return search(corpCode, from, to, page, size, true);
-  }
-
-  private DartDisclosurePage search(String corpCode, LocalDate from, LocalDate to,
-      int page, int size, boolean regularOnly) {
-    return request("/list.json", corpCode, uri -> {
-      if (regularOnly) {
-        uri.queryParam("pblntf_ty", "A");
-      }
-      return uri.queryParam("bgn_de", from.format(DateTimeFormatter.BASIC_ISO_DATE))
-          .queryParam("end_de", to.format(DateTimeFormatter.BASIC_ISO_DATE))
-          .queryParam("last_reprt_at", "N")
-          .queryParam("page_no", page)
-          .queryParam("page_count", Math.min(Math.max(size, 1), 100))
-          .queryParam("sort", "date")
-          .queryParam("sort_mth", "desc");
-    }, DartDisclosurePage.class);
+    return request("/list.json", corpCode, uri -> uri
+        .queryParam("pblntf_ty", "A")
+        .queryParam("bgn_de", from.format(DateTimeFormatter.BASIC_ISO_DATE))
+        .queryParam("end_de", to.format(DateTimeFormatter.BASIC_ISO_DATE))
+        .queryParam("last_reprt_at", "N")
+        .queryParam("page_no", page)
+        .queryParam("page_count", Math.min(Math.max(size, 1), 100))
+        .queryParam("sort", "date")
+        .queryParam("sort_mth", "desc"), DartDisclosurePage.class);
   }
 
   public DartCompany company(String corpCode) {

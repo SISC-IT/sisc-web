@@ -1,11 +1,9 @@
 package org.sejongisc.backend.disclosure.service;
 
-import static org.sejongisc.backend.disclosure.service.EarningsAccount.CUMULATIVE_AMOUNT;
-import static org.sejongisc.backend.disclosure.service.EarningsAccount.CURRENT_AMOUNT;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +25,7 @@ import org.sejongisc.backend.disclosure.entity.DisclosureFinancialMetric;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
+import org.sejongisc.backend.disclosure.service.EarningsRow.AmountKind;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DisclosureEarningsQueryService {
   private static final String DART_URL = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=";
-  private static final TypeReference<Map<String, String>> RAW_ROW = new TypeReference<>() {};
+
   private final DisclosureCompanyRepository companies;
   private final DisclosureFilingRepository filings;
   private final DisclosureFinancialMetricRepository metrics;
@@ -46,7 +45,8 @@ public class DisclosureEarningsQueryService {
   }
 
   Optional<DisclosureEarningsResponse> latest(String corpCode, LocalDate through) {
-    return companies.findByCorpCode(corpCode).map(company -> response(company, storedReports(corpCode, through)));
+    return companies.findByCorpCode(corpCode)
+        .map(company -> response(company, storedReports(corpCode, through)));
   }
 
   Map<ReportingQuarter, List<StoredFiling>> storedReports(String corpCode, LocalDate through) {
@@ -55,53 +55,68 @@ public class DisclosureEarningsQueryService {
     if (allFilings.isEmpty()) {
       return Map.of();
     }
-    Map<UUID, Map<String, List<Map<String, String>>>> financials = new HashMap<>();
+
+    Map<UUID, Map<String, List<EarningsRow>>> rowsByFiling = new HashMap<>();
     List<UUID> filingIds = allFilings.stream().map(DisclosureFiling::getFilingId).toList();
     for (var metric : metrics.findAllByFiling_FilingIdInAndMetricTypeIn(filingIds, EarningsAccount.METRIC_TYPES)) {
-      readRow(metric).ifPresent(row -> financials.computeIfAbsent(metric.getFiling().getFilingId(),
-          id -> new HashMap<>()).computeIfAbsent(metric.getBasis(), basis -> new ArrayList<>()).add(row));
+      toEarningsRow(metric).ifPresent(row -> rowsByFiling
+          .computeIfAbsent(metric.getFiling().getFilingId(), id -> new HashMap<>())
+          .computeIfAbsent(metric.getBasis(), basis -> new ArrayList<>())
+          .add(row));
     }
+
     Map<ReportingQuarter, List<StoredFiling>> reports = new HashMap<>();
     for (DisclosureFiling filing : allFilings) {
       ReportingQuarter.fromFiling(filing).ifPresent(quarter ->
           reports.computeIfAbsent(quarter, ignored -> new ArrayList<>())
               .add(new StoredFiling(filing.getReceiptNo(), filing.getTitle(), filing.getReceivedDate(),
-                  financials.getOrDefault(filing.getFilingId(), Map.of()))));
+                  rowsByFiling.getOrDefault(filing.getFilingId(), Map.of()))));
     }
     return reports;
   }
 
-  private Optional<Map<String, String>> readRow(DisclosureFinancialMetric metric) {
-    if (metric.getAmount() == null || metric.getCurrency() == null) {
+  private Optional<EarningsRow> toEarningsRow(DisclosureFinancialMetric metric) {
+    if (metric.getAmount() == null || metric.getCurrency() == null
+        || !metric.getCurrency().matches("[A-Z]{3}")) {
       return Optional.empty();
     }
-    try {
-      Map<String, String> row = objectMapper.readValue(metric.getRawPayload(), RAW_ROW);
-      if (row == null || EarningsAccount.valueOf(metric.getMetricType()).rank(row) == 0) {
-        return Optional.empty();
-      }
-      String field = switch (metric.getPeriodType()) {
-        case EarningsAccount.CURRENT, EarningsAccount.ANNUAL -> CURRENT_AMOUNT;
-        case EarningsAccount.YEAR_TO_DATE -> CUMULATIVE_AMOUNT;
-        default -> null;
-      };
-      if (field == null || !metric.getCurrency().matches("[A-Z]{3}")) {
-        return Optional.empty();
-      }
-      row.remove(CURRENT_AMOUNT);
-      row.remove(CUMULATIVE_AMOUNT);
-      row.put(field, metric.getAmount().toPlainString());
-      row.put("currency", metric.getCurrency());
-      return Optional.of(row);
-    } catch (JsonProcessingException ignored) {
+    String statementDivision = readStatementDivision(metric.getRawPayload());
+    if (statementDivision == null) {
       return Optional.empty();
+    }
+
+    BigDecimal currentAmount = null;
+    BigDecimal cumulativeAmount = null;
+    switch (metric.getPeriodType()) {
+      case EarningsAccount.CURRENT, EarningsAccount.ANNUAL -> currentAmount = metric.getAmount();
+      case EarningsAccount.YEAR_TO_DATE -> cumulativeAmount = metric.getAmount();
+      default -> {
+        return Optional.empty();
+      }
+    }
+
+    EarningsRow row = new EarningsRow(
+        statementDivision, metric.getAccountId(), metric.getAccountName(),
+        metric.getCurrency(), currentAmount, cumulativeAmount, null);
+    return EarningsAccount.valueOf(metric.getMetricType()).rank(row) > 0
+        ? Optional.of(row) : Optional.empty();
+  }
+
+  private String readStatementDivision(String rawPayload) {
+    try {
+      JsonNode node = objectMapper.readTree(rawPayload);
+      JsonNode sjDiv = node == null ? null : node.get("sj_div");
+      return sjDiv != null && sjDiv.isTextual() ? sjDiv.asText() : null;
+    } catch (JsonProcessingException ignored) {
+      return null;
     }
   }
 
   private DisclosureEarningsResponse response(DisclosureCompany company,
       Map<ReportingQuarter, List<StoredFiling>> reports) {
     List<Quarter> quarters = reports.keySet().stream().max(Comparator.naturalOrder()).stream()
-        .flatMap(latest -> latest.recentFour().stream().map(quarter -> summarize(quarter, reports))).toList();
+        .flatMap(latest -> latest.recentFour().stream().map(quarter -> summarize(quarter, reports)))
+        .toList();
     return new DisclosureEarningsResponse(company.getCorpCode(), company.getCompanyName(),
         company.getStockCode(), quarters);
   }
@@ -111,15 +126,19 @@ public class DisclosureEarningsQueryService {
     Optional<StoredFiling> third = quarter.number() == 4
         ? preferred(reports.getOrDefault(quarter.previous(1), List.of())) : Optional.empty();
     String basis = current.map(StoredFiling::basis).orElse(null);
-    Amount revenue = sourceAmount(EarningsAccount.REVENUE, quarter, current, third, basis);
-    Amount operatingProfit = sourceAmount(EarningsAccount.OPERATING_PROFIT, quarter, current, third, basis);
-    Amount netIncome = sourceAmount(EarningsAccount.NET_INCOME, quarter, current, third, basis);
+
+    Amount revenue = calculateAmount(EarningsAccount.REVENUE, quarter, current, third, basis);
+    Amount operatingProfit = calculateAmount(EarningsAccount.OPERATING_PROFIT, quarter, current, third, basis);
+    Amount netIncome = calculateAmount(EarningsAccount.NET_INCOME, quarter, current, third, basis);
+
     List<String> currencies = Stream.of(revenue, operatingProfit, netIncome)
         .filter(Objects::nonNull).map(Amount::currency).distinct().toList();
     String currency = currencies.size() == 1 ? currencies.getFirst() : null;
+
     String revenueValue = value(revenue, currency);
     String operatingProfitValue = value(operatingProfit, currency);
     String netIncomeValue = value(netIncome, currency);
+
     List<Source> sources = new ArrayList<>();
     current.map(StoredFiling::source).ifPresent(sources::add);
     boolean usedThird = quarter.number() == 4
@@ -127,32 +146,34 @@ public class DisclosureEarningsQueryService {
     if (usedThird) {
       third.map(StoredFiling::source).ifPresent(sources::add);
     }
+
     return new Quarter(quarter.fiscalYear(), quarter.number(), quarter.end().toString(), basis, currency,
         revenueValue, operatingProfitValue, netIncomeValue, List.copyOf(sources));
   }
 
-  private Amount sourceAmount(EarningsAccount account, ReportingQuarter quarter,
+  private Amount calculateAmount(EarningsAccount account, ReportingQuarter quarter,
       Optional<StoredFiling> current, Optional<StoredFiling> third, String basis) {
     if (basis == null) {
       return null;
     }
     StoredFiling filing = current.orElseThrow();
-    Map<String, String> row = account.select(filing.rows(basis), CURRENT_AMOUNT);
+    EarningsRow row = account.select(filing.rows(basis), AmountKind.CURRENT);
     if (row == null) {
       return null;
     }
-    var amount = EarningsAccount.amount(row.get(CURRENT_AMOUNT));
-    String currency = row.get("currency");
+    BigDecimal amount = row.currentAmount();
+    String currency = row.currency();
     if (quarter.number() == 4) {
       // If the interim report changed after the annual filing, their comparability is unconfirmed.
       Optional<StoredFiling> comparable = third.filter(value -> value.receiptNo().compareTo(filing.receiptNo()) < 0);
-      Map<String, String> cumulative = comparable
-          .map(value -> account.select(value.rows(basis), CUMULATIVE_AMOUNT)).orElse(null);
-      if (cumulative == null || !currency.equals(cumulative.get("currency"))
+      EarningsRow cumulative = comparable
+          .map(value -> account.select(value.rows(basis), AmountKind.CUMULATIVE))
+          .orElse(null);
+      if (cumulative == null || !currency.equals(cumulative.currency())
           || !EarningsAccount.sameAccount(row, cumulative)) {
         return null;
       }
-      amount = amount.subtract(EarningsAccount.amount(cumulative.get(CUMULATIVE_AMOUNT)));
+      amount = amount.subtract(cumulative.cumulativeAmount());
     }
     return new Amount(amount.stripTrailingZeros().toPlainString(), currency);
   }
@@ -162,8 +183,10 @@ public class DisclosureEarningsQueryService {
   }
 
   private Optional<StoredFiling> preferred(List<StoredFiling> candidates) {
-    Map<String, String> titles = candidates.stream().collect(Collectors.toMap(StoredFiling::receiptNo, StoredFiling::title));
-    return candidates.stream().filter(filing -> ReportingQuarter.canUse(filing.receiptNo(), titles))
+    Map<String, String> titles = candidates.stream()
+        .collect(Collectors.toMap(StoredFiling::receiptNo, StoredFiling::title));
+    return candidates.stream()
+        .filter(filing -> ReportingQuarter.canUse(filing.receiptNo(), titles))
         .max(Comparator.comparing((StoredFiling filing) -> filing.basis() != null)
             .thenComparing(StoredFiling::receiptNo));
   }
@@ -172,8 +195,8 @@ public class DisclosureEarningsQueryService {
   }
 
   record StoredFiling(String receiptNo, String title, LocalDate receivedDate,
-      Map<String, List<Map<String, String>>> rowsByBasis) {
-    List<Map<String, String>> rows(String basis) {
+      Map<String, List<EarningsRow>> rowsByBasis) {
+    List<EarningsRow> rows(String basis) {
       return rowsByBasis.getOrDefault(basis, List.of());
     }
 

@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
+import org.sejongisc.backend.disclosure.service.EarningsRow.AmountKind;
 
 enum EarningsAccount {
   REVENUE(Set.of("ifrs-full_revenue", "ifrs_revenue", "dart_revenue"),
@@ -20,8 +20,6 @@ enum EarningsAccount {
   static final String CURRENT = "CURRENT_PERIOD";
   static final String ANNUAL = "ANNUAL";
   static final String YEAR_TO_DATE = "YEAR_TO_DATE";
-  static final String CURRENT_AMOUNT = "thstrm_amount";
-  static final String CUMULATIVE_AMOUNT = "thstrm_add_amount";
 
   private final Set<String> standardIds;
   private final Set<String> names;
@@ -31,29 +29,29 @@ enum EarningsAccount {
     this.names = names;
   }
 
-  static boolean hasAmounts(List<Map<String, String>> rows, boolean needsCumulative) {
+  static boolean hasAmounts(List<EarningsRow> rows, boolean needsCumulative) {
     for (EarningsAccount account : values()) {
-      if (account.select(rows, CURRENT_AMOUNT) == null
-          || (needsCumulative && account.select(rows, CUMULATIVE_AMOUNT) == null)) {
+      if (account.select(rows, AmountKind.CURRENT) == null
+          || (needsCumulative && account.select(rows, AmountKind.CUMULATIVE) == null)) {
         return false;
       }
     }
     return true;
   }
 
-  Map<String, String> select(List<Map<String, String>> rows, String amountField) {
+  EarningsRow select(List<EarningsRow> rows, AmountKind kind) {
     int bestRank = 0;
-    Map<String, String> best = null;
+    EarningsRow best = null;
     BigDecimal bestAmount = null;
     boolean ambiguous = false;
-    for (Map<String, String> row : rows) {
+
+    for (EarningsRow row : rows) {
       int rank = rank(row);
       if (rank == 0 || rank < bestRank) {
         continue;
       }
-      BigDecimal amount = amount(row.get(amountField));
-      String currency = row.get("currency");
-      if (amount == null || currency == null || !currency.matches("[A-Z]{3}")) {
+      BigDecimal amount = row.amount(kind);
+      if (amount == null || !row.hasValidCurrency()) {
         continue;
       }
       if (rank > bestRank) {
@@ -61,19 +59,19 @@ enum EarningsAccount {
         bestAmount = amount;
         bestRank = rank;
         ambiguous = false;
-      } else if (bestAmount.compareTo(amount) != 0 || !best.get("currency").equals(currency)) {
+      } else if (bestAmount.compareTo(amount) != 0 || !best.currency().equals(row.currency())) {
         ambiguous = true;
       }
     }
     return ambiguous ? null : best;
   }
 
-  int rank(Map<String, String> row) {
-    String statement = row.get("sj_div");
+  int rank(EarningsRow row) {
+    String statement = row.statementDivision();
     if (!"IS".equals(statement) && !"CIS".equals(statement)) {
       return 0;
     }
-    String id = text(row.get("account_id")).toLowerCase(Locale.ROOT);
+    String id = text(row.accountId()).toLowerCase(Locale.ROOT);
     if (standardIds.contains(id)) {
       return 2;
     }
@@ -81,28 +79,17 @@ enum EarningsAccount {
     if (id.startsWith("ifrs") || id.startsWith("dart_")) {
       return 0;
     }
-    return names.contains(text(row.get("account_nm")).replaceAll("\\s+", "")) ? 1 : 0;
+    return names.contains(text(row.accountName()).replaceAll("\\s+", "")) ? 1 : 0;
   }
 
-  static boolean sameAccount(Map<String, String> first, Map<String, String> second) {
-    String firstId = text(first.get("account_id"));
-    String secondId = text(second.get("account_id"));
+  static boolean sameAccount(EarningsRow first, EarningsRow second) {
+    String firstId = text(first.accountId());
+    String secondId = text(second.accountId());
     if (!firstId.equals(secondId)) {
       return false;
     }
     return (!firstId.isBlank() && !firstId.startsWith("-"))
-        || text(first.get("account_nm")).equals(text(second.get("account_nm")));
-  }
-
-  static BigDecimal amount(String value) {
-    if (value == null || value.isBlank() || "-".equals(value.trim())) {
-      return null;
-    }
-    try {
-      return new BigDecimal(value.replace(",", "").trim());
-    } catch (NumberFormatException ignored) {
-      return null;
-    }
+        || text(first.accountName()).equals(text(second.accountName()));
   }
 
   private static String text(String value) {

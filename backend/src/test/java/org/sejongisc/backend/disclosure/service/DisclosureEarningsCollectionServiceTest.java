@@ -51,7 +51,7 @@ class DisclosureEarningsCollectionServiceTest {
   private final ObjectMapper mapper = new ObjectMapper();
   private final DisclosureEarningsQueryService query = new DisclosureEarningsQueryService(companies, filings, metrics, mapper);
   private final DisclosureEarningsCollectionService collection = new DisclosureEarningsCollectionService(client,
-      new DisclosureCollectionService(client, companies, filings, metrics, mapper), query);
+      new DisclosureCollectionService(companies, filings, metrics, mapper), query);
 
   @BeforeEach
   void setUpRepositories() {
