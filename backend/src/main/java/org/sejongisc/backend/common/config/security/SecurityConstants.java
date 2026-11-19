@@ -30,6 +30,8 @@ public class SecurityConstants {
         "/api/user/**",
         "/api/user-bets/**",
         "/api/disclosures/companies/*/financials",
+        "/api/disclosures/cards",
+        "/api/disclosures/cards/**",
         //"/api/board/**",
         //"/api/backtest/**",
         //"/api/quant-bot/**",

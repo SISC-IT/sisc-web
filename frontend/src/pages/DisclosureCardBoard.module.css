@@ -1,0 +1,482 @@
+.boardContainer {
+  width: 100%;
+  max-width: 1030px;
+  background: #ffffff;
+  padding: 20px;
+  margin-top: 20px;
+  margin-left: 0;
+  box-sizing: border-box;
+}
+
+.boardContainer::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: calc(var(--vh, 1vh) * 100);
+  background-color: #ffffff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.boardHeader {
+  margin-bottom: 24px;
+}
+
+.boardTitle {
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.3;
+  color: #171717;
+  margin: 0;
+}
+
+.boardSubtitle {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #828282;
+}
+
+.boardControls {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 20px;
+  gap: 18px;
+}
+
+.searchContainer {
+  width: 100%;
+  height: 56px;
+  border-radius: 50px;
+  padding: 12px 14px 12px 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.searchContainer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  padding: 0.9px;
+  background: linear-gradient(93.24deg, #7f7f7f 29.23%, #2b518e 91.43%);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  color: #171717;
+}
+
+.searchInput::placeholder {
+  color: #aaaaaa;
+}
+
+.searchButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #000000;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchButton img {
+  width: 18px;
+  height: 14px;
+}
+
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.resultCount {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 14px;
+  background: #d4d4d4;
+}
+
+.ruleChipGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ruleChip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f0f7ff;
+  border: 1px solid #cce3fc;
+  color: #1d80f4;
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sortSelect {
+  height: 35px;
+  padding: 0 10px;
+  border: 0.6px solid #000000;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #171717;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: #f9f9f9;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: #d0d7e2;
+  box-shadow: 0 4px 14px rgba(2, 4, 13, 0.05);
+}
+
+.cardMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.badgeGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.categoryBadge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.badgePrelim {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.badgeConfirmed {
+  background: #eef9ff;
+  color: #1d80f4;
+}
+
+.badgeShareholder {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.badgeCapex {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.marketBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: #ececec;
+  color: #555b68;
+}
+
+.cardDate {
+  font-size: 12px;
+  color: #828282;
+  font-variant-numeric: tabular-nums;
+}
+
+.companyLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #828282;
+  margin-bottom: 4px;
+}
+
+.stockCode {
+  font-variant-numeric: tabular-nums;
+  color: #9e9e9e;
+}
+
+.cardHeadline {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #171717;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.metricStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: #ffffff;
+  border: 1px solid #ececec;
+  border-radius: 8px;
+  padding: 12px 8px;
+  margin-bottom: 14px;
+}
+
+.metricCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 6px;
+  border-right: 1px solid #f0f0f0;
+}
+
+.metricCell:last-child {
+  border-right: none;
+}
+
+.metricLabel {
+  font-size: 11px;
+  color: #828282;
+  margin-bottom: 4px;
+}
+
+.metricValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: #171717;
+  font-variant-numeric: tabular-nums;
+  word-break: keep-all;
+}
+
+.metricHighlight {
+  color: #1d80f4;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #eeeeee;
+  font-size: 12px;
+}
+
+.dartLink {
+  color: #1d80f4;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.dartLink:hover {
+  text-decoration: underline;
+}
+
+.tagRow {
+  display: flex;
+  gap: 8px;
+  color: #828282;
+}
+
+.tagItem {
+  font-size: 12px;
+}
+
+.stateBox {
+  background: #f9f9f9;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  padding: 56px 20px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.pagination {
+  margin-top: 32px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pageNavButton {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  color: #616161;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pageNavButton:disabled {
+  color: #cccccc;
+  cursor: not-allowed;
+}
+
+.pageNumButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #525252;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pageNumActive {
+  background: #1d80f4;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 4, 13, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+}
+
+.modalContent {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 560px;
+  width: 100%;
+  padding: 28px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.modalClose {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #828282;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modalTitle {
+  margin: 6px 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #171717;
+}
+
+.modalReportTitle {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: #616161;
+}
+
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #eeeeee;
+}
+
+.receiptLabel {
+  font-size: 12px;
+  color: #828282;
+  font-variant-numeric: tabular-nums;
+}
+
+.modalDartButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: #1d80f4;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbarDivider {
+    display: none;
+  }
+}

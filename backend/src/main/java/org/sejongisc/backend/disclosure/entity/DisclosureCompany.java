@@ -33,6 +33,9 @@ public class DisclosureCompany extends BasePostgresEntity {
   @Column(name = "dart_corp_cls", length = 1)
   private String corporationClass;
 
+  @Column(name = "induty_code", length = 20)
+  private String indutyCode;
+
   @Column(name = "closing_month", nullable = false)
   private Integer closingMonth;
 
@@ -53,5 +56,11 @@ public class DisclosureCompany extends BasePostgresEntity {
     }
     this.corporationClass = corporationClass;
     this.closingMonth = closingMonth;
+  }
+
+  public void updateIndutyCode(String indutyCode) {
+    if (indutyCode != null && !indutyCode.isBlank()) {
+      this.indutyCode = indutyCode.trim();
+    }
   }
 }
