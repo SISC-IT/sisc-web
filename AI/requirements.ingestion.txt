@@ -1,0 +1,10 @@
+# Isolated ingestion runtime: avoid importing model training dependencies.
+psycopg2-binary>=2.9,<3
+python-dotenv>=1,<2
+SQLAlchemy>=2,<3
+pandas>=2.2,<3
+numpy>=1.26,<2
+yfinance>=0.2.54,<1
+exchange-calendars==4.11.2
+requests>=2.31,<3
+pyarrow>=18,<24

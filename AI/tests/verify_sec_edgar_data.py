@@ -39,6 +39,7 @@ from AI.modules.data_collector.components.sec_edgar_repository import (
 )
 from AI.modules.data_collector.scripts.collect_sec_edgar import (
     _load_universe_tickers,
+    main as collect_cli_main,
     parse_args as parse_collect_args,
 )
 from AI.modules.data_collector.scripts.query_sec_filings import main as query_cli_main
@@ -69,6 +70,31 @@ class SecCollectorCliTest(unittest.TestCase):
             parse_collect_args(
                 ["--tickers", "AAPL", "--start", "2026-08-01", "--lookback-days", "7"]
             )
+
+    @patch(
+        "AI.modules.data_collector.scripts.collect_sec_edgar.SecEdgarDataCollector"
+    )
+    def test_일부_공시_실패시_비정상_종료한다(self, collector_class):
+        collector_class.return_value.__enter__.return_value.collect.return_value = {
+            "companies": 1,
+            "filings": 1,
+            "documents": 1,
+            "transactions": 0,
+            "failed": 1,
+        }
+
+        with self.assertRaises(SystemExit) as raised:
+            collect_cli_main(
+                [
+                    "--tickers",
+                    "AAPL",
+                    "--user-agent",
+                    "SISC Test test@example.com",
+                    "--recent-only",
+                ]
+            )
+
+        self.assertEqual(1, raised.exception.code)
 
 
 class FakeSecClient:
@@ -141,6 +167,39 @@ class SecEdgarParserTest(unittest.TestCase):
         self.assertTrue(documents[0].is_primary)
         self.assertTrue(documents[1].is_exhibit)
         self.assertEqual("EX-99.1", documents[1].document_type)
+
+    def test_form4는_xsl_html이_아닌_원본_xml을_primary로_선택한다(self):
+        html = """
+        <table class="tableFile" summary="Document Format Files">
+          <tr>
+            <td>1</td><td>FORM 4</td>
+            <td><a href="/Archives/edgar/data/707549/0001/xslF345X06/ownership.xml">ownership.xml</a></td>
+            <td>4</td>
+          </tr>
+          <tr>
+            <td>1</td><td>FORM 4</td>
+            <td><a href="/Archives/edgar/data/707549/0001/ownership.xml">ownership.xml</a></td>
+            <td>4</td>
+          </tr>
+        </table>
+        """
+
+        documents = parse_filing_index(
+            html,
+            index_url=(
+                "https://www.sec.gov/Archives/edgar/data/1343600/0001/"
+                "0001343600-26-000011-index.html"
+            ),
+            primary_document="xslF345X06/ownership.xml",
+        )
+
+        primary = [document for document in documents if document.is_primary]
+        self.assertEqual(1, len(primary))
+        self.assertEqual("ownership.xml", primary[0].document_name)
+        self.assertEqual(
+            "https://www.sec.gov/Archives/edgar/data/707549/0001/ownership.xml",
+            primary[0].source_url,
+        )
 
     def test_html을_스크립트가_제거된_평문으로_바꾼다(self):
         content = (FIXTURE_DIR / "eight_k.html").read_bytes()

@@ -1,0 +1,63 @@
+# Opt-in overlay: apply migration and register partitions BEFORE enabling scheduler.
+# docker compose -f docker-compose.yml -f docker-compose.ingestion.yml up -d ingestion
+services:
+  ingestion: &ingestion-runtime
+    build:
+      context: .
+      dockerfile: AI/Dockerfile.ingestion
+      args:
+        CODE_SHA: ${CODE_SHA:-unknown}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: sisc_db
+      RAW_ARCHIVE_PATH: /data/bronze
+    volumes:
+      - ingestion-bronze:/data/bronze
+    networks:
+      - sisc-net
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "python", "-m", "AI.orchestration.cli", "health"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+    stop_grace_period: 90s
+  ingestion-sec:
+    <<: *ingestion-runtime
+    profiles: [sec]
+    command: ["python", "-m", "AI.orchestration.cli", "sec-schedule"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "AI.orchestration.cli", "health", "--scheduler-id", "sec-companyfacts-v2"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+  ingestion-fred:
+    <<: *ingestion-runtime
+    profiles: [fred]
+    command: ["python", "-m", "AI.orchestration.cli", "fred-schedule"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "AI.orchestration.cli", "health", "--scheduler-id", "fred-vintage-v3"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+  ingestion-quality:
+    <<: *ingestion-runtime
+    profiles: [quality]
+    command: ["python", "-m", "AI.orchestration.cli", "dq-schedule"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "AI.orchestration.cli", "health", "--scheduler-id", "quality-v4"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+volumes:
+  ingestion-bronze:

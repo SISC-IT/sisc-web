@@ -3,9 +3,9 @@ import argparse
 import os
 import sys
 import pickle
+import json
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 
@@ -81,7 +81,7 @@ def _resolve_transformer_artifacts(
     return artifacts.model_dir, artifacts.model_path, artifacts.scaler_path
 
 
-def train_single_pipeline(save_dir: str | None = None, artifact_mode: str = "tests"):
+def train_single_pipeline(save_dir: str | None = None, artifact_mode: str = "tests", validation_start=None):
     print("==================================================")
     print(" [Training] Multi-Horizon Model (1, 3, 5, 7 Days)")
     print("==================================================")
@@ -108,6 +108,7 @@ def train_single_pipeline(save_dir: str | None = None, artifact_mode: str = "tes
     X_ts, X_ticker, X_sector, y_class, _, info = loader.create_dataset(
         raw_df,
         feature_columns=TRANSFORMER_TRAIN_FEATURES,
+        validation_start=validation_start,
     )
     
     # [디버그] 정답 분포 확인
@@ -128,13 +129,11 @@ def train_single_pipeline(save_dir: str | None = None, artifact_mode: str = "tes
     # --------------------------------------------------------------------------
     # 4. 데이터 분할 (Train / Validation)
     # --------------------------------------------------------------------------
-    X_ts_train, X_ts_val, \
-    X_tick_train, X_tick_val, \
-    X_sec_train, X_sec_val, \
-    y_train, y_val = train_test_split(
-        X_ts, X_ticker, X_sector, y_class,
-        test_size=0.2, shuffle=True, random_state=42
-    )
+    train_mask, val_mask = info['train_mask'], info['val_mask']
+    X_ts_train, X_ts_val = X_ts[train_mask], X_ts[val_mask]
+    X_tick_train, X_tick_val = X_ticker[train_mask], X_ticker[val_mask]
+    X_sec_train, X_sec_val = X_sector[train_mask], X_sector[val_mask]
+    y_train, y_val = y_class[train_mask], y_class[val_mask]
     
     # --------------------------------------------------------------------------
     # 5. 모델 빌드
@@ -164,6 +163,8 @@ def train_single_pipeline(save_dir: str | None = None, artifact_mode: str = "tes
         artifact_mode=artifact_mode,
     )
     os.makedirs(save_dir, exist_ok=True)
+    with open(model_save_path + '.split.json', 'w', encoding='utf-8') as f:
+        json.dump(info['split_summary'], f, indent=2)
 
     # (1) 최고 성능 모델 저장 (전성기 캡처)
     chk_point = ModelCheckpoint(
@@ -217,6 +218,7 @@ def train_single_pipeline(save_dir: str | None = None, artifact_mode: str = "tes
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train transformer signal model.")
     parser.add_argument("--save-dir", default=None, help="Optional artifact output directory override.")
+    parser.add_argument("--validation-start", default=None, help="First validation date; default: last 20 percent of unique dates.")
     parser.add_argument(
         "--artifact-mode",
         default="tests",
@@ -225,4 +227,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    train_single_pipeline(save_dir=args.save_dir, artifact_mode=args.artifact_mode)
+    train_single_pipeline(save_dir=args.save_dir, artifact_mode=args.artifact_mode, validation_start=args.validation_start)

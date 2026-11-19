@@ -1,0 +1,8 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY AI/requirements.ingestion.txt /app/AI/requirements.ingestion.txt
+RUN pip install --no-cache-dir -r AI/requirements.ingestion.txt
+COPY AI /app/AI
+ARG CODE_SHA=unknown
+ENV CODE_SHA=${CODE_SHA} PYTHONPATH=/app PYTHONUNBUFFERED=1 RAW_ARCHIVE_PATH=/data/bronze
+CMD ["python", "-m", "AI.orchestration.cli", "schedule"]

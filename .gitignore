@@ -6,6 +6,7 @@
 .DS_Store
 # 환경 변수 & 민감 정보
 .env
+.env.ai
 *.secret
 *.key
 *.pem
@@ -28,6 +29,10 @@ __pycache__/
 /env
 /.vs
 /.venv/
+/.venv-ingestion/
+AI/data/bronze/
+.pytest_cache/
+.ruff_cache/
 /venv310/
 SISC_개인메모.md
 wandb
@@ -52,6 +57,7 @@ AI/local_notes/
 
 SISC_*.md
 test_*.py
+!AI/tests/ingestion/test_*.py
 AI/data/kaggle_data/
 *.parquet
 *.pt

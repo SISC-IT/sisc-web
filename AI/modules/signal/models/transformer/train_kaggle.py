@@ -13,12 +13,12 @@ Transformer 학습 스크립트 - Kaggle 크론잡 버전
 """
 import os
 import sys
+import json
 import pickle
 import warnings
 import logging
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
 # 불필요한 로그 억제
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -58,6 +58,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from AI.modules.signal.models.transformer.architecture import build_transformer_model
+from AI.modules.signal.core.time_split import chronological_split, resolve_validation_start
 from sklearn.preprocessing import StandardScaler
 from AI.modules.features.legacy.technical_features import (
     add_technical_indicators,
@@ -78,6 +79,7 @@ CONFIG = {
     'seq_len'     : 60,
     'batch_size'  : 32,
     'epochs'      : 50,
+    'validation_start': os.environ.get('VALIDATION_START') or None,
 
     # 저장 경로 (환경변수로 주입 가능)
     'weights_dir' : os.environ.get('WEIGHTS_DIR', '/kaggle/working'),
@@ -149,20 +151,18 @@ def load_and_preprocess():
     return full_df
 
 
-def build_sequences_transformer(full_df, scaler, ticker_to_id, sector_to_id, fit_scaler=True):
-    """Transformer용 시퀀스 생성 (DB 없이 직접 구현)"""
+def build_sequences_transformer(full_df, scaler, ticker_to_id, sector_to_id):
+    """학습 구간에 fit한 scaler로 전체 시퀀스와 실제 라벨 종료일을 생성한다."""
     seq_len    = CONFIG['seq_len']
     horizons   = [1, 3, 5, 7]
     max_h      = max(horizons)
     available  = [c for c in TRANSFORMER_TRAIN_FEATURES if c in full_df.columns]
 
     full_df = full_df.dropna(subset=available).copy()
-    if fit_scaler:
-        full_df[available] = scaler.fit_transform(full_df[available])
-    else:
-        full_df[available] = scaler.transform(full_df[available])
+    full_df[available] = scaler.transform(full_df[available])
 
     X_ts, X_tick, X_sec, y_list = [], [], [], []
+    sample_rows = []
 
     for ticker, group in full_df.groupby('ticker'):
         group   = group.sort_values('date').reset_index(drop=True)
@@ -175,6 +175,7 @@ def build_sequences_transformer(full_df, scaler, ticker_to_id, sector_to_id, fit
 
         feat_vals = group[available].values
         closes    = group['close'].values
+        dates     = pd.to_datetime(group['date']).to_numpy()
 
         for i in range(len(group) - seq_len - max_h + 1):
             window = feat_vals[i:i + seq_len]
@@ -184,12 +185,18 @@ def build_sequences_transformer(full_df, scaler, ticker_to_id, sector_to_id, fit
             X_tick.append(tick_id)
             X_sec.append(sec_id)
             y_list.append(labels)
+            sample_rows.append({
+                'ticker': ticker,
+                'asof_date': dates[i + seq_len - 1],
+                'label_end_max': dates[i + seq_len + max_h - 1],
+            })
 
     return (np.array(X_ts, dtype=np.float32),
             np.array(X_tick, dtype=np.int32),
             np.array(X_sec,  dtype=np.int32),
             np.array(y_list, dtype=np.float32),
-            len(ticker_to_id), len(sector_to_id))
+            len(ticker_to_id), len(sector_to_id),
+            pd.DataFrame(sample_rows, columns=['ticker', 'asof_date', 'label_end_max']))
 
 
 def train_single_pipeline():
@@ -211,40 +218,56 @@ def train_single_pipeline():
     horizons  = [1, 3, 5, 7]
     n_outputs = len(horizons)
 
-    # 2. Train/Val 분리 (ticker 기준)
-    tickers       = full_df['ticker'].unique()
-    if len(tickers) < 2:
-        raise ValueError(f"학습을 위한 ticker가 부족합니다. 현재 {len(tickers)}개")
-    n_val         = min(max(1, int(len(tickers) * 0.2)), len(tickers) - 1)
-    val_tickers   = tickers[-n_val:]
-    train_tickers = tickers[:-n_val]
-
-    train_df = full_df[full_df['ticker'].isin(train_tickers)].copy()
-    val_df   = full_df[full_df['ticker'].isin(val_tickers)].copy()
-    print(f">> Train: {len(train_tickers)}개, Val: {len(val_tickers)}개 종목")
-
-    # 3. 시퀀스 생성
+    # 2. 모든 종목에 공통 날짜 경계 적용; scaler는 경계 이전 행에만 fit.
+    available = [c for c in TRANSFORMER_TRAIN_FEATURES if c in full_df.columns]
+    full_df = full_df.dropna(subset=available).copy()
+    validation_start = resolve_validation_start(
+        full_df['date'], validation_start=CONFIG['validation_start']
+    )
+    scaler_frame = full_df[full_df['date'] < validation_start]
+    if scaler_frame.empty:
+        raise ValueError("scaler fit에 사용할 train feature row가 없습니다.")
     scaler = StandardScaler()
+    scaler.fit(scaler_frame[available])
+
+    # 3. 전체 이력으로 윈도우를 만든 뒤 분할하여 검증의 과거 입력 문맥을 유지.
     all_tickers = sorted(full_df['ticker'].unique())
     all_sectors = sorted(full_df['sector'].unique() if 'sector' in full_df.columns else ['Unknown'])
     ticker_to_id = {ticker: idx for idx, ticker in enumerate(all_tickers)}
     sector_to_id = {sector: idx for idx, sector in enumerate(all_sectors)}
-    X_ts_train, X_tick_train, X_sec_train, y_train, n_tickers, n_sectors = build_sequences_transformer(
-        train_df,
-        scaler,
-        ticker_to_id,
-        sector_to_id,
-        fit_scaler=True,
+    X_ts, X_tick, X_sec, y, n_tickers, n_sectors, rows = build_sequences_transformer(
+        full_df, scaler, ticker_to_id, sector_to_id,
     )
-    X_ts_val, X_tick_val, X_sec_val, y_val, _, _ = build_sequences_transformer(
-        val_df,
-        scaler,
-        ticker_to_id,
-        sector_to_id,
-        fit_scaler=False,
+    train_mask, val_mask = chronological_split(
+        rows['asof_date'], rows['label_end_max'], validation_start
     )
-    if len(X_ts_train) == 0 or len(X_ts_val) == 0:
-        raise ValueError("시퀀스 생성 결과가 비어 있습니다. 분할과 입력 데이터를 확인하세요.")
+    X_ts_train, X_tick_train, X_sec_train, y_train = (
+        values[train_mask] for values in (X_ts, X_tick, X_sec, y)
+    )
+    X_ts_val, X_tick_val, X_sec_val, y_val = (
+        values[val_mask] for values in (X_ts, X_tick, X_sec, y)
+    )
+    train_rows, val_rows = rows.loc[train_mask], rows.loc[val_mask]
+    split_summary = {
+        'method': 'purged_time_split',
+        'validation_start': str(validation_start.date()),
+        'n_candidates': len(rows),
+        'n_train': int(train_mask.sum()),
+        'n_validation': int(val_mask.sum()),
+        'n_purged': int((~(train_mask | val_mask)).sum()),
+        'train_asof_min': str(train_rows['asof_date'].min().date()),
+        'train_asof_max': str(train_rows['asof_date'].max().date()),
+        'train_label_end_max': str(train_rows['label_end_max'].max().date()),
+        'validation_asof_min': str(val_rows['asof_date'].min().date()),
+        'validation_asof_max': str(val_rows['asof_date'].max().date()),
+        'validation_label_end_max': str(val_rows['label_end_max'].max().date()),
+        'scaler_fit_rows': len(scaler_frame),
+        'scaler_fit_date_min': str(scaler_frame['date'].min().date()),
+        'scaler_fit_date_max': str(scaler_frame['date'].max().date()),
+        'seq_len': CONFIG['seq_len'],
+        'horizons': horizons,
+    }
+    print(f">> 날짜 분할: {json.dumps(split_summary, ensure_ascii=False)}")
 
     print(f"\n>> 시퀀스 생성 완료: {X_ts_train.shape}")
     print(f">> horizon: {horizons}")
@@ -268,6 +291,7 @@ def train_single_pipeline():
     os.makedirs(save_dir, exist_ok=True)
     model_path  = os.path.join(save_dir, CONFIG['model_name'])
     scaler_path = os.path.join(save_dir, CONFIG['scaler_name'])
+    split_path = os.path.splitext(model_path)[0] + '.split.json'
 
     # 6. 콜백
     callbacks = [
@@ -307,10 +331,13 @@ def train_single_pipeline():
     # 8. 스케일러 저장
     with open(scaler_path, "wb") as f:
         pickle.dump(scaler, f)
+    with open(split_path, "w", encoding="utf-8") as f:
+        json.dump(split_summary, f, ensure_ascii=False, indent=2)
 
     print(f"\n>> 완료")
     print(f"   모델    : {model_path}")
     print(f"   스케일러: {scaler_path}")
+    print(f"   분할 기록: {split_path}")
 
 
 if __name__ == "__main__":

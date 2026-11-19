@@ -185,6 +185,7 @@ def parse_filing_index(
     soup = BeautifulSoup(html, "html.parser")
     documents: list[SecDocument] = []
     tables = soup.select("table.tableFile, table[summary*='Document Format Files']")
+    primary_name = primary_document.replace("\\", "/").rsplit("/", 1)[-1]
 
     for table in tables:
         for row in table.select("tr"):
@@ -205,7 +206,13 @@ def parse_filing_index(
             document_name = link.get_text(" ", strip=True) or link["href"].rsplit("/", 1)[-1]
             document_type = cells[3].get_text(" ", strip=True)
             source_url = _raw_document_url(index_url, link["href"])
-            is_primary = document_name.lower() == primary_document.lower()
+            # Form 4의 primaryDocument는 xslF345X*/ownership.xml처럼 XSL 변환
+            # 경로를 포함하지만, 인덱스에는 변환본과 원본 XML이 함께 노출됩니다.
+            # 경로 전체가 아닌 파일명을 비교하되 XSL 경로는 원본으로 선택하지 않습니다.
+            is_primary = (
+                document_name.lower() == primary_name.lower()
+                and not _is_xsl_transformed_url(source_url)
+            )
             is_exhibit = document_type.upper().startswith("EX-")
 
             documents.append(
@@ -226,10 +233,10 @@ def parse_filing_index(
             0,
             SecDocument(
                 sequence=1,
-                document_name=primary_document,
+                document_name=primary_name,
                 document_type="PRIMARY",
                 description="Primary document",
-                source_url=urljoin(base_url, primary_document),
+                source_url=urljoin(base_url, primary_name),
                 is_primary=True,
             ),
         )
@@ -335,14 +342,25 @@ def _raw_document_url(index_url: str, href: str) -> str:
 
 def _deduplicate_documents(documents: list[SecDocument]) -> list[SecDocument]:
     result: list[SecDocument] = []
-    seen: set[str] = set()
+    positions: dict[str, int] = {}
     for document in documents:
         key = document.document_name.lower()
-        if key in seen:
+        position = positions.get(key)
+        if position is not None:
+            if document.is_primary and not result[position].is_primary:
+                result[position] = document
             continue
-        seen.add(key)
+        positions[key] = len(result)
         result.append(document)
     return result
+
+
+def _is_xsl_transformed_url(url: str) -> bool:
+    return any(
+        segment.lower().startswith("xsl")
+        for segment in urlparse(url).path.split("/")
+        if segment
+    )
 
 
 def _nullable_text(value: Any) -> str | None:

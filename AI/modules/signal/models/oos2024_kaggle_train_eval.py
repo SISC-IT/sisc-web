@@ -24,6 +24,7 @@ from AI.modules.features.legacy.technical_features import (
     add_multi_timeframe_features,
     add_technical_indicators,
 )
+from AI.modules.signal.core.time_split import chronological_split
 from AI.modules.signal.evaluation.backtest import (
     backtest_top_k_signals,
     universe_equal_benchmark,
@@ -628,27 +629,29 @@ def _build_supervised_sequences(
 def _split_train_val(dataset: Mapping[str, Any], config: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     dates = validate_oos2024_config(config)
     rows = dataset["rows"].copy()
-    train_mask = rows["asof_date"] < dates["validation_start"]
-    val_mask = rows["asof_date"] >= dates["validation_start"]
-    split_method = f"time_split:{_date_text(dates['validation_start'])}"
+    train_mask, val_mask = chronological_split(
+        rows["asof_date"], rows["label_end_max"], dates["validation_start"]
+    )
+    split_method = f"purged_time_split:{_date_text(dates['validation_start'])}"
+    train_rows, val_rows = rows.loc[train_mask], rows.loc[val_mask]
+    split_summary = {
+        "method": split_method,
+        "validation_start": _date_text(dates["validation_start"]),
+        "n_candidates": len(rows),
+        "n_train": int(train_mask.sum()),
+        "n_validation": int(val_mask.sum()),
+        "n_purged": int((~(train_mask | val_mask)).sum()),
+        "train_asof_min": _date_text(train_rows["asof_date"].min()),
+        "train_asof_max": _date_text(train_rows["asof_date"].max()),
+        "train_label_end_max": _date_text(train_rows["label_end_max"].max()),
+        "validation_asof_min": _date_text(val_rows["asof_date"].min()),
+        "validation_asof_max": _date_text(val_rows["asof_date"].max()),
+        "validation_label_end_max": _date_text(val_rows["label_end_max"].max()),
+    }
+    print(f"[split] {json.dumps(split_summary, ensure_ascii=False)}")
 
-    if not bool(val_mask.any()):
-        ordered_rows = rows.sort_values(["asof_date", "ticker"]).reset_index()
-        n_val = min(max(1, int(len(ordered_rows) * 0.2)), len(ordered_rows) - 1)
-        if n_val <= 0:
-            raise ValueError("validation sequence를 만들 수 있을 만큼 train sequence가 충분하지 않습니다.")
-        val_indices = set(ordered_rows.tail(n_val)["index"].astype(int).tolist())
-        val_mask = rows.index.to_series().isin(val_indices)
-        train_mask = ~val_mask
-        split_method = f"tail_time_fallback:last_{n_val}_of_{len(rows)}"
-
-    if not bool(train_mask.any()):
-        raise ValueError("fit train sequence가 비었습니다.")
-    if not bool(val_mask.any()):
-        raise ValueError("validation sequence가 비었습니다.")
-
-    def subset(mask: pd.Series) -> dict[str, Any]:
-        index = np.flatnonzero(mask.to_numpy(dtype=bool))
+    def subset(mask: np.ndarray) -> dict[str, Any]:
+        index = np.flatnonzero(mask)
         return {
             "x": dataset["x"][index],
             "ticker": dataset["ticker"][index],
@@ -656,6 +659,7 @@ def _split_train_val(dataset: Mapping[str, Any], config: Mapping[str, Any]) -> t
             "y": dataset["y"][index],
             "rows": rows.iloc[index].reset_index(drop=True),
             "split_method": split_method,
+            "split_summary": split_summary,
         }
 
     return subset(train_mask), subset(val_mask)
@@ -739,9 +743,10 @@ def _common_metadata(
         "train_window": _window_text(config["train_start"], config["train_cutoff"]),
         "validation_window": f"{config['validation_start']}..{config['train_cutoff']}",
         "validation_split_method": str(val_dataset.get("split_method", "unknown")),
+        "split_summary": dict(fit_dataset["split_summary"]),
         "requested_eval_window": _window_text(requested_eval_start, requested_eval_end),
         "eval_window": _window_text(actual_eval_start, actual_eval_end),
-        "label_policy": "training sample included only when every horizon label_end_date <= train_cutoff",
+        "label_policy": "train-pool labels end <= train_cutoff; fit labels end < validation_start",
         "holdout_policy": "2025-01-01 이후 데이터는 학습/평가에서 제외",
     }
 

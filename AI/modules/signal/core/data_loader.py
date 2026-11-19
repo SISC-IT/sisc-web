@@ -30,6 +30,7 @@ from AI.libs.database.fetcher import (
     fetch_fundamentals
 )
 from AI.modules.features.legacy.technical_features import add_multi_timeframe_features, add_technical_indicators
+from AI.modules.signal.core.time_split import resolve_validation_start, chronological_split
 
 class DataLoader:
     def __init__(self, db_name="db", lookback=60, horizons: List[int] = None):
@@ -141,7 +142,8 @@ class DataLoader:
         print(f"[DataLoader] 주가 데이터 로드 완료: {len(df_price)} rows")
         return df_price
 
-    def create_dataset(self, df: pd.DataFrame, feature_columns: Optional[List[str]] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict]:
+    def create_dataset(self, df: pd.DataFrame, feature_columns: Optional[List[str]] = None,
+                       validation_start=None, validation_fraction=0.2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict]:
         """
         로드된 주가 데이터(df)를 순회하며:
         1. 공통 데이터(Macro, Breadth) 병합
@@ -151,6 +153,7 @@ class DataLoader:
         """
         X_ts_list, X_ticker_list, X_sector_list = [], [], []
         y_class_list, y_reg_list = [], []
+        sample_rows = []
         
         # 동적으로 설정된 호라이즌 사용
         max_horizon = max(self.horizons)
@@ -240,8 +243,10 @@ class DataLoader:
         print(f">> Scaling Features: {len(available_cols)} columns selected")
         print(f"   (Included: {available_cols})")
         
-        # Scaling (전체 데이터 기준 fitting)
-        full_df[available_cols] = self.scaler.fit_transform(full_df[available_cols])
+        boundary = resolve_validation_start(full_df['date'], validation_start, validation_fraction)
+        fit_rows = full_df['date'] < boundary
+        self.scaler.fit(full_df.loc[fit_rows, available_cols])
+        full_df[available_cols] = self.scaler.transform(full_df[available_cols])
 
         # -------------------------------------------------------------------------
         # Step 2: 시퀀스 생성 (Sequencing)
@@ -293,6 +298,11 @@ class DataLoader:
                 X_sector_list.append(s_id)
                 y_class_list.append(multi_labels)
                 y_reg_list.append(label_reg)
+                sample_rows.append({
+                    'ticker': ticker,
+                    'asof_date': sub_df['date'].iloc[i + self.lookback - 1],
+                    'label_end_max': sub_df['date'].iloc[i + self.lookback + max_horizon - 1],
+                })
 
         # 결과 변환
         X_ts = np.array(X_ts_list)
@@ -300,6 +310,19 @@ class DataLoader:
         X_sector = np.array(X_sector_list)
         y_class = np.array(y_class_list) # Shape: (N, len(horizons))
         y_reg = np.array(y_reg_list)
+        rows = pd.DataFrame(sample_rows, columns=['ticker', 'asof_date', 'label_end_max'])
+        train_mask, val_mask = chronological_split(rows['asof_date'], rows['label_end_max'], boundary)
+        split_summary = {
+            'validation_start': str(boundary.date()),
+            'train_samples': int(train_mask.sum()),
+            'validation_samples': int(val_mask.sum()),
+            'purged_samples': int((~(train_mask | val_mask)).sum()),
+            'train_label_end_max': str(rows.loc[train_mask, 'label_end_max'].max().date()),
+            'scaler_fit_min': str(full_df.loc[fit_rows, 'date'].min().date()),
+            'scaler_fit_max': str(full_df.loc[fit_rows, 'date'].max().date()),
+            'scaler_fit_rows': int(fit_rows.sum()),
+        }
+        print(f'[Time Split] {split_summary}')
         
         info = {
             "n_tickers": len(self.ticker_to_id),
@@ -307,7 +330,11 @@ class DataLoader:
             "feature_names": available_cols,
             "n_features": len(available_cols),
             "horizons": self.horizons, # 메타데이터에 사용된 horizons 기록
-            "scaler": self.scaler
+            "scaler": self.scaler,
+            "rows": rows,
+            "train_mask": train_mask,
+            "val_mask": val_mask,
+            "split_summary": split_summary,
         }
         
         print(f"[Dataset Ready] Samples: {len(y_class)}, Features: {len(available_cols)}")

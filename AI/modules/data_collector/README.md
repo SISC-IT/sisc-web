@@ -118,6 +118,21 @@ Bash:
 export SEC_USER_AGENT="SISC Event Alpha Lab contact@example.com"
 ```
 
+서버에서는 자동 배포가 갱신하는 `.env`와 AI 전용 설정을 분리합니다.
+저장소에 커밋하지 않는 `.env.ai`를 한 번 생성하면 이후 웹 배포에서도 유지됩니다.
+
+```bash
+cd ~/app/sisc-web
+install -m 600 /dev/null .env.ai
+printf '%s\n' \
+  'SEC_USER_AGENT=SISC Event Alpha Lab contact@example.com' \
+  > .env.ai
+```
+
+`.env.ai`는 Compose에서 선택적으로 읽으므로 일반 웹 서비스 배포에는 영향을 주지
+않습니다. 다만 `ai-sec`를 실행하기 전에는 연락 가능한 이메일을 반드시 설정해야
+합니다.
+
 ### 실행 예시
 
 AAPL의 8-K 실적 공시와 Form 4를 파일과 DB에 저장:
@@ -151,13 +166,22 @@ python AI/modules/data_collector/scripts/collect_sec_edgar.py \
 ```
 
 서버에서는 원문·캐시·로그를 `/mnt/storage/sec-edgar`에 보존하는
-Compose one-shot 작을 실행합니다.
+Compose one-shot 작업을 실행합니다.
 
 ```bash
 docker compose --profile jobs run --rm ai-sec
 ```
 
-최초 5년 백필은 정기 작과 분리해 한 번만 실행합니다.
+운영 smoke test는 공시, 뉴스, 연결 작업 순서로 실행합니다.
+
+```bash
+docker compose --profile jobs pull ai-sec ai-news ai-event-news
+docker compose --profile jobs run --rm ai-sec
+docker compose --profile jobs run --rm ai-news
+docker compose --profile jobs run --rm ai-event-news
+```
+
+최초 5년 백필은 정기 작업과 분리해 한 번만 실행합니다.
 
 ```bash
 docker compose --profile jobs run --rm ai-sec \
@@ -365,3 +389,9 @@ AI/modules/data_collector/
 - Parquet 저장: 모델 학습/대량 데이터셋 배포에 적합합니다. `pyarrow` 또는 `fastparquet`가 필요합니다.
 
 현재 기본값은 `storage=both`, `file_format=csv`입니다. Kaggle/모델 학습용 단일 `price_data.parquet`는 기존 `AI/scripts/extract_to_parquet.py` 흐름으로 DB에서 추출하는 편이 기존 파이프라인과 가장 잘 맞습니다.
+# V2 운영 기반
+
+실행 이력, 거래일 기반 누락 탐지, 미국/암호화폐 일봉의 멱등 복구 및 scheduler는
+[V2 운영 가이드](../../orchestration/README.md)를 참조하세요.
+기존 crawler는 옵션을 유지하며 `--track-runs`로 migration 이후 실행 이력을 기록합니다.
+기존 재무·거시 데이터가 PIT 데이터로 변환된 것은 아닙니다.
