@@ -54,10 +54,6 @@ public class CompetitionService {
     if (request.endDate().isBefore(request.startDate())) {
       throw new CustomException(ErrorCode.INVALID_COMPETITION_PERIOD);
     }
-    // 평소엔 여기서 막고, 동시 요청은 saveOpenCompetition에서 막는다.
-    if (competitionRepository.existsByStatusIn(List.of(CompetitionStatus.READY, CompetitionStatus.ACTIVE))) {
-      throw new CustomException(ErrorCode.COMPETITION_ALREADY_OPEN);
-    }
 
     // 승인 대기 회원은 status가 ACTIVE여도 서비스를 쓸 수 없어 제외한다.
     List<User> members = userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER);
@@ -105,7 +101,7 @@ public class CompetitionService {
 
   private static final String SINGLE_OPEN_INDEX = "uk_competition_single_open";
 
-  // 동시 요청이 위 확인을 함께 통과하면 uk_competition_single_open 인덱스가 막는다.
+  // 시작 전·진행 중 대회가 이미 있으면 uk_competition_single_open 인덱스가 막는다(동시 요청 포함).
   // 그냥 save면 커밋 시점에 insert되어 여기서 잡을 수 없으므로 바로 flush한다.
   // 그 인덱스 위반만 409로 바꾸고, 다른 DB 오류는 그대로 올린다.
   private Competition saveOpenCompetition(Competition competition) {

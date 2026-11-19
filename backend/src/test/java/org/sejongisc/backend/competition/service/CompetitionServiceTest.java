@@ -105,15 +105,6 @@ class CompetitionServiceTest {
   }
 
   @Test
-  @DisplayName("시작 전이거나 진행 중인 대회가 있으면 만들지 않는다")
-  void rejectWhenOpenCompetitionExists() {
-    given(competitionRepository.existsByStatusIn(List.of(CompetitionStatus.READY, CompetitionStatus.ACTIVE)))
-        .willReturn(true);
-
-    assertError(ErrorCode.COMPETITION_ALREADY_OPEN);
-  }
-
-  @Test
   @DisplayName("팀이 없는 활동 회원이 한 명이라도 있으면 아무것도 만들지 않는다")
   void rejectWhenTeamUnassigned() {
     given(userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER))
@@ -155,7 +146,7 @@ class CompetitionServiceTest {
   }
 
   @Test
-  @DisplayName("동시 요청으로 인덱스에 막히면 열린 대회 에러로 바꾸고 참가자를 만들지 않는다")
+  @DisplayName("시작 전·진행 중 대회 인덱스에 막히면 열린 대회 에러로 바꾸고 참가자를 만들지 않는다")
   void translateUniqueViolation() {
     given(userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER))
         .willReturn(List.of(user("매크로팀")));
