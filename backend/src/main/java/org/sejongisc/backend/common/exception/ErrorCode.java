@@ -110,6 +110,18 @@ public enum ErrorCode {
 
   KIWOOM_CHART_MALFORMED_RESPONSE(HttpStatus.BAD_GATEWAY, "키움증권 차트 응답 형식이 올바르지 않습니다."),
 
+  // COMPETITION
+
+  COMPETITION_ALREADY_OPEN(HttpStatus.CONFLICT, "시작 전이거나 진행 중인 대회가 이미 있습니다."),
+
+  INVALID_COMPETITION_PERIOD(HttpStatus.BAD_REQUEST, "대회 종료일은 시작일보다 빠를 수 없습니다."),
+
+  COMPETITION_START_DATE_PAST(HttpStatus.BAD_REQUEST, "대회 시작일은 오늘 이후여야 합니다."),
+
+  COMPETITION_NO_PARTICIPANTS(HttpStatus.BAD_REQUEST, "참가할 활동 회원이 없습니다."),
+
+  COMPETITION_TEAM_UNASSIGNED(HttpStatus.BAD_REQUEST, "팀이 배정되지 않은 활동 회원이 있습니다. 회원 관리에서 팀을 배정해 주세요."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
