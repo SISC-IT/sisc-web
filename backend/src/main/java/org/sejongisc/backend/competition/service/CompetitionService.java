@@ -2,6 +2,7 @@ package org.sejongisc.backend.competition.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.exception.ConstraintViolationException;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
@@ -18,7 +19,6 @@ import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.sejongisc.backend.user.repository.UserRepository;
-import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,9 +35,11 @@ import java.util.UUID;
 public class CompetitionService {
 
   // 대회마다 DB에 저장되며, 여기 값은 생성 시 기본값으로만 쓴다.
-  static final BigDecimal DEFAULT_INITIAL_CASH = new BigDecimal("10000000");
-  static final BigDecimal DEFAULT_FEE_RATE = new BigDecimal("0.0001");             // 0.01%
-  static final BigDecimal DEFAULT_DEPOSIT_INTEREST_RATE = new BigDecimal("0.03"); // 연 3%, 매일 ÷365로 지급
+  private static final BigDecimal DEFAULT_INITIAL_CASH = new BigDecimal("10000000");
+  private static final BigDecimal DEFAULT_FEE_RATE = new BigDecimal("0.0001");             // 0.01%
+  private static final BigDecimal DEFAULT_DEPOSIT_INTEREST_RATE = new BigDecimal("0.03"); // 연 3%, 매일 ÷365로 지급
+
+  private static final String SINGLE_OPEN_INDEX = "uk_competition_single_open";
 
   private final CompetitionRepository competitionRepository;
   private final CompetitionParticipantRepository participantRepository;
@@ -98,8 +100,6 @@ public class CompetitionService {
 
     return CompetitionCreateResponse.of(competition, participants.size());
   }
-
-  private static final String SINGLE_OPEN_INDEX = "uk_competition_single_open";
 
   // 시작 전·진행 중 대회가 이미 있으면 uk_competition_single_open 인덱스가 막는다(동시 요청 포함).
   // 그냥 save면 커밋 시점에 insert되어 여기서 잡을 수 없으므로 바로 flush한다.
