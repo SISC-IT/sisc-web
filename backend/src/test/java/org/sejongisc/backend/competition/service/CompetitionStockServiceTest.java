@@ -110,7 +110,7 @@ class CompetitionStockServiceTest {
         DailyClosePrice latest = price(MON, "60000.0000");
         givenListPrices(latest, price(FRI, "59000.0000"));
 
-        CompetitionStockListResponse response = stockService.search(competitionId, Market.KR, "삼성", 0, 20);
+        CompetitionStockListResponse response = stockService.search(competitionId, "kr", "삼성", 0, 20);
 
         assertThat(response.page()).isZero();
         assertThat(response.size()).isEqualTo(20);
@@ -204,6 +204,28 @@ class CompetitionStockServiceTest {
         }
 
         verify(stockRepository).search(null, "%ibm%", FIRST_PAGE);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 시장 구분은 거부한다")
+    void searchRejectsUnknownMarket() {
+        givenCompetition();
+
+        assertThatThrownBy(() -> stockService.search(competitionId, "JP", null, 0, 20))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_COMPETITION_MARKET);
+        verifyNoInteractions(stockRepository);
+    }
+
+    @Test
+    @DisplayName("시장 구분이 빈 문자열이면 전체 시장을 조회한다")
+    void searchTreatsBlankMarketAsAll() {
+        givenCompetition();
+        when(stockRepository.search(null, "%%", FIRST_PAGE)).thenReturn(new PageImpl<>(List.of(), FIRST_PAGE, 0));
+
+        stockService.search(competitionId, " ", null, 0, 20);
+
+        verify(stockRepository).search(null, "%%", FIRST_PAGE);
     }
 
     @Test

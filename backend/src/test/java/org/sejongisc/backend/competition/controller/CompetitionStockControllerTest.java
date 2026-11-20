@@ -100,7 +100,7 @@ class CompetitionStockControllerTest {
     @Test
     @DisplayName("GET /stocks - 시장, 검색어, 페이지를 서비스에 그대로 넘긴다")
     void searchPassesParameters() throws Exception {
-        when(stockService.search(competitionId, Market.US, "AAPL", 2, 50))
+        when(stockService.search(competitionId, "US", "AAPL", 2, 50))
                 .thenReturn(new CompetitionStockListResponse(2, 50, 0, null, List.of()));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/stocks", competitionId)
@@ -111,6 +111,17 @@ class CompetitionStockControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(2))
                 .andExpect(jsonPath("$.size").value(50));
+    }
+
+    @Test
+    @DisplayName("GET /stocks - 지원하지 않는 시장 구분은 400을 반환한다")
+    void searchReturns400ForUnknownMarket() throws Exception {
+        when(stockService.search(competitionId, "JP", null, 0, 20))
+                .thenThrow(new CustomException(ErrorCode.INVALID_COMPETITION_MARKET));
+
+        mockMvc.perform(get("/api/competitions/{competitionId}/stocks", competitionId).param("market", "JP"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_COMPETITION_MARKET"));
     }
 
     @Test

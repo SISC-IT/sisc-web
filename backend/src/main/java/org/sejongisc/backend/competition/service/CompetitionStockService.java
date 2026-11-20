@@ -32,6 +32,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -48,13 +49,14 @@ public class CompetitionStockService {
     private final HoldingRepository holdingRepository;
     private final Clock clock;
 
-    public CompetitionStockListResponse search(UUID competitionId, Market market, String query, int page, int size) {
+    public CompetitionStockListResponse search(UUID competitionId, String market, String query, int page, int size) {
         findCompetition(competitionId);
+        Market marketFilter = StringUtils.hasText(market) ? Market.from(market) : null;
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
 
         Page<CompetitionStock> stocks = stockRepository.search(
-                market, likePattern(query), PageRequest.of(safePage, safeSize, Sort.by("ticker")));
+                marketFilter, likePattern(query), PageRequest.of(safePage, safeSize, Sort.by("ticker")));
         Map<UUID, List<DailyClosePrice>> prices = latestTwoPrices(stocks.getContent());
 
         return new CompetitionStockListResponse(

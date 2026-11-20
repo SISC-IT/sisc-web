@@ -128,6 +128,8 @@ public enum ErrorCode {
 
   COMPETITION_PARTICIPANT_NOT_FOUND(HttpStatus.NOT_FOUND, "대회 참가 정보를 찾을 수 없습니다."),
 
+  INVALID_COMPETITION_MARKET(HttpStatus.BAD_REQUEST, "지원하지 않는 시장 구분입니다. KR 또는 US만 사용할 수 있습니다."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),

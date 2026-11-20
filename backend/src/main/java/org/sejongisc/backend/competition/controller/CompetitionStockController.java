@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.sejongisc.backend.competition.dto.CompetitionStockDetailResponse;
 import org.sejongisc.backend.competition.dto.CompetitionStockListResponse;
-import org.sejongisc.backend.competition.entity.Market;
 import org.sejongisc.backend.competition.service.CompetitionStockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,7 +28,7 @@ public class CompetitionStockController {
             summary = "종목 목록 검색",
             description = """
             회사명 또는 종목코드로 검색하고 종가와 전 거래일 대비 등락률을 반환합니다. \s
-            - market을 생략하면 전체 시장을 조회합니다. \s
+            - market은 KR 또는 US이고, 생략하면 전체 시장을 조회합니다. \s
             - page는 0부터 시작하고 size는 최대 100입니다. \s
             - 거래 가능한 종가가 없으면 가격 항목은 null이고 tradable은 false입니다. \s
             - tradable은 종가 유무만 반영합니다.
@@ -38,7 +37,7 @@ public class CompetitionStockController {
     @GetMapping
     public ResponseEntity<CompetitionStockListResponse> search(
             @PathVariable UUID competitionId,
-            @RequestParam(required = false) Market market,
+            @RequestParam(required = false) String market,
             @RequestParam(required = false) String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
