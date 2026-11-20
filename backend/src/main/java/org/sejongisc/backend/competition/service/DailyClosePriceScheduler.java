@@ -10,9 +10,11 @@ import org.springframework.stereotype.Component;
 public class DailyClosePriceScheduler {
 
     private final DailyClosePriceCollector collector;
+    private final AccountSnapshotService snapshotService;
 
     @Scheduled(cron = "${competition.price-collection.cron:0 0 16 * * MON-FRI}", zone = "Asia/Seoul")
     public void collectDomesticClosePrices() {
         collector.collectDomestic();
+        snapshotService.createDailySnapshot();
     }
 }

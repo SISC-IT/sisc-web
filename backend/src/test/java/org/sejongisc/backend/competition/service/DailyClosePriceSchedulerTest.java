@@ -1,13 +1,18 @@
 package org.sejongisc.backend.competition.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,6 +26,9 @@ class DailyClosePriceSchedulerTest {
     @Mock
     private DailyClosePriceCollector collector;
 
+    @Mock
+    private AccountSnapshotService snapshotService;
+
     @InjectMocks
     private DailyClosePriceScheduler scheduler;
 
@@ -30,6 +38,26 @@ class DailyClosePriceSchedulerTest {
         scheduler.collectDomesticClosePrices();
 
         verify(collector).collectDomestic();
+    }
+
+    @Test
+    @DisplayName("수집이 끝난 뒤에 계좌 스냅샷을 만든다")
+    void createsSnapshotAfterCollection() {
+        scheduler.collectDomesticClosePrices();
+
+        InOrder order = inOrder(collector, snapshotService);
+        order.verify(collector).collectDomestic();
+        order.verify(snapshotService).createDailySnapshot();
+    }
+
+    @Test
+    @DisplayName("수집이 예외로 중단되면 스냅샷을 만들지 않는다")
+    void skipsSnapshotWhenCollectionFails() {
+        when(collector.collectDomestic()).thenThrow(new IllegalStateException("수집 중단"));
+
+        assertThatThrownBy(() -> scheduler.collectDomesticClosePrices())
+                .isInstanceOf(IllegalStateException.class);
+        verifyNoInteractions(snapshotService);
     }
 
     @Test
