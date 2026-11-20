@@ -18,6 +18,10 @@ public enum ErrorCode {
 
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP 메서드입니다."),
 
+  UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 Content-Type입니다."),
+
+  UPLOAD_SIZE_EXCEEDED(HttpStatus.PAYLOAD_TOO_LARGE, "업로드 크기 제한을 넘었습니다."),
+
   // PRICE DATA
 
   PRICE_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 주식의 가격 데이터가 존재하지 않습니다."),
