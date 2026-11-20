@@ -3,6 +3,7 @@ package org.sejongisc.backend.competition.service;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -51,10 +52,9 @@ public class CompetitionStockService {
         findCompetition(competitionId);
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        String pattern = "%" + (query == null ? "" : query.trim().toLowerCase()) + "%";
 
         Page<CompetitionStock> stocks = stockRepository.search(
-                market, pattern, PageRequest.of(safePage, safeSize, Sort.by("ticker")));
+                market, likePattern(query), PageRequest.of(safePage, safeSize, Sort.by("ticker")));
         Map<UUID, List<DailyClosePrice>> prices = latestTwoPrices(stocks.getContent());
 
         return new CompetitionStockListResponse(
@@ -84,6 +84,17 @@ public class CompetitionStockService {
                         stock, LocalDateTime.now(clock)));
 
         return CompetitionStockDetailResponse.of(competition, stock, quote, account, holding);
+    }
+
+    private String likePattern(String query) {
+        if (query == null) {
+            return "%%";
+        }
+        String keyword = query.trim().toLowerCase(Locale.ROOT)
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
+        return "%" + keyword + "%";
     }
 
     private Competition findCompetition(UUID competitionId) {

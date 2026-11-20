@@ -2,6 +2,7 @@ package org.sejongisc.backend.competition.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -175,6 +177,33 @@ class CompetitionStockServiceTest {
         assertThat(response.size()).isEqualTo(100);
         assertThat(response.stocks()).isEmpty();
         verifyNoInteractions(closePriceRepository);
+    }
+
+    @Test
+    @DisplayName("검색어의 %와 _는 와일드카드가 아닌 글자로 검색한다")
+    void searchEscapesLikeWildcards() {
+        givenCompetition();
+        when(stockRepository.search(null, "%50!%!_a!!%", FIRST_PAGE)).thenReturn(new PageImpl<>(List.of(), FIRST_PAGE, 0));
+
+        stockService.search(competitionId, null, "50%_A!", 0, 20);
+
+        verify(stockRepository).search(null, "%50!%!_a!!%", FIRST_PAGE);
+    }
+
+    @Test
+    @DisplayName("서버 로캘이 터키어여도 검색어를 같은 소문자로 바꾼다")
+    void searchLowercasesRegardlessOfLocale() {
+        givenCompetition();
+        when(stockRepository.search(null, "%ibm%", FIRST_PAGE)).thenReturn(new PageImpl<>(List.of(), FIRST_PAGE, 0));
+        Locale original = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+        try {
+            stockService.search(competitionId, null, "IBM", 0, 20);
+        } finally {
+            Locale.setDefault(original);
+        }
+
+        verify(stockRepository).search(null, "%ibm%", FIRST_PAGE);
     }
 
     @Test

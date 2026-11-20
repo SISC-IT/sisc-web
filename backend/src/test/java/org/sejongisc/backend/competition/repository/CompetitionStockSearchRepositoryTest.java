@@ -58,6 +58,17 @@ class CompetitionStockSearchRepositoryTest {
   }
 
   @Test
+  void 이스케이프한_퍼센트와_밑줄은_그_글자가_있는_종목만_찾는다() {
+    saveStock("900001", "배당50%", Market.KR);
+    saveStock("900002", "A_B", Market.KR);
+
+    assertThat(stockRepository.search(null, "%!%%", FIRST_PAGE))
+        .extracting(CompetitionStock::getTicker).containsExactly("900001");
+    assertThat(stockRepository.search(null, "%!_%", FIRST_PAGE))
+        .extracting(CompetitionStock::getTicker).containsExactly("900002");
+  }
+
+  @Test
   void 시장을_지정하면_그_시장_종목만_가져온다() {
     assertThat(stockRepository.search(Market.US, "%%", FIRST_PAGE))
         .extracting(CompetitionStock::getTicker).containsExactly("AAPL");
