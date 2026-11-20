@@ -1,6 +1,7 @@
 package org.sejongisc.backend.competition.dto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.UUID;
 import lombok.Builder;
@@ -49,6 +50,9 @@ public record CompetitionStockDetailResponse(
         BigDecimal invested = held && krw ? averageBuyPrice.multiply(quantity) : null;
         BigDecimal valuation = invested != null && quote.available() ? quote.closePrice().multiply(quantity) : null;
         BigDecimal profitLoss = valuation != null ? valuation.subtract(invested) : null;
+        BigDecimal holdingReturnRate = profitLoss != null
+                ? profitLoss.multiply(BigDecimal.valueOf(100)).divide(invested, 6, RoundingMode.HALF_UP)
+                : null;
 
         return CompetitionStockDetailResponse.builder()
                 .ticker(stock.getTicker())
@@ -56,19 +60,19 @@ public record CompetitionStockDetailResponse(
                 .market(stock.getMarket())
                 .currency(stock.getMarket().getCurrency())
                 .closePriceId(quote.closePriceId())
-                .closePrice(Decimals.plain(quote.closePrice()))
-                .closePriceKrw(krw ? Decimals.plain(quote.closePrice()) : null)
+                .closePrice(quote.closePrice())
+                .closePriceKrw(krw ? quote.closePrice() : null)
                 .priceDate(quote.priceDate())
-                .dailyChangeRate(Decimals.plain(quote.dailyChangeRate()))
+                .dailyChangeRate(quote.dailyChangeRate())
                 .holdingQuantity(held ? holding.getQuantity() : 0)
-                .averageBuyPrice(Decimals.plain(averageBuyPrice))
-                .averageBuyPriceKrw(krw ? Decimals.plain(averageBuyPrice) : null)
-                .investedAmountKrw(Decimals.plain(invested))
-                .valuationAmountKrw(Decimals.plain(valuation))
-                .profitLossKrw(Decimals.plain(profitLoss))
-                .holdingReturnRate(profitLoss != null ? Decimals.plain(Decimals.percent(profitLoss, invested)) : null)
-                .cashBalance(Decimals.plain(account.getCash()))
-                .tradingFeeRate(Decimals.plain(competition.getFeeRate()))
+                .averageBuyPrice(averageBuyPrice)
+                .averageBuyPriceKrw(krw ? averageBuyPrice : null)
+                .investedAmountKrw(invested)
+                .valuationAmountKrw(valuation)
+                .profitLossKrw(profitLoss)
+                .holdingReturnRate(holdingReturnRate)
+                .cashBalance(account.getCash())
+                .tradingFeeRate(competition.getFeeRate())
                 .tradable(quote.available())
                 .unavailableReason(quote.unavailableReason())
                 .build();

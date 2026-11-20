@@ -1,6 +1,7 @@
 package org.sejongisc.backend.competition.dto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -38,7 +39,9 @@ public record StockQuote(DailyClosePrice latest, DailyClosePrice previous) {
         if (previous == null) {
             return null;
         }
-        return Decimals.percent(latest.getClosePrice().subtract(previous.getClosePrice()), previous.getClosePrice());
+        return latest.getClosePrice().subtract(previous.getClosePrice())
+                .multiply(BigDecimal.valueOf(100))
+                .divide(previous.getClosePrice(), 6, RoundingMode.HALF_UP);
     }
 
     public UnavailableReason unavailableReason() {

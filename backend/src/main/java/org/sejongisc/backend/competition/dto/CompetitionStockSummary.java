@@ -22,17 +22,16 @@ public record CompetitionStockSummary(
 ) {
 
     public static CompetitionStockSummary of(CompetitionStock stock, StockQuote quote) {
-        BigDecimal closePrice = Decimals.plain(quote.closePrice());
         return new CompetitionStockSummary(
                 stock.getTicker(),
                 stock.getName(),
                 stock.getMarket(),
                 stock.getMarket().getCurrency(),
                 quote.closePriceId(),
-                closePrice,
-                stock.getMarket() == Market.KR ? closePrice : null,
-                Decimals.plain(quote.previousClosePrice()),
-                Decimals.plain(quote.dailyChangeRate()),
+                quote.closePrice(),
+                stock.getMarket() == Market.KR ? quote.closePrice() : null,
+                quote.previousClosePrice(),
+                quote.dailyChangeRate(),
                 quote.priceDate(),
                 quote.available(),
                 quote.unavailableReason()

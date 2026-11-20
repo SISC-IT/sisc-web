@@ -1,9 +1,7 @@
 package org.sejongisc.backend.competition.controller;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,7 +93,6 @@ class CompetitionStockControllerTest {
                 .andExpect(jsonPath("$.stocks[0].market").value("KR"))
                 .andExpect(jsonPath("$.stocks[0].closePrice").value(60000))
                 .andExpect(jsonPath("$.stocks[0].dailyChangeRate").value(1.694915))
-                .andExpect(content().string(containsString("\"closePrice\":60000,")))
                 .andExpect(jsonPath("$.stocks[0].priceDate").value("2026-11-09"))
                 .andExpect(jsonPath("$.stocks[0].tradable").value(true));
     }
