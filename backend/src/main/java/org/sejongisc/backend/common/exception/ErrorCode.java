@@ -144,7 +144,7 @@ public enum ErrorCode {
 
   COMPETITION_ORDER_CLOSED(HttpStatus.BAD_REQUEST, "주문 가능 시간이 아닙니다."),
 
-  COMPETITION_PRICE_UNAVAILABLE(HttpStatus.BAD_REQUEST, "오늘 확정된 종가가 없어 주문할 수 없습니다."),
+  COMPETITION_PRICE_UNAVAILABLE(HttpStatus.BAD_REQUEST, "오늘 종가가 아직 없어 주문할 수 없습니다."),
 
   PRICE_CHANGED(HttpStatus.CONFLICT, "종가가 바뀌었습니다. 새 종가를 확인한 뒤 다시 주문해 주세요."),
 

@@ -80,6 +80,20 @@ class OrderRuleTest {
                 .isEqualTo(UnavailableReason.PRICE_UNAVAILABLE);
     }
 
+    @Test
+    @DisplayName("종목 조건(시장, 주문 시간, 오늘 종가)은 대회 조건과 따로 확인할 수 있다")
+    void stockConditionsOnly() {
+        CompetitionStock apple = CompetitionStock.builder().ticker("AAPL").market(Market.US).build();
+
+        assertThat(OrderRule.stockUnavailableReason(samsung, fridayPrice, FRI_17)).isNull();
+        assertThat(OrderRule.stockUnavailableReason(apple, fridayPrice, FRI_17))
+                .isEqualTo(UnavailableReason.MARKET_NOT_SUPPORTED);
+        assertThat(OrderRule.stockUnavailableReason(samsung, fridayPrice, FRI.atTime(16, 29)))
+                .isEqualTo(UnavailableReason.ORDER_CLOSED);
+        assertThat(OrderRule.stockUnavailableReason(samsung, null, FRI_17))
+                .isEqualTo(UnavailableReason.PRICE_UNAVAILABLE);
+    }
+
     // 대회 기간 2026-11-16(월) ~ 11-27(금)
     private static Competition competition(CompetitionStatus status) {
         return Competition.builder()

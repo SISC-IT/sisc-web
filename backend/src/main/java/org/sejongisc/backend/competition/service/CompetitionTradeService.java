@@ -68,7 +68,7 @@ public class CompetitionTradeService {
         LocalDateTime now = LocalDateTime.now(clock);
         validateOrderAllowed(competition, participant, now);
         CompetitionStock stock = findStock(request.ticker());
-        DailyClosePrice closePrice = findOrderPrice(competition, stock, request.closePriceId(), now);
+        DailyClosePrice closePrice = findOrderPrice(stock, request.closePriceId(), now);
 
         BigDecimal amount = closePrice.getClosePrice().multiply(BigDecimal.valueOf(request.quantity()));
         BigDecimal fee = amount.multiply(competition.getFeeRate()).setScale(4, RoundingMode.DOWN);
@@ -132,13 +132,13 @@ public class CompetitionTradeService {
         }
     }
 
-    // 주문 규칙(시장, 주문 시간, 오늘 종가)과 사용자가 확인한 종가를 모두 통과한 체결가를 돌려준다.
-    private DailyClosePrice findOrderPrice(
-            Competition competition, CompetitionStock stock, UUID requestedClosePriceId, LocalDateTime now) {
+    // 종목 조건(시장, 주문 시간, 오늘 종가)과 사용자가 확인한 종가를 모두 통과한 체결가를 돌려준다.
+    // 대회 조건은 validateOrderAllowed에서 이미 확인했다.
+    private DailyClosePrice findOrderPrice(CompetitionStock stock, UUID requestedClosePriceId, LocalDateTime now) {
         DailyClosePrice latest = closePriceRepository
                 .findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(stock, now)
                 .orElse(null);
-        UnavailableReason reason = OrderRule.unavailableReason(competition, stock, latest, now);
+        UnavailableReason reason = OrderRule.stockUnavailableReason(stock, latest, now);
         if (reason != null) {
             throw new CustomException(reason.getErrorCode());
         }

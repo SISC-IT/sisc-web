@@ -28,20 +28,22 @@ final class OrderRule {
                 : UnavailableReason.COMPETITION_NOT_ACTIVE;
     }
 
-    // 주문할 수 있으면 null을 반환한다. latest는 지금 공개된 최신 종가이고 없으면 null이다.
+    // 대회 조건과 종목 조건을 모두 확인한다. 주문할 수 있으면 null을 반환한다.
     static UnavailableReason unavailableReason(
             Competition competition, CompetitionStock stock, DailyClosePrice latest, LocalDateTime now) {
         UnavailableReason competitionReason = competitionUnavailableReason(competition, now.toLocalDate());
-        if (competitionReason != null) {
-            return competitionReason;
-        }
+        return competitionReason != null ? competitionReason : stockUnavailableReason(stock, latest, now);
+    }
+
+    // 종목 단위 조건(시장, 주문 시간, 오늘 종가). latest는 지금 공개된 최신 종가이고 없으면 null이다.
+    static UnavailableReason stockUnavailableReason(CompetitionStock stock, DailyClosePrice latest, LocalDateTime now) {
         if (!SUPPORTED_MARKETS.contains(stock.getMarket())) {
             return UnavailableReason.MARKET_NOT_SUPPORTED;
         }
         if (!stock.getMarket().isOrderOpen(now.toLocalTime())) {
             return UnavailableReason.ORDER_CLOSED;
         }
-        // 종가는 거래일에만 수집되므로, 최신 종가가 오늘 날짜가 아니면 주말·공휴일이다.
+        // 종가는 거래일에만 수집되므로 오늘 종가가 없으면 주말·공휴일이거나 수집이 늦거나 실패한 경우다.
         if (latest == null || !latest.getPriceDate().equals(now.toLocalDate())) {
             return UnavailableReason.PRICE_UNAVAILABLE;
         }
