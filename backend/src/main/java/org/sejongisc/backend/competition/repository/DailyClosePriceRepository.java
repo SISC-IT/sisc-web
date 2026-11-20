@@ -39,5 +39,19 @@ public interface DailyClosePriceRepository extends JpaRepository<DailyClosePrice
     List<DailyClosePrice> findLatestTwoByStockIds(
             @Param("stockIds") Collection<UUID> stockIds, @Param("now") LocalDateTime now);
 
+    // 계좌 평가용. 주문과 달리 availableAt을 보지 않는다.
+    @Query(value = """
+            select distinct on (stock_id)
+                close_price_id, stock_id, price_date, available_at, close_price, created_date, updated_date
+            from daily_close_price
+            where stock_id in (:stockIds)
+              and price_date <= :date
+            order by stock_id, price_date desc
+            """, nativeQuery = true)
+    List<DailyClosePrice> findLatestByStockIds(
+            @Param("stockIds") Collection<UUID> stockIds, @Param("date") LocalDate date);
+
     boolean existsByStockAndPriceDate(CompetitionStock stock, LocalDate priceDate);
+
+    boolean existsByPriceDate(LocalDate priceDate);
 }
