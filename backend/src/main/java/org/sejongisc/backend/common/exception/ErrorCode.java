@@ -132,6 +132,10 @@ public enum ErrorCode {
 
   INVALID_COMPETITION_MARKET(HttpStatus.BAD_REQUEST, "지원하지 않는 시장 구분입니다. KR 또는 US만 사용할 수 있습니다."),
 
+  COMPETITION_INSUFFICIENT_CASH(HttpStatus.BAD_REQUEST, "현금이 부족합니다."),
+
+  COMPETITION_INSUFFICIENT_HOLDING(HttpStatus.BAD_REQUEST, "보유 수량이 부족합니다."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
