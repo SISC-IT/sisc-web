@@ -101,6 +101,18 @@ public class CompetitionService {
     return CompetitionCreateResponse.of(competition, participants.size());
   }
 
+  // 시작일이 지난 READY 대회를 ACTIVE로 바꾼다. 스케줄러가 주기적으로 호출한다.
+  // '시작일 = 오늘'이 아니라 '시작일 <= 오늘'로 찾아서, 실행을 한 번 놓쳐도 다음 실행에서 열린다.
+  @Transactional
+  public void startDueCompetitions() {
+    List<Competition> due = competitionRepository.findAllByStatusAndStartDateLessThanEqual(
+        CompetitionStatus.READY, LocalDate.now(clock));
+    for (Competition competition : due) {
+      competition.start();
+      log.info("[대회 시작] competitionId={}, startDate={}", competition.getCompetitionId(), competition.getStartDate());
+    }
+  }
+
   // 시작 전·진행 중 대회가 이미 있으면 uk_competition_single_open 인덱스가 막는다(동시 요청 포함).
   // 그냥 save면 커밋 시점에 insert되어 여기서 잡을 수 없으므로 바로 flush한다.
   // 그 인덱스 위반만 409로 바꾸고, 다른 DB 오류는 그대로 올린다.

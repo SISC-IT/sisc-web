@@ -220,6 +220,18 @@ class CompetitionAccountRepositoryTest {
     }
   }
 
+  @Test
+  void 시작할_대회는_시작일이_지난_시작_전_대회만_가져온다() {
+    saveCompetition(CompetitionStatus.ENDED);  // 시작일 11/16, 종료된 대회
+    Competition ready = saveCompetition(CompetitionStatus.READY); // 시작일 11/16
+
+    assertThat(competitionRepository.findAllByStatusAndStartDateLessThanEqual(
+        CompetitionStatus.READY, LocalDate.of(2026, 11, 15))).isEmpty();
+    assertThat(competitionRepository.findAllByStatusAndStartDateLessThanEqual(
+        CompetitionStatus.READY, LocalDate.of(2026, 11, 16)))
+        .extracting(Competition::getCompetitionId).containsExactly(ready.getCompetitionId());
+  }
+
   private Competition saveCompetition(CompetitionStatus status) {
     return competitionRepository.saveAndFlush(competitionBuilder(status).build());
   }

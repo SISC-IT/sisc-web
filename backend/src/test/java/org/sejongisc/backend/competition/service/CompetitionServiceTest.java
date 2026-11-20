@@ -192,4 +192,19 @@ class CompetitionServiceTest {
         .status(UserStatus.ACTIVE)
         .build();
   }
+
+  @Test
+  @DisplayName("시작일이 지난 시작 전 대회를 진행 중으로 바꾼다")
+  void startDueCompetitions() {
+    Competition ready = Competition.builder()
+        .status(CompetitionStatus.READY)
+        .startDate(LocalDate.of(2026, 11, 18))
+        .build();
+    given(competitionRepository.findAllByStatusAndStartDateLessThanEqual(
+        CompetitionStatus.READY, LocalDate.of(2026, 11, 18))).willReturn(List.of(ready));
+
+    competitionService.startDueCompetitions();
+
+    assertThat(ready.getStatus()).isEqualTo(CompetitionStatus.ACTIVE);
+  }
 }
