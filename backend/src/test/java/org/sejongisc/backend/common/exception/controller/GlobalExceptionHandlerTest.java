@@ -77,6 +77,15 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").value("요청 값이 올바르지 않습니다."));
     }
 
+    @Test
+    @DisplayName("처리하지 않은 예외는 500과 공통 메시지만 반환하고 예외 메시지는 응답에 담지 않는다")
+    void unhandledExceptionHidesExceptionMessage() throws Exception {
+        mockMvc.perform(get("/test/error"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.errorCode").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("서버에 문제가 발생했습니다."));
+    }
+
     record CountRequest(Integer count) {
     }
 
@@ -97,6 +106,11 @@ class GlobalExceptionHandlerTest {
         @PostMapping("/test/secret")
         String secret(@Valid @RequestBody SecretRequest request) {
             return "ok";
+        }
+
+        @GetMapping("/test/error")
+        String error() {
+            throw new IllegalStateException("Key (email)=(member@example.com) already exists");
         }
 
         @GetMapping("/test/count")

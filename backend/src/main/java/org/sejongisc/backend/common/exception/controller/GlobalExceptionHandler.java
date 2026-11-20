@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.ErrorResponse;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -54,10 +53,14 @@ public class GlobalExceptionHandler {
    * 3) 그 외 예외 처리
    */
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<String> handleException(Exception e) {
+  public ResponseEntity<ErrorResponse> handleException(Exception e) {
     log.error("Unhandled Exception 발생: {}", e.getMessage(), e);
 
     // 예상치 못한 예외 => 500
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+    // 예외 메시지에는 SQL·입력값 등 내부 정보가 들어 있을 수 있어 로그에만 남기고 응답은 공통 메시지로 보낸다.
+    ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
+    return ResponseEntity
+        .status(errorCode.getStatus())
+        .body(ErrorResponse.of(errorCode));
   }
 }
