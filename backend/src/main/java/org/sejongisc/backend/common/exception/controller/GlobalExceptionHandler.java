@@ -41,7 +41,10 @@ public class GlobalExceptionHandler {
 
     ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
     FieldError fieldError = e.getFieldError();
-    String message = fieldError != null ? fieldError.getDefaultMessage() : errorCode.getMessage();
+    // 타입 변환 실패(isBindingFailure)의 기본 메시지에는 입력값과 내부 타입 이름이 들어 있어 공통 메시지를 쓴다.
+    String message = fieldError != null && !fieldError.isBindingFailure()
+        ? fieldError.getDefaultMessage()
+        : errorCode.getMessage();
     return ResponseEntity
         .status(errorCode.getStatus())
         .body(ErrorResponse.builder().errorCode(errorCode).message(message).build());

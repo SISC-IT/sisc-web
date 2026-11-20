@@ -68,6 +68,18 @@ class GlobalExceptionHandlerTest {
         assertThat(output).contains("password");
     }
 
+    @Test
+    @DisplayName("타입 변환 실패는 입력값과 내부 타입 정보 대신 공통 메시지를 반환한다")
+    void bindingFailureReturnsCommonMessage() throws Exception {
+        mockMvc.perform(get("/test/count").param("count", "abc-input"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_INPUT_VALUE"))
+                .andExpect(jsonPath("$.message").value("요청 값이 올바르지 않습니다."));
+    }
+
+    record CountRequest(Integer count) {
+    }
+
     record NameRequest(@NotBlank(message = "이름은 필수입니다.") String name) {
     }
 
@@ -84,6 +96,11 @@ class GlobalExceptionHandlerTest {
 
         @PostMapping("/test/secret")
         String secret(@Valid @RequestBody SecretRequest request) {
+            return "ok";
+        }
+
+        @GetMapping("/test/count")
+        String count(@Valid @ModelAttribute CountRequest request) {
             return "ok";
         }
 
