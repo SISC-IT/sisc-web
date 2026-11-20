@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -109,10 +110,11 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("지원하지 않는 HTTP 메서드는 405를 반환한다")
+    @DisplayName("지원하지 않는 HTTP 메서드는 405와 지원하는 메서드(Allow 헤더)를 반환한다")
     void unsupportedMethodReturnsMethodNotAllowed() throws Exception {
         mockMvc.perform(delete("/test/admin"))
                 .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string("Allow", "GET"))
                 .andExpect(jsonPath("$.errorCode").value("METHOD_NOT_ALLOWED"));
     }
 

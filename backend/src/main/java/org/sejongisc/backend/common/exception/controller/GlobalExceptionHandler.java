@@ -1,10 +1,12 @@
 package org.sejongisc.backend.common.exception.controller;
 
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.ErrorResponse;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -88,10 +90,16 @@ public class GlobalExceptionHandler {
 
   /**
    * 6) 지원하지 않는 HTTP 메서드 처리
+   * - 405 응답에는 지원하는 메서드를 Allow 헤더로 알려야 한다(RFC 9110). Spring 기본 처리와 같다.
    */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e) {
-    return errorResponse(ErrorCode.METHOD_NOT_ALLOWED);
+    ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+    Set<HttpMethod> supported = e.getSupportedHttpMethods();
+    return ResponseEntity
+        .status(errorCode.getStatus())
+        .allow(supported != null ? supported.toArray(HttpMethod[]::new) : new HttpMethod[0])
+        .body(ErrorResponse.of(errorCode));
   }
 
   /**
