@@ -122,6 +122,12 @@ public enum ErrorCode {
 
   COMPETITION_TEAM_UNASSIGNED(HttpStatus.BAD_REQUEST, "팀이 배정되지 않은 활동 회원이 있습니다. 회원 관리에서 팀을 배정해 주세요."),
 
+  COMPETITION_NOT_FOUND(HttpStatus.NOT_FOUND, "대회를 찾을 수 없습니다."),
+
+  COMPETITION_STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "거래 대상 종목을 찾을 수 없습니다."),
+
+  COMPETITION_PARTICIPANT_NOT_FOUND(HttpStatus.NOT_FOUND, "대회 참가 정보를 찾을 수 없습니다."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
