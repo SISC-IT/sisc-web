@@ -136,6 +136,22 @@ public enum ErrorCode {
 
   COMPETITION_INSUFFICIENT_HOLDING(HttpStatus.BAD_REQUEST, "보유 수량이 부족합니다."),
 
+  COMPETITION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "진행 중인 대회가 아닙니다."),
+
+  COMPETITION_PARTICIPANT_EXCLUDED(HttpStatus.FORBIDDEN, "대회에서 제외되어 거래할 수 없습니다."),
+
+  COMPETITION_MARKET_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "국내 종목만 거래할 수 있습니다."),
+
+  COMPETITION_ORDER_CLOSED(HttpStatus.BAD_REQUEST, "주문 가능 시간이 아닙니다."),
+
+  COMPETITION_PRICE_UNAVAILABLE(HttpStatus.BAD_REQUEST, "오늘 확정된 종가가 없어 주문할 수 없습니다."),
+
+  PRICE_CHANGED(HttpStatus.CONFLICT, "종가가 바뀌었습니다. 새 종가를 확인한 뒤 다시 주문해 주세요."),
+
+  COMPETITION_IDEMPOTENCY_KEY_REUSED(HttpStatus.CONFLICT, "같은 주문 키로 다른 주문이 이미 접수되었습니다."),
+
+  COMPETITION_ORDER_CONFLICT(HttpStatus.CONFLICT, "동시에 처리 중인 주문이 있습니다. 잠시 후 다시 시도해 주세요."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
