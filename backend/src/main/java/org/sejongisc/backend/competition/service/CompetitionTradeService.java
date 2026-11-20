@@ -84,6 +84,7 @@ public class CompetitionTradeService {
                 .closePrice(closePrice)
                 .side(request.side())
                 .quantity(request.quantity())
+                .price(closePrice.getClosePrice())
                 .fee(fee)
                 .idempotencyKey(idempotencyKey)
                 .executedAt(now)

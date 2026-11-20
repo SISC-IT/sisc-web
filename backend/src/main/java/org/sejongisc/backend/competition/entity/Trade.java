@@ -28,7 +28,7 @@ public class Trade extends BasePostgresEntity {
     @JoinColumn(name = "stock_id", nullable = false)
     private CompetitionStock stock;
 
-    // 체결가는 이 종가다. 종가 행은 저장 후 바뀌지 않아 가격을 따로 복사하지 않는다.
+    // 체결에 쓴 종가. 사용자가 확인한 종가(closePriceId)와 같은지 비교한 그 행이다.
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "close_price_id", nullable = false)
     private DailyClosePrice closePrice;
@@ -39,6 +39,10 @@ public class Trade extends BasePostgresEntity {
 
     @Column(nullable = false)
     private Long quantity;
+
+    // 체결가. 거래 행만 보고 무엇을 얼마에 거래했는지 알 수 있도록 종가를 복사해 둔다.
+    @Column(nullable = false, precision = 18, scale = 4)
+    private BigDecimal price;
 
     // 실제로 현금에서 빠진 수수료. 나중에 수수료율·반올림 규칙이 바뀌어도 기록이 어긋나지 않게 금액으로 남긴다.
     @Column(nullable = false, precision = 18, scale = 4)

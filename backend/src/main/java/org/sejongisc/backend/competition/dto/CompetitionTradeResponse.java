@@ -24,7 +24,7 @@ public record CompetitionTradeResponse(
                 trade.getStock().getTicker(),
                 trade.getSide(),
                 trade.getQuantity(),
-                trade.getClosePrice().getClosePrice(),
+                trade.getPrice(),
                 trade.getFee(),
                 trade.getExecutedAt(),
                 account.getCash()

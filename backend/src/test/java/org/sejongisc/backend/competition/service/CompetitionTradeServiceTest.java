@@ -124,6 +124,7 @@ class CompetitionTradeServiceTest {
         assertThat(trade.getQuantity()).isEqualTo(10L);
         assertThat(trade.getFee()).isEqualByComparingTo("60");
         assertThat(trade.getClosePrice()).isSameAs(todayPrice);
+        assertThat(trade.getPrice()).isEqualByComparingTo("60000");
         assertThat(trade.getIdempotencyKey()).isEqualTo(key);
         assertThat(trade.getExecutedAt()).isEqualTo(FRI_17);
 
@@ -423,6 +424,7 @@ class CompetitionTradeServiceTest {
                         .build())
                 .side(side)
                 .quantity(quantity)
+                .price(new BigDecimal("60000.0000"))
                 .fee(new BigDecimal("60"))
                 .idempotencyKey(key)
                 .executedAt(FRI_17)

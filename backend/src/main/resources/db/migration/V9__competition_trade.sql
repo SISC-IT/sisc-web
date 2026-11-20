@@ -5,6 +5,7 @@ create table trade (
     close_price_id uuid not null references daily_close_price (close_price_id),
     side varchar(4) not null,
     quantity bigint not null,
+    price numeric(18, 4) not null,
     fee numeric(18, 4) not null,
     idempotency_key uuid not null,
     executed_at timestamp not null,
@@ -14,5 +15,6 @@ create table trade (
     constraint uk_trade_account_idempotency_key unique (account_id, idempotency_key),
     constraint ck_trade_side check (side in ('BUY', 'SELL')),
     constraint ck_trade_quantity check (quantity > 0),
+    constraint ck_trade_price check (price > 0),
     constraint ck_trade_fee check (fee >= 0)
 );

@@ -79,6 +79,7 @@ class TradeRepositoryTest {
     assertThat(found.getQuantity()).isEqualTo(10L);
     assertThat(found.getFee()).isEqualByComparingTo("60");
     assertThat(found.getClosePrice().getClosePriceId()).isEqualTo(closePrice.getClosePriceId());
+    assertThat(found.getPrice()).isEqualByComparingTo("60000");
     assertThat(found.getExecutedAt()).isEqualTo(LocalDateTime.of(2026, 11, 20, 17, 0));
     assertThat(tradeRepository.findByAccountAndIdempotencyKey(account, UUID.randomUUID())).isEmpty();
   }
@@ -109,11 +110,23 @@ class TradeRepositoryTest {
   void 거래_수량은_0이_될_수_없다() {
     Trade zero = Trade.builder()
         .account(saveAccount()).stock(samsung).closePrice(closePrice)
-        .side(TradeSide.BUY).quantity(0L).fee(BigDecimal.ZERO)
+        .side(TradeSide.BUY).quantity(0L).price(new BigDecimal("60000")).fee(BigDecimal.ZERO)
         .idempotencyKey(UUID.randomUUID()).executedAt(LocalDateTime.of(2026, 11, 20, 17, 0))
         .build();
 
     assertThatThrownBy(() -> tradeRepository.saveAndFlush(zero))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void 체결가는_0이_될_수_없다() {
+    Trade zeroPrice = Trade.builder()
+        .account(saveAccount()).stock(samsung).closePrice(closePrice)
+        .side(TradeSide.BUY).quantity(1L).price(BigDecimal.ZERO).fee(BigDecimal.ZERO)
+        .idempotencyKey(UUID.randomUUID()).executedAt(LocalDateTime.of(2026, 11, 20, 17, 0))
+        .build();
+
+    assertThatThrownBy(() -> tradeRepository.saveAndFlush(zeroPrice))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
@@ -124,6 +137,7 @@ class TradeRepositoryTest {
         .closePrice(closePrice)
         .side(TradeSide.BUY)
         .quantity(10L)
+        .price(new BigDecimal("60000"))
         .fee(new BigDecimal("60"))
         .idempotencyKey(key)
         .executedAt(LocalDateTime.of(2026, 11, 20, 17, 0))
