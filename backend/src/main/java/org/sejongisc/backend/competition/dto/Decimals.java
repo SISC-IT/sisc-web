@@ -11,12 +11,12 @@ final class Decimals {
     private Decimals() {
     }
 
-    static String text(BigDecimal value) {
-        return value == null ? null : value.stripTrailingZeros().toPlainString();
-    }
-
-    static String rateText(BigDecimal rate) {
-        return rate == null ? null : rate.toPlainString();
+    static BigDecimal plain(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        BigDecimal stripped = value.stripTrailingZeros();
+        return stripped.scale() < 0 ? stripped.setScale(0) : stripped;
     }
 
     static BigDecimal percent(BigDecimal change, BigDecimal base) {

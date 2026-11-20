@@ -17,20 +17,20 @@ public record CompetitionStockDetailResponse(
         Market market,
         String currency,
         UUID closePriceId,
-        String closePrice,
-        String closePriceKrw,
-        String exchangeRate,
+        BigDecimal closePrice,
+        BigDecimal closePriceKrw,
+        BigDecimal exchangeRate,
         LocalDate priceDate,
-        String dailyChangeRate,
+        BigDecimal dailyChangeRate,
         long holdingQuantity,
-        String averageBuyPrice,
-        String averageBuyPriceKrw,
-        String investedAmountKrw,
-        String valuationAmountKrw,
-        String profitLossKrw,
-        String holdingReturnRate,
-        String cashBalance,
-        String tradingFeeRate,
+        BigDecimal averageBuyPrice,
+        BigDecimal averageBuyPriceKrw,
+        BigDecimal investedAmountKrw,
+        BigDecimal valuationAmountKrw,
+        BigDecimal profitLossKrw,
+        BigDecimal holdingReturnRate,
+        BigDecimal cashBalance,
+        BigDecimal tradingFeeRate,
         boolean tradable,
         UnavailableReason unavailableReason
 ) {
@@ -56,19 +56,19 @@ public record CompetitionStockDetailResponse(
                 .market(stock.getMarket())
                 .currency(stock.getMarket().getCurrency())
                 .closePriceId(quote.closePriceId())
-                .closePrice(Decimals.text(quote.closePrice()))
-                .closePriceKrw(krw ? Decimals.text(quote.closePrice()) : null)
+                .closePrice(Decimals.plain(quote.closePrice()))
+                .closePriceKrw(krw ? Decimals.plain(quote.closePrice()) : null)
                 .priceDate(quote.priceDate())
-                .dailyChangeRate(Decimals.rateText(quote.dailyChangeRate()))
+                .dailyChangeRate(Decimals.plain(quote.dailyChangeRate()))
                 .holdingQuantity(held ? holding.getQuantity() : 0)
-                .averageBuyPrice(Decimals.text(averageBuyPrice))
-                .averageBuyPriceKrw(krw ? Decimals.text(averageBuyPrice) : null)
-                .investedAmountKrw(Decimals.text(invested))
-                .valuationAmountKrw(Decimals.text(valuation))
-                .profitLossKrw(Decimals.text(profitLoss))
-                .holdingReturnRate(profitLoss != null ? Decimals.rateText(Decimals.percent(profitLoss, invested)) : null)
-                .cashBalance(Decimals.text(account.getCash()))
-                .tradingFeeRate(Decimals.text(competition.getFeeRate()))
+                .averageBuyPrice(Decimals.plain(averageBuyPrice))
+                .averageBuyPriceKrw(krw ? Decimals.plain(averageBuyPrice) : null)
+                .investedAmountKrw(Decimals.plain(invested))
+                .valuationAmountKrw(Decimals.plain(valuation))
+                .profitLossKrw(Decimals.plain(profitLoss))
+                .holdingReturnRate(profitLoss != null ? Decimals.plain(Decimals.percent(profitLoss, invested)) : null)
+                .cashBalance(Decimals.plain(account.getCash()))
+                .tradingFeeRate(Decimals.plain(competition.getFeeRate()))
                 .tradable(quote.available())
                 .unavailableReason(quote.unavailableReason())
                 .build();

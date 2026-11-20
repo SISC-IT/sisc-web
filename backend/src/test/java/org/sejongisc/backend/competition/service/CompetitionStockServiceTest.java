@@ -119,10 +119,10 @@ class CompetitionStockServiceTest {
         assertThat(stock.companyName()).isEqualTo("삼성전자");
         assertThat(stock.currency()).isEqualTo("KRW");
         assertThat(stock.closePriceId()).isEqualTo(latest.getClosePriceId());
-        assertThat(stock.closePrice()).isEqualTo("60000");
-        assertThat(stock.closePriceKrw()).isEqualTo("60000");
-        assertThat(stock.previousClosePrice()).isEqualTo("59000");
-        assertThat(stock.dailyChangeRate()).isEqualTo("1.694915");
+        assertThat(stock.closePrice()).isEqualTo(new BigDecimal("60000"));
+        assertThat(stock.closePriceKrw()).isEqualTo(new BigDecimal("60000"));
+        assertThat(stock.previousClosePrice()).isEqualTo(new BigDecimal("59000"));
+        assertThat(stock.dailyChangeRate()).isEqualTo(new BigDecimal("1.694915"));
         assertThat(stock.priceDate()).isEqualTo(MON);
         assertThat(stock.tradable()).isTrue();
         assertThat(stock.unavailableReason()).isNull();
@@ -156,7 +156,7 @@ class CompetitionStockServiceTest {
 
         CompetitionStockSummary stock = stockService.search(competitionId, null, null, 0, 20).stocks().get(0);
 
-        assertThat(stock.closePrice()).isEqualTo("60000");
+        assertThat(stock.closePrice()).isEqualTo(new BigDecimal("60000"));
         assertThat(stock.previousClosePrice()).isNull();
         assertThat(stock.dailyChangeRate()).isNull();
         assertThat(stock.tradable()).isTrue();
@@ -197,19 +197,19 @@ class CompetitionStockServiceTest {
 
         CompetitionStockDetailResponse response = stockService.getDetail(competitionId, "005930", userId);
 
-        assertThat(response.closePrice()).isEqualTo("60000");
-        assertThat(response.closePriceKrw()).isEqualTo("60000");
+        assertThat(response.closePrice()).isEqualTo(new BigDecimal("60000"));
+        assertThat(response.closePriceKrw()).isEqualTo(new BigDecimal("60000"));
         assertThat(response.exchangeRate()).isNull();
-        assertThat(response.dailyChangeRate()).isEqualTo("1.694915");
+        assertThat(response.dailyChangeRate()).isEqualTo(new BigDecimal("1.694915"));
         assertThat(response.holdingQuantity()).isEqualTo(10);
-        assertThat(response.averageBuyPrice()).isEqualTo("58000");
-        assertThat(response.averageBuyPriceKrw()).isEqualTo("58000");
-        assertThat(response.investedAmountKrw()).isEqualTo("580000");
-        assertThat(response.valuationAmountKrw()).isEqualTo("600000");
-        assertThat(response.profitLossKrw()).isEqualTo("20000");
-        assertThat(response.holdingReturnRate()).isEqualTo("3.448276");
-        assertThat(response.cashBalance()).isEqualTo("6999900");
-        assertThat(response.tradingFeeRate()).isEqualTo("0.0001");
+        assertThat(response.averageBuyPrice()).isEqualTo(new BigDecimal("58000"));
+        assertThat(response.averageBuyPriceKrw()).isEqualTo(new BigDecimal("58000"));
+        assertThat(response.investedAmountKrw()).isEqualTo(new BigDecimal("580000"));
+        assertThat(response.valuationAmountKrw()).isEqualTo(new BigDecimal("600000"));
+        assertThat(response.profitLossKrw()).isEqualTo(new BigDecimal("20000"));
+        assertThat(response.holdingReturnRate()).isEqualTo(new BigDecimal("3.448276"));
+        assertThat(response.cashBalance()).isEqualTo(new BigDecimal("6999900"));
+        assertThat(response.tradingFeeRate()).isEqualTo(new BigDecimal("0.0001"));
         assertThat(response.tradable()).isTrue();
     }
 
@@ -228,7 +228,7 @@ class CompetitionStockServiceTest {
         assertThat(response.valuationAmountKrw()).isNull();
         assertThat(response.profitLossKrw()).isNull();
         assertThat(response.holdingReturnRate()).isNull();
-        assertThat(response.cashBalance()).isEqualTo("6999900");
+        assertThat(response.cashBalance()).isEqualTo(new BigDecimal("6999900"));
     }
 
     @Test
@@ -241,7 +241,7 @@ class CompetitionStockServiceTest {
 
         CompetitionStockDetailResponse response = stockService.getDetail(competitionId, "005930", userId);
 
-        assertThat(response.investedAmountKrw()).isEqualTo("580000");
+        assertThat(response.investedAmountKrw()).isEqualTo(new BigDecimal("580000"));
         assertThat(response.valuationAmountKrw()).isNull();
         assertThat(response.profitLossKrw()).isNull();
         assertThat(response.holdingReturnRate()).isNull();

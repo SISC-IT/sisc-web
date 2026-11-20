@@ -1,12 +1,15 @@
 package org.sejongisc.backend.competition.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -78,7 +81,8 @@ class CompetitionStockControllerTest {
     void searchUsesDefaults() throws Exception {
         CompetitionStockSummary samsung = new CompetitionStockSummary(
                 "005930", "삼성전자", Market.KR, "KRW", UUID.randomUUID(),
-                "60000", "60000", "59000", "1.694915", LocalDate.of(2026, 11, 9), true, null);
+                new BigDecimal("60000"), new BigDecimal("60000"), new BigDecimal("59000"), new BigDecimal("1.694915"),
+                LocalDate.of(2026, 11, 9), true, null);
         when(stockService.search(competitionId, null, null, 0, 20))
                 .thenReturn(new CompetitionStockListResponse(0, 20, 1, null, List.of(samsung)));
 
@@ -89,8 +93,9 @@ class CompetitionStockControllerTest {
                 .andExpect(jsonPath("$.exchangeRate").doesNotExist())
                 .andExpect(jsonPath("$.stocks[0].ticker").value("005930"))
                 .andExpect(jsonPath("$.stocks[0].market").value("KR"))
-                .andExpect(jsonPath("$.stocks[0].closePrice").value("60000"))
-                .andExpect(jsonPath("$.stocks[0].dailyChangeRate").value("1.694915"))
+                .andExpect(jsonPath("$.stocks[0].closePrice").value(60000))
+                .andExpect(jsonPath("$.stocks[0].dailyChangeRate").value(1.694915))
+                .andExpect(content().string(containsString("\"closePrice\":60000,")))
                 .andExpect(jsonPath("$.stocks[0].priceDate").value("2026-11-09"))
                 .andExpect(jsonPath("$.stocks[0].tradable").value(true));
     }
@@ -119,7 +124,7 @@ class CompetitionStockControllerTest {
                         .ticker("005930")
                         .market(Market.KR)
                         .holdingQuantity(10)
-                        .cashBalance("6999900")
+                        .cashBalance(new BigDecimal("6999900"))
                         .tradable(false)
                         .unavailableReason(UnavailableReason.PRICE_UNAVAILABLE)
                         .build());
@@ -128,7 +133,7 @@ class CompetitionStockControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ticker").value("005930"))
                 .andExpect(jsonPath("$.holdingQuantity").value(10))
-                .andExpect(jsonPath("$.cashBalance").value("6999900"))
+                .andExpect(jsonPath("$.cashBalance").value(6999900))
                 .andExpect(jsonPath("$.tradable").value(false))
                 .andExpect(jsonPath("$.unavailableReason").value("PRICE_UNAVAILABLE"));
     }
