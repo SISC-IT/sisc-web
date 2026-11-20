@@ -1,5 +1,6 @@
 package org.sejongisc.backend.competition.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 import org.sejongisc.backend.competition.dto.UnavailableReason;
@@ -19,14 +20,18 @@ final class OrderRule {
     }
 
     // 대회 단위 조건. 종목을 조회하기 전에 먼저 확인할 수 있게 따로 둔다.
-    static UnavailableReason competitionUnavailableReason(Competition competition) {
-        return competition.getStatus() == CompetitionStatus.ACTIVE ? null : UnavailableReason.COMPETITION_NOT_ACTIVE;
+    // 상태가 늦게 바뀌어도 기간 밖 주문은 막히도록 날짜도 함께 본다.
+    static UnavailableReason competitionUnavailableReason(Competition competition, LocalDate today) {
+        boolean inPeriod = !today.isBefore(competition.getStartDate()) && !today.isAfter(competition.getEndDate());
+        return competition.getStatus() == CompetitionStatus.ACTIVE && inPeriod
+                ? null
+                : UnavailableReason.COMPETITION_NOT_ACTIVE;
     }
 
     // 주문할 수 있으면 null을 반환한다. latest는 지금 공개된 최신 종가이고 없으면 null이다.
     static UnavailableReason unavailableReason(
             Competition competition, CompetitionStock stock, DailyClosePrice latest, LocalDateTime now) {
-        UnavailableReason competitionReason = competitionUnavailableReason(competition);
+        UnavailableReason competitionReason = competitionUnavailableReason(competition, now.toLocalDate());
         if (competitionReason != null) {
             return competitionReason;
         }

@@ -125,6 +125,7 @@ class CompetitionTradeServiceTest {
         assertThat(trade.getFee()).isEqualByComparingTo("60");
         assertThat(trade.getClosePrice()).isSameAs(todayPrice);
         assertThat(trade.getPrice()).isEqualByComparingTo("60000");
+        assertThat(trade.getCashAfter()).isEqualByComparingTo("399940");
         assertThat(trade.getIdempotencyKey()).isEqualTo(key);
         assertThat(trade.getExecutedAt()).isEqualTo(FRI_17);
 
@@ -204,6 +205,7 @@ class CompetitionTradeServiceTest {
         CompetitionTradeResponse response = service(FRI_17).order(competitionId, userId, key, buy(10));
 
         assertThat(response.tradeId()).isEqualTo(existing.getTradeId());
+        assertThat(response.cashBalance()).isEqualByComparingTo("399940"); // 지금 현금(100만)이 아니라 체결 직후 잔고
         assertThat(account.getCash()).isEqualByComparingTo("1000000");
         verify(tradeRepository, never()).saveAndFlush(any());
     }
@@ -426,13 +428,19 @@ class CompetitionTradeServiceTest {
                 .quantity(quantity)
                 .price(new BigDecimal("60000.0000"))
                 .fee(new BigDecimal("60"))
+                .cashAfter(new BigDecimal("399940"))
                 .idempotencyKey(key)
                 .executedAt(FRI_17)
                 .build();
     }
 
     private static Competition competition(CompetitionStatus status, String feeRate) {
-        return Competition.builder().status(status).feeRate(new BigDecimal(feeRate)).build();
+        return Competition.builder()
+                .status(status)
+                .startDate(LocalDate.of(2026, 11, 16))
+                .endDate(LocalDate.of(2026, 11, 27))
+                .feeRate(new BigDecimal(feeRate))
+                .build();
     }
 
     private static DailyClosePrice price(CompetitionStock stock, LocalDate date, String closePrice) {

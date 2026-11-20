@@ -48,6 +48,10 @@ public class Trade extends BasePostgresEntity {
     @Column(nullable = false, precision = 18, scale = 4)
     private BigDecimal fee;
 
+    // 체결 직후 현금. 같은 키로 다시 요청하면 이 값으로 처음 응답을 그대로 돌려준다.
+    @Column(nullable = false, precision = 18, scale = 4)
+    private BigDecimal cashAfter;
+
     // 클라이언트가 보낸 중복 주문 방지 키. (account_id, idempotency_key) 유니크
     @Column(nullable = false, columnDefinition = "uuid")
     private UUID idempotencyKey;

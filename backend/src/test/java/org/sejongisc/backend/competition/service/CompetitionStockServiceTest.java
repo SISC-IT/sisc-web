@@ -89,6 +89,8 @@ class CompetitionStockServiceTest {
                 Clock.fixed(NOW.atZone(SEOUL).toInstant(), SEOUL));
         competition = Competition.builder()
                 .competitionId(competitionId)
+                .startDate(MON)
+                .endDate(MON.plusDays(11))
                 .status(CompetitionStatus.ACTIVE)
                 .feeRate(new BigDecimal("0.000100"))
                 .build();
@@ -300,6 +302,8 @@ class CompetitionStockServiceTest {
     void detailMarksStockUntradableWhenCompetitionNotActive() {
         competition = Competition.builder()
                 .competitionId(competitionId)
+                .startDate(MON)
+                .endDate(MON.plusDays(11))
                 .status(CompetitionStatus.ENDED)
                 .feeRate(new BigDecimal("0.000100"))
                 .build();

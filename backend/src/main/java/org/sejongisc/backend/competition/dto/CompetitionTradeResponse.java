@@ -3,7 +3,6 @@ package org.sejongisc.backend.competition.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.Trade;
 import org.sejongisc.backend.competition.entity.TradeSide;
 
@@ -18,7 +17,7 @@ public record CompetitionTradeResponse(
         BigDecimal cashBalance
 ) {
 
-    public static CompetitionTradeResponse of(Trade trade, CompetitionAccount account) {
+    public static CompetitionTradeResponse of(Trade trade) {
         return new CompetitionTradeResponse(
                 trade.getTradeId(),
                 trade.getStock().getTicker(),
@@ -27,7 +26,7 @@ public record CompetitionTradeResponse(
                 trade.getPrice(),
                 trade.getFee(),
                 trade.getExecutedAt(),
-                account.getCash()
+                trade.getCashAfter()
         );
     }
 }

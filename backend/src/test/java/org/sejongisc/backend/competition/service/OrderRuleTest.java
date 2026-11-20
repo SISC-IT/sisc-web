@@ -19,7 +19,7 @@ class OrderRuleTest {
     private static final LocalDate FRI = LocalDate.of(2026, 11, 20);
     private static final LocalDateTime FRI_17 = FRI.atTime(17, 0);
 
-    private final Competition active = Competition.builder().status(CompetitionStatus.ACTIVE).build();
+    private final Competition active = competition(CompetitionStatus.ACTIVE);
     private final CompetitionStock samsung = CompetitionStock.builder().ticker("005930").market(Market.KR).build();
     private final DailyClosePrice fridayPrice = DailyClosePrice.builder()
             .priceDate(FRI).closePrice(new BigDecimal("60000")).build();
@@ -33,9 +33,20 @@ class OrderRuleTest {
     @Test
     @DisplayName("진행 중이 아닌 대회는 주문할 수 없다")
     void competitionNotActive() {
-        Competition ready = Competition.builder().status(CompetitionStatus.READY).build();
+        Competition ready = competition(CompetitionStatus.READY);
 
         assertThat(OrderRule.unavailableReason(ready, samsung, fridayPrice, FRI_17))
+                .isEqualTo(UnavailableReason.COMPETITION_NOT_ACTIVE);
+    }
+
+    @Test
+    @DisplayName("상태가 진행 중이어도 대회 기간 밖이면 주문할 수 없다")
+    void outsideCompetitionPeriod() {
+        LocalDate dayAfterEnd = FRI.plusDays(8); // 종료일 11/27 다음 날
+
+        assertThat(OrderRule.unavailableReason(active, samsung, fridayPrice, FRI.minusDays(5).atTime(17, 0)))
+                .isEqualTo(UnavailableReason.COMPETITION_NOT_ACTIVE); // 시작일 11/16 전날
+        assertThat(OrderRule.unavailableReason(active, samsung, fridayPrice, dayAfterEnd.atTime(17, 0)))
                 .isEqualTo(UnavailableReason.COMPETITION_NOT_ACTIVE);
     }
 
@@ -67,5 +78,14 @@ class OrderRuleTest {
     void noPrice() {
         assertThat(OrderRule.unavailableReason(active, samsung, null, FRI_17))
                 .isEqualTo(UnavailableReason.PRICE_UNAVAILABLE);
+    }
+
+    // 대회 기간 2026-11-16(월) ~ 11-27(금)
+    private static Competition competition(CompetitionStatus status) {
+        return Competition.builder()
+                .status(status)
+                .startDate(LocalDate.of(2026, 11, 16))
+                .endDate(LocalDate.of(2026, 11, 27))
+                .build();
     }
 }

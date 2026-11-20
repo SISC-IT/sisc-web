@@ -62,12 +62,12 @@ public class CompetitionTradeService {
         // 응답만 유실된 재시도는 대회 상태와 관계없이 처음 체결 결과로 응답해야 해서 검증보다 먼저 확인한다.
         Optional<Trade> existing = tradeRepository.findByAccountAndIdempotencyKey(account, idempotencyKey);
         if (existing.isPresent()) {
-            return replay(existing.get(), account, request);
+            return replay(existing.get(), request);
         }
 
-        validateOrderAllowed(competition, participant);
-        CompetitionStock stock = findStock(request.ticker());
         LocalDateTime now = LocalDateTime.now(clock);
+        validateOrderAllowed(competition, participant, now);
+        CompetitionStock stock = findStock(request.ticker());
         DailyClosePrice closePrice = findOrderPrice(competition, stock, request.closePriceId(), now);
 
         BigDecimal amount = closePrice.getClosePrice().multiply(BigDecimal.valueOf(request.quantity()));
@@ -86,10 +86,11 @@ public class CompetitionTradeService {
                 .quantity(request.quantity())
                 .price(closePrice.getClosePrice())
                 .fee(fee)
+                .cashAfter(account.getCash())
                 .idempotencyKey(idempotencyKey)
                 .executedAt(now)
                 .build());
-        return CompetitionTradeResponse.of(trade, account);
+        return CompetitionTradeResponse.of(trade);
     }
 
     private Competition findCompetition(UUID competitionId) {
@@ -113,16 +114,16 @@ public class CompetitionTradeService {
     }
 
     // 같은 키의 재요청이다. 내용까지 같아야 정상 재시도로 보고 처음 체결 결과를 돌려준다.
-    private CompetitionTradeResponse replay(Trade existing, CompetitionAccount account, CompetitionTradeRequest request) {
+    private CompetitionTradeResponse replay(Trade existing, CompetitionTradeRequest request) {
         if (!isSameOrder(existing, request)) {
             throw new CustomException(ErrorCode.COMPETITION_IDEMPOTENCY_KEY_REUSED);
         }
-        return CompetitionTradeResponse.of(existing, account);
+        return CompetitionTradeResponse.of(existing);
     }
 
     // 종목과 상관없는 조건을 종목·종가 조회 전에 확인한다.
-    private void validateOrderAllowed(Competition competition, CompetitionParticipant participant) {
-        UnavailableReason reason = OrderRule.competitionUnavailableReason(competition);
+    private void validateOrderAllowed(Competition competition, CompetitionParticipant participant, LocalDateTime now) {
+        UnavailableReason reason = OrderRule.competitionUnavailableReason(competition, now.toLocalDate());
         if (reason != null) {
             throw new CustomException(reason.getErrorCode());
         }

@@ -7,6 +7,7 @@ create table trade (
     quantity bigint not null,
     price numeric(18, 4) not null,
     fee numeric(18, 4) not null,
+    cash_after numeric(18, 4) not null,
     idempotency_key uuid not null,
     executed_at timestamp not null,
     created_date timestamp not null,
@@ -16,5 +17,6 @@ create table trade (
     constraint ck_trade_side check (side in ('BUY', 'SELL')),
     constraint ck_trade_quantity check (quantity > 0),
     constraint ck_trade_price check (price > 0),
-    constraint ck_trade_fee check (fee >= 0)
+    constraint ck_trade_fee check (fee >= 0),
+    constraint ck_trade_cash_after check (cash_after >= 0)
 );
