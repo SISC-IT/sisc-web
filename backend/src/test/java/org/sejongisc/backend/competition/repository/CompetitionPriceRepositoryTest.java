@@ -82,6 +82,21 @@ class CompetitionPriceRepositoryTest {
   }
 
   @Test
+  void 주문에_쓸_최신_종가_1건은_공개_시각이_지난_것_중에서_가져온다() {
+    CompetitionStock samsung = saveStock("005930");
+    CompetitionStock hynix = saveStock("000660");
+    savePrice(samsung, FRI, "101");
+    savePrice(samsung, MON, "102");
+
+    assertThat(priceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+        samsung, MON.atTime(16, 29, 59))).get().extracting(DailyClosePrice::getPriceDate).isEqualTo(FRI);
+    assertThat(priceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+        samsung, MON.atTime(OPEN))).get().extracting(DailyClosePrice::getPriceDate).isEqualTo(MON);
+    assertThat(priceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+        hynix, MON.atTime(OPEN))).isEmpty();
+  }
+
+  @Test
   void 여러_날짜를_한_번에_적재해_공개_시각이_같아도_날짜순으로_가져온다() {
     CompetitionStock samsung = saveStock("005930");
     LocalDateTime sameOpen = MON.atTime(OPEN);

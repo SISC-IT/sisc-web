@@ -14,7 +14,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
@@ -291,8 +290,8 @@ class CompetitionTradeServiceTest {
         LocalDateTime saturday17 = FRI.plusDays(1).atTime(17, 0);
         givenNewOrder();
         when(stockRepository.findByTicker("005930")).thenReturn(Optional.of(samsung));
-        when(closePriceRepository.findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(samsung, saturday17))
-                .thenReturn(List.of(todayPrice)); // 금요일 종가가 최신
+        when(closePriceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(samsung, saturday17))
+                .thenReturn(Optional.of(todayPrice)); // 금요일 종가가 최신
 
         assertErrorCode(() -> service(saturday17).order(competitionId, userId, key, buy(10)),
                 ErrorCode.COMPETITION_PRICE_UNAVAILABLE);
@@ -384,8 +383,8 @@ class CompetitionTradeServiceTest {
 
     private void givenTodayPrice() {
         when(stockRepository.findByTicker("005930")).thenReturn(Optional.of(samsung));
-        when(closePriceRepository.findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(samsung, FRI_17))
-                .thenReturn(List.of(todayPrice, price(samsung, FRI.minusDays(1), "59000.0000")));
+        when(closePriceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(samsung, FRI_17))
+                .thenReturn(Optional.of(todayPrice));
     }
 
     private void givenOrderable() {

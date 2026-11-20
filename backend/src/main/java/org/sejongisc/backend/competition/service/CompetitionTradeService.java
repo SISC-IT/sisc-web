@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -54,49 +55,23 @@ public class CompetitionTradeService {
     @Transactional
     public CompetitionTradeResponse order(
             UUID competitionId, UUID userId, UUID idempotencyKey, CompetitionTradeRequest request) {
-        Competition competition = competitionRepository.findById(competitionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
-        CompetitionParticipant participant = participantRepository.findByCompetitionAndUserId(competition, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_PARTICIPANT_NOT_FOUND));
-        CompetitionAccount account = accountRepository.findByParticipant(participant)
-                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_PARTICIPANT_NOT_FOUND));
+        Competition competition = findCompetition(competitionId);
+        CompetitionParticipant participant = findParticipant(competition, userId);
+        CompetitionAccount account = findAccount(participant);
 
         // 응답만 유실된 재시도는 대회 상태와 관계없이 처음 체결 결과로 응답해야 해서 검증보다 먼저 확인한다.
-        Trade existing = tradeRepository.findByAccountAndIdempotencyKey(account, idempotencyKey).orElse(null);
-        if (existing != null) {
-            if (!isSameOrder(existing, request)) {
-                throw new CustomException(ErrorCode.COMPETITION_IDEMPOTENCY_KEY_REUSED);
-            }
-            return CompetitionTradeResponse.of(existing, account);
+        Optional<Trade> existing = tradeRepository.findByAccountAndIdempotencyKey(account, idempotencyKey);
+        if (existing.isPresent()) {
+            return replay(existing.get(), account, request);
         }
 
-        UnavailableReason competitionReason = OrderRule.competitionUnavailableReason(competition);
-        if (competitionReason != null) {
-            throw new CustomException(competitionReason.getErrorCode());
-        }
-        if (participant.getStatus() == ParticipantStatus.EXCLUDED) {
-            throw new CustomException(ErrorCode.COMPETITION_PARTICIPANT_EXCLUDED);
-        }
-
-        CompetitionStock stock = stockRepository.findByTicker(request.ticker())
-                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_STOCK_NOT_FOUND));
-
+        validateOrderAllowed(competition, participant);
+        CompetitionStock stock = findStock(request.ticker());
         LocalDateTime now = LocalDateTime.now(clock);
-        DailyClosePrice closePrice = closePriceRepository
-                .findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(stock, now).stream()
-                .findFirst()
-                .orElse(null);
-        UnavailableReason reason = OrderRule.unavailableReason(competition, stock, closePrice, now);
-        if (reason != null) {
-            throw new CustomException(reason.getErrorCode());
-        }
-        if (!closePrice.getClosePriceId().equals(request.closePriceId())) {
-            throw new CustomException(ErrorCode.PRICE_CHANGED);
-        }
+        DailyClosePrice closePrice = findOrderPrice(competition, stock, request.closePriceId(), now);
 
         BigDecimal amount = closePrice.getClosePrice().multiply(BigDecimal.valueOf(request.quantity()));
         BigDecimal fee = amount.multiply(competition.getFeeRate()).setScale(4, RoundingMode.DOWN);
-
         if (request.side() == TradeSide.BUY) {
             buy(account, stock, request.quantity(), closePrice.getClosePrice(), amount.add(fee));
         } else {
@@ -114,6 +89,62 @@ public class CompetitionTradeService {
                 .executedAt(now)
                 .build());
         return CompetitionTradeResponse.of(trade, account);
+    }
+
+    private Competition findCompetition(UUID competitionId) {
+        return competitionRepository.findById(competitionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+    }
+
+    private CompetitionParticipant findParticipant(Competition competition, UUID userId) {
+        return participantRepository.findByCompetitionAndUserId(competition, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_PARTICIPANT_NOT_FOUND));
+    }
+
+    private CompetitionAccount findAccount(CompetitionParticipant participant) {
+        return accountRepository.findByParticipant(participant)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_PARTICIPANT_NOT_FOUND));
+    }
+
+    private CompetitionStock findStock(String ticker) {
+        return stockRepository.findByTicker(ticker)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_STOCK_NOT_FOUND));
+    }
+
+    // 같은 키의 재요청이다. 내용까지 같아야 정상 재시도로 보고 처음 체결 결과를 돌려준다.
+    private CompetitionTradeResponse replay(Trade existing, CompetitionAccount account, CompetitionTradeRequest request) {
+        if (!isSameOrder(existing, request)) {
+            throw new CustomException(ErrorCode.COMPETITION_IDEMPOTENCY_KEY_REUSED);
+        }
+        return CompetitionTradeResponse.of(existing, account);
+    }
+
+    // 종목과 상관없는 조건을 종목·종가 조회 전에 확인한다.
+    private void validateOrderAllowed(Competition competition, CompetitionParticipant participant) {
+        UnavailableReason reason = OrderRule.competitionUnavailableReason(competition);
+        if (reason != null) {
+            throw new CustomException(reason.getErrorCode());
+        }
+        if (participant.getStatus() == ParticipantStatus.EXCLUDED) {
+            throw new CustomException(ErrorCode.COMPETITION_PARTICIPANT_EXCLUDED);
+        }
+    }
+
+    // 주문 규칙(시장, 주문 시간, 오늘 종가)과 사용자가 확인한 종가를 모두 통과한 체결가를 돌려준다.
+    private DailyClosePrice findOrderPrice(
+            Competition competition, CompetitionStock stock, UUID requestedClosePriceId, LocalDateTime now) {
+        DailyClosePrice latest = closePriceRepository
+                .findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(stock, now)
+                .orElse(null);
+        UnavailableReason reason = OrderRule.unavailableReason(competition, stock, latest, now);
+        if (reason != null) {
+            throw new CustomException(reason.getErrorCode());
+        }
+        // 규칙을 통과했으면 오늘 종가가 있으므로 latest는 null이 아니다.
+        if (!latest.getClosePriceId().equals(requestedClosePriceId)) {
+            throw new CustomException(ErrorCode.PRICE_CHANGED);
+        }
+        return latest;
     }
 
     private void buy(CompetitionAccount account, CompetitionStock stock, long quantity, BigDecimal price,

@@ -4,44 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
-import java.time.LocalTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 
-class CompetitionTradeEntityTest {
-
-    @Test
-    @DisplayName("국내 종목 주문 시간은 16:30 이상 21:00 미만이다")
-    void krOrderHours() {
-        assertThat(Market.KR.isOrderOpen(LocalTime.of(16, 29, 59))).isFalse();
-        assertThat(Market.KR.isOrderOpen(LocalTime.of(16, 30))).isTrue();
-        assertThat(Market.KR.isOrderOpen(LocalTime.of(20, 59, 59))).isTrue();
-        assertThat(Market.KR.isOrderOpen(LocalTime.of(21, 0))).isFalse();
-    }
-
-    @Test
-    @DisplayName("현금을 빼고 넣는다")
-    void decreaseAndIncreaseCash() {
-        CompetitionAccount account = account("1000000");
-
-        account.decreaseCash(new BigDecimal("600060"));
-        account.increaseCash(new BigDecimal("100000"));
-
-        assertThat(account.getCash()).isEqualByComparingTo("499940");
-    }
-
-    @Test
-    @DisplayName("현금보다 많이 빼면 잔고 부족으로 거절하고 현금은 그대로다")
-    void decreaseMoreThanCash() {
-        CompetitionAccount account = account("1000000");
-
-        assertThatThrownBy(() -> account.decreaseCash(new BigDecimal("1000000.0001")))
-                .isInstanceOf(CustomException.class)
-                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INSUFFICIENT_CASH);
-        assertThat(account.getCash()).isEqualByComparingTo("1000000");
-    }
+class HoldingTest {
 
     @Test
     @DisplayName("추가 매수하면 수량이 늘고 평균 매입가를 다시 계산한다")
@@ -84,10 +52,6 @@ class CompetitionTradeEntityTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INSUFFICIENT_HOLDING);
         assertThat(holding.getQuantity()).isEqualTo(5L);
-    }
-
-    private static CompetitionAccount account(String cash) {
-        return CompetitionAccount.builder().cash(new BigDecimal(cash)).deposit(BigDecimal.ZERO).build();
     }
 
     private static Holding holding(long quantity, String avgBuyPrice) {
