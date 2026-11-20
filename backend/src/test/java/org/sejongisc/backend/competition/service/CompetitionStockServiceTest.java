@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -105,7 +104,7 @@ class CompetitionStockServiceTest {
     @DisplayName("종가와 직전 거래일 종가로 등락률을 계산해 목록을 반환한다")
     void searchReturnsClosePriceAndChangeRate() {
         givenCompetition();
-        when(stockRepository.search(Market.KR, "%삼성%", FIRST_PAGE))
+        when(stockRepository.search(Market.KR, "삼성", FIRST_PAGE))
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
         DailyClosePrice latest = price(MON, "60000.0000");
         givenListPrices(latest, price(FRI, "59000.0000"));
@@ -134,7 +133,7 @@ class CompetitionStockServiceTest {
     @DisplayName("종가가 없는 종목은 가격이 null이고 거래할 수 없다")
     void searchMarksStockWithoutPriceUntradable() {
         givenCompetition();
-        when(stockRepository.search(null, "%%", FIRST_PAGE))
+        when(stockRepository.search(null, "", FIRST_PAGE))
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
         givenListPrices();
 
@@ -152,7 +151,7 @@ class CompetitionStockServiceTest {
     @DisplayName("종가가 1건이면 등락률 없이 거래 가능으로 반환한다")
     void searchOmitsChangeRateWithoutPreviousPrice() {
         givenCompetition();
-        when(stockRepository.search(null, "%%", FIRST_PAGE))
+        when(stockRepository.search(null, "", FIRST_PAGE))
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
         givenListPrices(price(MON, "60000.0000"));
 
@@ -165,11 +164,11 @@ class CompetitionStockServiceTest {
     }
 
     @Test
-    @DisplayName("페이지와 크기를 범위 안으로 맞추고 검색어는 소문자로 바꾼다")
+    @DisplayName("페이지와 크기를 범위 안으로 맞추고 검색어 앞뒤 공백을 뗀다")
     void searchNormalizesPageAndQuery() {
         givenCompetition();
         Pageable expected = PageRequest.of(0, 100, Sort.by("ticker"));
-        when(stockRepository.search(null, "%aapl%", expected)).thenReturn(new PageImpl<>(List.of(), expected, 0));
+        when(stockRepository.search(null, "AAPL", expected)).thenReturn(new PageImpl<>(List.of(), expected, 0));
 
         CompetitionStockListResponse response = stockService.search(competitionId, null, " AAPL ", -1, 500);
 
@@ -177,33 +176,6 @@ class CompetitionStockServiceTest {
         assertThat(response.size()).isEqualTo(100);
         assertThat(response.stocks()).isEmpty();
         verifyNoInteractions(closePriceRepository);
-    }
-
-    @Test
-    @DisplayName("검색어의 %와 _는 와일드카드가 아닌 글자로 검색한다")
-    void searchEscapesLikeWildcards() {
-        givenCompetition();
-        when(stockRepository.search(null, "%50!%!_a!!%", FIRST_PAGE)).thenReturn(new PageImpl<>(List.of(), FIRST_PAGE, 0));
-
-        stockService.search(competitionId, null, "50%_A!", 0, 20);
-
-        verify(stockRepository).search(null, "%50!%!_a!!%", FIRST_PAGE);
-    }
-
-    @Test
-    @DisplayName("서버 로캘이 터키어여도 검색어를 같은 소문자로 바꾼다")
-    void searchLowercasesRegardlessOfLocale() {
-        givenCompetition();
-        when(stockRepository.search(null, "%ibm%", FIRST_PAGE)).thenReturn(new PageImpl<>(List.of(), FIRST_PAGE, 0));
-        Locale original = Locale.getDefault();
-        Locale.setDefault(Locale.forLanguageTag("tr-TR"));
-        try {
-            stockService.search(competitionId, null, "IBM", 0, 20);
-        } finally {
-            Locale.setDefault(original);
-        }
-
-        verify(stockRepository).search(null, "%ibm%", FIRST_PAGE);
     }
 
     @Test
@@ -221,11 +193,11 @@ class CompetitionStockServiceTest {
     @DisplayName("시장 구분이 빈 문자열이면 전체 시장을 조회한다")
     void searchTreatsBlankMarketAsAll() {
         givenCompetition();
-        when(stockRepository.search(null, "%%", FIRST_PAGE)).thenReturn(new PageImpl<>(List.of(), FIRST_PAGE, 0));
+        when(stockRepository.search(null, "", FIRST_PAGE)).thenReturn(new PageImpl<>(List.of(), FIRST_PAGE, 0));
 
         stockService.search(competitionId, " ", null, 0, 20);
 
-        verify(stockRepository).search(null, "%%", FIRST_PAGE);
+        verify(stockRepository).search(null, "", FIRST_PAGE);
     }
 
     @Test

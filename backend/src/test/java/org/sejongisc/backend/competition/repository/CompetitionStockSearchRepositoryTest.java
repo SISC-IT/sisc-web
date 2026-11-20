@@ -32,7 +32,7 @@ class CompetitionStockSearchRepositoryTest {
 
   @Test
   void 검색어가_없으면_전체_종목을_티커순으로_가져온다() {
-    Page<CompetitionStock> result = stockRepository.search(null, "%%", FIRST_PAGE);
+    Page<CompetitionStock> result = stockRepository.search(null, "", FIRST_PAGE);
 
     assertThat(result.getTotalElements()).isEqualTo(4);
     assertThat(result).extracting(CompetitionStock::getTicker)
@@ -41,43 +41,32 @@ class CompetitionStockSearchRepositoryTest {
 
   @Test
   void 회사명이나_티커_일부로_검색한다() {
-    assertThat(stockRepository.search(null, "%삼성%", FIRST_PAGE))
+    assertThat(stockRepository.search(null, "삼성", FIRST_PAGE))
         .extracting(CompetitionStock::getTicker).containsExactly("005930", "005935");
-    assertThat(stockRepository.search(null, "%0059%", FIRST_PAGE))
+    assertThat(stockRepository.search(null, "0059", FIRST_PAGE))
         .extracting(CompetitionStock::getTicker).containsExactly("005930", "005935");
   }
 
   @Test
   void 대소문자를_구분하지_않는다() {
-    assertThat(stockRepository.search(null, "%apple%", FIRST_PAGE))
+    assertThat(stockRepository.search(null, "APPLE", FIRST_PAGE))
         .extracting(CompetitionStock::getTicker).containsExactly("AAPL");
-    assertThat(stockRepository.search(null, "%aapl%", FIRST_PAGE))
+    assertThat(stockRepository.search(null, "aapl", FIRST_PAGE))
         .extracting(CompetitionStock::getTicker).containsExactly("AAPL");
-    assertThat(stockRepository.search(null, "%sk%", FIRST_PAGE))
+    assertThat(stockRepository.search(null, "sk", FIRST_PAGE))
         .extracting(CompetitionStock::getTicker).containsExactly("000660");
   }
 
   @Test
-  void 이스케이프한_퍼센트와_밑줄은_그_글자가_있는_종목만_찾는다() {
-    saveStock("900001", "배당50%", Market.KR);
-    saveStock("900002", "A_B", Market.KR);
-
-    assertThat(stockRepository.search(null, "%!%%", FIRST_PAGE))
-        .extracting(CompetitionStock::getTicker).containsExactly("900001");
-    assertThat(stockRepository.search(null, "%!_%", FIRST_PAGE))
-        .extracting(CompetitionStock::getTicker).containsExactly("900002");
-  }
-
-  @Test
   void 시장을_지정하면_그_시장_종목만_가져온다() {
-    assertThat(stockRepository.search(Market.US, "%%", FIRST_PAGE))
+    assertThat(stockRepository.search(Market.US, "", FIRST_PAGE))
         .extracting(CompetitionStock::getTicker).containsExactly("AAPL");
-    assertThat(stockRepository.search(Market.KR, "%apple%", FIRST_PAGE)).isEmpty();
+    assertThat(stockRepository.search(Market.KR, "apple", FIRST_PAGE)).isEmpty();
   }
 
   @Test
   void 페이지를_나눠도_전체_건수는_그대로다() {
-    Page<CompetitionStock> second = stockRepository.search(null, "%%", PageRequest.of(1, 3, Sort.by("ticker")));
+    Page<CompetitionStock> second = stockRepository.search(null, "", PageRequest.of(1, 3, Sort.by("ticker")));
 
     assertThat(second.getTotalElements()).isEqualTo(4);
     assertThat(second).extracting(CompetitionStock::getTicker).containsExactly("AAPL");

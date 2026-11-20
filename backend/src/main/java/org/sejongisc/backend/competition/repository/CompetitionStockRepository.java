@@ -21,7 +21,8 @@ public interface CompetitionStockRepository extends JpaRepository<CompetitionSto
     @Query("""
             select s from CompetitionStock s
             where (:market is null or s.market = :market)
-              and (lower(s.name) like :pattern escape '!' or lower(s.ticker) like :pattern escape '!')
+              and (lower(s.name) like lower(concat('%', :keyword, '%'))
+                or lower(s.ticker) like lower(concat('%', :keyword, '%')))
             """)
-    Page<CompetitionStock> search(@Param("market") Market market, @Param("pattern") String pattern, Pageable pageable);
+    Page<CompetitionStock> search(@Param("market") Market market, @Param("keyword") String keyword, Pageable pageable);
 }
