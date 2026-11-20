@@ -1,5 +1,6 @@
 package org.sejongisc.backend.common.exception.controller;
 
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
@@ -34,7 +35,9 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(BindException.class)
   public ResponseEntity<ErrorResponse> handleBindException(BindException e) {
-    log.warn("요청 값 검증 실패: {}", e.getMessage());
+    // e.getMessage()에는 거부된 입력값(비밀번호 등)이 들어 있으므로 필드 이름만 남긴다.
+    List<String> fields = e.getFieldErrors().stream().map(FieldError::getField).toList();
+    log.warn("요청 값 검증 실패: fields={}", fields);
 
     ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
     FieldError fieldError = e.getFieldError();
