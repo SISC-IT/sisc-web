@@ -31,7 +31,7 @@ public class CompetitionStockController {
             - market은 KR 또는 US이고, 생략하면 전체 시장을 조회합니다. \s
             - page는 0부터 시작하고 size는 최대 100입니다. \s
             - 거래 가능한 종가가 없으면 가격 항목은 null이고 tradable은 false입니다. \s
-            - tradable은 종가 유무만 반영합니다.
+            - tradable은 주문 API와 같은 규칙(진행 중인 대회, 국내 종목, 주문 시간 16:30~21:00, 오늘 종가)으로 정하고, false면 unavailableReason에 이유를 담습니다.
             """
     )
     @GetMapping

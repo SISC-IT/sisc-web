@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -239,6 +240,7 @@ class CompetitionTradeServiceTest {
 
         assertErrorCode(() -> service(FRI_17).order(competitionId, userId, key, buy(10)),
                 ErrorCode.COMPETITION_NOT_ACTIVE);
+        verifyNoInteractions(stockRepository, closePriceRepository);
     }
 
     @Test

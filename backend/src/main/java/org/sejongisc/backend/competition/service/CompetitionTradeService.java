@@ -12,14 +12,13 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionTradeRequest;
 import org.sejongisc.backend.competition.dto.CompetitionTradeResponse;
+import org.sejongisc.backend.competition.dto.UnavailableReason;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
-import org.sejongisc.backend.competition.entity.CompetitionStatus;
 import org.sejongisc.backend.competition.entity.CompetitionStock;
 import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Holding;
-import org.sejongisc.backend.competition.entity.Market;
 import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.entity.Trade;
 import org.sejongisc.backend.competition.entity.TradeSide;
@@ -71,8 +70,9 @@ public class CompetitionTradeService {
             return CompetitionTradeResponse.of(existing, account);
         }
 
-        if (competition.getStatus() != CompetitionStatus.ACTIVE) {
-            throw new CustomException(ErrorCode.COMPETITION_NOT_ACTIVE);
+        UnavailableReason competitionReason = OrderRule.competitionUnavailableReason(competition);
+        if (competitionReason != null) {
+            throw new CustomException(competitionReason.getErrorCode());
         }
         if (participant.getStatus() == ParticipantStatus.EXCLUDED) {
             throw new CustomException(ErrorCode.COMPETITION_PARTICIPANT_EXCLUDED);
@@ -80,21 +80,16 @@ public class CompetitionTradeService {
 
         CompetitionStock stock = stockRepository.findByTicker(request.ticker())
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_STOCK_NOT_FOUND));
-        if (stock.getMarket() != Market.KR) {
-            throw new CustomException(ErrorCode.COMPETITION_MARKET_NOT_SUPPORTED);
-        }
 
         LocalDateTime now = LocalDateTime.now(clock);
-        if (!stock.getMarket().isOrderOpen(now.toLocalTime())) {
-            throw new CustomException(ErrorCode.COMPETITION_ORDER_CLOSED);
-        }
-
-        // 종가는 거래일에만 수집되므로, 최신 종가가 오늘 날짜가 아니면 주말·공휴일이다.
         DailyClosePrice closePrice = closePriceRepository
                 .findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(stock, now).stream()
                 .findFirst()
-                .filter(price -> price.getPriceDate().equals(now.toLocalDate()))
-                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_PRICE_UNAVAILABLE));
+                .orElse(null);
+        UnavailableReason reason = OrderRule.unavailableReason(competition, stock, closePrice, now);
+        if (reason != null) {
+            throw new CustomException(reason.getErrorCode());
+        }
         if (!closePrice.getClosePriceId().equals(request.closePriceId())) {
             throw new CustomException(ErrorCode.PRICE_CHANGED);
         }
