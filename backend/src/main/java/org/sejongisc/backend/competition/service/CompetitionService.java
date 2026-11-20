@@ -47,10 +47,11 @@ public class CompetitionService {
   private final UserRepository userRepository;
   private final Clock clock;
 
-  // 대회를 READY로 만들고 활동 회원 전원을 참가자로 등록해 계좌를 만든다.
+  // 대회를 READY(시작일이 오늘이면 ACTIVE)로 만들고 활동 회원 전원을 참가자로 등록해 계좌를 만든다.
   @Transactional
   public CompetitionCreateResponse create(CompetitionCreateRequest request) {
-    if (request.startDate().isBefore(LocalDate.now(clock))) {
+    LocalDate today = LocalDate.now(clock);
+    if (request.startDate().isBefore(today)) {
       throw new CustomException(ErrorCode.COMPETITION_START_DATE_PAST);
     }
     if (request.endDate().isBefore(request.startDate())) {
@@ -73,7 +74,8 @@ public class CompetitionService {
 
     Competition competition = saveOpenCompetition(Competition.builder()
         .name(request.name())
-        .status(CompetitionStatus.READY)
+        // 오늘 시작하는 대회는 다음 스케줄러 실행(매시 정각)을 기다리지 않고 바로 연다.
+        .status(request.startDate().isAfter(today) ? CompetitionStatus.READY : CompetitionStatus.ACTIVE)
         .startDate(request.startDate())
         .endDate(request.endDate())
         .initialCash(DEFAULT_INITIAL_CASH)

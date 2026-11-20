@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -65,7 +66,8 @@ public class CompetitionTradeService {
             return replay(existing.get(), request);
         }
 
-        LocalDateTime now = LocalDateTime.now(clock);
+        // DB(timestamp)는 마이크로초까지 저장한다. 첫 응답과 재시도 응답의 체결 시각이 같도록 미리 맞춘다.
+        LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
         validateOrderAllowed(competition, participant, now);
         CompetitionStock stock = findStock(request.ticker());
         DailyClosePrice closePrice = findOrderPrice(stock, request.closePriceId(), now);

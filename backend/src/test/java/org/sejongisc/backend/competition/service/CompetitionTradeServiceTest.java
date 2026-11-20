@@ -3,6 +3,7 @@ package org.sejongisc.backend.competition.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -133,6 +134,22 @@ class CompetitionTradeServiceTest {
         assertThat(response.price()).isEqualByComparingTo("60000");
         assertThat(response.fee()).isEqualByComparingTo("60");
         assertThat(response.cashBalance()).isEqualByComparingTo("399940");
+    }
+
+    @Test
+    @DisplayName("체결 시각은 DB가 저장하는 마이크로초까지만 남겨 재시도 응답과 같게 한다")
+    void executedAtIsTruncatedToMicros() {
+        givenNewOrder();
+        when(stockRepository.findByTicker("005930")).thenReturn(Optional.of(samsung));
+        when(closePriceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(eq(samsung), any()))
+                .thenReturn(Optional.of(todayPrice));
+        when(holdingRepository.findByAccountAndStock(account, samsung)).thenReturn(Optional.empty());
+        givenTradeSaved();
+
+        CompetitionTradeResponse response =
+                service(FRI_17.plusNanos(123_456_789)).order(competitionId, userId, key, buy(1));
+
+        assertThat(response.executedAt()).isEqualTo(FRI_17.plusNanos(123_456_000));
     }
 
     @Test

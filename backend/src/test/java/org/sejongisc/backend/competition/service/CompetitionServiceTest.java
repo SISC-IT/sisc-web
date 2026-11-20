@@ -207,4 +207,21 @@ class CompetitionServiceTest {
 
     assertThat(ready.getStatus()).isEqualTo(CompetitionStatus.ACTIVE);
   }
+
+  @Test
+  @DisplayName("시작일이 오늘이면 스케줄러를 기다리지 않고 바로 진행 중으로 만든다")
+  @SuppressWarnings("unchecked")
+  void createStartingTodayIsActive() {
+    given(userRepository.findAllByStatusAndRoleNot(UserStatus.ACTIVE, Role.PENDING_MEMBER))
+        .willReturn(List.of(user("매크로팀")));
+    given(competitionRepository.saveAndFlush(any())).willAnswer(invocation -> invocation.getArgument(0));
+    given(participantRepository.saveAll(anyList())).willAnswer(invocation -> invocation.getArgument(0));
+
+    competitionService.create(new CompetitionCreateRequest(
+        "2026 2학기 수익률 대결", LocalDate.of(2026, 11, 18), LocalDate.of(2026, 11, 27)));
+
+    ArgumentCaptor<Competition> competition = ArgumentCaptor.forClass(Competition.class);
+    verify(competitionRepository).saveAndFlush(competition.capture());
+    assertThat(competition.getValue().getStatus()).isEqualTo(CompetitionStatus.ACTIVE);
+  }
 }
