@@ -2,8 +2,7 @@ package org.sejongisc.backend.competition.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -107,7 +106,7 @@ class CompetitionStockServiceTest {
         when(stockRepository.search(Market.KR, "%삼성%", FIRST_PAGE))
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
         DailyClosePrice latest = price(MON, "60000.0000");
-        givenPrices(latest, price(FRI, "59000.0000"));
+        givenListPrices(latest, price(FRI, "59000.0000"));
 
         CompetitionStockListResponse response = stockService.search(competitionId, Market.KR, "삼성", 0, 20);
 
@@ -135,7 +134,7 @@ class CompetitionStockServiceTest {
         givenCompetition();
         when(stockRepository.search(null, "%%", FIRST_PAGE))
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
-        givenPrices();
+        givenListPrices();
 
         CompetitionStockSummary stock = stockService.search(competitionId, null, null, 0, 20).stocks().get(0);
 
@@ -153,7 +152,7 @@ class CompetitionStockServiceTest {
         givenCompetition();
         when(stockRepository.search(null, "%%", FIRST_PAGE))
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
-        givenPrices(price(MON, "60000.0000"));
+        givenListPrices(price(MON, "60000.0000"));
 
         CompetitionStockSummary stock = stockService.search(competitionId, null, null, 0, 20).stocks().get(0);
 
@@ -175,7 +174,7 @@ class CompetitionStockServiceTest {
         assertThat(response.page()).isZero();
         assertThat(response.size()).isEqualTo(100);
         assertThat(response.stocks()).isEmpty();
-        verify(stockRepository).search(null, "%aapl%", expected);
+        verifyNoInteractions(closePriceRepository);
     }
 
     @Test
@@ -283,6 +282,11 @@ class CompetitionStockServiceTest {
         when(participantRepository.findByCompetitionAndUserId(competition, userId))
                 .thenReturn(Optional.of(participant));
         when(accountRepository.findByParticipant(participant)).thenReturn(Optional.of(account));
+    }
+
+    private void givenListPrices(DailyClosePrice... prices) {
+        when(closePriceRepository.findLatestTwoByStockIds(List.of(samsung.getStockId()), NOW))
+                .thenReturn(List.of(prices));
     }
 
     private void givenPrices(DailyClosePrice... prices) {

@@ -2,7 +2,10 @@ package org.sejongisc.backend.competition.service;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
@@ -14,6 +17,7 @@ import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
 import org.sejongisc.backend.competition.entity.CompetitionStock;
+import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Holding;
 import org.sejongisc.backend.competition.entity.Market;
 import org.sejongisc.backend.competition.repository.CompetitionAccountRepository;
@@ -51,7 +55,7 @@ public class CompetitionStockService {
 
         Page<CompetitionStock> stocks = stockRepository.search(
                 market, pattern, PageRequest.of(safePage, safeSize, Sort.by("ticker")));
-        LocalDateTime now = LocalDateTime.now(clock);
+        Map<UUID, List<DailyClosePrice>> prices = latestTwoPrices(stocks.getContent());
 
         return new CompetitionStockListResponse(
                 safePage,
@@ -59,7 +63,8 @@ public class CompetitionStockService {
                 stocks.getTotalElements(),
                 null,
                 stocks.stream()
-                        .map(stock -> CompetitionStockSummary.of(stock, quote(stock, now)))
+                        .map(stock -> CompetitionStockSummary.of(
+                                stock, StockQuote.of(prices.getOrDefault(stock.getStockId(), List.of()))))
                         .toList()
         );
     }
@@ -74,8 +79,11 @@ public class CompetitionStockService {
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_PARTICIPANT_NOT_FOUND));
         Holding holding = holdingRepository.findByAccountAndStock(account, stock).orElse(null);
 
-        return CompetitionStockDetailResponse.of(
-                competition, stock, quote(stock, LocalDateTime.now(clock)), account, holding);
+        StockQuote quote = StockQuote.of(
+                closePriceRepository.findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+                        stock, LocalDateTime.now(clock)));
+
+        return CompetitionStockDetailResponse.of(competition, stock, quote, account, holding);
     }
 
     private Competition findCompetition(UUID competitionId) {
@@ -83,8 +91,12 @@ public class CompetitionStockService {
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
     }
 
-    private StockQuote quote(CompetitionStock stock, LocalDateTime now) {
-        return StockQuote.of(
-                closePriceRepository.findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(stock, now));
+    private Map<UUID, List<DailyClosePrice>> latestTwoPrices(List<CompetitionStock> stocks) {
+        if (stocks.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> stockIds = stocks.stream().map(CompetitionStock::getStockId).toList();
+        return closePriceRepository.findLatestTwoByStockIds(stockIds, LocalDateTime.now(clock)).stream()
+                .collect(Collectors.groupingBy(price -> price.getStock().getStockId()));
     }
 }
