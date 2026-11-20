@@ -29,6 +29,7 @@ import org.sejongisc.backend.competition.dto.UnavailableReason;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
+import org.sejongisc.backend.competition.entity.CompetitionStatus;
 import org.sejongisc.backend.competition.entity.CompetitionStock;
 import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Holding;
@@ -88,6 +89,9 @@ class CompetitionStockServiceTest {
                 Clock.fixed(NOW.atZone(SEOUL).toInstant(), SEOUL));
         competition = Competition.builder()
                 .competitionId(competitionId)
+                .startDate(MON)
+                .endDate(MON.plusDays(11))
+                .status(CompetitionStatus.ACTIVE)
                 .feeRate(new BigDecimal("0.000100"))
                 .build();
         samsung = CompetitionStock.builder()
@@ -270,6 +274,48 @@ class CompetitionStockServiceTest {
         assertThat(response.holdingReturnRate()).isNull();
         assertThat(response.tradable()).isFalse();
         assertThat(response.unavailableReason()).isEqualTo(UnavailableReason.PRICE_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("주문 시간 전에는 종가가 있어도 목록에서 거래할 수 없다")
+    void searchMarksStockUntradableBeforeOrderHours() {
+        LocalDateTime monday16 = MON.atTime(16, 0);
+        stockService = new CompetitionStockService(
+                competitionRepository, stockRepository, closePriceRepository,
+                participantRepository, accountRepository, holdingRepository,
+                Clock.fixed(monday16.atZone(SEOUL).toInstant(), SEOUL));
+        givenCompetition();
+        when(stockRepository.search(null, "", FIRST_PAGE))
+                .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
+        when(closePriceRepository.findLatestTwoByStockIds(List.of(samsung.getStockId()), monday16))
+                .thenReturn(List.of(price(FRI, "59000.0000")));
+
+        CompetitionStockSummary stock = stockService.search(competitionId, null, null, 0, 20).stocks().get(0);
+
+        assertThat(stock.closePrice()).isEqualByComparingTo("59000");
+        assertThat(stock.tradable()).isFalse();
+        assertThat(stock.unavailableReason()).isEqualTo(UnavailableReason.ORDER_CLOSED);
+    }
+
+    @Test
+    @DisplayName("진행 중이 아닌 대회의 종목 상세는 거래할 수 없다")
+    void detailMarksStockUntradableWhenCompetitionNotActive() {
+        competition = Competition.builder()
+                .competitionId(competitionId)
+                .startDate(MON)
+                .endDate(MON.plusDays(11))
+                .status(CompetitionStatus.ENDED)
+                .feeRate(new BigDecimal("0.000100"))
+                .build();
+        givenParticipant();
+        givenPrices(price(MON, "60000.0000"));
+        when(holdingRepository.findByAccountAndStock(account, samsung)).thenReturn(Optional.empty());
+
+        CompetitionStockDetailResponse response = stockService.getDetail(competitionId, "005930", userId);
+
+        assertThat(response.closePrice()).isEqualByComparingTo("60000");
+        assertThat(response.tradable()).isFalse();
+        assertThat(response.unavailableReason()).isEqualTo(UnavailableReason.COMPETITION_NOT_ACTIVE);
     }
 
     @Test

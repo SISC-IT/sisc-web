@@ -43,8 +43,4 @@ public record StockQuote(DailyClosePrice latest, DailyClosePrice previous) {
                 .multiply(BigDecimal.valueOf(100))
                 .divide(previous.getClosePrice(), 6, RoundingMode.HALF_UP);
     }
-
-    public UnavailableReason unavailableReason() {
-        return available() ? null : UnavailableReason.PRICE_UNAVAILABLE;
-    }
 }

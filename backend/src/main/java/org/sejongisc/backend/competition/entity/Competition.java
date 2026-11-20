@@ -41,4 +41,8 @@ public class Competition extends BasePostgresEntity {
 
     @Column(nullable = false, precision = 10, scale = 6)
     private BigDecimal depositInterestRate;
+
+    public void start() {
+        status = CompetitionStatus.ACTIVE;
+    }
 }

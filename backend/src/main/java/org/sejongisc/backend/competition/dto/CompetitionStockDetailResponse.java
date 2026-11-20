@@ -41,7 +41,8 @@ public record CompetitionStockDetailResponse(
             CompetitionStock stock,
             StockQuote quote,
             CompetitionAccount account,
-            Holding holding
+            Holding holding,
+            UnavailableReason reason
     ) {
         boolean krw = stock.getMarket() == Market.KR;
         boolean held = holding != null;
@@ -73,8 +74,8 @@ public record CompetitionStockDetailResponse(
                 .holdingReturnRate(holdingReturnRate)
                 .cashBalance(account.getCash())
                 .tradingFeeRate(competition.getFeeRate())
-                .tradable(quote.available())
-                .unavailableReason(quote.unavailableReason())
+                .tradable(reason == null)
+                .unavailableReason(reason)
                 .build();
     }
 }

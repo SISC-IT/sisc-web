@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface DailyClosePriceRepository extends JpaRepository<DailyClosePrice, UUID> {
@@ -18,6 +19,10 @@ public interface DailyClosePriceRepository extends JpaRepository<DailyClosePrice
     // 공개 여부는 availableAt으로 거르고, 순서는 priceDate로 정한다. 여러 날짜를 한 번에 적재하면 availableAt이 같아질 수 있다.
     // 인덱스는 uk_daily_close_price_stock_date (stock_id, price_date)를 그대로 쓴다.
     List<DailyClosePrice> findTop2ByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+            CompetitionStock stock, LocalDateTime now);
+
+    // 주문 체결가: 지금 공개된 종가 중 가장 최근 것
+    Optional<DailyClosePrice> findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
             CompetitionStock stock, LocalDateTime now);
 
     @Query(value = """

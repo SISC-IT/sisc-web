@@ -21,7 +21,7 @@ public record CompetitionStockSummary(
         UnavailableReason unavailableReason
 ) {
 
-    public static CompetitionStockSummary of(CompetitionStock stock, StockQuote quote) {
+    public static CompetitionStockSummary of(CompetitionStock stock, StockQuote quote, UnavailableReason reason) {
         return new CompetitionStockSummary(
                 stock.getTicker(),
                 stock.getName(),
@@ -33,8 +33,8 @@ public record CompetitionStockSummary(
                 quote.previousClosePrice(),
                 quote.dailyChangeRate(),
                 quote.priceDate(),
-                quote.available(),
-                quote.unavailableReason()
+                reason == null,
+                reason
         );
     }
 }
