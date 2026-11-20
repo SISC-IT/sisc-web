@@ -45,12 +45,12 @@ public class CompetitionStockService {
 
     public CompetitionStockListResponse search(UUID competitionId, Market market, String query, int page, int size) {
         findCompetition(competitionId);
-        int safePage = Math.max(page, 1);
+        int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         String pattern = "%" + (query == null ? "" : query.trim().toLowerCase()) + "%";
 
         Page<CompetitionStock> stocks = stockRepository.search(
-                market, pattern, PageRequest.of(safePage - 1, safeSize, Sort.by("ticker")));
+                market, pattern, PageRequest.of(safePage, safeSize, Sort.by("ticker")));
         LocalDateTime now = LocalDateTime.now(clock);
 
         return new CompetitionStockListResponse(

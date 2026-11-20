@@ -74,17 +74,17 @@ class CompetitionStockControllerTest {
     }
 
     @Test
-    @DisplayName("GET /stocks - 파라미터를 생략하면 1페이지 20건으로 조회한다")
+    @DisplayName("GET /stocks - 파라미터를 생략하면 첫 페이지 20건으로 조회한다")
     void searchUsesDefaults() throws Exception {
         CompetitionStockSummary samsung = new CompetitionStockSummary(
                 "005930", "삼성전자", Market.KR, "KRW", UUID.randomUUID(),
                 "60000", "60000", "59000", "1.694915", LocalDate.of(2026, 11, 9), true, null);
-        when(stockService.search(competitionId, null, null, 1, 20))
-                .thenReturn(new CompetitionStockListResponse(1, 20, 1, null, List.of(samsung)));
+        when(stockService.search(competitionId, null, null, 0, 20))
+                .thenReturn(new CompetitionStockListResponse(0, 20, 1, null, List.of(samsung)));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/stocks", competitionId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.totalCount").value(1))
                 .andExpect(jsonPath("$.exchangeRate").doesNotExist())
                 .andExpect(jsonPath("$.stocks[0].ticker").value("005930"))

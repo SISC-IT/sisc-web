@@ -109,9 +109,9 @@ class CompetitionStockServiceTest {
         DailyClosePrice latest = price(MON, "60000.0000");
         givenPrices(latest, price(FRI, "59000.0000"));
 
-        CompetitionStockListResponse response = stockService.search(competitionId, Market.KR, "삼성", 1, 20);
+        CompetitionStockListResponse response = stockService.search(competitionId, Market.KR, "삼성", 0, 20);
 
-        assertThat(response.page()).isEqualTo(1);
+        assertThat(response.page()).isZero();
         assertThat(response.size()).isEqualTo(20);
         assertThat(response.totalCount()).isEqualTo(1);
         assertThat(response.exchangeRate()).isNull();
@@ -137,7 +137,7 @@ class CompetitionStockServiceTest {
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
         givenPrices();
 
-        CompetitionStockSummary stock = stockService.search(competitionId, null, null, 1, 20).stocks().get(0);
+        CompetitionStockSummary stock = stockService.search(competitionId, null, null, 0, 20).stocks().get(0);
 
         assertThat(stock.closePriceId()).isNull();
         assertThat(stock.closePrice()).isNull();
@@ -155,7 +155,7 @@ class CompetitionStockServiceTest {
                 .thenReturn(new PageImpl<>(List.of(samsung), FIRST_PAGE, 1));
         givenPrices(price(MON, "60000.0000"));
 
-        CompetitionStockSummary stock = stockService.search(competitionId, null, null, 1, 20).stocks().get(0);
+        CompetitionStockSummary stock = stockService.search(competitionId, null, null, 0, 20).stocks().get(0);
 
         assertThat(stock.closePrice()).isEqualTo("60000");
         assertThat(stock.previousClosePrice()).isNull();
@@ -170,9 +170,9 @@ class CompetitionStockServiceTest {
         Pageable expected = PageRequest.of(0, 100, Sort.by("ticker"));
         when(stockRepository.search(null, "%aapl%", expected)).thenReturn(new PageImpl<>(List.of(), expected, 0));
 
-        CompetitionStockListResponse response = stockService.search(competitionId, null, " AAPL ", 0, 500);
+        CompetitionStockListResponse response = stockService.search(competitionId, null, " AAPL ", -1, 500);
 
-        assertThat(response.page()).isEqualTo(1);
+        assertThat(response.page()).isZero();
         assertThat(response.size()).isEqualTo(100);
         assertThat(response.stocks()).isEmpty();
         verify(stockRepository).search(null, "%aapl%", expected);
@@ -183,7 +183,7 @@ class CompetitionStockServiceTest {
     void searchRejectsUnknownCompetition() {
         when(competitionRepository.findById(competitionId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> stockService.search(competitionId, null, null, 1, 20))
+        assertThatThrownBy(() -> stockService.search(competitionId, null, null, 0, 20))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
     }
