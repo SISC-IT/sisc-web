@@ -3,14 +3,23 @@ package org.sejongisc.backend.common.exception.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,11 +34,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(OutputCaptureExtension.class)
 class GlobalExceptionHandlerTest {
@@ -155,6 +169,76 @@ class GlobalExceptionHandlerTest {
         assertThat(output).doesNotContain("secret-pw").doesNotContain("buy-secret");
     }
 
+    @Test
+    @DisplayName("서비스 메서드 검증(@Validated)에 실패하면 400을 반환하고 로그에는 입력값 대신 필드 경로를 남긴다")
+    void methodValidationFailureReturnsBadRequest(CapturedOutput output) throws Exception {
+        mockMvc.perform(post("/test/method-validation"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_INPUT_VALUE"));
+
+        assertThat(output).contains("EmailSender.send.email")
+                .doesNotContain("abc-email").doesNotContain("secret-key");
+    }
+
+    @Test
+    @DisplayName("엔티티 검증에 실패하면 서버 버그로 보고 500을 반환하고, 로그에는 입력값 대신 필드 경로를 남긴다")
+    void entityValidationFailureReturnsServerError(CapturedOutput output) throws Exception {
+        mockMvc.perform(post("/test/entity-validation"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.errorCode").value("INTERNAL_SERVER_ERROR"));
+
+        assertThat(output).contains("Member.email").doesNotContain("abc-email");
+    }
+
+    @Test
+    @DisplayName("업로드 요청에 파일이 없으면 400을 반환한다")
+    void missingPartReturnsBadRequest() throws Exception {
+        mockMvc.perform(multipart("/test/part"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_INPUT_VALUE"));
+    }
+
+    @Test
+    @DisplayName("업로드 주소에 multipart가 아닌 요청을 보내면 400을 반환한다")
+    void nonMultipartRequestReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/test/part").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_INPUT_VALUE"));
+    }
+
+    @Test
+    @DisplayName("업로드 처리 자체가 실패하면(임시 파일 저장 실패 등) 서버 문제로 보고 500을 반환한다")
+    void multipartParseFailureReturnsServerError() throws Exception {
+        mockMvc.perform(post("/test/multipart-failure"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.errorCode").value("INTERNAL_SERVER_ERROR"));
+    }
+
+    @Test
+    @DisplayName("업로드 크기 제한을 넘으면 413을 반환한다")
+    void maxUploadSizeExceededReturns413() throws Exception {
+        mockMvc.perform(post("/test/too-large"))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.errorCode").value("UPLOAD_SIZE_EXCEEDED"));
+    }
+
+    @Test
+    @DisplayName("PATCH 요청의 Content-Type이 틀리면 415와 Accept-Patch 헤더를 반환한다")
+    void unsupportedMediaTypeOnPatchReturnsAcceptPatch() throws Exception {
+        mockMvc.perform(patch("/test/json-only").contentType(MediaType.TEXT_PLAIN).content("hello"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(header().string("Accept-Patch", "application/json"));
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 Content-Type은 415와 지원하는 형식(Accept 헤더)을 반환한다")
+    void unsupportedMediaTypeReturns415() throws Exception {
+        mockMvc.perform(post("/test/json-only").contentType(MediaType.TEXT_PLAIN).content("hello"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(header().string("Accept", "application/json"))
+                .andExpect(jsonPath("$.errorCode").value("UNSUPPORTED_MEDIA_TYPE"));
+    }
+
     enum Side {
         BUY, SELL
     }
@@ -166,6 +250,14 @@ class GlobalExceptionHandlerTest {
     }
 
     record NameRequest(@NotBlank(message = "이름은 필수입니다.") String name) {
+    }
+
+    record Member(@Email String email) {
+    }
+
+    static class EmailSender {
+        void send(@Email String email, Map<String, @Email String> aliases) {
+        }
     }
 
     record SecretRequest(@Size(min = 20, message = "비밀번호가 너무 짧습니다.") String password) {
@@ -181,6 +273,45 @@ class GlobalExceptionHandlerTest {
 
         @PostMapping("/test/secret")
         String secret(@Valid @RequestBody SecretRequest request) {
+            return "ok";
+        }
+
+        private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+        @PostMapping("/test/method-validation")
+        String methodValidation() throws NoSuchMethodException {
+            Method send = EmailSender.class.getDeclaredMethod("send", String.class, Map.class);
+            throw new ConstraintViolationException(validator.forExecutables().validateParameters(
+                    new EmailSender(), send, new Object[] {"abc-email", Map.of("secret-key", "abc-email")}));
+        }
+
+        @PostMapping("/test/entity-validation")
+        String entityValidation() {
+            throw new ConstraintViolationException(validator.validate(new Member("abc-email")));
+        }
+
+        @PostMapping("/test/multipart-failure")
+        String multipartFailure() {
+            throw new MultipartException("Failed to parse multipart servlet request", new IOException("disk full"));
+        }
+
+        @PostMapping("/test/too-large")
+        String tooLarge() {
+            throw new MaxUploadSizeExceededException(100L * 1024 * 1024);
+        }
+
+        @PostMapping("/test/part")
+        String part(@RequestPart("file") MultipartFile file) {
+            return "ok";
+        }
+
+        @PostMapping(value = "/test/json-only", consumes = MediaType.APPLICATION_JSON_VALUE)
+        String jsonOnly(@RequestBody NameRequest request) {
+            return "ok";
+        }
+
+        @PatchMapping(value = "/test/json-only", consumes = MediaType.APPLICATION_JSON_VALUE)
+        String jsonOnlyPatch(@RequestBody NameRequest request) {
             return "ok";
         }
 
