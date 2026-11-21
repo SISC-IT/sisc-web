@@ -27,6 +27,7 @@ import org.sejongisc.backend.competition.repository.DailyAccountSnapshotReposito
 import org.sejongisc.backend.competition.repository.DailyClosePriceRepository;
 import org.sejongisc.backend.competition.repository.HoldingRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -41,7 +42,8 @@ public class AccountSnapshotService {
     private final DailyAccountSnapshotRepository snapshotRepository;
     private final Clock clock;
 
-    @Transactional
+    // 현금과 보유 종목을 같은 시점 기준으로 읽는다
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public int createDailySnapshot() {
         LocalDate today = LocalDate.now(clock);
         Optional<Competition> active =

@@ -59,7 +59,7 @@ class DailyAccountSnapshotRepositoryTest {
     entityManager.flush();
     entityManager.clear();
 
-    List<DailyAccountSnapshot> found = snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI);
+    List<DailyAccountSnapshot> found = snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE);
 
     assertThat(found).extracting(snapshot -> snapshot.getAccount().getAccountId())
         .containsExactly(first.getAccountId(), second.getAccountId());
@@ -67,6 +67,26 @@ class DailyAccountSnapshotRepositoryTest {
     assertThat(found.get(0).getTotalValue()).isEqualByComparingTo("10500000");
     assertThat(found.get(0).getProfitRate()).isEqualByComparingTo("0.05");
     assertThat(found.get(0).getAccount().getParticipant().getTeamName()).isEqualTo("매크로팀");
+  }
+
+  @Test
+  void 스냅샷을_만든_뒤_제외된_참가자의_스냅샷은_읽지_않는다() {
+    Competition competition = saveCompetition(CompetitionStatus.ACTIVE);
+    CompetitionAccount active = saveAccount(competition, ParticipantStatus.ACTIVE);
+    CompetitionAccount excludedLater = saveAccount(competition, ParticipantStatus.ACTIVE);
+    saveSnapshot(excludedLater, FRI, "10500000", "0.05", 1);
+    saveSnapshot(active, FRI, "10000000", "0", 2);
+    new JdbcTemplate(dataSource).update(
+        "update competition_participant set status = 'EXCLUDED' where participant_id = ?",
+        excludedLater.getParticipant().getParticipantId());
+    entityManager.flush();
+    entityManager.clear();
+
+    List<DailyAccountSnapshot> found =
+        snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE);
+
+    assertThat(found).extracting(snapshot -> snapshot.getAccount().getAccountId())
+        .containsExactly(active.getAccountId());
   }
 
   @Test

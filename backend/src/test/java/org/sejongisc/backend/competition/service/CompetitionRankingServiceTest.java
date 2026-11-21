@@ -25,6 +25,7 @@ import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
 import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
+import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
 import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
 import org.sejongisc.backend.user.entity.User;
@@ -66,10 +67,10 @@ class CompetitionRankingServiceTest {
         givenCompetition();
         givenLatestDate(FRI);
         givenPreviousDate(FRI, THU);
-        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI)).thenReturn(List.of(
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE)).thenReturn(List.of(
                 snapshot(lee, FRI, "10600000", "0.06", 1),
                 snapshot(kim, FRI, "10480000", "0.048", 2)));
-        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, THU)).thenReturn(List.of(
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, THU, ParticipantStatus.ACTIVE)).thenReturn(List.of(
                 snapshot(kim, THU, "10520000", "0.052", 1),
                 snapshot(lee, THU, "10310000", "0.031", 2)));
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));
@@ -97,7 +98,7 @@ class CompetitionRankingServiceTest {
         givenCompetition();
         givenLatestDate(FRI);
         givenPreviousDate(FRI, null);
-        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI))
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE))
                 .thenReturn(List.of(snapshot(kim, FRI, "10000000", "0", 1)));
         givenUsers(user(kim, "김세종"));
 
@@ -112,10 +113,10 @@ class CompetitionRankingServiceTest {
         givenCompetition();
         givenLatestDate(FRI);
         givenPreviousDate(FRI, THU);
-        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI)).thenReturn(List.of(
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE)).thenReturn(List.of(
                 snapshot(kim, FRI, "10100000", "0.01", 1),
                 snapshot(lee, FRI, "10000000", "0", 2)));
-        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, THU))
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, THU, ParticipantStatus.ACTIVE))
                 .thenReturn(List.of(snapshot(kim, THU, "10000000", "0", 1)));
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));
 
@@ -131,7 +132,7 @@ class CompetitionRankingServiceTest {
         givenCompetition();
         givenLatestDate(FRI);
         givenPreviousDate(FRI, null);
-        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI)).thenReturn(List.of(
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE)).thenReturn(List.of(
                 snapshot(lee, FRI, "10000000", "0", 1),
                 snapshot(kim, FRI, "10000000", "0", 1)));
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));

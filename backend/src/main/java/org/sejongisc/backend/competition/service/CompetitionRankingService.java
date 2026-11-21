@@ -15,6 +15,7 @@ import org.sejongisc.backend.competition.dto.CompetitionRankingResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
 import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
+import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
 import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
 import org.sejongisc.backend.user.entity.User;
@@ -45,7 +46,8 @@ public class CompetitionRankingService {
         }
 
         List<DailyAccountSnapshot> snapshots =
-                snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, latestDate.get());
+                snapshotRepository.findAllByCompetitionAndSnapshotDate(
+                        competition, latestDate.get(), ParticipantStatus.ACTIVE);
         Map<UUID, Integer> previousRanks = previousRanks(competition, latestDate.get());
         Map<UUID, String> userNames = userNames(snapshots);
 
@@ -61,7 +63,8 @@ public class CompetitionRankingService {
         if (previousDate.isEmpty()) {
             return Map.of();
         }
-        return snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, previousDate.get()).stream()
+        return snapshotRepository
+                .findAllByCompetitionAndSnapshotDate(competition, previousDate.get(), ParticipantStatus.ACTIVE).stream()
                 .collect(Collectors.toMap(
                         snapshot -> snapshot.getAccount().getAccountId(), DailyAccountSnapshot::getRank));
     }
