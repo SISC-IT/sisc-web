@@ -9,6 +9,7 @@ import org.sejongisc.backend.competition.entity.TradeSide;
 public record CompetitionTradeResponse(
         UUID tradeId,
         String ticker,
+        String companyName,
         TradeSide side,
         long quantity,
         BigDecimal price,
@@ -21,6 +22,7 @@ public record CompetitionTradeResponse(
         return new CompetitionTradeResponse(
                 trade.getTradeId(),
                 trade.getStock().getTicker(),
+                trade.getStock().getName(),
                 trade.getSide(),
                 trade.getQuantity(),
                 trade.getPrice(),

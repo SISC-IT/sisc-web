@@ -83,7 +83,7 @@ class CompetitionTradeControllerTest {
         CompetitionTradeRequest request = new CompetitionTradeRequest("005930", TradeSide.BUY, 10L, closePriceId);
         when(tradeService.order(competitionId, userId, key, request))
                 .thenReturn(new CompetitionTradeResponse(
-                        UUID.randomUUID(), "005930", TradeSide.BUY, 10L,
+                        UUID.randomUUID(), "005930", "삼성전자", TradeSide.BUY, 10L,
                         new BigDecimal("60000"), new BigDecimal("60"),
                         LocalDateTime.of(2026, 11, 20, 17, 0), new BigDecimal("399940")));
 
@@ -93,6 +93,7 @@ class CompetitionTradeControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ticker").value("005930"))
+                .andExpect(jsonPath("$.companyName").value("삼성전자"))
                 .andExpect(jsonPath("$.side").value("BUY"))
                 .andExpect(jsonPath("$.quantity").value(10))
                 .andExpect(jsonPath("$.price").value(60000))
