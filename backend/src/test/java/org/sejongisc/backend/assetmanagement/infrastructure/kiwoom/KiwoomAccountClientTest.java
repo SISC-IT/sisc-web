@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Set;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
@@ -48,7 +49,7 @@ class KiwoomAccountClientTest {
     accountClient = new KiwoomAccountClient(
         webClient,
         new KiwoomTokenManager(authClient, 300),
-        new KiwoomRateLimiter(3, 0),
+        new KiwoomRateLimiter(3, 0, 0, Set.of()),
         20,
         5000
     );
