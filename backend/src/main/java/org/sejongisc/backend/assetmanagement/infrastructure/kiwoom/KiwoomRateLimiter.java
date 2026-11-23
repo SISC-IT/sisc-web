@@ -32,7 +32,7 @@ public class KiwoomRateLimiter {
   @Autowired
   public KiwoomRateLimiter(
       @Value("${kiwoom.api.rate-limit.max-concurrent:3}") int maxConcurrent,
-      @Value("${kiwoom.api.rate-limit.min-interval-ms:100}") long minIntervalMillis,
+      @Value("${kiwoom.api.rate-limit.min-interval-ms:200}") long minIntervalMillis,
       @Value("${kiwoom.api.rate-limit.restricted.min-interval-ms:1000}")
       long restrictedMinIntervalMillis,
       @Value("${kiwoom.api.rate-limit.restricted.api-ids:}") Set<String> restrictedApiIds
