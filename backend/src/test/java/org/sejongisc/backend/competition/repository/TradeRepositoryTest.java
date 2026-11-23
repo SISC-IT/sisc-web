@@ -8,7 +8,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 import javax.sql.DataSource;
+import org.hibernate.Hibernate;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,8 @@ import org.sejongisc.backend.competition.entity.Trade;
 import org.sejongisc.backend.competition.entity.TradeSide;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.annotation.Transactional;
@@ -131,7 +135,32 @@ class TradeRepositoryTest {
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
+  @Test
+  void 계좌의_거래를_최근_체결순으로_페이지에_나눠_읽고_종목도_함께_읽는다() {
+    CompetitionAccount account = saveAccount();
+    tradeRepository.saveAndFlush(trade(account, UUID.randomUUID(), LocalDateTime.of(2026, 11, 18, 17, 0)));
+    tradeRepository.saveAndFlush(trade(account, UUID.randomUUID(), LocalDateTime.of(2026, 11, 20, 17, 0)));
+    tradeRepository.saveAndFlush(trade(account, UUID.randomUUID(), LocalDateTime.of(2026, 11, 19, 17, 0)));
+    tradeRepository.saveAndFlush(trade(saveAccount(), UUID.randomUUID(), LocalDateTime.of(2026, 11, 21, 17, 0)));
+    entityManager.clear();
+
+    Page<Trade> first = tradeRepository.findAllByAccountOrderByExecutedAtDesc(account, PageRequest.of(0, 2));
+    Page<Trade> second = tradeRepository.findAllByAccountOrderByExecutedAtDesc(account, PageRequest.of(1, 2));
+
+    assertThat(first.getTotalElements()).isEqualTo(3); // 다른 계좌의 거래는 세지 않는다
+    assertThat(first.getContent()).extracting(Trade::getExecutedAt).containsExactly(
+        LocalDateTime.of(2026, 11, 20, 17, 0), LocalDateTime.of(2026, 11, 19, 17, 0));
+    assertThat(second.getContent()).extracting(Trade::getExecutedAt).containsExactly(
+        LocalDateTime.of(2026, 11, 18, 17, 0));
+    List<Trade> trades = first.getContent();
+    assertThat(trades).allMatch(trade -> Hibernate.isInitialized(trade.getStock()));
+  }
+
   private Trade trade(CompetitionAccount account, UUID key) {
+    return trade(account, key, LocalDateTime.of(2026, 11, 20, 17, 0));
+  }
+
+  private Trade trade(CompetitionAccount account, UUID key, LocalDateTime executedAt) {
     return Trade.builder()
         .account(account)
         .stock(samsung)
@@ -142,7 +171,7 @@ class TradeRepositoryTest {
         .fee(new BigDecimal("60"))
         .cashAfter(new BigDecimal("9399940"))
         .idempotencyKey(key)
-        .executedAt(LocalDateTime.of(2026, 11, 20, 17, 0))
+        .executedAt(executedAt)
         .build();
   }
 
