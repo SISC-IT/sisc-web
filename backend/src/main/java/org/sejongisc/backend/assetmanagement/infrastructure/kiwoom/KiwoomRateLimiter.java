@@ -65,41 +65,38 @@ public class KiwoomRateLimiter {
   }
 
   public <T> T call(String apiId, Supplier<T> supplier) {
-    boolean acquired = false;
     try {
-      semaphore.acquire();
-      acquired = true;
-      awaitSlot(apiId);
-      return supplier.get();
+      long slot = restrictedApiIds.contains(apiId) ? acquireRestricted(apiId) : acquire();
+      try {
+        sleepUntil(slot);
+        return supplier.get();
+      } finally {
+        semaphore.release();
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new CustomException(ErrorCode.KIWOOM_API_FAILED);
-    } finally {
-      if (acquired) {
-        semaphore.release();
-      }
     }
   }
 
-  private void awaitSlot(String apiId) throws InterruptedException {
-    if (!restrictedApiIds.contains(apiId)) {
-      sleepUntil(reserveGlobalSlot());
-      return;
-    }
+  private long acquire() throws InterruptedException {
+    semaphore.acquire();
+    return reserveGlobalSlot();
+  }
 
+  private long acquireRestricted(String apiId) throws InterruptedException {
     RestrictedGate gate = restrictedGates.computeIfAbsent(apiId, id -> new RestrictedGate());
-    long slot;
     gate.lock.lockInterruptibly();
     try {
       if (gate.nextSlot != null) {
         sleepUntil(gate.nextSlot);
       }
-      slot = reserveGlobalSlot();
+      long slot = acquire();
       gate.nextSlot = slot + restrictedMinIntervalNanos;
+      return slot;
     } finally {
       gate.lock.unlock();
     }
-    sleepUntil(slot);
   }
 
   private long reserveGlobalSlot() {

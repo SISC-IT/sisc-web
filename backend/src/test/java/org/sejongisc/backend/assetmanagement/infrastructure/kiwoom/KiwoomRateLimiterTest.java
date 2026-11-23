@@ -113,6 +113,31 @@ class KiwoomRateLimiterTest {
   }
 
   @Test
+  @DisplayName("제한 대상 TR이 동시 실행 수만큼 대기해도 다른 API 호출을 막지 않는다")
+  void queuedRestrictedApisDoNotHoldAllPermits() throws Exception {
+    int maxConcurrent = 3;
+    KiwoomRateLimiter realTimeLimiter =
+        new KiwoomRateLimiter(maxConcurrent, 0, 2000, Set.of(RESTRICTED_API_ID));
+    realTimeLimiter.call(RESTRICTED_API_ID, () -> "first");
+
+    ExecutorService executor = Executors.newFixedThreadPool(maxConcurrent + 1);
+    try {
+      List<Future<String>> waiting = new ArrayList<>();
+      for (int i = 0; i < maxConcurrent; i++) {
+        waiting.add(executor.submit(() -> realTimeLimiter.call(RESTRICTED_API_ID, () -> "queued")));
+      }
+      TimeUnit.MILLISECONDS.sleep(200);
+
+      Future<String> chart = executor.submit(() -> realTimeLimiter.call(CHART_API_ID, () -> "chart"));
+
+      assertThat(chart.get(1, TimeUnit.SECONDS)).isEqualTo("chart");
+      assertThat(waiting).noneMatch(Future::isDone);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
   @DisplayName("간격 일부가 이미 지났으면 남은 시간만 기다린다")
   void waitsOnlyRemainingInterval() {
     rateLimiter.call(RESTRICTED_API_ID, () -> "first");
