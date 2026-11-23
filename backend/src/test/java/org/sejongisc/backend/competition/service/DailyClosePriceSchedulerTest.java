@@ -29,12 +29,17 @@ class DailyClosePriceSchedulerTest {
     @Mock
     private AccountSnapshotService snapshotService;
 
+    @Mock
+    private CompetitionService competitionService;
+
     @InjectMocks
     private DailyClosePriceScheduler scheduler;
 
     @Test
     @DisplayName("수집기를 호출한다")
     void delegatesToCollector() {
+        when(competitionService.hasOpenCompetition()).thenReturn(true);
+
         scheduler.collectDomesticClosePrices();
 
         verify(collector).collectDomestic();
@@ -43,6 +48,8 @@ class DailyClosePriceSchedulerTest {
     @Test
     @DisplayName("수집이 끝난 뒤에 계좌 스냅샷을 만든다")
     void createsSnapshotAfterCollection() {
+        when(competitionService.hasOpenCompetition()).thenReturn(true);
+
         scheduler.collectDomesticClosePrices();
 
         InOrder order = inOrder(collector, snapshotService);
@@ -53,11 +60,22 @@ class DailyClosePriceSchedulerTest {
     @Test
     @DisplayName("수집이 예외로 중단되면 스냅샷을 만들지 않는다")
     void skipsSnapshotWhenCollectionFails() {
+        when(competitionService.hasOpenCompetition()).thenReturn(true);
         when(collector.collectDomestic()).thenThrow(new IllegalStateException("수집 중단"));
 
         assertThatThrownBy(() -> scheduler.collectDomesticClosePrices())
                 .isInstanceOf(IllegalStateException.class);
         verifyNoInteractions(snapshotService);
+    }
+
+    @Test
+    @DisplayName("열린 대회가 없으면 수집도 스냅샷도 하지 않는다")
+    void skipsWhenNoOpenCompetition() {
+        when(competitionService.hasOpenCompetition()).thenReturn(false);
+
+        scheduler.collectDomesticClosePrices();
+
+        verifyNoInteractions(collector, snapshotService);
     }
 
     @Test

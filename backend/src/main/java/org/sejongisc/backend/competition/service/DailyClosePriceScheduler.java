@@ -11,6 +11,7 @@ public class DailyClosePriceScheduler {
 
     private final DailyClosePriceCollector collector;
     private final AccountSnapshotService snapshotService;
+    private final CompetitionService competitionService;
 
     @Scheduled(cron = "${competition.price-collection.cron:0 0 16 * * MON-FRI}", zone = "Asia/Seoul")
     public void collectDomesticClosePrices() {
@@ -18,3 +19,6 @@ public class DailyClosePriceScheduler {
         snapshotService.createDailySnapshot();
     }
 }
+        if (!competitionService.hasOpenCompetition()) {
+            return;
+        }
