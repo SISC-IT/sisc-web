@@ -301,7 +301,7 @@ public class KiwoomChartClient implements MarketDataClient {
       String token
   ) {
     try {
-      return rateLimiter.call(() -> kiwoomWebClient.post()
+      return rateLimiter.call(apiId, () -> kiwoomWebClient.post()
           .uri(endpoint)
           .header("authorization", "Bearer " + token)
           .header("api-id", apiId)
