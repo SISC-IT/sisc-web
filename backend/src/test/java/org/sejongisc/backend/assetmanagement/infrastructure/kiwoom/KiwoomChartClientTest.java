@@ -26,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.sejongisc.backend.assetmanagement.model.DailyCandle;
+import org.sejongisc.backend.assetmanagement.model.ListedStock;
 import org.sejongisc.backend.assetmanagement.model.UsExchangeType;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
@@ -57,6 +58,7 @@ class KiwoomChartClientTest {
         new KiwoomTokenManager(authClient, 300),
         new KiwoomRateLimiter(3, 0, 0, Set.of()),
         20,
+        3,
         5000
     );
   }
@@ -275,6 +277,28 @@ class KiwoomChartClientTest {
   }
 
   @Test
+  @DisplayName("차트 조회는 종목 목록 페이지 한도의 영향을 받지 않는다")
+  void chartPagingIgnoresStockListPageLimit() {
+    // 종목 목록 한도는 3, 차트 한도는 20
+    for (int page = 1; page <= 4; page++) {
+      mockWebServer.enqueue(new MockResponse()
+          .setBody("""
+              {"stk_cd":"005930","stk_dt_pole_chart_qry":[],"return_code":"0"}
+              """)
+          .addHeader("Content-Type", "application/json")
+          .addHeader("cont-yn", "Y")
+          .addHeader("next-key", "key-" + page));
+    }
+    enqueueJson("""
+        {"stk_cd":"005930","stk_dt_pole_chart_qry":[],"return_code":"0"}
+        """);
+
+    chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 5));
+
+    assertThat(mockWebServer.getRequestCount()).isEqualTo(5);
+  }
+
+  @Test
   @DisplayName("return_code가 0이 아니면 예외를 던진다")
   void throwsWhenReturnCodeIsNotZero() {
     enqueueJson("""
@@ -363,6 +387,71 @@ class KiwoomChartClientTest {
     assertThat(UsExchangeType.from("nd")).isEqualTo(UsExchangeType.NASDAQ);
     assertThat(UsExchangeType.from("NY")).isEqualTo(UsExchangeType.NYSE);
     assertThat(UsExchangeType.NASDAQ.code()).isEqualTo("ND");
+  }
+
+  @Test
+  @DisplayName("종목 목록을 연속조회로 끝까지 받아 합친다")
+  void fetchesListedStocksAcrossPages() throws Exception {
+    mockWebServer.enqueue(new MockResponse()
+        .addHeader("Content-Type", "application/json")
+        .addHeader("cont-yn", "Y")
+        .addHeader("next-key", "key-1")
+        .setBody("""
+            {"return_code": 0, "list": [{"code":"005930","name":"삼성전자","lastPrice":"00000197"}]}
+            """));
+    enqueueJson("""
+        {"return_code": 0, "list": [{"code":"000660","name":"SK하이닉스"}]}
+        """);
+
+    List<ListedStock> stocks = chartClient.fetchDomesticListedStocks("0");
+
+    assertThat(stocks).containsExactly(
+        new ListedStock("005930", "삼성전자"), new ListedStock("000660", "SK하이닉스"));
+
+    RecordedRequest first = mockWebServer.takeRequest();
+    assertThat(first.getPath()).isEqualTo("/api/dostk/stkinfo");
+    assertThat(first.getHeader("api-id")).isEqualTo("ka10099");
+    assertThat(first.getBody().readUtf8()).contains("\"mrkt_tp\":\"0\"");
+    RecordedRequest second = mockWebServer.takeRequest();
+    assertThat(second.getHeader("cont-yn")).isEqualTo("Y");
+    assertThat(second.getHeader("next-key")).isEqualTo("key-1");
+  }
+
+  @Test
+  @DisplayName("종목 목록이 비어 오면 빈 목록을 반환한다")
+  void returnsEmptyWhenStockListMissing() {
+    enqueueJson("""
+        {"return_code": 0}
+        """);
+
+    assertThat(chartClient.fetchDomesticListedStocks("10")).isEmpty();
+  }
+
+  @Test
+  @DisplayName("종목 목록이 페이지 한도를 넘으면 실패한다")
+  void failsWhenStockListExceedsPageLimit() {
+    for (int page = 1; page <= 3; page++) {
+      mockWebServer.enqueue(new MockResponse()
+          .addHeader("Content-Type", "application/json")
+          .addHeader("cont-yn", "Y")
+          .addHeader("next-key", "key-" + page)
+          .setBody("{\"return_code\": 0, \"list\": []}"));
+    }
+
+    assertThatThrownBy(() -> chartClient.fetchDomesticListedStocks("0"))
+        .isInstanceOf(CustomException.class)
+        .extracting(e -> ((CustomException) e).getErrorCode())
+        .isEqualTo(ErrorCode.KIWOOM_PAGING_LIMIT_EXCEEDED);
+  }
+
+  @Test
+  @DisplayName("시장 코드가 비어 있으면 키움을 호출하지 않는다")
+  void rejectsBlankMarketType() {
+    assertThatThrownBy(() -> chartClient.fetchDomesticListedStocks(" "))
+        .isInstanceOf(CustomException.class)
+        .extracting(e -> ((CustomException) e).getErrorCode())
+        .isEqualTo(ErrorCode.INVALID_KIWOOM_MARKET_TYPE);
+    assertThat(mockWebServer.getRequestCount()).isZero();
   }
 
   private void enqueueJson(String body) {

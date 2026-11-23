@@ -30,6 +30,7 @@ kiwoom:
       max-pages: ${KIWOOM_MAX_PAGES:20}
     rate-limit:
       max-concurrent: ${KIWOOM_MAX_CONCURRENT_REQUESTS:3}
+      stock-list-max-pages: ${KIWOOM_STOCK_LIST_MAX_PAGES:100}
       min-interval-ms: ${KIWOOM_MIN_INTERVAL_MS:200}
       restricted:
         min-interval-ms: ${KIWOOM_RESTRICTED_MIN_INTERVAL_MS:1000}
