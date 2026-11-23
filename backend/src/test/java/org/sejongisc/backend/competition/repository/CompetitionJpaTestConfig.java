@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * 수익률 대결 마이그레이션(V6~V10)을 그대로 실행한 DB에 운영과 같은 hbm2ddl=validate로 엔티티를 띄운다.
+ * 수익률 대결 마이그레이션(V6~V11)을 그대로 실행한 DB에 운영과 같은 hbm2ddl=validate로 엔티티를 띄운다.
  * 엔티티와 마이그레이션이 어긋나면 컨텍스트 로딩 단계에서 실패한다.
  */
 @TestConfiguration
@@ -49,7 +49,8 @@ class CompetitionJpaTestConfig {
         new ClassPathResource("db/migration/V7__competition_participant_account.sql"),
         new ClassPathResource("db/migration/V8__competition_single_open.sql"),
         new ClassPathResource("db/migration/V9__competition_trade.sql"),
-        new ClassPathResource("db/migration/V10__competition_daily_account_snapshot.sql")
+        new ClassPathResource("db/migration/V10__competition_daily_account_snapshot.sql"),
+        new ClassPathResource("db/migration/V11__competition_account_ledger.sql")
     ).execute(dataSource);
     return dataSource;
   }

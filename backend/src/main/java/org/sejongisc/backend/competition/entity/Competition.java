@@ -42,6 +42,9 @@ public class Competition extends BasePostgresEntity {
     @Column(nullable = false, precision = 10, scale = 6)
     private BigDecimal depositInterestRate;
 
+    // 예금 이자를 이 날짜 밤까지 지급했다. 아직 한 번도 지급하지 않았으면 null
+    private LocalDate interestPaidDate;
+
     public void start() {
         status = CompetitionStatus.ACTIVE;
     }

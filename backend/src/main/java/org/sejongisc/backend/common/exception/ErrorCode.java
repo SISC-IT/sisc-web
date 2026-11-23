@@ -162,6 +162,12 @@ public enum ErrorCode {
 
   COMPETITION_ORDER_CONFLICT(HttpStatus.CONFLICT, "동시에 처리 중인 주문이 있습니다. 잠시 후 다시 시도해 주세요."),
 
+  COMPETITION_INSUFFICIENT_DEPOSIT(HttpStatus.BAD_REQUEST, "예금이 부족합니다."),
+
+  COMPETITION_TRANSFER_CLOSED(HttpStatus.BAD_REQUEST, "입출금 가능 시간이 아닙니다."),
+
+  COMPETITION_TRANSFER_CONFLICT(HttpStatus.CONFLICT, "같은 계좌의 다른 요청과 겹쳤습니다. 잠시 후 다시 시도해 주세요."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
