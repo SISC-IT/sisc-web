@@ -26,6 +26,8 @@ kiwoom:
       connect-ms: ${KIWOOM_CONNECT_TIMEOUT_MS:3000}
       response-ms: ${KIWOOM_RESPONSE_TIMEOUT_MS:5000}
       block-ms: ${KIWOOM_BLOCK_TIMEOUT_MS:7000}
+    # 종목 목록(ka10099)은 한 페이지가 기본 버퍼 256KB를 넘을 수 있다.
+    max-response-bytes: ${KIWOOM_MAX_RESPONSE_BYTES:5242880}
     pagination:
       max-pages: ${KIWOOM_MAX_PAGES:20}
     rate-limit:
