@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -89,50 +90,39 @@ class KiwoomRateLimiterTest {
   }
 
   @Test
-  @DisplayName("대기 중인 제한 대상 TR이 다른 API 호출을 막지 않는다")
-  void waitingRestrictedApiDoesNotBlockOtherApi() throws Exception {
-    KiwoomRateLimiter realTimeLimiter =
-        new KiwoomRateLimiter(3, 0, 2000, Set.of(RESTRICTED_API_ID));
-    realTimeLimiter.call(RESTRICTED_API_ID, () -> "first");
+  @DisplayName("간격 대기 중인 제한 대상 TR은 슬롯을 잡지 않아 다른 API를 막지 않는다")
+  void waitingRestrictedApiDoesNotHoldPermit() throws Exception {
+    CountDownLatch waitingStarted = new CountDownLatch(1);
+    CountDownLatch releaseWaiting = new CountDownLatch(1);
+    KiwoomRateLimiter singlePermitLimiter = new KiwoomRateLimiter(
+        1,
+        0,
+        1000,
+        Set.of(RESTRICTED_API_ID),
+        () -> 0L,
+        nanos -> {
+          waitingStarted.countDown();
+          releaseWaiting.await();
+        }
+    );
+    singlePermitLimiter.call(RESTRICTED_API_ID, () -> "first");
 
-    ExecutorService executor = Executors.newSingleThreadExecutor();
+    ExecutorService executor = Executors.newFixedThreadPool(2);
     try {
       Future<String> waiting =
-          executor.submit(() -> realTimeLimiter.call(RESTRICTED_API_ID, () -> "second"));
+          executor.submit(() -> singlePermitLimiter.call(RESTRICTED_API_ID, () -> "second"));
+      assertThat(waitingStarted.await(5, TimeUnit.SECONDS)).isTrue();
 
-      long startedAt = System.nanoTime();
-      realTimeLimiter.call(CHART_API_ID, () -> "chart");
-      long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
-
-      assertThat(elapsedMillis).isLessThan(1000L);
-      assertThat(waiting.isDone()).isFalse();
-      assertThat(waiting.get(5, TimeUnit.SECONDS)).isEqualTo("second");
-    } finally {
-      executor.shutdownNow();
-    }
-  }
-
-  @Test
-  @DisplayName("제한 대상 TR이 동시 실행 수만큼 대기해도 다른 API 호출을 막지 않는다")
-  void queuedRestrictedApisDoNotHoldAllPermits() throws Exception {
-    int maxConcurrent = 3;
-    KiwoomRateLimiter realTimeLimiter =
-        new KiwoomRateLimiter(maxConcurrent, 0, 2000, Set.of(RESTRICTED_API_ID));
-    realTimeLimiter.call(RESTRICTED_API_ID, () -> "first");
-
-    ExecutorService executor = Executors.newFixedThreadPool(maxConcurrent + 1);
-    try {
-      List<Future<String>> waiting = new ArrayList<>();
-      for (int i = 0; i < maxConcurrent; i++) {
-        waiting.add(executor.submit(() -> realTimeLimiter.call(RESTRICTED_API_ID, () -> "queued")));
-      }
-      TimeUnit.MILLISECONDS.sleep(200);
-
-      Future<String> chart = executor.submit(() -> realTimeLimiter.call(CHART_API_ID, () -> "chart"));
+      Future<String> chart =
+          executor.submit(() -> singlePermitLimiter.call(CHART_API_ID, () -> "chart"));
 
       assertThat(chart.get(1, TimeUnit.SECONDS)).isEqualTo("chart");
-      assertThat(waiting).noneMatch(Future::isDone);
+      assertThat(waiting.isDone()).isFalse();
+
+      releaseWaiting.countDown();
+      assertThat(waiting.get(5, TimeUnit.SECONDS)).isEqualTo("second");
     } finally {
+      releaseWaiting.countDown();
       executor.shutdownNow();
     }
   }
