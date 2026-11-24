@@ -22,12 +22,12 @@ import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser
 import org.sejongisc.backend.disclosure.service.settings.DisclosureCardRuleEngine;
 import org.sejongisc.backend.disclosure.service.settings.DisclosureCardRuleEngine.CardDraft;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.TransactionOperations;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DisclosureCardCollectionService {
+public class DisclosureEventCollectionService {
   private static final DateTimeFormatter DART_DATE = DateTimeFormatter.BASIC_ISO_DATE;
   private static final String DART_VIEWER_URL = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=";
 
@@ -36,7 +36,7 @@ public class DisclosureCardCollectionService {
   private final DisclosureCardRuleEngine ruleEngine;
   private final DisclosureCompanyRepository companyRepository;
   private final DisclosureCardNewsRepository cardRepository;
-  private final TransactionTemplate transactionTemplate;
+  private final TransactionOperations transactionOperations;
   private final ObjectMapper objectMapper;
 
   public int collectForCompany(String corpCode, LocalDate from, LocalDate to) {
@@ -55,7 +55,7 @@ public class DisclosureCardCollectionService {
         .map(DisclosureCompany::isTrackCapex)
         .orElseGet(() -> DisclosureCompany.isDefaultCapexCorp(corpCode));
 
-    List<PendingCard> pending = new ArrayList<>();
+    List<PendingEvent> pending = new ArrayList<>();
 
     // 1. 주주환원 — 자사주 취득 결정 (전용 JSON API)
     var treasuryRes = dartClient.treasuryStockAcquisitions(corpCode, from, to);
@@ -67,7 +67,7 @@ public class DisclosureCardCollectionService {
         }
         LocalDate rceptDate = parseReceiptDate(receiptNo);
         ruleEngine.evaluateTreasuryStockAcquisition(profile.corp_name(), row, rceptDate)
-            .ifPresent(draft -> pending.add(new PendingCard(
+            .ifPresent(draft -> pending.add(new PendingEvent(
                 corpCode, profile.stock_code(), profile.corp_name(), profile.corp_cls(),
                 profile.induty_code(), closingMonth, receiptNo,
                 "자기주식 취득 결정", draft, row)));
@@ -77,11 +77,11 @@ public class DisclosureCardCollectionService {
     // 2. 거래소공시(I) — 수주공시, 잠정실적, 배당/소각, CAPEX(지정 기업)
     collectExchangeDisclosures(corpCode, profile.induty_code(), trackCapex, from, to, pending);
 
-    return persistCards(pending);
+    return persistEvents(pending);
   }
 
   private void collectExchangeDisclosures(String corpCode, String indutyCode, boolean trackCapex,
-      LocalDate from, LocalDate to, List<PendingCard> pending) {
+      LocalDate from, LocalDate to, List<PendingEvent> pending) {
     for (int page = 1; ; page++) {
       var res = dartClient.searchDisclosures(corpCode, "I", from, to, page, 100, true);
       if (res == null || "013".equals(res.status()) || res.list() == null || res.list().isEmpty()) {
@@ -124,7 +124,7 @@ public class DisclosureCardCollectionService {
         };
 
         if (draftOpt.isPresent()) {
-          pending.add(new PendingCard(
+          pending.add(new PendingEvent(
               corpCode, blankToNull(row.get("stock_code")), row.get("corp_name"), marketCls,
               indutyCode, 12, receiptNo, reportTitle, draftOpt.get(), row));
         }
@@ -136,13 +136,13 @@ public class DisclosureCardCollectionService {
     }
   }
 
-  private int persistCards(List<PendingCard> pending) {
+  private int persistEvents(List<PendingEvent> pending) {
     if (pending.isEmpty()) {
       return 0;
     }
-    Integer saved = transactionTemplate.execute(status -> {
+    Integer saved = transactionOperations.execute(status -> {
       int count = 0;
-      for (PendingCard item : pending) {
+      for (PendingEvent item : pending) {
         DisclosureCompany company = companyRepository.findForUpdate(item.corpCode())
             .orElseGet(() -> companyRepository.saveAndFlush(new DisclosureCompany(
                 item.corpCode(), item.stockCode(), item.companyName(),
@@ -178,7 +178,7 @@ public class DisclosureCardCollectionService {
     try {
       return objectMapper.writeValueAsString(value);
     } catch (JsonProcessingException e) {
-      throw new IllegalStateException("Failed to serialize disclosure card payload", e);
+      throw new IllegalStateException("Failed to serialize disclosure event payload", e);
     }
   }
 
@@ -197,7 +197,7 @@ public class DisclosureCardCollectionService {
     return value == null || value.isBlank() ? null : value.trim();
   }
 
-  private record PendingCard(
+  private record PendingEvent(
       String corpCode,
       String stockCode,
       String companyName,

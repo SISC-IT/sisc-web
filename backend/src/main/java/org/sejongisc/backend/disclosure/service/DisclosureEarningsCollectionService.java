@@ -1,6 +1,10 @@
 package org.sejongisc.backend.disclosure.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -15,12 +19,19 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.disclosure.client.OpenDartClient;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse;
-import org.sejongisc.backend.disclosure.service.DisclosureCollectionService.Counts;
-import org.sejongisc.backend.disclosure.service.DisclosureEarningsQueryService.StoredFiling;
+import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
+import org.sejongisc.backend.disclosure.entity.DisclosureFiling;
+import org.sejongisc.backend.disclosure.entity.DisclosureFinancialMetric;
+import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
+import org.sejongisc.backend.disclosure.service.DisclosureQueryService.StoredFiling;
 import org.sejongisc.backend.disclosure.service.enums.EarningsAccount;
 import org.sejongisc.backend.disclosure.service.enums.EarningsRow;
+import org.sejongisc.backend.disclosure.service.enums.EarningsRow.AmountKind;
 import org.sejongisc.backend.disclosure.service.enums.ReportingQuarter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionOperations;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +40,12 @@ public class DisclosureEarningsCollectionService {
   private static final DateTimeFormatter DART_DATE = DateTimeFormatter.BASIC_ISO_DATE;
 
   private final OpenDartClient client;
-  private final DisclosureCollectionService storage;
-  private final DisclosureEarningsQueryService query;
+  private final DisclosureCompanyRepository companyRepository;
+  private final DisclosureFilingRepository filingRepository;
+  private final DisclosureFinancialMetricRepository metricRepository;
+  private final DisclosureQueryService query;
+  private final TransactionOperations transactionOperations;
+  private final ObjectMapper objectMapper;
 
   public CollectionResult collect(String corpCode, LocalDate through) {
     if (!corpCode.matches("[0-9]{8}") || through.isBefore(XBRL_START)) {
@@ -46,10 +61,10 @@ public class DisclosureEarningsCollectionService {
     Map<ReportingQuarter, List<StoredFiling>> previous = query.storedReports(corpCode, through);
     TargetQuarters targets = selectTargetQuarters(available, previous);
     List<RegularReport> selectedReports = targets.byQuarter().values().stream().flatMap(List::stream).toList();
-    int filingsInserted = storage.saveReports(corpCode, closingMonth, selectedReports);
+    int filingsInserted = saveReports(corpCode, closingMonth, selectedReports);
     FetchOutcome outcome = fetchMissingFinancials(corpCode, closingMonth, targets, previous);
     Counts counts = new Counts(filingsInserted, outcome.metricsInserted());
-    return new CollectionResult(counts, List.copyOf(outcome.pendingPeriods()), query.latest(corpCode, through));
+    return new CollectionResult(counts, List.copyOf(outcome.pendingPeriods()), query.latestEarnings(corpCode, through));
   }
 
   private int fetchClosingMonth(String corpCode) {
@@ -113,7 +128,7 @@ public class DisclosureEarningsCollectionService {
       Optional<FinancialReport> result = fetchFinancialReport(corpCode, quarter, candidates, titles,
           consolidated, closingMonth != 12);
       if (result.isPresent()) {
-        metricsInserted += storage.saveFinancialReport(corpCode, result.get());
+        metricsInserted += saveFinancialReport(corpCode, result.get());
       }
       if (result.filter(financial -> financial.receiptNo().equals(expected.receiptNo())
           && financial.hasAmounts(needsCumulative)).isEmpty()) {
@@ -121,6 +136,100 @@ public class DisclosureEarningsCollectionService {
       }
     }
     return new FetchOutcome(metricsInserted, pending);
+  }
+
+  private int saveReports(String corpCode, int closingMonth, List<RegularReport> regularReports) {
+    if (regularReports.isEmpty()) {
+      return 0;
+    }
+    Integer saved = transactionOperations.execute(status -> {
+      RegularReport sample = regularReports.getFirst();
+      DisclosureCompany company = companyRepository.findForUpdate(corpCode).orElseGet(() ->
+          companyRepository.saveAndFlush(new DisclosureCompany(
+              corpCode, sample.stockCode(), sample.companyName(), sample.corporationClass(), closingMonth)));
+      company.updateProfile(sample.stockCode(), sample.companyName(), sample.corporationClass(), closingMonth);
+
+      int inserted = 0;
+      for (RegularReport report : regularReports) {
+        var existing = filingRepository.findByReceiptNo(report.receiptNo());
+        DisclosureFiling filing = existing.orElseGet(() -> filingRepository.save(toEntity(company, report)));
+        if (!company.getCorpCode().equals(filing.getCompany().getCorpCode())) {
+          throw new IllegalStateException("Disclosure receipt belongs to another company");
+        }
+        if (filing.getBusinessYear() == null || filing.getReportCode() == null) {
+          filing.setFinancialReport(report.quarter().fiscalYear(), report.quarter().reportCode());
+        }
+        if (existing.isEmpty()) {
+          inserted++;
+        }
+      }
+      return inserted;
+    });
+    return saved == null ? 0 : saved;
+  }
+
+  private int saveFinancialReport(String corpCode, FinancialReport financial) {
+    Integer saved = transactionOperations.execute(status -> {
+      companyRepository.findForUpdate(corpCode)
+          .orElseThrow(() -> new IllegalStateException("Missing company for financial report"));
+      DisclosureFiling filing = filingRepository.findByReceiptNo(financial.receiptNo())
+          .orElseThrow(() -> new IllegalStateException("Missing regular report for financial receipt"));
+      if (!corpCode.equals(filing.getCompany().getCorpCode())) {
+        throw new IllegalStateException("Disclosure receipt belongs to another company");
+      }
+      filing.setFinancialReport(financial.businessYear(), financial.quarter().reportCode());
+      String currentPeriodType = financial.quarter().number() == 4
+          ? EarningsAccount.ANNUAL : EarningsAccount.CURRENT;
+      int inserted = 0;
+      for (EarningsAccount account : EarningsAccount.values()) {
+        EarningsRow currentRow = account.select(financial.rows(), AmountKind.CURRENT);
+        if (currentRow != null) {
+          inserted += saveMetric(filing, currentRow, financial.basis(), currentPeriodType,
+              AmountKind.CURRENT, account.name());
+        }
+        if (financial.quarter().number() == 3) {
+          EarningsRow cumulativeRow = account.select(financial.rows(), AmountKind.CUMULATIVE);
+          if (cumulativeRow != null) {
+            inserted += saveMetric(filing, cumulativeRow, financial.basis(), EarningsAccount.YEAR_TO_DATE,
+                AmountKind.CUMULATIVE, account.name());
+          }
+        }
+      }
+      return inserted;
+    });
+    return saved == null ? 0 : saved;
+  }
+
+  private int saveMetric(DisclosureFiling filing, EarningsRow row, String basis,
+      String periodType, AmountKind kind, String metricType) {
+    BigDecimal amount = row.amount(kind);
+    if (amount == null) {
+      return 0;
+    }
+    if (metricRepository.existsByFiling_FilingIdAndMetricTypeAndBasisAndPeriodTypeAndAccountId(
+        filing.getFilingId(), metricType, basis, periodType, row.accountId())) {
+      return 0;
+    }
+    try {
+      DisclosureFinancialMetric metric = new DisclosureFinancialMetric(
+          filing, metricType, row.accountId(), row.accountName(), basis, periodType,
+          amount, row.currency(), objectMapper.writeValueAsString(row.rawPayload()));
+      metricRepository.save(metric);
+      return 1;
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("Could not preserve OpenDART financial metric: " + row.accountName(), e);
+    }
+  }
+
+  private DisclosureFiling toEntity(DisclosureCompany company, RegularReport report) {
+    try {
+      return new DisclosureFiling(
+          company, report.receiptNo(), report.title(), report.submitterName(),
+          report.receivedDate(), null, null, report.remarks(),
+          objectMapper.writeValueAsString(report.rawPayload()), LocalDateTime.now());
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("Could not preserve OpenDART disclosure payload", e);
+    }
   }
 
   private boolean isAlreadyStored(List<StoredFiling> stored, String receiptNo,
@@ -201,6 +310,9 @@ public class DisclosureEarningsCollectionService {
       String safeStatus = status != null && status.matches("[0-9]{3}") ? status : "missing/invalid";
       throw new IllegalStateException("OpenDART " + operation + " failed, status=" + safeStatus);
     }
+  }
+
+  public record Counts(int filingsInserted, int metricsInserted) {
   }
 
   private record TargetQuarters(TreeMap<ReportingQuarter, List<RegularReport>> byQuarter,

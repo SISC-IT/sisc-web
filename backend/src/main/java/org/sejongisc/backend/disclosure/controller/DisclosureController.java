@@ -8,7 +8,7 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyDetailResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListResponse;
 import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
-import org.sejongisc.backend.disclosure.service.DisclosureCardQueryService;
+import org.sejongisc.backend.disclosure.service.DisclosureQueryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/disclosures/companies")
 @RequiredArgsConstructor
-public class DisclosureCardController {
-  private final DisclosureCardQueryService queryService;
+public class DisclosureController {
+  private final DisclosureQueryService queryService;
 
   @GetMapping
   public ResponseEntity<CompanyListResponse> list(

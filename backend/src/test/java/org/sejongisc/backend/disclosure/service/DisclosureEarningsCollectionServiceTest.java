@@ -27,11 +27,14 @@ import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Source;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
 import org.sejongisc.backend.disclosure.entity.DisclosureFiling;
 import org.sejongisc.backend.disclosure.entity.DisclosureFinancialMetric;
+import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureUserReadRepository;
 import org.sejongisc.backend.disclosure.service.enums.ReportingQuarter;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionOperations;
 
 class DisclosureEarningsCollectionServiceTest {
   private static final String COMPANY = "00000001";
@@ -51,9 +54,11 @@ class DisclosureEarningsCollectionServiceTest {
   private final Map<String, DisclosureFiling> storedFilings = new LinkedHashMap<>();
   private final List<DisclosureFinancialMetric> storedMetrics = new ArrayList<>();
   private final ObjectMapper mapper = new ObjectMapper();
-  private final DisclosureEarningsQueryService query = new DisclosureEarningsQueryService(companies, filings, metrics, mapper);
-  private final DisclosureEarningsCollectionService collection = new DisclosureEarningsCollectionService(client,
-      new DisclosureCollectionService(companies, filings, metrics, mapper), query);
+  private final DisclosureQueryService query = new DisclosureQueryService(
+      companies, filings, metrics, mock(DisclosureCardNewsRepository.class),
+      mock(DisclosureUserReadRepository.class), mapper);
+  private final DisclosureEarningsCollectionService collection = new DisclosureEarningsCollectionService(
+      client, companies, filings, metrics, query, TransactionOperations.withoutTransaction(), mapper);
 
   @BeforeEach
   void setUpRepositories() {
@@ -122,7 +127,7 @@ class DisclosureEarningsCollectionServiceTest {
 
     clearInvocations(client);
     var second = collection.collect(COMPANY, THROUGH);
-    assertThat(second.counts()).isEqualTo(new DisclosureCollectionService.Counts(0, 0));
+    assertThat(second.counts()).isEqualTo(new DisclosureEarningsCollectionService.Counts(0, 0));
     verify(client, never()).financialStatements(anyString(), anyInt(), anyString(), anyString());
 
     when(client.searchRegularReports(eq(COMPANY), any(), eq(THROUGH), eq(1), eq(100)))
@@ -130,11 +135,11 @@ class DisclosureEarningsCollectionServiceTest {
             java.util.stream.Stream.of(filing(ANNUAL_2026, "사업보고서 (2026.12)", "연")), reports.stream()).toList()));
     financial(2026, "11011", ANNUAL_2026, "CFS", "400", null);
     var updated = collection.collect(COMPANY, THROUGH);
-    assertThat(updated.counts()).isEqualTo(new DisclosureCollectionService.Counts(1, 3));
+    assertThat(updated.counts()).isEqualTo(new DisclosureEarningsCollectionService.Counts(1, 3));
     assertThat(updated.earnings().orElseThrow().quarters()).extracting(Quarter::revenue)
         .containsExactly("0", "-15", "90", "190");
     assertThat(storedFilings).containsKeys(THIRD_2025, ANNUAL_2025, ANNUAL_2026);
-    assertThat(query.latest(COMPANY, LocalDate.of(2026, 12, 31)).orElseThrow().quarters().getLast().periodEnd())
+    assertThat(query.latestEarnings(COMPANY, LocalDate.of(2026, 12, 31)).orElseThrow().quarters().getLast().periodEnd())
         .isEqualTo("2026-09");
     verify(client).financialStatements(COMPANY, 2026, "11011", "CFS");
     verify(client, times(1)).financialStatements(anyString(), anyInt(), anyString(), anyString());

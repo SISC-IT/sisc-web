@@ -20,15 +20,15 @@ import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyLis
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Quarter;
 import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
-import org.sejongisc.backend.disclosure.service.DisclosureCardQueryService;
+import org.sejongisc.backend.disclosure.service.DisclosureQueryService;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-class DisclosureCardControllerTest {
-  private final DisclosureCardQueryService queryService = mock(DisclosureCardQueryService.class);
+class DisclosureControllerTest {
+  private final DisclosureQueryService queryService = mock(DisclosureQueryService.class);
   private final MockMvc mvc =
-      MockMvcBuilders.standaloneSetup(new DisclosureCardController(queryService))
+      MockMvcBuilders.standaloneSetup(new DisclosureController(queryService))
           .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
           .setControllerAdvice(new GlobalExceptionHandler()).build();
 
@@ -50,7 +50,7 @@ class DisclosureCardControllerTest {
 
   @Test
   void returnsUnifiedCompanyDetailWithEarningsTrendAndFilteredEvents() throws Exception {
-    var q3 = new Quarter(2026, 3, "2026-09", "CFS", "KRW", "18400000000000", "7200000000000", "5600000000000", List.of());
+    var q3 = new Quarter(2026, 3, "2026-09", "CFS", "KRW", "9007199254740993", "7200000000000", "5600000000000", List.of());
     var ev = new DisclosureCardResponse(
         UUID.randomUUID(), "20261118000001", "CAPEX", "CAPEX",
         "00164779", "SK하이닉스", "000660", "KOSPI", "26110",
@@ -70,7 +70,7 @@ class DisclosureCardControllerTest {
             .param("type", "CAPEX"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.companyName").value("SK하이닉스"))
-        .andExpect(jsonPath("$.latestQuarter.fiscalYear").value(2026))
+        .andExpect(jsonPath("$.latestQuarter.revenue").value("9007199254740993"))
         .andExpect(jsonPath("$.earningsTrend.length()").value(1))
         .andExpect(jsonPath("$.events[0].category").value("CAPEX"));
   }
