@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import styles from './StockOrder.module.css';
 import { getStockDetail, placeOrder, searchStocks } from '../../utils/competitionApi';
 import { changeColor, ratePercent, shortDate, signedPercent, won } from '../../utils/competitionFormat';
@@ -30,6 +31,9 @@ const StockOrder = ({ competition }) => {
   const [listError, setListError] = useState('');
   const [ticker, setTicker] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [detailError, setDetailError] = useState('');
+  // 주문 뒤 현금·보유 수량을 다시 읽을 때 올린다
+  const [reloadCount, setReloadCount] = useState(0);
   const [side, setSide] = useState('BUY');
   const [qty, setQty] = useState('1');
   const [submitting, setSubmitting] = useState(false);
@@ -37,43 +41,57 @@ const StockOrder = ({ competition }) => {
   // 응답을 못 받은 주문을 다시 보낼 때 같은 키를 써야 서버가 두 번 체결하지 않는다
   const pendingKey = useRef(null);
 
-  // 입력이 멈추고 0.3초 뒤에 검색한다
+  // 입력이 멈추고 0.3초 뒤에 검색한다. 검색어가 바뀐 뒤 늦게 온 예전 응답은 버린다.
   useEffect(() => {
+    let stale = false;
     const timer = setTimeout(() => {
       searchStocks(competitionId, { query: query.trim() })
         .then((res) => {
+          if (stale) return;
           setStocks(res.stocks);
           setListError('');
           setTicker((current) => current ?? res.stocks[0]?.ticker ?? null);
         })
-        .catch((err) => setListError(err.message));
+        .catch((err) => !stale && setListError(err.message));
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
   }, [competitionId, query]);
 
-  const loadDetail = useCallback(() => {
-    if (!ticker || !isParticipant) return;
-    getStockDetail(competitionId, ticker)
-      .then(setDetail)
-      .catch((err) => setResult({ ok: false, text: err.message }));
-  }, [competitionId, ticker, isParticipant]);
-
+  // 다른 종목을 고른 뒤 늦게 온 예전 종목 응답은 버린다. 그래야 화면과 주문 종목이 어긋나지 않는다.
   useEffect(() => {
-    setDetail(null);
-    loadDetail();
-  }, [loadDetail]);
+    if (!ticker || !isParticipant) return undefined;
+    let stale = false;
+    getStockDetail(competitionId, ticker)
+      .then((res) => {
+        if (stale) return;
+        setDetail(res);
+        setDetailError('');
+      })
+      .catch((err) => !stale && setDetailError(err.message));
+    return () => {
+      stale = true;
+    };
+  }, [competitionId, ticker, isParticipant, reloadCount]);
+
+  const reloadDetail = () => setReloadCount((count) => count + 1);
 
   const pick = (nextTicker) => {
+    if (nextTicker === ticker) return;
     setTicker(nextTicker);
+    setDetail(null);
+    setDetailError('');
     setResult(null);
-    pendingKey.current = null;
   };
 
   const price = detail ? Number(detail.closePrice) : 0;
   const feeRate = detail ? Number(detail.tradingFeeRate) : 0;
   const cash = detail ? Number(detail.cashBalance) : 0;
   const isBuy = side === 'BUY';
-  const quantity = Number.parseInt(qty, 10) || 0;
+  // 1.5나 1e3처럼 정수가 아닌 입력을 잘라서 주문하지 않도록 그대로 검사한다
+  const quantity = Number(qty);
   const amount = price * quantity;
   const fee = feeOf(amount, feeRate);
   const total = isBuy ? amount + fee : amount - fee;
@@ -81,7 +99,7 @@ const StockOrder = ({ competition }) => {
   const maxQty = isBuy ? maxBuy : detail?.holdingQuantity ?? 0;
 
   let inputError = '';
-  if (quantity <= 0) inputError = '수량을 1주 이상 입력하세요.';
+  if (!Number.isInteger(quantity) || quantity <= 0) inputError = '수량은 1주 이상의 정수로 입력하세요.';
   else if (isBuy && total > cash) inputError = `현금이 부족해요. 최대 ${maxBuy.toLocaleString('ko-KR')}주까지 살 수 있어요.`;
   else if (!isBuy && quantity > detail?.holdingQuantity) {
     inputError = detail.holdingQuantity === 0
@@ -95,7 +113,7 @@ const StockOrder = ({ competition }) => {
     const order = { ticker: detail.ticker, side, quantity, closePriceId: detail.closePriceId };
     const signature = JSON.stringify(order);
     if (pendingKey.current?.signature !== signature) {
-      pendingKey.current = { signature, key: crypto.randomUUID() };
+      pendingKey.current = { signature, key: uuidv4() };
     }
     setSubmitting(true);
     setResult(null);
@@ -106,15 +124,13 @@ const StockOrder = ({ competition }) => {
         ok: true,
         text: `${trade.companyName} ${trade.quantity.toLocaleString('ko-KR')}주 ${isBuy ? '매수' : '매도'} 체결 — ${won(trade.price)}원 (${shortDate(detail.priceDate)} 종가)`,
       });
-      loadDetail();
     } catch (err) {
-      // 종가가 바뀌었으면 새 종가를 다시 보여준다. 새 종가로는 다른 주문이라 키도 새로 만든다.
-      if (err.data?.errorCode === 'PRICE_CHANGED') {
-        pendingKey.current = null;
-        loadDetail();
-      }
+      // 종가가 바뀌었으면 새 종가로는 다른 주문이라 키도 새로 만든다
+      if (err.data?.errorCode === 'PRICE_CHANGED') pendingKey.current = null;
       setResult({ ok: false, text: err.message });
     } finally {
+      // 성공해도 실패해도 현금·보유 수량·주문 가능 여부를 다시 읽는다
+      reloadDetail();
       setSubmitting(false);
     }
   };
@@ -159,7 +175,8 @@ const StockOrder = ({ competition }) => {
 
       <section aria-label="종목 상세와 주문" className={styles.detailColumn}>
         {!isParticipant && <p className={styles.muted}>대회 참가자만 종목 상세를 보고 주문할 수 있어요.</p>}
-        {isParticipant && !detail && <p className={styles.muted}>왼쪽에서 종목을 골라 주세요.</p>}
+        {isParticipant && !detail && detailError && <p role="alert" className={styles.errorBox}>{detailError}</p>}
+        {isParticipant && !detail && !detailError && <p className={styles.muted}>왼쪽에서 종목을 골라 주세요.</p>}
         {isParticipant && detail && (
           <>
             <p className={detail.tradable ? styles.openBar : styles.closedBar}>

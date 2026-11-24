@@ -16,11 +16,12 @@ const NOT_PARTICIPANT_TEXT = '이번 대회 참가자가 아니에요 — 대회
 
 const dDay = (days) => (days === 0 ? 'D-DAY' : `D-${days}`);
 
-// 시작 전이면 시작까지, 진행 중이면 종료까지 남은 날
+// 시작 전이면 시작까지, 진행 중이면 종료까지 남은 날.
+// 상태 전환이 늦어 날짜가 이미 지났으면(음수) 보여주지 않는다.
 const countdown = ({ status, startDate, endDate }) => {
-  if (status === 'READY') return `시작까지 ${dDay(daysUntil(startDate))}`;
-  if (status === 'ACTIVE') return `종료까지 ${dDay(daysUntil(endDate))}`;
-  return null;
+  const target = status === 'READY' ? startDate : status === 'ACTIVE' ? endDate : null;
+  if (!target || daysUntil(target) < 0) return null;
+  return `${status === 'READY' ? '시작까지' : '종료까지'} ${dDay(daysUntil(target))}`;
 };
 
 const CompetitionHome = ({ competition }) => {
