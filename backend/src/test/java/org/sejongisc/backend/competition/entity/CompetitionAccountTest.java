@@ -33,6 +33,55 @@ class CompetitionAccountTest {
         assertThat(account.getCash()).isEqualByComparingTo("1000000");
     }
 
+    @Test
+    @DisplayName("현금을 예금으로, 예금을 현금으로 옮긴다")
+    void depositAndWithdraw() {
+        CompetitionAccount account = account("1000000");
+
+        account.depositCash(new BigDecimal("700000"));
+        account.withdrawDeposit(new BigDecimal("200000"));
+
+        assertThat(account.getCash()).isEqualByComparingTo("500000");
+        assertThat(account.getDeposit()).isEqualByComparingTo("500000");
+    }
+
+    @Test
+    @DisplayName("현금보다 많이 예금하면 잔고 부족으로 거절하고 현금·예금은 그대로다")
+    void depositMoreThanCash() {
+        CompetitionAccount account = account("1000000");
+
+        assertThatThrownBy(() -> account.depositCash(new BigDecimal("1000001")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INSUFFICIENT_CASH);
+        assertThat(account.getCash()).isEqualByComparingTo("1000000");
+        assertThat(account.getDeposit()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    @DisplayName("예금보다 많이 출금하면 예금 부족으로 거절하고 현금·예금은 그대로다")
+    void withdrawMoreThanDeposit() {
+        CompetitionAccount account = account("1000000");
+        account.depositCash(new BigDecimal("300000"));
+
+        assertThatThrownBy(() -> account.withdrawDeposit(new BigDecimal("300000.0001")))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_INSUFFICIENT_DEPOSIT);
+        assertThat(account.getCash()).isEqualByComparingTo("700000");
+        assertThat(account.getDeposit()).isEqualByComparingTo("300000");
+    }
+
+    @Test
+    @DisplayName("이자는 예금에 더한다")
+    void addInterest() {
+        CompetitionAccount account = account("1000000");
+        account.depositCash(new BigDecimal("1000000"));
+
+        account.addInterest(new BigDecimal("82.1917"));
+
+        assertThat(account.getDeposit()).isEqualByComparingTo("1000082.1917");
+        assertThat(account.getCash()).isEqualByComparingTo("0");
+    }
+
     private static CompetitionAccount account(String cash) {
         return CompetitionAccount.builder().cash(new BigDecimal(cash)).deposit(BigDecimal.ZERO).build();
     }

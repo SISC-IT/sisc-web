@@ -47,4 +47,23 @@ public class CompetitionAccount extends BasePostgresEntity {
     public void increaseCash(BigDecimal amount) {
         cash = cash.add(amount);
     }
+
+    // 현금을 예금으로 옮긴다.
+    public void depositCash(BigDecimal amount) {
+        decreaseCash(amount);
+        deposit = deposit.add(amount);
+    }
+
+    // 예금을 현금으로 옮긴다.
+    public void withdrawDeposit(BigDecimal amount) {
+        if (deposit.compareTo(amount) < 0) {
+            throw new CustomException(ErrorCode.COMPETITION_INSUFFICIENT_DEPOSIT);
+        }
+        deposit = deposit.subtract(amount);
+        cash = cash.add(amount);
+    }
+
+    public void addInterest(BigDecimal amount) {
+        deposit = deposit.add(amount);
+    }
 }
