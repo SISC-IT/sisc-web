@@ -2,8 +2,10 @@ package org.sejongisc.backend.competition.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -123,20 +125,59 @@ class DailyClosePriceWriterTest {
     }
 
     @Test
-    @DisplayName("여러 날짜가 와도 기준일 종가만 저장한다")
-    void savesOnlyBaseDateCandle() {
+    @DisplayName("직전 거래일 종가가 없으면 같은 응답에서 함께 저장한다")
+    void savesPreviousTradingDayWhenMissing() {
         when(closePriceRepository.existsByStockAndPriceDate(samsung, BASE_DATE)).thenReturn(false);
+        when(closePriceRepository.existsByStockAndPriceDate(samsung, BASE_DATE.minusDays(1))).thenReturn(false);
         when(marketDataClient.fetchDomesticDailyCandles("005930", BASE_DATE))
                 .thenReturn(List.of(
                         candle(BASE_DATE.minusDays(2), "59000"),
                         candle(BASE_DATE.minusDays(1), "60000"),
                         candle(BASE_DATE, "61000")));
 
+        boolean saved = writer.saveIfAbsent(samsung, BASE_DATE);
+
+        assertThat(saved).isTrue();
+        ArgumentCaptor<DailyClosePrice> captor = ArgumentCaptor.forClass(DailyClosePrice.class);
+        verify(closePriceRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(DailyClosePrice::getPriceDate, DailyClosePrice::getClosePrice, DailyClosePrice::getAvailableAt)
+                .containsExactly(
+                        tuple(BASE_DATE, new BigDecimal("61000"), LocalDateTime.of(BASE_DATE, AVAILABLE_AT)),
+                        tuple(BASE_DATE.minusDays(1), new BigDecimal("60000"),
+                                LocalDateTime.of(BASE_DATE.minusDays(1), AVAILABLE_AT)));
+    }
+
+    @Test
+    @DisplayName("직전 거래일 종가가 이미 있으면 기준일 종가만 저장한다")
+    void savesOnlyBaseDateWhenPreviousExists() {
+        when(closePriceRepository.existsByStockAndPriceDate(samsung, BASE_DATE)).thenReturn(false);
+        when(closePriceRepository.existsByStockAndPriceDate(samsung, BASE_DATE.minusDays(1))).thenReturn(true);
+        when(marketDataClient.fetchDomesticDailyCandles("005930", BASE_DATE))
+                .thenReturn(List.of(candle(BASE_DATE.minusDays(1), "60000"), candle(BASE_DATE, "61000")));
+
         writer.saveIfAbsent(samsung, BASE_DATE);
 
         ArgumentCaptor<DailyClosePrice> captor = ArgumentCaptor.forClass(DailyClosePrice.class);
         verify(closePriceRepository).save(captor.capture());
-        assertThat(captor.getValue().getClosePrice()).isEqualByComparingTo("61000");
+        assertThat(captor.getValue().getPriceDate()).isEqualTo(BASE_DATE);
+    }
+
+    @Test
+    @DisplayName("주말이나 휴일을 건너뛴 직전 거래일 종가를 저장한다")
+    void savesPreviousTradingDayAcrossHolidays() {
+        LocalDate friday = BASE_DATE.minusDays(5);
+        when(closePriceRepository.existsByStockAndPriceDate(samsung, BASE_DATE)).thenReturn(false);
+        when(closePriceRepository.existsByStockAndPriceDate(samsung, friday)).thenReturn(false);
+        when(marketDataClient.fetchDomesticDailyCandles("005930", BASE_DATE))
+                .thenReturn(List.of(candle(friday, "60000"), candle(BASE_DATE, "61000")));
+
+        writer.saveIfAbsent(samsung, BASE_DATE);
+
+        ArgumentCaptor<DailyClosePrice> captor = ArgumentCaptor.forClass(DailyClosePrice.class);
+        verify(closePriceRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(DailyClosePrice::getPriceDate)
+                .containsExactly(BASE_DATE, friday);
     }
 
     @Test
