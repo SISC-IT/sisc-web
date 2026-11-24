@@ -124,14 +124,15 @@ class CompetitionServiceTest {
   }
 
   @Test
-  @DisplayName("종료일이 시작일보다 빠르면 만들지 않는다")
+  @DisplayName("종료일이 시작일보다 늦지 않으면 만들지 않는다")
   void rejectInvalidPeriod() {
-    CompetitionCreateRequest reversed =
-        new CompetitionCreateRequest("대회", LocalDate.of(2026, 12, 4), LocalDate.of(2026, 11, 23));
-
-    assertThatThrownBy(() -> competitionService.create(reversed))
-        .isInstanceOf(CustomException.class)
-        .extracting("errorCode").isEqualTo(ErrorCode.INVALID_COMPETITION_PERIOD);
+    for (CompetitionCreateRequest invalid : List.of(
+        new CompetitionCreateRequest("대회", LocalDate.of(2026, 12, 4), LocalDate.of(2026, 11, 23)),
+        new CompetitionCreateRequest("하루 대회", LocalDate.of(2026, 11, 23), LocalDate.of(2026, 11, 23)))) {
+      assertThatThrownBy(() -> competitionService.create(invalid))
+          .isInstanceOf(CustomException.class)
+          .extracting("errorCode").isEqualTo(ErrorCode.INVALID_COMPETITION_PERIOD);
+    }
     verify(competitionRepository, never()).saveAndFlush(any());
   }
 

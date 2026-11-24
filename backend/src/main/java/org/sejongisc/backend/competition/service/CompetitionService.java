@@ -55,7 +55,8 @@ public class CompetitionService {
     if (request.startDate().isBefore(today)) {
       throw new CustomException(ErrorCode.COMPETITION_START_DATE_PAST);
     }
-    if (request.endDate().isBefore(request.startDate())) {
+    // 종료일에는 주문을 받지 않아 하루짜리 대회는 거래할 날이 없다
+    if (!request.endDate().isAfter(request.startDate())) {
       throw new CustomException(ErrorCode.INVALID_COMPETITION_PERIOD);
     }
 

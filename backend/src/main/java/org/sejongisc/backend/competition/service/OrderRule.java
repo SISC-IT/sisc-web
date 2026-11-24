@@ -21,8 +21,9 @@ final class OrderRule {
 
     // 대회 단위 조건. 종목을 조회하기 전에 먼저 확인할 수 있게 따로 둔다.
     // 상태가 늦게 바뀌어도 기간 밖 주문은 막히도록 날짜도 함께 본다.
+    // 종료일 16:00 종가로 최종 평가하므로 주문은 종료 전날까지 받는다.
     static UnavailableReason competitionUnavailableReason(Competition competition, LocalDate today) {
-        boolean inPeriod = !today.isBefore(competition.getStartDate()) && !today.isAfter(competition.getEndDate());
+        boolean inPeriod = !today.isBefore(competition.getStartDate()) && today.isBefore(competition.getEndDate());
         return competition.getStatus() == CompetitionStatus.ACTIVE && inPeriod
                 ? null
                 : UnavailableReason.COMPETITION_NOT_ACTIVE;
