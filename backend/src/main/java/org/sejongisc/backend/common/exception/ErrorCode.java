@@ -150,6 +150,8 @@ public enum ErrorCode {
 
   COMPETITION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "진행 중인 대회가 아닙니다."),
 
+  COMPETITION_NOT_ENDED(HttpStatus.CONFLICT, "종료되어 결과 확인을 기다리는 대회만 결과를 공개할 수 있습니다."),
+
   COMPETITION_PARTICIPANT_EXCLUDED(HttpStatus.FORBIDDEN, "대회에서 제외되어 거래할 수 없습니다."),
 
   COMPETITION_MARKET_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "국내 종목만 거래할 수 있습니다."),

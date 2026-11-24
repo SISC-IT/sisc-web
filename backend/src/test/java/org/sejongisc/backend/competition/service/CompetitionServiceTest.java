@@ -33,10 +33,12 @@ import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
 import org.sejongisc.backend.competition.entity.CompetitionStatus;
+import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
 import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.repository.CompetitionAccountRepository;
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
+import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
@@ -47,9 +49,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 @ExtendWith(MockitoExtension.class)
 class CompetitionServiceTest {
 
+  private static final LocalDate TODAY = LocalDate.of(2026, 11, 18);
+
   @Mock CompetitionRepository competitionRepository;
   @Mock CompetitionParticipantRepository participantRepository;
   @Mock CompetitionAccountRepository accountRepository;
+  @Mock DailyAccountSnapshotRepository snapshotRepository;
   @Mock UserRepository userRepository;
   CompetitionService competitionService;
 
@@ -62,7 +67,7 @@ class CompetitionServiceTest {
     Clock clock = Clock.fixed(ZonedDateTime.of(2026, 11, 18, 10, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant(),
         ZoneId.of("Asia/Seoul"));
     competitionService = new CompetitionService(
-        competitionRepository, participantRepository, accountRepository, userRepository, clock);
+        competitionRepository, participantRepository, accountRepository, snapshotRepository, userRepository, clock);
   }
 
   @Test
@@ -209,6 +214,149 @@ class CompetitionServiceTest {
     competitionService.startDueCompetitions();
 
     assertThat(ready.getStatus()).isEqualTo(CompetitionStatus.ACTIVE);
+  }
+
+  @Test
+  @DisplayName("종료일 스냅샷이 생기면 그 등수를 최종 등수로 정하고 종료한다")
+  void endWithEndDateSnapshot() {
+    Competition competition = activeEndingOn(TODAY);
+    CompetitionParticipant first = participant(competition);
+    CompetitionParticipant second = participant(competition);
+    givenDue(competition);
+    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(TODAY));
+    given(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, TODAY, ParticipantStatus.ACTIVE))
+        .willReturn(List.of(snapshot(first, 1), snapshot(second, 2)));
+
+    competitionService.endDueCompetitions();
+
+    assertThat(competition.getStatus()).isEqualTo(CompetitionStatus.ENDED);
+    assertThat(first.getFinalRank()).isEqualTo(1);
+    assertThat(second.getFinalRank()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("종료일이어도 그날 스냅샷이 아직 없으면 닫지 않는다")
+  void waitForEndDateSnapshot() {
+    Competition competition = activeEndingOn(TODAY);
+    givenDue(competition);
+    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(TODAY.minusDays(1)));
+
+    competitionService.endDueCompetitions();
+
+    assertThat(competition.getStatus()).isEqualTo(CompetitionStatus.ACTIVE);
+    verify(snapshotRepository, never()).findAllByCompetitionAndSnapshotDate(any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("종료일이 휴장일이라 그날 스냅샷이 없으면 종료일이 지난 뒤 직전 거래일 스냅샷으로 닫는다")
+  void endWithLastTradingDaySnapshotAfterEndDate() {
+    LocalDate endDate = TODAY.minusDays(1);
+    LocalDate lastTradingDay = TODAY.minusDays(2);
+    Competition competition = activeEndingOn(endDate);
+    CompetitionParticipant participant = participant(competition);
+    givenDue(competition);
+    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(lastTradingDay));
+    given(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, lastTradingDay, ParticipantStatus.ACTIVE))
+        .willReturn(List.of(snapshot(participant, 1)));
+
+    competitionService.endDueCompetitions();
+
+    assertThat(competition.getStatus()).isEqualTo(CompetitionStatus.ENDED);
+    assertThat(participant.getFinalRank()).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("스냅샷에 없는 참가자(제외자)의 최종 등수는 null로 남는다")
+  void excludedParticipantHasNoFinalRank() {
+    Competition competition = activeEndingOn(TODAY);
+    CompetitionParticipant active = participant(competition);
+    CompetitionParticipant excluded = participant(competition);
+    givenDue(competition);
+    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(TODAY));
+    given(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, TODAY, ParticipantStatus.ACTIVE))
+        .willReturn(List.of(snapshot(active, 1)));
+
+    competitionService.endDueCompetitions();
+
+    assertThat(active.getFinalRank()).isEqualTo(1);
+    assertThat(excluded.getFinalRank()).isNull();
+  }
+
+  @Test
+  @DisplayName("스냅샷이 한 번도 없으면 종료일이 지난 뒤 최종 등수 없이 닫는다")
+  void endWithoutAnySnapshot() {
+    Competition competition = activeEndingOn(TODAY.minusDays(1));
+    givenDue(competition);
+    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.empty());
+
+    competitionService.endDueCompetitions();
+
+    assertThat(competition.getStatus()).isEqualTo(CompetitionStatus.ENDED);
+  }
+
+  @Test
+  @DisplayName("종료된 대회의 결과를 공개한다")
+  void finalizeResult() {
+    Competition ended = Competition.builder().competitionId(UUID.randomUUID()).status(CompetitionStatus.ENDED).build();
+    given(competitionRepository.findById(ended.getCompetitionId())).willReturn(Optional.of(ended));
+
+    competitionService.finalizeResult(ended.getCompetitionId());
+
+    assertThat(ended.getStatus()).isEqualTo(CompetitionStatus.FINALIZED);
+  }
+
+  @Test
+  @DisplayName("종료 상태가 아닌 대회는 결과를 공개할 수 없다")
+  void finalizeResultRejectsNotEnded() {
+    for (CompetitionStatus status : List.of(
+        CompetitionStatus.READY, CompetitionStatus.ACTIVE, CompetitionStatus.FINALIZED)) {
+      Competition competition = Competition.builder().competitionId(UUID.randomUUID()).status(status).build();
+      given(competitionRepository.findById(competition.getCompetitionId())).willReturn(Optional.of(competition));
+
+      assertThatThrownBy(() -> competitionService.finalizeResult(competition.getCompetitionId()))
+          .isInstanceOf(CustomException.class)
+          .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_ENDED);
+      assertThat(competition.getStatus()).isEqualTo(status);
+    }
+  }
+
+  @Test
+  @DisplayName("없는 대회의 결과를 공개하면 COMPETITION_NOT_FOUND")
+  void finalizeResultNotFound() {
+    UUID competitionId = UUID.randomUUID();
+    given(competitionRepository.findById(competitionId)).willReturn(Optional.empty());
+
+    assertThatThrownBy(() -> competitionService.finalizeResult(competitionId))
+        .isInstanceOf(CustomException.class)
+        .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+  }
+
+  private static Competition activeEndingOn(LocalDate endDate) {
+    return Competition.builder()
+        .competitionId(UUID.randomUUID())
+        .status(CompetitionStatus.ACTIVE)
+        .endDate(endDate)
+        .build();
+  }
+
+  private void givenDue(Competition competition) {
+    given(competitionRepository.findAllByStatusAndEndDateLessThanEqual(CompetitionStatus.ACTIVE, TODAY))
+        .willReturn(List.of(competition));
+  }
+
+  private static CompetitionParticipant participant(Competition competition) {
+    return CompetitionParticipant.builder()
+        .participantId(UUID.randomUUID())
+        .competition(competition)
+        .status(ParticipantStatus.ACTIVE)
+        .build();
+  }
+
+  private static DailyAccountSnapshot snapshot(CompetitionParticipant participant, int rank) {
+    return DailyAccountSnapshot.builder()
+        .account(CompetitionAccount.builder().participant(participant).build())
+        .rank(rank)
+        .build();
   }
 
   @Test

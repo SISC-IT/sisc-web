@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/competitions")
@@ -36,5 +38,20 @@ public class AdminCompetitionController {
   @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
   public ResponseEntity<CompetitionCreateResponse> create(@Valid @RequestBody CompetitionCreateRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.create(request));
+  }
+
+  @Operation(
+      summary = "대회 결과 공개",
+      description = """
+      종료(ENDED)된 대회를 결과 공개(FINALIZED) 상태로 바꿉니다. \s
+      - 대회는 종료일 16:00 종가로 최종 등수를 정하고 자동으로 종료됩니다. 운영진이 결과를 확인한 뒤 이 API로 공개합니다. \s
+      - 종료 상태가 아닌 대회는 409 COMPETITION_NOT_ENDED입니다. 이미 공개한 대회도 마찬가지입니다.
+      """
+  )
+  @PostMapping("/{competitionId}/finalize")
+  @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
+  public ResponseEntity<Void> finalizeResult(@PathVariable UUID competitionId) {
+    competitionService.finalizeResult(competitionId);
+    return ResponseEntity.noContent().build();
   }
 }

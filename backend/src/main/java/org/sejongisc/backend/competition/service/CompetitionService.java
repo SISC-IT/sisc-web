@@ -16,6 +16,7 @@ import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.repository.CompetitionAccountRepository;
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
+import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
@@ -28,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -45,6 +47,7 @@ public class CompetitionService {
   private final CompetitionRepository competitionRepository;
   private final CompetitionParticipantRepository participantRepository;
   private final CompetitionAccountRepository accountRepository;
+  private final DailyAccountSnapshotRepository snapshotRepository;
   private final UserRepository userRepository;
   private final Clock clock;
 
@@ -145,6 +148,47 @@ public class CompetitionService {
       competition.start();
       log.info("[대회 시작] competitionId={}, startDate={}", competition.getCompetitionId(), competition.getStartDate());
     }
+  }
+
+  // 종료일 스냅샷이 없으면(휴장일, 수집 실패) 종료일이 지난 뒤 가장 최근 스냅샷으로 닫는다.
+  @Transactional
+  public void endDueCompetitions() {
+    LocalDate today = LocalDate.now(clock);
+    List<Competition> due = competitionRepository.findAllByStatusAndEndDateLessThanEqual(
+        CompetitionStatus.ACTIVE, today);
+    for (Competition competition : due) {
+      Optional<LocalDate> latestSnapshotDate = snapshotRepository.findLatestSnapshotDate(competition);
+      if (!isFinalSnapshotReady(competition, latestSnapshotDate, today)) {
+        continue;
+      }
+      latestSnapshotDate.ifPresentOrElse(
+          snapshotDate -> assignFinalRanks(competition, snapshotDate),
+          () -> log.warn("[대회 종료] 스냅샷이 없어 최종 등수 없이 닫습니다: competitionId={}", competition.getCompetitionId()));
+      competition.end();
+      log.info("[대회 종료] competitionId={}, endDate={}, 평가일={}",
+          competition.getCompetitionId(), competition.getEndDate(), latestSnapshotDate.orElse(null));
+    }
+  }
+
+  private static boolean isFinalSnapshotReady(
+      Competition competition, Optional<LocalDate> latestSnapshotDate, LocalDate today) {
+    return competition.getEndDate().isBefore(today) || latestSnapshotDate.filter(today::equals).isPresent();
+  }
+
+  private void assignFinalRanks(Competition competition, LocalDate snapshotDate) {
+    snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, snapshotDate, ParticipantStatus.ACTIVE)
+        .forEach(snapshot -> snapshot.getAccount().getParticipant().assignFinalRank(snapshot.getRank()));
+  }
+
+  @Transactional
+  public void finalizeResult(UUID competitionId) {
+    Competition competition = competitionRepository.findById(competitionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+    if (competition.getStatus() != CompetitionStatus.ENDED) {
+      throw new CustomException(ErrorCode.COMPETITION_NOT_ENDED);
+    }
+    competition.finalizeResult();
+    log.info("[결과 공개] competitionId={}", competitionId);
   }
 
   // 시작 전·진행 중 대회가 이미 있으면 uk_competition_single_open 인덱스가 막는다(동시 요청 포함).
