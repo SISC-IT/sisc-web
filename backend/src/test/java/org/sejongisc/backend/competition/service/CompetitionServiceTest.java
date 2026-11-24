@@ -224,4 +224,17 @@ class CompetitionServiceTest {
     verify(competitionRepository).saveAndFlush(competition.capture());
     assertThat(competition.getValue().getStatus()).isEqualTo(CompetitionStatus.ACTIVE);
   }
+
+  @Test
+  @DisplayName("종료일이 지나지 않은 시작 전이거나 진행 중인 대회가 있으면 열린 대회가 있다고 본다")
+  void hasOpenCompetitionChecksStatusAndEndDate() {
+    List<CompetitionStatus> open = List.of(CompetitionStatus.READY, CompetitionStatus.ACTIVE);
+    LocalDate today = LocalDate.of(2026, 11, 18);
+
+    given(competitionRepository.existsByStatusInAndEndDateGreaterThanEqual(open, today)).willReturn(true);
+    assertThat(competitionService.hasOpenCompetition()).isTrue();
+
+    given(competitionRepository.existsByStatusInAndEndDateGreaterThanEqual(open, today)).willReturn(false);
+    assertThat(competitionService.hasOpenCompetition()).isFalse();
+  }
 }

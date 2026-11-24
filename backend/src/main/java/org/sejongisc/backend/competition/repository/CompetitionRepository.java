@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +19,8 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
     Optional<Competition> findFirstByStatusOrderByStartDateDesc(CompetitionStatus status);
 
     List<Competition> findAllByStatusAndStartDateLessThanEqual(CompetitionStatus status, LocalDate date);
+
+    boolean existsByStatusInAndEndDateGreaterThanEqual(Collection<CompetitionStatus> statuses, LocalDate date);
 
     // 이 컬럼만 바꾼다. 엔티티로 저장하면 행 전체를 덮어써서, 그 사이 바뀐 대회 상태를 되돌릴 수 있다.
     // 같은 트랜잭션에서 고친 계좌·원장이 먼저 DB에 반영되도록 flush한다.

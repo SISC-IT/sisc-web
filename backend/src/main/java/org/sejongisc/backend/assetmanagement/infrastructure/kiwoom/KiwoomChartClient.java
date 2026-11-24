@@ -13,9 +13,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.DomesticDailyChartRequest;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.DomesticDailyChartResponse;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.KiwoomResponse;
+import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.StockListRequest;
+import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.StockListResponse;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.UsDailyChartRequest;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.UsDailyChartResponse;
 import org.sejongisc.backend.assetmanagement.model.DailyCandle;
+import org.sejongisc.backend.assetmanagement.model.ListedStock;
 import org.sejongisc.backend.assetmanagement.model.UsExchangeType;
 import org.sejongisc.backend.assetmanagement.service.MarketDataClient;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -35,8 +38,10 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 public class KiwoomChartClient implements MarketDataClient {
   private static final String DOMESTIC_CHART_ENDPOINT = "/api/dostk/chart";
   private static final String US_CHART_ENDPOINT = "/api/us/chart";
+  private static final String STOCK_INFO_ENDPOINT = "/api/dostk/stkinfo";
   private static final String DOMESTIC_DAILY_CHART_API_ID = "ka10081";
   private static final String US_DAILY_CHART_API_ID = "usa06012";
+  private static final String STOCK_LIST_API_ID = "ka10099";
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
   private static final String CURRENCY_KRW = "KRW";
   private static final String CURRENCY_USD = "USD";
@@ -45,6 +50,7 @@ public class KiwoomChartClient implements MarketDataClient {
   private final KiwoomTokenManager tokenManager;
   private final KiwoomRateLimiter rateLimiter;
   private final int maxPages;
+  private final int stockListMaxPages;
   private final Duration blockTimeout;
 
   public KiwoomChartClient(
@@ -52,12 +58,14 @@ public class KiwoomChartClient implements MarketDataClient {
       KiwoomTokenManager tokenManager,
       KiwoomRateLimiter rateLimiter,
       @Value("${kiwoom.api.pagination.max-pages:20}") int maxPages,
+      @Value("${kiwoom.api.pagination.stock-list-max-pages:100}") int stockListMaxPages,
       @Value("${kiwoom.api.timeout.block-ms:7000}") long blockTimeoutMillis
   ) {
     this.kiwoomWebClient = kiwoomWebClient;
     this.tokenManager = tokenManager;
     this.rateLimiter = rateLimiter;
     this.maxPages = Math.max(1, maxPages);
+    this.stockListMaxPages = Math.max(1, stockListMaxPages);
     this.blockTimeout = Duration.ofMillis(Math.max(1000, blockTimeoutMillis));
   }
 
@@ -70,7 +78,8 @@ public class KiwoomChartClient implements MarketDataClient {
         DOMESTIC_CHART_ENDPOINT,
         DOMESTIC_DAILY_CHART_API_ID,
         DomesticDailyChartRequest.of(stockCode, baseDate.format(DATE_FORMAT)),
-        DomesticDailyChartResponse.class
+        DomesticDailyChartResponse.class,
+        maxPages
     );
 
     return pages.stream()
@@ -104,7 +113,8 @@ public class KiwoomChartClient implements MarketDataClient {
         US_DAILY_CHART_API_ID,
         UsDailyChartRequest.of(
             exchangeType.code(), stockCode, startDate.format(DATE_FORMAT)),
-        UsDailyChartResponse.class
+        UsDailyChartResponse.class,
+        maxPages
     );
 
     return pages.stream()
@@ -124,9 +134,34 @@ public class KiwoomChartClient implements MarketDataClient {
         .toList();
   }
 
+  @Override
+  public List<ListedStock> fetchDomesticListedStocks(String marketType) {
+    validateMarketType(marketType);
+
+    List<StockListResponse> pages = executePagingTemplate(
+        STOCK_INFO_ENDPOINT,
+        STOCK_LIST_API_ID,
+        StockListRequest.of(marketType),
+        StockListResponse.class,
+        stockListMaxPages
+    );
+
+    return pages.stream()
+        .filter(page -> page.getStocks() != null)
+        .flatMap(page -> page.getStocks().stream())
+        .map(stock -> new ListedStock(stock.getCode(), stock.getName()))
+        .toList();
+  }
+
   private void validateStockCode(String stockCode) {
     if (!StringUtils.hasText(stockCode)) {
       throw new CustomException(ErrorCode.INVALID_KIWOOM_STOCK_CODE);
+    }
+  }
+
+  private void validateMarketType(String marketType) {
+    if (!StringUtils.hasText(marketType)) {
+      throw new CustomException(ErrorCode.INVALID_KIWOOM_MARKET_TYPE);
     }
   }
 
@@ -227,7 +262,8 @@ public class KiwoomChartClient implements MarketDataClient {
       String endpoint,
       String apiId,
       Object requestBody,
-      Class<T> responseType
+      Class<T> responseType,
+      int maxPages
   ) {
     String contYn = "N";
     String nextKey = "";
