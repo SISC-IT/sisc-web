@@ -44,6 +44,23 @@ class CompetitionAccountRepositoryTest {
   @Autowired DataSource dataSource;
 
   @Test
+  void 시작일이_가장_늦은_대회를_현재_대회로_찾는다() {
+    competitionRepository.saveAndFlush(competitionBuilder(CompetitionStatus.FINALIZED)
+        .startDate(LocalDate.of(2026, 9, 1)).endDate(LocalDate.of(2026, 9, 26)).build());
+    Competition latestEnded = competitionRepository.saveAndFlush(competitionBuilder(CompetitionStatus.ENDED)
+        .startDate(LocalDate.of(2026, 10, 6)).endDate(LocalDate.of(2026, 10, 31)).build());
+
+    assertThat(competitionRepository.findFirstByOrderByStartDateDesc())
+        .map(Competition::getCompetitionId).contains(latestEnded.getCompetitionId());
+
+    Competition ready = competitionRepository.saveAndFlush(competitionBuilder(CompetitionStatus.READY)
+        .startDate(LocalDate.of(2026, 11, 30)).endDate(LocalDate.of(2026, 12, 25)).build());
+
+    assertThat(competitionRepository.findFirstByOrderByStartDateDesc())
+        .map(Competition::getCompetitionId).contains(ready.getCompetitionId());
+  }
+
+  @Test
   void 대회_참가자_계좌_보유종목을_저장하고_다시_읽는다() {
     Competition competition = saveCompetition(CompetitionStatus.ACTIVE);
     UUID userId = saveUser();

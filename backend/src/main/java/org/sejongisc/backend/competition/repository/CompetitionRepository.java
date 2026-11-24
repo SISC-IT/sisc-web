@@ -27,4 +27,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
     @Modifying(flushAutomatically = true)
     @Query("update Competition c set c.interestPaidDate = :date where c.competitionId = :competitionId")
     void updateInterestPaidDate(@Param("competitionId") UUID competitionId, @Param("date") LocalDate date);
+
+    // 시작일이 가장 늦은 대회. 새 대회는 시작일이 오늘 이후여야 해서, 시작 전·진행 중인 대회가 있으면 늘 그 대회다.
+    Optional<Competition> findFirstByOrderByStartDateDesc();
 }
