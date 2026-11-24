@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.competition.dto.CompetitionRankingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionTeamRankingResponse;
 import org.sejongisc.backend.competition.service.CompetitionRankingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,5 +35,21 @@ public class CompetitionRankingController {
     @GetMapping
     public ResponseEntity<CompetitionRankingResponse> getRankings(@PathVariable UUID competitionId) {
         return ResponseEntity.ok(rankingService.getRankings(competitionId));
+    }
+
+    @Operation(
+            summary = "팀 순위 조회",
+            description = """
+            개인 순위와 같은 스냅샷으로 계산한 팀 순위를 등수 순으로 반환합니다. \s
+            - 팀원 수가 달라도 공정하도록 팀원 개인 등수의 평균(averageRank)이 낮은 팀이 앞섭니다. \s
+            - averageRank는 소수 둘째 자리까지 반올림한 값입니다. 등수는 반올림 전 평균으로 정합니다. \s
+            - 평균 등수가 같으면 같은 등수이고 다음 등수는 건너뜁니다. \s
+            - rankSum은 팀원 개인 등수의 합, memberCount는 순위에 포함된 팀원 수입니다. 제외된 참가자는 빠집니다. \s
+            - 계산된 순위가 아직 없으면 snapshotDate는 null이고 rankings는 빈 목록입니다.
+            """
+    )
+    @GetMapping("/teams")
+    public ResponseEntity<CompetitionTeamRankingResponse> getTeamRankings(@PathVariable UUID competitionId) {
+        return ResponseEntity.ok(rankingService.getTeamRankings(competitionId));
     }
 }
