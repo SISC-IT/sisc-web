@@ -118,6 +118,8 @@ public enum ErrorCode {
 
   INVALID_KIWOOM_STOCK_CODE(HttpStatus.BAD_REQUEST, "종목코드는 비어 있을 수 없습니다."),
 
+  INVALID_KIWOOM_MARKET_TYPE(HttpStatus.BAD_REQUEST, "시장구분은 비어 있을 수 없습니다."),
+
   KIWOOM_CHART_API_FAILED(HttpStatus.BAD_GATEWAY, "키움증권 차트 조회 중 오류가 발생했습니다."),
 
   KIWOOM_CHART_MALFORMED_RESPONSE(HttpStatus.BAD_GATEWAY, "키움증권 차트 응답 형식이 올바르지 않습니다."),

@@ -103,6 +103,13 @@ public class CompetitionService {
     return CompetitionCreateResponse.of(competition, participants.size());
   }
 
+  // 종료 처리가 늦어져 상태가 ACTIVE로 남아 있어도 종료일이 지나면 닫힌 것으로 본다.
+  @Transactional(readOnly = true)
+  public boolean hasOpenCompetition() {
+    return competitionRepository.existsByStatusInAndEndDateGreaterThanEqual(
+        List.of(CompetitionStatus.READY, CompetitionStatus.ACTIVE), LocalDate.now(clock));
+  }
+
   // 시작일이 지난 READY 대회를 ACTIVE로 바꾼다. 스케줄러가 주기적으로 호출한다.
   // '시작일 = 오늘'이 아니라 '시작일 <= 오늘'로 찾아서, 실행을 한 번 놓쳐도 다음 실행에서 열린다.
   @Transactional

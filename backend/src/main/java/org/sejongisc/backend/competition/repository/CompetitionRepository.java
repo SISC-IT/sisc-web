@@ -5,6 +5,7 @@ import org.sejongisc.backend.competition.entity.CompetitionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,4 +16,6 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
     Optional<Competition> findFirstByStatusOrderByStartDateDesc(CompetitionStatus status);
 
     List<Competition> findAllByStatusAndStartDateLessThanEqual(CompetitionStatus status, LocalDate date);
+
+    boolean existsByStatusInAndEndDateGreaterThanEqual(Collection<CompetitionStatus> statuses, LocalDate date);
 }

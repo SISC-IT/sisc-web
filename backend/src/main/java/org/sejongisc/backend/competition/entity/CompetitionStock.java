@@ -27,4 +27,8 @@ public class CompetitionStock extends BasePostgresEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 8)
     private Market market;
+
+    public void rename(String name) {
+        this.name = name;
+    }
 }
