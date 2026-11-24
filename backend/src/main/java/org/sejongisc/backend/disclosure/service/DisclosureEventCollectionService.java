@@ -75,13 +75,13 @@ public class DisclosureEventCollectionService {
     }
 
     // 2. 거래소공시(I) — 수주공시, 잠정실적, 배당/소각, CAPEX(지정 기업)
-    collectExchangeDisclosures(corpCode, profile.induty_code(), trackCapex, from, to, pending);
+    collectExchangeDisclosures(corpCode, profile.induty_code(), closingMonth, trackCapex, from, to, pending);
 
     return persistEvents(pending);
   }
 
-  private void collectExchangeDisclosures(String corpCode, String indutyCode, boolean trackCapex,
-      LocalDate from, LocalDate to, List<PendingEvent> pending) {
+  private void collectExchangeDisclosures(String corpCode, String indutyCode, int closingMonth,
+      boolean trackCapex, LocalDate from, LocalDate to, List<PendingEvent> pending) {
     for (int page = 1; ; page++) {
       var res = dartClient.searchDisclosures(corpCode, "I", from, to, page, 100, true);
       if (res == null || "013".equals(res.status()) || res.list() == null || res.list().isEmpty()) {
@@ -108,6 +108,11 @@ public class DisclosureEventCollectionService {
           continue;
         }
 
+        // 이미 DB에 저장된 공시면 원문(/document.xml) 재다운로드 및 파싱 생략
+        if (cardRepository.findByReceiptNoAndCategory(receiptNo, categoryOpt.get()).isPresent()) {
+          continue;
+        }
+
         LocalDate publishedDate = parseDartDate(row.get("rcept_dt"), receiptNo);
         String xml = dartClient.downloadDocument(receiptNo);
         var parsedDoc = documentParser.parse(xml);
@@ -126,7 +131,7 @@ public class DisclosureEventCollectionService {
         if (draftOpt.isPresent()) {
           pending.add(new PendingEvent(
               corpCode, blankToNull(row.get("stock_code")), row.get("corp_name"), marketCls,
-              indutyCode, 12, receiptNo, reportTitle, draftOpt.get(), row));
+              indutyCode, closingMonth, receiptNo, reportTitle, draftOpt.get(), row));
         }
       }
 

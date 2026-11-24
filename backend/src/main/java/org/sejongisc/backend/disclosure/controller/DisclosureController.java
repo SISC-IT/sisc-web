@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DisclosureController {
   private final DisclosureQueryService queryService;
 
+  //1. 리스트 조회
   @GetMapping
   public ResponseEntity<CompanyListResponse> list(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -33,6 +34,7 @@ public class DisclosureController {
     return ResponseEntity.ok(queryService.listCompanies(userId, keyword, page, size));
   }
 
+  //2. 상세 정보 조회
   @GetMapping("/{corpCode}")
   public ResponseEntity<CompanyDetailResponse> detail(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -46,6 +48,7 @@ public class DisclosureController {
     return ResponseEntity.of(queryService.companyDetail(userId, corpCode, parsedType));
   }
 
+  //parsing
   private DisclosureCardCategory parseCategory(String raw) {
     if (raw == null || raw.isBlank() || "ALL".equalsIgnoreCase(raw)) {
       return null;

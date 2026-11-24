@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import org.sejongisc.backend.disclosure.entity.DisclosureFiling;
 
+// 결산월 기준 분기·정정공시 판별 값 객체
 public record ReportingQuarter(YearMonth end, int number) implements Comparable<ReportingQuarter> {
   private static final List<String> REPORT_CODES = List.of("11013", "11012", "11014", "11011");
   private static final Pattern TITLE = Pattern.compile(

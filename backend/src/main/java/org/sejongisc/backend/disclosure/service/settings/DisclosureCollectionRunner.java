@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
+// 공시 단건 수집 CLI 실행기
 @Slf4j
 @Component
 @RequiredArgsConstructor

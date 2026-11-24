@@ -31,6 +31,7 @@ import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureUserReadRepository;
 import org.sejongisc.backend.disclosure.service.enums.ReportingQuarter;
+import org.sejongisc.backend.disclosure.service.settings.QuarterlyEarningsCalculator;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -56,7 +57,7 @@ class DisclosureEarningsCollectionServiceTest {
   private final ObjectMapper mapper = new ObjectMapper();
   private final DisclosureQueryService query = new DisclosureQueryService(
       companies, filings, metrics, mock(DisclosureCardNewsRepository.class),
-      mock(DisclosureUserReadRepository.class), mapper);
+      mock(DisclosureUserReadRepository.class), new QuarterlyEarningsCalculator(), mapper);
   private final DisclosureEarningsCollectionService collection = new DisclosureEarningsCollectionService(
       client, companies, filings, metrics, query, TransactionOperations.withoutTransaction(), mapper);
 

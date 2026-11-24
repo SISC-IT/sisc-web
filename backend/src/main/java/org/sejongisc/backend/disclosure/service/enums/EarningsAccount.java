@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Set;
 import org.sejongisc.backend.disclosure.service.enums.EarningsRow.AmountKind;
 
+// 매출액·영업이익·당기순이익 계정 매칭 규칙
 public enum EarningsAccount {
   REVENUE(Set.of("ifrs-full_revenue", "ifrs_revenue", "dart_revenue"),
       Set.of("매출액", "수익(매출액)")),

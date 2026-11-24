@@ -3,6 +3,7 @@ package org.sejongisc.backend.disclosure.service.enums;
 import java.math.BigDecimal;
 import java.util.Map;
 
+// OpenDART 재무제표 응답 1행 파싱 값 객체
 public record EarningsRow(
     String statementDivision,
     String accountId,

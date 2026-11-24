@@ -12,12 +12,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse.Metric;
@@ -26,7 +24,6 @@ import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyLis
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Quarter;
-import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Source;
 import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
 import org.sejongisc.backend.disclosure.entity.DisclosureCardNews;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
@@ -37,12 +34,14 @@ import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository.CompanyEventSummary;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository.CompanyFilingSummary;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureUserReadRepository;
 import org.sejongisc.backend.disclosure.service.enums.EarningsAccount;
 import org.sejongisc.backend.disclosure.service.enums.EarningsRow;
-import org.sejongisc.backend.disclosure.service.enums.EarningsRow.AmountKind;
 import org.sejongisc.backend.disclosure.service.enums.ReportingQuarter;
+import org.sejongisc.backend.disclosure.service.settings.QuarterlyEarningsCalculator;
+import org.sejongisc.backend.disclosure.service.settings.QuarterlyEarningsCalculator.StoredFiling;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -51,7 +50,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class DisclosureQueryService {
-  private static final String DART_URL = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=";
   private static final TypeReference<List<Metric>> METRICS_TYPE = new TypeReference<>() {};
   private static final TypeReference<List<String>> TAGS_TYPE = new TypeReference<>() {};
 
@@ -60,6 +58,7 @@ public class DisclosureQueryService {
   private final DisclosureFinancialMetricRepository metricRepository;
   private final DisclosureCardNewsRepository cardRepository;
   private final DisclosureUserReadRepository userReadRepository;
+  private final QuarterlyEarningsCalculator earningsCalculator;
   private final ObjectMapper objectMapper;
 
   @Transactional(readOnly = true)
@@ -74,10 +73,17 @@ public class DisclosureQueryService {
         .map(DisclosureCompany::getCompanyId)
         .toList();
 
-    Map<UUID, CompanyEventSummary> summaryByCompany = companyIds.isEmpty()
+    Map<UUID, CompanyEventSummary> eventSummaryByCompany = companyIds.isEmpty()
         ? Map.of()
         : cardRepository.summarizeByCompanyIds(companyIds).stream()
             .collect(Collectors.toMap(CompanyEventSummary::getCompanyId, Function.identity()));
+
+    Map<UUID, LocalDateTime> latestFilingAtByCompany = companyIds.isEmpty()
+        ? Map.of()
+        : filingRepository.summarizeLatestCollectedAtByCompanyIds(companyIds).stream()
+            .collect(Collectors.toMap(
+                CompanyFilingSummary::getCompanyId,
+                CompanyFilingSummary::getLatestCollectedAt));
 
     Map<UUID, LocalDateTime> viewedAtByCompany = (userId == null || companyIds.isEmpty())
         ? Map.of()
@@ -88,13 +94,17 @@ public class DisclosureQueryService {
 
     List<CompanyListItem> items = companies.getContent().stream()
         .map(company -> {
-          CompanyEventSummary summary = summaryByCompany.get(company.getCompanyId());
-          LocalDateTime latestAt = summary == null ? null : summary.getLatestCollectedAt();
-          LocalDate latestDate = summary == null ? null : summary.getLatestPublishedDate();
-          long eventCount = summary == null ? 0L : summary.getEventCount();
+          CompanyEventSummary eventSummary = eventSummaryByCompany.get(company.getCompanyId());
+          LocalDateTime latestEventAt = eventSummary == null ? null : eventSummary.getLatestCollectedAt();
+          LocalDateTime latestFilingAt = latestFilingAtByCompany.get(company.getCompanyId());
+          LocalDateTime latestActivityAt = maxDateTime(latestEventAt, latestFilingAt);
+
+          LocalDate latestDate = eventSummary == null ? null : eventSummary.getLatestPublishedDate();
+          long eventCount = eventSummary == null ? 0L : eventSummary.getEventCount();
           LocalDateTime lastViewedAt = viewedAtByCompany.get(company.getCompanyId());
-          boolean hasUnread = latestAt != null
-              && (lastViewedAt == null || latestAt.isAfter(lastViewedAt));
+          // 이벤트 공시 또는 새 정기 분기 실적 중 하나라도 마지막 확인 시각 이후 수집됐으면 빨간 점 표시
+          boolean hasUnread = latestActivityAt != null
+              && (lastViewedAt == null || latestActivityAt.isAfter(lastViewedAt));
           return new CompanyListItem(
               company.getCorpCode(),
               company.getCompanyName(),
@@ -160,7 +170,15 @@ public class DisclosureQueryService {
   @Transactional(readOnly = true)
   public Optional<DisclosureEarningsResponse> latestEarnings(String corpCode, LocalDate through) {
     return companyRepository.findByCorpCode(corpCode)
-        .map(company -> toEarningsResponse(company, storedReports(corpCode, through)));
+        .map(company -> {
+          Map<ReportingQuarter, List<StoredFiling>> reports = storedReports(corpCode, through);
+          List<Quarter> quarters = reports.keySet().stream().max(Comparator.naturalOrder()).stream()
+              .flatMap(latest -> latest.recentFour().stream()
+                  .map(quarter -> earningsCalculator.summarize(quarter, reports)))
+              .toList();
+          return new DisclosureEarningsResponse(company.getCorpCode(), company.getCompanyName(),
+              company.getStockCode(), quarters);
+        });
   }
 
   @Transactional(readOnly = true)
@@ -171,7 +189,7 @@ public class DisclosureQueryService {
     }
     return reports.keySet().stream()
         .sorted(Comparator.naturalOrder())
-        .map(quarter -> summarize(quarter, reports))
+        .map(quarter -> earningsCalculator.summarize(quarter, reports))
         .toList();
   }
 
@@ -242,85 +260,6 @@ public class DisclosureQueryService {
     }
   }
 
-  private DisclosureEarningsResponse toEarningsResponse(DisclosureCompany company,
-      Map<ReportingQuarter, List<StoredFiling>> reports) {
-    List<Quarter> quarters = reports.keySet().stream().max(Comparator.naturalOrder()).stream()
-        .flatMap(latest -> latest.recentFour().stream().map(quarter -> summarize(quarter, reports)))
-        .toList();
-    return new DisclosureEarningsResponse(company.getCorpCode(), company.getCompanyName(),
-        company.getStockCode(), quarters);
-  }
-
-  private Quarter summarize(ReportingQuarter quarter, Map<ReportingQuarter, List<StoredFiling>> reports) {
-    Optional<StoredFiling> current = preferred(reports.getOrDefault(quarter, List.of()));
-    Optional<StoredFiling> third = quarter.number() == 4
-        ? preferred(reports.getOrDefault(quarter.previous(1), List.of())) : Optional.empty();
-    String basis = current.map(StoredFiling::basis).orElse(null);
-
-    Amount revenue = calculateAmount(EarningsAccount.REVENUE, quarter, current, third, basis);
-    Amount operatingProfit = calculateAmount(EarningsAccount.OPERATING_PROFIT, quarter, current, third, basis);
-    Amount netIncome = calculateAmount(EarningsAccount.NET_INCOME, quarter, current, third, basis);
-
-    List<String> currencies = Stream.of(revenue, operatingProfit, netIncome)
-        .filter(Objects::nonNull).map(Amount::currency).distinct().toList();
-    String currency = currencies.size() == 1 ? currencies.getFirst() : null;
-
-    String revenueValue = value(revenue, currency);
-    String operatingProfitValue = value(operatingProfit, currency);
-    String netIncomeValue = value(netIncome, currency);
-
-    List<Source> sources = new ArrayList<>();
-    current.map(StoredFiling::source).ifPresent(sources::add);
-    boolean usedThird = quarter.number() == 4
-        && (revenueValue != null || operatingProfitValue != null || netIncomeValue != null);
-    if (usedThird) {
-      third.map(StoredFiling::source).ifPresent(sources::add);
-    }
-
-    return new Quarter(quarter.fiscalYear(), quarter.number(), quarter.end().toString(), basis, currency,
-        revenueValue, operatingProfitValue, netIncomeValue, List.copyOf(sources));
-  }
-
-  private Amount calculateAmount(EarningsAccount account, ReportingQuarter quarter,
-      Optional<StoredFiling> current, Optional<StoredFiling> third, String basis) {
-    if (basis == null) {
-      return null;
-    }
-    StoredFiling filing = current.orElseThrow();
-    EarningsRow row = account.select(filing.rows(basis), AmountKind.CURRENT);
-    if (row == null) {
-      return null;
-    }
-    BigDecimal amount = row.currentAmount();
-    String currency = row.currency();
-    if (quarter.number() == 4) {
-      // 4분기 단독 실적 = 연간(사업보고서) - 3분기 누적(3분기보고서)
-      Optional<StoredFiling> comparable = third.filter(value -> value.receiptNo().compareTo(filing.receiptNo()) < 0);
-      EarningsRow cumulative = comparable
-          .map(value -> account.select(value.rows(basis), AmountKind.CUMULATIVE))
-          .orElse(null);
-      if (cumulative == null || !currency.equals(cumulative.currency())
-          || !EarningsAccount.sameAccount(row, cumulative)) {
-        return null;
-      }
-      amount = amount.subtract(cumulative.cumulativeAmount());
-    }
-    return new Amount(amount.stripTrailingZeros().toPlainString(), currency);
-  }
-
-  private String value(Amount amount, String currency) {
-    return amount != null && amount.currency().equals(currency) ? amount.value() : null;
-  }
-
-  private Optional<StoredFiling> preferred(List<StoredFiling> candidates) {
-    Map<String, String> titles = candidates.stream()
-        .collect(Collectors.toMap(StoredFiling::receiptNo, StoredFiling::title));
-    return candidates.stream()
-        .filter(filing -> ReportingQuarter.canUse(filing.receiptNo(), titles))
-        .max(Comparator.comparing((StoredFiling filing) -> filing.basis() != null)
-            .thenComparing(StoredFiling::receiptNo));
-  }
-
   private DisclosureCardResponse toCardResponse(DisclosureCardNews entity) {
     var company = entity.getCompany();
     return new DisclosureCardResponse(
@@ -341,6 +280,12 @@ public class DisclosureQueryService {
         entity.getDartUrl());
   }
 
+  private static LocalDateTime maxDateTime(LocalDateTime a, LocalDateTime b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a.isAfter(b) ? a : b;
+  }
+
   private static String toMarketName(String corpCls) {
     return switch (corpCls == null ? "" : corpCls) {
       case "Y" -> "KOSPI";
@@ -358,29 +303,6 @@ public class DisclosureQueryService {
       return objectMapper.readValue(json, type);
     } catch (Exception ignored) {
       return List.of();
-    }
-  }
-
-  private record Amount(String value, String currency) {
-  }
-
-  record StoredFiling(String receiptNo, String title, LocalDate receivedDate,
-      Map<String, List<EarningsRow>> rowsByBasis) {
-    List<EarningsRow> rows(String basis) {
-      return rowsByBasis.getOrDefault(basis, List.of());
-    }
-
-    String basis() {
-      return !rows("CFS").isEmpty() ? "CFS" : !rows("OFS").isEmpty() ? "OFS" : null;
-    }
-
-    boolean hasAmounts(boolean hasConsolidated, boolean needsCumulative) {
-      String basis = hasConsolidated ? "CFS" : basis();
-      return basis != null && EarningsAccount.hasAmounts(rows(basis), needsCumulative);
-    }
-
-    Source source() {
-      return new Source(receiptNo, receivedDate, DART_URL + receiptNo);
     }
   }
 }

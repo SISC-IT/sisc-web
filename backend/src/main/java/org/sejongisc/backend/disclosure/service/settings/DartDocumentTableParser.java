@@ -15,6 +15,7 @@ import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
+// OpenDART 공시 원문 HTML/XML 표 파서
 @Component
 public class DartDocumentTableParser {
   private static final Pattern NUMBER_PATTERN = Pattern.compile("[-+]?\\d+(?:,\\d{3})*(?:\\.\\d+)?");

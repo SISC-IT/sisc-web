@@ -13,6 +13,7 @@ import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
 import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser.ParsedDocument;
 import org.springframework.stereotype.Component;
 
+// 4대 이벤트 공시 규칙 기반 필터링 엔진
 @Component
 public class DisclosureCardRuleEngine {
   private static final BigDecimal HUNDRED_MILLION = new BigDecimal("100000000");
