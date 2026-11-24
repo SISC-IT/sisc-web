@@ -1,0 +1,254 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import styles from './StockOrder.module.css';
+import { getStockDetail, placeOrder, searchStocks } from '../../utils/competitionApi';
+import { changeColor, ratePercent, shortDate, signedPercent, won } from '../../utils/competitionFormat';
+
+// 서버가 tradable=false일 때 주는 이유
+const UNAVAILABLE_TEXT = {
+  COMPETITION_NOT_ACTIVE: '진행 중인 대회가 아니라 주문할 수 없어요.',
+  MARKET_NOT_SUPPORTED: '국내 종목만 거래할 수 있어요.',
+  ORDER_CLOSED: '주문 가능 시간(16:30 – 21:00)이 아니에요.',
+  PRICE_UNAVAILABLE: '오늘 종가가 아직 없어요. 주말·공휴일이거나 종가를 모으는 중이에요.',
+};
+
+// 서버와 같은 계산: 수수료는 소수 4자리에서 버린다
+const feeOf = (amount, feeRate) => Math.floor(amount * feeRate * 10000) / 10000;
+
+const maxBuyQuantity = (cash, price, feeRate) => {
+  if (!price) return 0;
+  let qty = Math.floor(cash / (price * (1 + feeRate)));
+  while (qty > 0 && qty * price + feeOf(qty * price, feeRate) > cash) qty -= 1;
+  return qty;
+};
+
+const StockOrder = ({ competition }) => {
+  const { competitionId, myStatus } = competition;
+  const isParticipant = myStatus === 'ACTIVE';
+
+  const [query, setQuery] = useState('');
+  const [stocks, setStocks] = useState([]);
+  const [listError, setListError] = useState('');
+  const [ticker, setTicker] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [side, setSide] = useState('BUY');
+  const [qty, setQty] = useState('1');
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState(null);
+  // 응답을 못 받은 주문을 다시 보낼 때 같은 키를 써야 서버가 두 번 체결하지 않는다
+  const pendingKey = useRef(null);
+
+  // 입력이 멈추고 0.3초 뒤에 검색한다
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchStocks(competitionId, { query: query.trim() })
+        .then((res) => {
+          setStocks(res.stocks);
+          setListError('');
+          setTicker((current) => current ?? res.stocks[0]?.ticker ?? null);
+        })
+        .catch((err) => setListError(err.message));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [competitionId, query]);
+
+  const loadDetail = useCallback(() => {
+    if (!ticker || !isParticipant) return;
+    getStockDetail(competitionId, ticker)
+      .then(setDetail)
+      .catch((err) => setResult({ ok: false, text: err.message }));
+  }, [competitionId, ticker, isParticipant]);
+
+  useEffect(() => {
+    setDetail(null);
+    loadDetail();
+  }, [loadDetail]);
+
+  const pick = (nextTicker) => {
+    setTicker(nextTicker);
+    setResult(null);
+    pendingKey.current = null;
+  };
+
+  const price = detail ? Number(detail.closePrice) : 0;
+  const feeRate = detail ? Number(detail.tradingFeeRate) : 0;
+  const cash = detail ? Number(detail.cashBalance) : 0;
+  const isBuy = side === 'BUY';
+  const quantity = Number.parseInt(qty, 10) || 0;
+  const amount = price * quantity;
+  const fee = feeOf(amount, feeRate);
+  const total = isBuy ? amount + fee : amount - fee;
+  const maxBuy = maxBuyQuantity(cash, price, feeRate);
+  const maxQty = isBuy ? maxBuy : detail?.holdingQuantity ?? 0;
+
+  let inputError = '';
+  if (quantity <= 0) inputError = '수량을 1주 이상 입력하세요.';
+  else if (isBuy && total > cash) inputError = `현금이 부족해요. 최대 ${maxBuy.toLocaleString('ko-KR')}주까지 살 수 있어요.`;
+  else if (!isBuy && quantity > detail?.holdingQuantity) {
+    inputError = detail.holdingQuantity === 0
+      ? '보유하지 않은 종목은 팔 수 없어요.'
+      : `보유 수량(${detail.holdingQuantity}주)보다 많이 팔 수 없어요.`;
+  }
+  const canSubmit = detail?.tradable && !inputError && !submitting;
+
+  const submit = async () => {
+    if (!canSubmit) return;
+    const order = { ticker: detail.ticker, side, quantity, closePriceId: detail.closePriceId };
+    const signature = JSON.stringify(order);
+    if (pendingKey.current?.signature !== signature) {
+      pendingKey.current = { signature, key: crypto.randomUUID() };
+    }
+    setSubmitting(true);
+    setResult(null);
+    try {
+      const trade = await placeOrder(competitionId, order, pendingKey.current.key);
+      pendingKey.current = null;
+      setResult({
+        ok: true,
+        text: `${trade.companyName} ${trade.quantity.toLocaleString('ko-KR')}주 ${isBuy ? '매수' : '매도'} 체결 — ${won(trade.price)}원 (${shortDate(detail.priceDate)} 종가)`,
+      });
+      loadDetail();
+    } catch (err) {
+      // 종가가 바뀌었으면 새 종가를 다시 보여준다. 새 종가로는 다른 주문이라 키도 새로 만든다.
+      if (err.data?.errorCode === 'PRICE_CHANGED') {
+        pendingKey.current = null;
+        loadDetail();
+      }
+      setResult({ ok: false, text: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className={styles.layout}>
+      <section aria-labelledby="search-title" className={styles.search}>
+        <h2 id="search-title" className={styles.sectionTitle}>종목 검색</h2>
+        <label htmlFor="stock-query" className={styles.srOnly}>종목명 또는 코드</label>
+        <input
+          id="stock-query"
+          type="search"
+          placeholder="종목명 또는 코드"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className={styles.searchInput}
+        />
+        {listError && <p className={styles.muted}>{listError}</p>}
+        {!listError && stocks.length === 0 && <p className={styles.muted}>검색 결과가 없어요.</p>}
+        <ul className={styles.stockList}>
+          {stocks.map((s) => (
+            <li key={s.ticker}>
+              <button
+                type="button"
+                aria-pressed={s.ticker === ticker}
+                onClick={() => pick(s.ticker)}
+                className={`${styles.stockItem} ${s.ticker === ticker ? styles.selected : ''}`}
+              >
+                <span className={styles.stockName}>
+                  <strong>{s.companyName}</strong>
+                  <span className={styles.ticker}>{s.ticker}</span>
+                </span>
+                <span className={styles.stockPrice}>
+                  <strong>{won(s.closePrice)}</strong>
+                  <span style={{ color: changeColor(s.dailyChangeRate) }}>{signedPercent(s.dailyChangeRate)}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-label="종목 상세와 주문" className={styles.detailColumn}>
+        {!isParticipant && <p className={styles.muted}>대회 참가자만 종목 상세를 보고 주문할 수 있어요.</p>}
+        {isParticipant && !detail && <p className={styles.muted}>왼쪽에서 종목을 골라 주세요.</p>}
+        {isParticipant && detail && (
+          <>
+            <p className={detail.tradable ? styles.openBar : styles.closedBar}>
+              {detail.tradable
+                ? `지금 주문 가능 · 21:00 마감 — 주문하면 ${shortDate(detail.priceDate)} 종가로 바로 체결됩니다`
+                : UNAVAILABLE_TEXT[detail.unavailableReason]}
+            </p>
+
+            <div className={styles.quote}>
+              <div>
+                <h2 className={styles.detailName}>{detail.companyName}</h2>
+                <span className={styles.muted}>
+                  {detail.ticker} · 보유 {detail.holdingQuantity.toLocaleString('ko-KR')}주
+                </span>
+              </div>
+              <div className={styles.quotePrice}>
+                <span className={styles.muted}>{detail.priceDate ? `${shortDate(detail.priceDate)} 종가` : '종가 없음'}</span>
+                <strong className={styles.bigPrice}>{won(detail.closePrice)}원</strong>
+                <span style={{ color: changeColor(detail.dailyChangeRate) }}>
+                  전일 대비 {signedPercent(detail.dailyChangeRate)}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.orderBox}>
+              <div role="group" aria-label="주문 종류" className={styles.sideToggle}>
+                <button
+                  type="button"
+                  aria-pressed={isBuy}
+                  className={isBuy ? styles.buyOn : styles.sideOff}
+                  onClick={() => { setSide('BUY'); setResult(null); }}
+                >
+                  매수
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!isBuy}
+                  className={!isBuy ? styles.sellOn : styles.sideOff}
+                  onClick={() => { setSide('SELL'); setResult(null); }}
+                >
+                  매도
+                </button>
+              </div>
+
+              <div className={styles.qtyRow}>
+                <label htmlFor="order-qty" className={styles.qtyLabel}>수량</label>
+                <button type="button" className={styles.maxButton} onClick={() => setQty(String(maxQty))}>
+                  최대 {isBuy ? '매수' : '매도'} {maxQty.toLocaleString('ko-KR')}주
+                </button>
+              </div>
+              <input
+                id="order-qty"
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={qty}
+                onChange={(e) => { setQty(e.target.value); setResult(null); }}
+                className={styles.qtyInput}
+              />
+
+              <dl className={styles.costs}>
+                <div><dt>체결가 ({shortDate(detail.priceDate)} 종가)</dt><dd>{won(price)}원</dd></div>
+                <div><dt>거래 금액</dt><dd>{won(amount)}원</dd></div>
+                <div><dt>수수료 ({ratePercent(feeRate)})</dt><dd>{won(fee)}원</dd></div>
+                <div className={styles.totalRow}><dt>{isBuy ? '필요한 현금' : '받을 금액'}</dt><dd>{won(total)}원</dd></div>
+                <div><dt>주문 가능 현금</dt><dd>{won(cash)}원</dd></div>
+              </dl>
+              <p className={styles.muted}>예금은 인출해야 주문에 쓸 수 있어요.</p>
+
+              {detail.tradable && inputError && <p role="alert" className={styles.errorBox}>{inputError}</p>}
+              {result && (
+                <p role={result.ok ? 'status' : 'alert'} className={result.ok ? styles.successBox : styles.errorBox}>
+                  {result.text}
+                </p>
+              )}
+              <button
+                type="button"
+                disabled={!canSubmit}
+                onClick={submit}
+                className={`${styles.submit} ${isBuy ? styles.submitBuy : styles.submitSell}`}
+              >
+                {submitting ? '주문 중…' : isBuy ? '매수하기' : '매도하기'}
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+};
+
+export default StockOrder;

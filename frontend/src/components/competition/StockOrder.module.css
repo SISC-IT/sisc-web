@@ -1,0 +1,313 @@
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.search {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detailColumn {
+  flex: 2 1 460px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.searchInput {
+  font: inherit;
+  font-size: 16px;
+  padding: 14px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  min-height: 48px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.muted {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.stockList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stockItem {
+  font: inherit;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  min-height: 60px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  color: #111111;
+}
+
+.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.stockName,
+.stockPrice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 16px;
+}
+
+.stockPrice {
+  align-items: flex-end;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stockPrice strong {
+  font-size: 16px;
+}
+
+.ticker {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.openBar,
+.closedBar {
+  margin: 0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.openBar {
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.closedBar {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.quote {
+  background: #f7f7f8;
+  border-radius: 24px;
+  padding: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detailName {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.quotePrice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bigPrice {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.orderBox {
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sideToggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  background: #f3f4f6;
+  border-radius: 14px;
+  padding: 6px;
+}
+
+.sideToggle button {
+  font: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  border: 0;
+  border-radius: 10px;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.sideOff {
+  background: transparent;
+  color: #4b5563;
+}
+
+.buyOn {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.sellOn {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.qtyRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qtyLabel {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.maxButton {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2563eb;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.qtyInput {
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 14px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  min-height: 56px;
+  box-sizing: border-box;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.costs {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.costs div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.costs dt {
+  color: #4b5563;
+}
+
+.costs dd {
+  margin: 0;
+}
+
+.costs .totalRow {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.costs .totalRow dt {
+  color: #111111;
+}
+
+.errorBox,
+.successBox {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.errorBox {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.successBox {
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.submit {
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  border: 0;
+  border-radius: 14px;
+  min-height: 56px;
+  cursor: pointer;
+  color: #ffffff;
+}
+
+.submitBuy {
+  background: #2563eb;
+}
+
+.submitSell {
+  background: #dc2626;
+}
+
+.submit:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
