@@ -127,7 +127,7 @@ class CompetitionStockServiceTest {
         assertThat(stock.closePrice()).isEqualByComparingTo("60000");
         assertThat(stock.closePriceKrw()).isEqualByComparingTo("60000");
         assertThat(stock.previousClosePrice()).isEqualByComparingTo("59000");
-        assertThat(stock.dailyChangeRate()).isEqualByComparingTo("1.694915");
+        assertThat(stock.dailyChangeRate()).isEqualByComparingTo("0.016949");
         assertThat(stock.priceDate()).isEqualTo(MON);
         assertThat(stock.tradable()).isTrue();
         assertThat(stock.unavailableReason()).isNull();
@@ -227,14 +227,14 @@ class CompetitionStockServiceTest {
         assertThat(response.closePrice()).isEqualByComparingTo("60000");
         assertThat(response.closePriceKrw()).isEqualByComparingTo("60000");
         assertThat(response.exchangeRate()).isNull();
-        assertThat(response.dailyChangeRate()).isEqualByComparingTo("1.694915");
+        assertThat(response.dailyChangeRate()).isEqualByComparingTo("0.016949");
         assertThat(response.holdingQuantity()).isEqualTo(10);
         assertThat(response.averageBuyPrice()).isEqualByComparingTo("58000");
         assertThat(response.averageBuyPriceKrw()).isEqualByComparingTo("58000");
         assertThat(response.investedAmountKrw()).isEqualByComparingTo("580000");
         assertThat(response.valuationAmountKrw()).isEqualByComparingTo("600000");
         assertThat(response.profitLossKrw()).isEqualByComparingTo("20000");
-        assertThat(response.holdingReturnRate()).isEqualByComparingTo("3.448276");
+        assertThat(response.holdingReturnRate()).isEqualByComparingTo("0.034483");
         assertThat(response.cashBalance()).isEqualByComparingTo("6999900");
         assertThat(response.tradingFeeRate()).isEqualByComparingTo("0.0001");
         assertThat(response.tradable()).isTrue();

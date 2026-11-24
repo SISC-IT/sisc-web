@@ -52,7 +52,7 @@ public record CompetitionStockDetailResponse(
         BigDecimal valuation = invested != null && quote.available() ? quote.closePrice().multiply(quantity) : null;
         BigDecimal profitLoss = valuation != null ? valuation.subtract(invested) : null;
         BigDecimal holdingReturnRate = profitLoss != null
-                ? profitLoss.multiply(BigDecimal.valueOf(100)).divide(invested, 6, RoundingMode.HALF_UP)
+                ? profitLoss.divide(invested, 6, RoundingMode.HALF_UP)
                 : null;
 
         return CompetitionStockDetailResponse.builder()
