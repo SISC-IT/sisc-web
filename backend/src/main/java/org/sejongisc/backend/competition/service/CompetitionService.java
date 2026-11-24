@@ -7,6 +7,7 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
 import org.sejongisc.backend.competition.dto.CompetitionCreateResponse;
+import org.sejongisc.backend.competition.dto.CompetitionResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
@@ -108,6 +109,29 @@ public class CompetitionService {
   public boolean hasOpenCompetition() {
     return competitionRepository.existsByStatusInAndEndDateGreaterThanEqual(
         List.of(CompetitionStatus.READY, CompetitionStatus.ACTIVE), LocalDate.now(clock));
+  }
+
+  // 화면에 보여줄 대회. 시작 전·진행 중인 대회가 없으면 가장 최근에 끝난 대회라, 끝난 뒤에도 결과 화면을 열 수 있다.
+  @Transactional(readOnly = true)
+  public CompetitionResponse getCurrent(UUID userId) {
+    Competition competition = competitionRepository.findFirstByOrderByStartDateDesc()
+        .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+    return toResponse(competition, userId);
+  }
+
+  @Transactional(readOnly = true)
+  public CompetitionResponse get(UUID competitionId, UUID userId) {
+    Competition competition = competitionRepository.findById(competitionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+    return toResponse(competition, userId);
+  }
+
+  // 대회가 만들어진 뒤 가입한 회원은 참가자가 아니라 myStatus가 null이다.
+  private CompetitionResponse toResponse(Competition competition, UUID userId) {
+    ParticipantStatus myStatus = participantRepository.findByCompetitionAndUserId(competition, userId)
+        .map(CompetitionParticipant::getStatus)
+        .orElse(null);
+    return CompetitionResponse.of(competition, myStatus);
   }
 
   // 시작일이 지난 READY 대회를 ACTIVE로 바꾼다. 스케줄러가 주기적으로 호출한다.

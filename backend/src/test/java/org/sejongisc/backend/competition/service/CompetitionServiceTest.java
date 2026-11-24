@@ -15,6 +15,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +28,7 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
 import org.sejongisc.backend.competition.dto.CompetitionCreateResponse;
+import org.sejongisc.backend.competition.dto.CompetitionResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
@@ -236,5 +238,59 @@ class CompetitionServiceTest {
 
     given(competitionRepository.existsByStatusInAndEndDateGreaterThanEqual(open, today)).willReturn(false);
     assertThat(competitionService.hasOpenCompetition()).isFalse();
+  }
+
+  @Test
+  @DisplayName("현재 대회는 시작일이 가장 늦은 대회이고, 내 참가 상태를 함께 준다")
+  void getCurrent() {
+    UUID userId = UUID.randomUUID();
+    Competition ended = competition(CompetitionStatus.ENDED);
+    given(competitionRepository.findFirstByOrderByStartDateDesc()).willReturn(Optional.of(ended));
+    given(participantRepository.findByCompetitionAndUserId(ended, userId)).willReturn(Optional.of(
+        CompetitionParticipant.builder().competition(ended).userId(userId).status(ParticipantStatus.EXCLUDED).build()));
+
+    CompetitionResponse response = competitionService.getCurrent(userId);
+
+    assertThat(response.competitionId()).isEqualTo(ended.getCompetitionId());
+    assertThat(response.status()).isEqualTo(CompetitionStatus.ENDED);
+    assertThat(response.initialCash()).isEqualByComparingTo("10000000");
+    assertThat(response.myStatus()).isEqualTo(ParticipantStatus.EXCLUDED);
+  }
+
+  @Test
+  @DisplayName("참가자가 아니면 myStatus는 null이다")
+  void getWhenNotParticipant() {
+    UUID userId = UUID.randomUUID();
+    Competition active = competition(CompetitionStatus.ACTIVE);
+    given(competitionRepository.findById(active.getCompetitionId())).willReturn(Optional.of(active));
+    given(participantRepository.findByCompetitionAndUserId(active, userId)).willReturn(Optional.empty());
+
+    CompetitionResponse response = competitionService.get(active.getCompetitionId(), userId);
+
+    assertThat(response.status()).isEqualTo(CompetitionStatus.ACTIVE);
+    assertThat(response.myStatus()).isNull();
+  }
+
+  @Test
+  @DisplayName("대회가 한 번도 없으면 COMPETITION_NOT_FOUND")
+  void getCurrentWithoutCompetition() {
+    given(competitionRepository.findFirstByOrderByStartDateDesc()).willReturn(Optional.empty());
+
+    assertThatThrownBy(() -> competitionService.getCurrent(UUID.randomUUID()))
+        .isInstanceOf(CustomException.class)
+        .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+  }
+
+  private static Competition competition(CompetitionStatus status) {
+    return Competition.builder()
+        .competitionId(UUID.randomUUID())
+        .name("2026 2학기 수익률 대결")
+        .status(status)
+        .startDate(LocalDate.of(2026, 11, 16))
+        .endDate(LocalDate.of(2026, 12, 11))
+        .initialCash(new BigDecimal("10000000"))
+        .feeRate(new BigDecimal("0.0001"))
+        .depositInterestRate(new BigDecimal("0.03"))
+        .build();
   }
 }
