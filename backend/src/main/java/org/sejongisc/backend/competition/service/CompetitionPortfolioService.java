@@ -109,7 +109,9 @@ public class CompetitionPortfolioService {
         return valued(summary, account, holdings, now);
     }
 
-    // 날짜별 현금·예금·주식 평가액은 남기지 않아 비운다. 총자산과 수익률은 그날 순위 스냅샷(16:00)에서 읽는다.
+    // 날짜별 현금·예금·주식 평가액은 남기지 않아 비운다. 총자산은 그날 마감 기준이다.
+    // 스냅샷(16:00) 뒤 저녁 거래는 종가로 체결돼 총자산을 수수료만큼만 줄이므로, 스냅샷 총자산에서 그 수수료를 뺀다.
+    // 입출금은 현금과 예금 사이 이동이라 총자산이 그대로이고, 이자는 다음 날 0시에 붙는다.
     private CompetitionSummaryResponse pastDay(
             CompetitionSummaryResponse.CompetitionSummaryResponseBuilder summary, CompetitionAccount account,
             LocalDate day) {
@@ -117,13 +119,17 @@ public class CompetitionPortfolioService {
         if (snapshot.isEmpty()) {
             return summary.valuationStatus(ValuationStatus.PENDING_DATA).build();
         }
+        LocalDateTime snapshotAt = snapshot.get().getCreatedDate();
+        BigDecimal eveningFees = tradeRepository.sumFeeExecutedBefore(account, day.plusDays(1).atStartOfDay())
+                .subtract(tradeRepository.sumFeeExecutedBefore(account, snapshotAt));
+        BigDecimal totalAssets = snapshot.get().getTotalValue().subtract(eveningFees);
         BigDecimal initialCash = account.getParticipant().getCompetition().getInitialCash();
         return summary
                 .valuationStatus(ValuationStatus.FINALIZED)
-                .valuedAt(snapshot.get().getCreatedDate())
-                .totalAssets(snapshot.get().getTotalValue())
-                .profitLoss(snapshot.get().getTotalValue().subtract(initialCash))
-                .returnRate(snapshot.get().getProfitRate())
+                .valuedAt(snapshotAt)
+                .totalAssets(totalAssets)
+                .profitLoss(totalAssets.subtract(initialCash))
+                .returnRate(returnRate(totalAssets, initialCash))
                 .build();
     }
 
@@ -142,8 +148,12 @@ public class CompetitionPortfolioService {
                 .stockValue(stockValue)
                 .totalAssets(totalAssets)
                 .profitLoss(totalAssets.subtract(initialCash))
-                .returnRate(totalAssets.divide(initialCash, 6, RoundingMode.HALF_UP).subtract(BigDecimal.ONE))
+                .returnRate(returnRate(totalAssets, initialCash))
                 .build();
+    }
+
+    private static BigDecimal returnRate(BigDecimal totalAssets, BigDecimal initialCash) {
+        return totalAssets.divide(initialCash, 6, RoundingMode.HALF_UP).subtract(BigDecimal.ONE);
     }
 
     // 날짜와 상관없이 기록으로 알 수 있는 항목: 그날 기준 누적 수수료·이자, 참여 상태, 그날 거래 시각

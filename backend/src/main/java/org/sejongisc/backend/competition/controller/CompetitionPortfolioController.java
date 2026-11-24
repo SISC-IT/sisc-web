@@ -71,7 +71,7 @@ public class CompetitionPortfolioController {
             description = """
             로그인한 참가자의 그날 자산·수익률·참여 상태를 반환합니다. date를 생략하면 오늘(KST)이고, 오늘 이후 날짜는 400입니다. \s
             - 오늘은 PROVISIONAL입니다. 지금 잔액과 지금 공개된 종가로 평가합니다. 종가는 16:30에 공개되므로 그 전에는 전 거래일 종가입니다. valuedAt은 평가 시각입니다. \s
-            - 지난 날짜는 그날 16:00 순위 스냅샷이 있으면 FINALIZED이고 totalAssets, profitLoss, returnRate를 스냅샷 값으로 줍니다. 스냅샷이 없는 날(주말·공휴일 등)은 PENDING_DATA입니다. 순위와 같은 기준이라 그날 저녁 거래의 수수료는 다음 거래일 값에 반영됩니다. \s
+            - 지난 날짜는 그날 16:00 순위 스냅샷이 있으면 FINALIZED이고, totalAssets는 그날 마감 기준입니다. 저녁 거래는 종가로 체결돼 총자산이 수수료만큼만 바뀌므로 스냅샷 총자산에서 스냅샷 이후 그날 수수료를 뺍니다. 순위는 16:00 기준이라 저녁에 거래한 날은 순위의 수익률과 조금 다를 수 있습니다. 스냅샷이 없는 날(주말·공휴일 등)은 PENDING_DATA입니다. \s
             - 지난 날짜의 cashBalance, depositBalance, stockValue는 날짜별로 남기지 않아 null입니다. \s
             - 오늘이라도 종가가 없는 보유 종목이 있으면 PENDING_DATA이고 평가 항목(stockValue, totalAssets, profitLoss, returnRate)은 null입니다. \s
             - totalAssets = cashBalance + depositBalance + stockValue, profitLoss = totalAssets − initialBalance입니다. \s

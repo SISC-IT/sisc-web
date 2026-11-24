@@ -282,30 +282,34 @@ class CompetitionPortfolioServiceTest {
     }
 
     @Test
-    @DisplayName("지난 날짜는 그날 순위 스냅샷으로 FINALIZED 총자산·수익률을 주고, 날짜별 잔액은 비운다")
-    void getSummaryPastDateFromSnapshot() {
+    @DisplayName("지난 날짜는 그날 마감 기준이다. 스냅샷 총자산에서 스냅샷 이후 저녁 거래 수수료를 빼고, 날짜별 잔액은 비운다")
+    void getSummaryPastDateIsEndOfDay() {
         givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
         LocalDate thu = FRI.minusDays(1);
+        LocalDateTime snapshotAt = thu.atTime(16, 5);
         DailyAccountSnapshot snapshot = DailyAccountSnapshot.builder()
                 .account(account).snapshotDate(thu)
                 .totalValue(new BigDecimal("2100000")).profitRate(new BigDecimal("0.050000")).rank(3)
                 .build();
-        snapshot.setCreatedDate(thu.atTime(16, 5));
+        snapshot.setCreatedDate(snapshotAt);
         when(snapshotRepository.findByAccountAndSnapshotDate(account, thu)).thenReturn(Optional.of(snapshot));
+        // 목요일까지 수수료 30원 중 20원은 스냅샷 전, 10원은 그날 저녁 거래분
         when(tradeRepository.sumFeeExecutedBefore(account, FRI.atStartOfDay())).thenReturn(new BigDecimal("30"));
+        when(tradeRepository.sumFeeExecutedBefore(account, snapshotAt)).thenReturn(new BigDecimal("20"));
 
         CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, thu);
 
+        // 2,100,000 − 10 = 2,099,990, 수익률 2,099,990 ÷ 2,000,000 − 1 = 0.049995
         assertThat(summary.date()).isEqualTo(thu);
         assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.FINALIZED);
-        assertThat(summary.valuedAt()).isEqualTo(thu.atTime(16, 5));
-        assertThat(summary.totalAssets()).isEqualByComparingTo("2100000");
-        assertThat(summary.profitLoss()).isEqualByComparingTo("100000");
-        assertThat(summary.returnRate()).isEqualByComparingTo("0.050000");
+        assertThat(summary.valuedAt()).isEqualTo(snapshotAt);
+        assertThat(summary.totalAssets()).isEqualByComparingTo("2099990");
+        assertThat(summary.profitLoss()).isEqualByComparingTo("99990");
+        assertThat(summary.returnRate()).isEqualByComparingTo("0.049995");
+        assertThat(summary.totalFees()).isEqualByComparingTo("30");
         assertThat(summary.cashBalance()).isNull();
         assertThat(summary.depositBalance()).isNull();
         assertThat(summary.stockValue()).isNull();
-        assertThat(summary.totalFees()).isEqualByComparingTo("30");
         verifyNoInteractions(holdingRepository, closePriceRepository);
     }
 
