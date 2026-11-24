@@ -14,7 +14,9 @@ import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
 import org.sejongisc.backend.disclosure.service.DisclosureEarningsCollectionService.FinancialReport;
 import org.sejongisc.backend.disclosure.service.DisclosureEarningsCollectionService.RegularReport;
-import org.sejongisc.backend.disclosure.service.EarningsRow.AmountKind;
+import org.sejongisc.backend.disclosure.service.enums.EarningsAccount;
+import org.sejongisc.backend.disclosure.service.enums.EarningsRow;
+import org.sejongisc.backend.disclosure.service.enums.EarningsRow.AmountKind;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

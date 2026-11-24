@@ -17,6 +17,9 @@ import org.sejongisc.backend.disclosure.client.OpenDartClient;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse;
 import org.sejongisc.backend.disclosure.service.DisclosureCollectionService.Counts;
 import org.sejongisc.backend.disclosure.service.DisclosureEarningsQueryService.StoredFiling;
+import org.sejongisc.backend.disclosure.service.enums.EarningsAccount;
+import org.sejongisc.backend.disclosure.service.enums.EarningsRow;
+import org.sejongisc.backend.disclosure.service.enums.ReportingQuarter;
 import org.springframework.stereotype.Service;
 
 @Service

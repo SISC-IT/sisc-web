@@ -1,4 +1,4 @@
-package org.sejongisc.backend.disclosure.service;
+package org.sejongisc.backend.disclosure.service.enums;
 
 import java.time.YearMonth;
 import java.util.List;
@@ -8,12 +8,12 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import org.sejongisc.backend.disclosure.entity.DisclosureFiling;
 
-record ReportingQuarter(YearMonth end, int number) implements Comparable<ReportingQuarter> {
+public record ReportingQuarter(YearMonth end, int number) implements Comparable<ReportingQuarter> {
   private static final List<String> REPORT_CODES = List.of("11013", "11012", "11014", "11011");
   private static final Pattern TITLE = Pattern.compile(
       "^(?:\\[[^\\]]+\\]\\s*)*(사업보고서|반기보고서|분기보고서)\\s*\\((\\d{4})\\.(0[1-9]|1[0-2])\\)\\s*$");
 
-  static Optional<ReportingQuarter> fromTitle(String title, int closingMonth) {
+  public static Optional<ReportingQuarter> fromTitle(String title, int closingMonth) {
     return parse(title).flatMap(report -> {
       int offset = Math.floorMod(report.end().getMonthValue() - closingMonth, 12);
       int quarter = offset == 0 ? 4 : offset / 3;
@@ -22,18 +22,18 @@ record ReportingQuarter(YearMonth end, int number) implements Comparable<Reporti
     });
   }
 
-  static Optional<ReportingQuarter> fromFiling(DisclosureFiling filing) {
+  public static Optional<ReportingQuarter> fromFiling(DisclosureFiling filing) {
     int quarter = filing.getReportCode() == null ? 0 : REPORT_CODES.indexOf(filing.getReportCode()) + 1;
     return parse(filing.getTitle()).filter(report -> report.matches(quarter))
         .map(report -> new ReportingQuarter(report.end(), quarter));
   }
 
-  static boolean isCorrection(String title) {
+  public static boolean isCorrection(String title) {
     return title.stripLeading().startsWith("[")
         && (title.contains("정정]") || title.contains("첨부추가]"));
   }
 
-  static boolean canUse(String receiptNo, Map<String, String> titles) {
+  public static boolean canUse(String receiptNo, Map<String, String> titles) {
     if (!isCorrection(titles.get(receiptNo))) {
       return true;
     }
@@ -52,19 +52,19 @@ record ReportingQuarter(YearMonth end, int number) implements Comparable<Reporti
         : Optional.empty();
   }
 
-  String reportCode() {
+  public String reportCode() {
     return REPORT_CODES.get(number - 1);
   }
 
-  int fiscalYear() {
+  public int fiscalYear() {
     return end.plusMonths((4 - number) * 3L).getYear();
   }
 
-  ReportingQuarter previous(int count) {
+  public ReportingQuarter previous(int count) {
     return new ReportingQuarter(end.minusMonths(3L * count), Math.floorMod(number - 1 - count, 4) + 1);
   }
 
-  List<ReportingQuarter> recentFour() {
+  public List<ReportingQuarter> recentFour() {
     return IntStream.range(0, 4).mapToObj(this::previous).toList().reversed();
   }
 

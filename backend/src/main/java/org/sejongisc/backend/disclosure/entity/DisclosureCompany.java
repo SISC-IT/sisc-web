@@ -36,6 +36,12 @@ public class DisclosureCompany extends BasePostgresEntity {
   @Column(name = "induty_code", length = 20)
   private String indutyCode;
 
+  @Column(name = "is_tracked", nullable = false)
+  private boolean tracked = true;
+
+  @Column(name = "track_capex", nullable = false)
+  private boolean trackCapex = false;
+
   @Column(name = "closing_month", nullable = false)
   private Integer closingMonth;
 
@@ -46,6 +52,8 @@ public class DisclosureCompany extends BasePostgresEntity {
     this.companyName = companyName;
     this.corporationClass = corporationClass;
     this.closingMonth = closingMonth;
+    this.tracked = true;
+    this.trackCapex = isDefaultCapexCorp(corpCode);
   }
 
   public void updateProfile(String stockCode, String companyName, String corporationClass,
@@ -56,11 +64,27 @@ public class DisclosureCompany extends BasePostgresEntity {
     }
     this.corporationClass = corporationClass;
     this.closingMonth = closingMonth;
+    if (isDefaultCapexCorp(this.corpCode)) {
+      this.trackCapex = true;
+    }
   }
 
   public void updateIndutyCode(String indutyCode) {
     if (indutyCode != null && !indutyCode.isBlank()) {
       this.indutyCode = indutyCode.trim();
     }
+  }
+
+  public void setTrackCapex(boolean trackCapex) {
+    this.trackCapex = trackCapex;
+  }
+
+  public void setTracked(boolean tracked) {
+    this.tracked = tracked;
+  }
+
+  public static boolean isDefaultCapexCorp(String corpCode) {
+    // 삼성전자(00126380), SK하이닉스(00164779) 기본 활성화; 추후 현대차 등은 DB 플래그(track_capex)로 확장
+    return "00126380".equals(corpCode) || "00164779".equals(corpCode);
   }
 }

@@ -1,326 +1,366 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import CategoryTabs from '../components/Board/CategoryTabs';
-import SearchArrowIcon from '../assets/boardSearchArrow.svg';
-import { getDisclosureCards } from '../utils/disclosureCardApi';
+import {
+  getDisclosureCompanies,
+  getDisclosureCompanyDetail,
+} from '../utils/disclosureCardApi';
 import styles from './DisclosureCardBoard.module.css';
 
-const CATEGORY_TABS = [
-  { id: 'ALL', name: '전체' },
-  { id: 'PRELIMINARY_EARNINGS', name: '잠정 실적' },
-  { id: 'CONFIRMED_EARNINGS', name: '확정 실적' },
-  { id: 'SHAREHOLDER_RETURN', name: '주주환원' },
-  { id: 'SEMICONDUCTOR_CAPEX', name: '반도체 CAPEX' },
+const EVENT_FILTERS = [
+  { id: 'ALL', label: '전체' },
+  { id: 'ORDER_CONTRACT', label: '수주공시' },
+  { id: 'SHAREHOLDER_RETURN', label: '주주환원' },
+  { id: 'CAPEX', label: 'CAPEX' },
+  { id: 'PRELIMINARY_EARNINGS', label: '잠정실적' },
 ];
 
-const BADGE_CLASS_MAP = {
-  PRELIMINARY_EARNINGS: styles.badgePrelim,
-  CONFIRMED_EARNINGS: styles.badgeConfirmed,
-  SHAREHOLDER_RETURN: styles.badgeShareholder,
-  SEMICONDUCTOR_CAPEX: styles.badgeCapex,
-};
-
-const RULE_HINTS = {
-  ALL: ['영업이익 YoY ±20%↑ / 흑·적자전환', '자사주 소각·100억↑ / 배당률 3.5%↑', '반도체 업종 CAPEX 5%↑'],
-  PRELIMINARY_EARNINGS: ['영업이익 YoY ±20% 이상', '흑자전환 · 적자전환 포함', '기재정정 · 자율공시 제외'],
-  CONFIRMED_EARNINGS: ['정기보고서 확정 실적', '연결(CFS) 우선 반영', '최근 분기 요약'],
-  SHAREHOLDER_RETURN: ['자사주 소각 전체', '자사주 취득 100억↑', '시가배당률 3.5%↑ / 배당총액 500억↑'],
-  SEMICONDUCTOR_CAPEX: ['반도체 제조(261) · 장비(29271)', '자기자본대비 5%↑ 또는 300억↑'],
+const formatWon = (raw) => {
+  if (raw === null || raw === undefined || raw === '') return '-';
+  const num = Number(raw);
+  if (Number.isNaN(num)) return String(raw);
+  const abs = Math.abs(num);
+  const sign = num < 0 ? '-' : '';
+  if (abs >= 1e12) {
+    return `${sign}${(abs / 1e12).toFixed(2).replace(/\.?0+$/, '')}조`;
+  }
+  if (abs >= 1e8) {
+    return `${sign}${Math.round(abs / 1e8).toLocaleString()}억`;
+  }
+  return `${sign}${Math.round(abs).toLocaleString()}원`;
 };
 
 const DisclosureCardBoard = () => {
-  const [activeCategory, setActiveCategory] = useState('ALL');
   const [searchInput, setSearchInput] = useState('');
-  const [queryKeyword, setQueryKeyword] = useState('');
-  const [sortOption, setSortOption] = useState('latest');
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageData, setPageData] = useState({
-    items: [],
-    totalCount: 0,
-    page: 0,
-    size: 12,
-    totalPages: 0,
-  });
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [selectedCard, setSelectedCard] = useState(null);
+  const [keyword, setKeyword] = useState('');
+  const [companies, setCompanies] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState('');
 
-  const fetchCards = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage('');
+  const [selectedCorpCode, setSelectedCorpCode] = useState(null);
+  const [eventFilter, setEventFilter] = useState('ALL');
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+
+  const fetchCompanies = useCallback(async () => {
+    setListLoading(true);
+    setListError('');
     try {
-      const response = await getDisclosureCards({
-        category: activeCategory,
-        q: queryKeyword,
-        sort: sortOption,
-        page: currentPage,
-        size: 12,
-      });
-      setPageData({
-        items: response?.items || [],
-        totalCount: response?.totalCount || 0,
-        page: response?.page || 0,
-        size: response?.size || 12,
-        totalPages: response?.totalPages || 0,
-      });
+      const data = await getDisclosureCompanies({ q: keyword, page: 0, size: 200 });
+      setCompanies(data?.items || []);
+      setTotalCount(data?.totalCount || 0);
     } catch {
-      setErrorMessage('공시 카드 뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
-      setPageData((prev) => ({ ...prev, items: [], totalCount: 0, totalPages: 0 }));
+      setListError('기업 목록을 불러오지 못했습니다.');
+      setCompanies([]);
+      setTotalCount(0);
     } finally {
-      setLoading(false);
+      setListLoading(false);
     }
-  }, [activeCategory, queryKeyword, sortOption, currentPage]);
+  }, [keyword]);
 
   useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+    fetchCompanies();
+  }, [fetchCompanies]);
 
-  const handleSearch = () => {
-    setCurrentPage(0);
-    setQueryKeyword(searchInput.trim());
+  const fetchDetail = useCallback(async (corpCode, filterType) => {
+    if (!corpCode) return;
+    setDetailLoading(true);
+    setDetailError('');
+    try {
+      const data = await getDisclosureCompanyDetail(corpCode, filterType);
+      setDetail(data);
+      // 상세 조회로 읽음 처리되었으므로 목록의 빨간 점 즉시 해제
+      setCompanies((prev) =>
+        prev.map((item) =>
+          item.corpCode === corpCode ? { ...item, hasUnread: false } : item
+        )
+      );
+    } catch {
+      setDetailError('기업 상세 공시 데이터를 불러오지 못했습니다.');
+      setDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedCorpCode) {
+      fetchDetail(selectedCorpCode, eventFilter);
+    }
+  }, [selectedCorpCode, eventFilter, fetchDetail]);
+
+  const handleSelectCompany = (corpCode) => {
+    setSelectedCorpCode(corpCode);
+    setEventFilter('ALL');
   };
 
-  const handleCategoryChange = (categoryId) => {
-    setActiveCategory(categoryId);
-    setCurrentPage(0);
+  const handleBackToList = () => {
+    setSelectedCorpCode(null);
+    setDetail(null);
+    setDetailError('');
   };
 
-  const handleSortChange = (event) => {
-    setSortOption(event.target.value);
-    setCurrentPage(0);
-  };
-
-  const ruleHints = RULE_HINTS[activeCategory] || RULE_HINTS.ALL;
-
-  return (
-    <div className={styles.boardContainer}>
-      <div className={styles.boardHeader}>
-        <h1 className={styles.boardTitle}>공시 카드 뉴스</h1>
-        <p className={styles.boardSubtitle}>
-          OpenDART 잠정·확정 실적, 주주환원, 반도체 업종 CAPEX 공시를 규칙 기반으로 자동 요약합니다.
-        </p>
-      </div>
-
-      <div className={styles.boardControls}>
-        <div className={styles.searchContainer}>
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder="종목명, 종목코드 또는 공시 키워드를 입력하세요"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSearch();
-            }}
-          />
+  if (selectedCorpCode) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.topRow}>
           <button
             type="button"
-            className={styles.searchButton}
-            onClick={handleSearch}
-            aria-label="공시 검색"
+            className={styles.backButton}
+            onClick={handleBackToList}
           >
-            <img src={SearchArrowIcon} alt="검색" />
+            ← 기업 목록으로
           </button>
         </div>
 
-        <CategoryTabs
-          activeTab={activeCategory}
-          onTabChange={handleCategoryChange}
-          tabs={CATEGORY_TABS}
-        />
-      </div>
+        {detailLoading && !detail ? (
+          <div className={styles.statusText}>기업 상세 데이터를 불러오는 중...</div>
+        ) : detailError ? (
+          <div className={styles.statusText}>{detailError}</div>
+        ) : detail ? (
+          <>
+            <header className={styles.detailHeader}>
+              <h1 className={styles.title}>
+                {detail.companyName}{' '}
+                <span className={styles.codeMeta}>
+                  {detail.stockCode || detail.corpCode} · {detail.market}
+                </span>
+              </h1>
+              <p className={styles.subtitle}>
+                고유번호: {detail.corpCode} | 업종코드: {detail.indutyCode || '-'} | CAPEX 추적:{' '}
+                {detail.trackCapex ? '활성(추적 중)' : '비활성'}
+              </p>
+            </header>
 
-      <div className={styles.toolbarRow}>
-        <div className={styles.toolbarLeft}>
-          <span className={styles.resultCount}>
-            {pageData.totalCount.toLocaleString()}건의 공시 카드
-          </span>
-          <span className={styles.toolbarDivider} />
-          <div className={styles.ruleChipGroup}>
-            {ruleHints.map((hint) => (
-              <span key={hint} className={styles.ruleChip}>
-                {hint}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.toolbarRight}>
-          <select
-            className={styles.sortSelect}
-            value={sortOption}
-            onChange={handleSortChange}
-            aria-label="정렬 기준"
-          >
-            <option value="latest">최신순</option>
-            <option value="oldest">오래된순</option>
-          </select>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className={styles.stateBox}>공시 카드 뉴스를 불러오는 중입니다...</div>
-      ) : errorMessage ? (
-        <div className={styles.stateBox}>{errorMessage}</div>
-      ) : pageData.items.length === 0 ? (
-        <div className={styles.stateBox}>
-          조건에 맞는 공시 카드 뉴스가 없습니다.
-        </div>
-      ) : (
-        <div className={styles.cardGrid}>
-          {pageData.items.map((card) => (
-            <article
-              key={card.cardId}
-              className={styles.card}
-              onClick={() => setSelectedCard(card)}
-            >
-              <div className={styles.cardMetaRow}>
-                <div className={styles.badgeGroup}>
-                  <span
-                    className={`${styles.categoryBadge} ${BADGE_CLASS_MAP[card.category] || ''}`}
-                  >
-                    {card.categoryLabel}
-                  </span>
-                  <span className={styles.marketBadge}>{card.market}</span>
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>1. 분기 실적 &amp; 수집 기간 추이</h2>
+              {detail.latestQuarter ? (
+                <div className={styles.summaryLine}>
+                  <strong>
+                    최근 분기 ({detail.latestQuarter.fiscalYear}Q{detail.latestQuarter.quarter},{' '}
+                    {detail.latestQuarter.basis || '-'})
+                  </strong>
+                  <span>매출액: {formatWon(detail.latestQuarter.revenue)}</span>
+                  <span>영업이익: {formatWon(detail.latestQuarter.operatingProfit)}</span>
+                  <span>당기순이익: {formatWon(detail.latestQuarter.netIncome)}</span>
                 </div>
-                <span className={styles.cardDate}>{card.publishedDate}</span>
-              </div>
+              ) : (
+                <p className={styles.emptyText}>수집된 분기 실적 데이터가 없습니다.</p>
+              )}
 
-              <div className={styles.companyLine}>
-                <span>{card.companyName}</span>
-                {card.stockCode && (
-                  <span className={styles.stockCode}>{card.stockCode}</span>
-                )}
-              </div>
+              {(detail.earningsTrend || []).length > 0 && (
+                <div className={styles.tableWrap}>
+                  <table className={styles.sheetTable}>
+                    <thead>
+                      <tr>
+                        <th>분기</th>
+                        <th>결산기준</th>
+                        <th>구분</th>
+                        <th className={styles.numCol}>매출액</th>
+                        <th className={styles.numCol}>영업이익</th>
+                        <th className={styles.numCol}>당기순이익</th>
+                        <th>원문</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.earningsTrend.map((q) => (
+                        <tr key={`${q.fiscalYear}-Q${q.quarter}`}>
+                          <td>
+                            {q.fiscalYear}년 {q.quarter}분기
+                          </td>
+                          <td>{q.periodEnd}</td>
+                          <td>{q.basis || '-'}</td>
+                          <td className={styles.numCol}>{formatWon(q.revenue)}</td>
+                          <td className={styles.numCol}>{formatWon(q.operatingProfit)}</td>
+                          <td className={styles.numCol}>{formatWon(q.netIncome)}</td>
+                          <td>
+                            {q.sources?.[0]?.url ? (
+                              <a
+                                href={q.sources[0].url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.link}
+                              >
+                                DART ↗
+                              </a>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
-              <h2 className={styles.cardHeadline}>{card.headline}</h2>
-
-              <div className={styles.metricStrip}>
-                {(card.metrics || []).slice(0, 3).map((metric, idx) => (
-                  <div key={`${card.cardId}-m-${idx}`} className={styles.metricCell}>
-                    <span className={styles.metricLabel}>{metric.label}</span>
-                    <span
-                      className={`${styles.metricValue} ${metric.highlight ? styles.metricHighlight : ''}`}
+            <section className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>2. 공시 이벤트 스프레드시트</h2>
+                <div className={styles.filterGroup}>
+                  {EVENT_FILTERS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className={`${styles.filterBtn} ${
+                        eventFilter === f.id ? styles.filterBtnActive : ''
+                      }`}
+                      onClick={() => setEventFilter(f.id)}
                     >
-                      {metric.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className={styles.cardFooter}>
-                <a
-                  href={card.dartUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.dartLink}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  DART 원문 ↗
-                </a>
-                <div className={styles.tagRow}>
-                  {(card.tags || []).slice(0, 2).map((tag) => (
-                    <span key={tag} className={styles.tagItem}>
-                      #{tag}
-                    </span>
+                      {f.label}
+                    </button>
                   ))}
                 </div>
               </div>
-            </article>
-          ))}
-        </div>
-      )}
 
-      {pageData.totalPages > 1 && (
-        <div className={styles.pagination}>
-          <button
-            type="button"
-            className={styles.pageNavButton}
-            disabled={currentPage <= 0}
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
-          >
-            이전
-          </button>
-          {Array.from({ length: pageData.totalPages }, (_, idx) => idx).map((pageNum) => (
-            <button
-              key={pageNum}
-              type="button"
-              className={`${styles.pageNumButton} ${currentPage === pageNum ? styles.pageNumActive : ''}`}
-              onClick={() => setCurrentPage(pageNum)}
-            >
-              {pageNum + 1}
-            </button>
-          ))}
-          <button
-            type="button"
-            className={styles.pageNavButton}
-            disabled={currentPage >= pageData.totalPages - 1}
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, pageData.totalPages - 1))
-            }
-          >
-            다음
-          </button>
-        </div>
-      )}
-
-      {selectedCard && (
-        <div className={styles.modalOverlay} onClick={() => setSelectedCard(null)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <div className={styles.badgeGroup}>
-                <span
-                  className={`${styles.categoryBadge} ${BADGE_CLASS_MAP[selectedCard.category] || ''}`}
-                >
-                  {selectedCard.categoryLabel}
-                </span>
-                <span className={styles.marketBadge}>{selectedCard.market}</span>
-              </div>
-              <button
-                type="button"
-                className={styles.modalClose}
-                onClick={() => setSelectedCard(null)}
-                aria-label="닫기"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className={styles.companyLine}>
-              <span>{selectedCard.companyName}</span>
-              {selectedCard.stockCode && (
-                <span className={styles.stockCode}>{selectedCard.stockCode}</span>
+              {eventFilter === 'CAPEX' && !detail.trackCapex && (
+                <p className={styles.noticeText}>
+                  현재 CAPEX 추적 대상 기업이 아닙니다. (삼성전자·SK하이닉스 기본 활성화, 추후 DB 설정으로 확장 가능)
+                </p>
               )}
-              <span className={styles.cardDate}>· {selectedCard.publishedDate}</span>
-            </div>
 
-            <h2 className={styles.modalTitle}>{selectedCard.headline}</h2>
-            <p className={styles.modalReportTitle}>공시명: {selectedCard.reportTitle}</p>
-
-            <div className={styles.metricStrip}>
-              {(selectedCard.metrics || []).map((metric, idx) => (
-                <div key={`modal-m-${idx}`} className={styles.metricCell}>
-                  <span className={styles.metricLabel}>{metric.label}</span>
-                  <span
-                    className={`${styles.metricValue} ${metric.highlight ? styles.metricHighlight : ''}`}
-                  >
-                    {metric.value}
-                  </span>
+              {detailLoading ? (
+                <div className={styles.statusText}>필터 적용 중...</div>
+              ) : (detail.events || []).length === 0 ? (
+                <p className={styles.emptyText}>해당 조건의 공시 기록이 없습니다.</p>
+              ) : (
+                <div className={styles.tableWrap}>
+                  <table className={styles.sheetTable}>
+                    <thead>
+                      <tr>
+                        <th>날짜</th>
+                        <th>구분</th>
+                        <th>요약 / 공시명</th>
+                        <th>상세 수치</th>
+                        <th>원문</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.events.map((ev) => (
+                        <tr key={ev.cardId}>
+                          <td className={styles.nowrap}>{ev.publishedDate}</td>
+                          <td className={styles.nowrap}>{ev.categoryLabel}</td>
+                          <td>
+                            <div className={styles.headlineCell}>{ev.headline}</div>
+                            <div className={styles.reportSub}>{ev.reportTitle}</div>
+                          </td>
+                          <td>
+                            {(ev.metrics || [])
+                              .map((m) => `${m.label}: ${m.value}`)
+                              .join(' / ') || '-'}
+                          </td>
+                          <td className={styles.nowrap}>
+                            <a
+                              href={ev.dartUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.link}
+                            >
+                              DART ↗
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
-            </div>
+              )}
+            </section>
+          </>
+        ) : null}
+      </div>
+    );
+  }
 
-            <div className={styles.modalFooter}>
-              <span className={styles.receiptLabel}>접수번호: {selectedCard.receiptNo}</span>
-              <a
-                href={selectedCard.dartUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.modalDartButton}
-              >
-                DART 공시 원문 보기 ↗
-              </a>
-            </div>
-          </div>
+  return (
+    <div className={styles.container}>
+      <header className={styles.listHeader}>
+        <h1 className={styles.title}>공시 리서치 기업 목록</h1>
+        <p className={styles.subtitle}>
+          추적 대상 기업 ({totalCount}개) · 미확인 공시가 있는 기업에는 빨간 점이 표시됩니다.
+        </p>
+      </header>
+
+      <div className={styles.searchRow}>
+        <input
+          type="text"
+          className={styles.searchInput}
+          placeholder="기업명 또는 종목코드 검색"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') setKeyword(searchInput.trim());
+          }}
+        />
+        <button
+          type="button"
+          className={styles.searchBtn}
+          onClick={() => setKeyword(searchInput.trim())}
+        >
+          검색
+        </button>
+        {keyword && (
+          <button
+            type="button"
+            className={styles.resetBtn}
+            onClick={() => {
+              setSearchInput('');
+              setKeyword('');
+            }}
+          >
+            초기화
+          </button>
+        )}
+      </div>
+
+      {listLoading ? (
+        <div className={styles.statusText}>기업 목록을 불러오는 중...</div>
+      ) : listError ? (
+        <div className={styles.statusText}>{listError}</div>
+      ) : companies.length === 0 ? (
+        <div className={styles.statusText}>수집된 기업 데이터가 없습니다.</div>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.sheetTable}>
+            <thead>
+              <tr>
+                <th>기업명</th>
+                <th>종목코드</th>
+                <th>시장</th>
+                <th>최근 공시일</th>
+                <th className={styles.numCol}>이벤트 건수</th>
+                <th>CAPEX 추적</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companies.map((c) => (
+                <tr
+                  key={c.corpCode}
+                  className={styles.clickableRow}
+                  onClick={() => handleSelectCompany(c.corpCode)}
+                >
+                  <td>
+                    <span className={styles.companyNameCell}>
+                      {c.hasUnread && (
+                        <span
+                          className={styles.unreadDot}
+                          title="확인하지 않은 공시가 있습니다"
+                          aria-label="미확인 공시"
+                        />
+                      )}
+                      {c.companyName}
+                    </span>
+                  </td>
+                  <td className={styles.nowrap}>{c.stockCode || c.corpCode}</td>
+                  <td className={styles.nowrap}>{c.market}</td>
+                  <td className={styles.nowrap}>{c.latestEventDate || '-'}</td>
+                  <td className={styles.numCol}>{c.eventCount}</td>
+                  <td className={styles.nowrap}>{c.trackCapex ? 'O' : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

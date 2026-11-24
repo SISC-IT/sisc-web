@@ -15,9 +15,13 @@ import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
 import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse.Metric;
-import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse.PageResponse;
+import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyDetailResponse;
+import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListItem;
+import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListResponse;
+import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Quarter;
 import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
 import org.sejongisc.backend.disclosure.service.DisclosureCardQueryService;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -25,39 +29,63 @@ class DisclosureCardControllerTest {
   private final DisclosureCardQueryService queryService = mock(DisclosureCardQueryService.class);
   private final MockMvc mvc =
       MockMvcBuilders.standaloneSetup(new DisclosureCardController(queryService))
+          .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
           .setControllerAdvice(new GlobalExceptionHandler()).build();
 
   @Test
-  void listsDisclosureCardsFilteredByCategoryAndKeyword() throws Exception {
-    UUID id = UUID.randomUUID();
-    var card = new DisclosureCardResponse(
-        id, "20261118000001", "SEMICONDUCTOR_CAPEX", "반도체 CAPEX",
-        "00164779", "SK하이닉스", "000660", "KOSPI", "26110",
-        "신규시설투자등", "반도체 신규시설투자 1.98조 결정",
-        LocalDate.of(2026, 11, 18),
-        List.of(new Metric("투자금액", "1.98조", false)),
-        List.of("반도체 CAPEX"), "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261118000001");
+  void listsTrackedCompaniesWithUnreadIndicator() throws Exception {
+    var item = new CompanyListItem(
+        "00164779", "SK하이닉스", "000660", "KOSPI", true,
+        LocalDate.of(2026, 11, 18), 3L, true);
+    when(queryService.listCompanies(null, "하이닉스", 0, 200))
+        .thenReturn(new CompanyListResponse(List.of(item), 1, 0, 200, 1));
 
-    when(queryService.list(DisclosureCardCategory.SEMICONDUCTOR_CAPEX, "하이닉스", "latest", 0, 12))
-        .thenReturn(new PageResponse(List.of(card), 1, 0, 12, 1));
-
-    mvc.perform(get("/api/disclosures/cards")
-            .param("category", "SEMICONDUCTOR_CAPEX")
-            .param("q", "하이닉스"))
+    mvc.perform(get("/api/disclosures/companies").param("q", "하이닉스"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalCount").value(1))
-        .andExpect(jsonPath("$.items[0].companyName").value("SK하이닉스"));
+        .andExpect(jsonPath("$.items[0].companyName").value("SK하이닉스"))
+        .andExpect(jsonPath("$.items[0].hasUnread").value(true))
+        .andExpect(jsonPath("$.items[0].trackCapex").value(true));
   }
 
   @Test
-  void rejectsInvalidCategoryAndReturnsNotFoundForUnknownCard() throws Exception {
-    mvc.perform(get("/api/disclosures/cards").param("category", "UNKNOWN_TYPE"))
+  void returnsUnifiedCompanyDetailWithEarningsTrendAndFilteredEvents() throws Exception {
+    var q3 = new Quarter(2026, 3, "2026-09", "CFS", "KRW", "18400000000000", "7200000000000", "5600000000000", List.of());
+    var ev = new DisclosureCardResponse(
+        UUID.randomUUID(), "20261118000001", "CAPEX", "CAPEX",
+        "00164779", "SK하이닉스", "000660", "KOSPI", "26110",
+        "신규시설투자등", "신규시설투자 1.98조 결정",
+        LocalDate.of(2026, 11, 18),
+        List.of(new Metric("투자금액", "1.98조", false)),
+        List.of("CAPEX"), "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20261118000001");
+
+    var detail = new CompanyDetailResponse(
+        "00164779", "SK하이닉스", "000660", "KOSPI", "26110", true,
+        q3, List.of(q3), List.of(ev));
+
+    when(queryService.companyDetail(null, "00164779", DisclosureCardCategory.CAPEX))
+        .thenReturn(Optional.of(detail));
+
+    mvc.perform(get("/api/disclosures/companies/{corpCode}", "00164779")
+            .param("type", "CAPEX"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.companyName").value("SK하이닉스"))
+        .andExpect(jsonPath("$.latestQuarter.fiscalYear").value(2026))
+        .andExpect(jsonPath("$.earningsTrend.length()").value(1))
+        .andExpect(jsonPath("$.events[0].category").value("CAPEX"));
+  }
+
+  @Test
+  void rejectsInvalidCorpCodeOrEventTypeAndReturnsNotFound() throws Exception {
+    mvc.perform(get("/api/disclosures/companies/{corpCode}", "123"))
+        .andExpect(status().isBadRequest());
+    mvc.perform(get("/api/disclosures/companies/{corpCode}", "00164779")
+            .param("type", "UNKNOWN_TYPE"))
         .andExpect(status().isBadRequest());
     verifyNoInteractions(queryService);
 
-    UUID missingId = UUID.randomUUID();
-    when(queryService.findById(missingId)).thenReturn(Optional.empty());
-    mvc.perform(get("/api/disclosures/cards/{cardId}", missingId))
+    when(queryService.companyDetail(null, "00126380", null)).thenReturn(Optional.empty());
+    mvc.perform(get("/api/disclosures/companies/{corpCode}", "00126380"))
         .andExpect(status().isNotFound());
   }
 }

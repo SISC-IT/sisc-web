@@ -1,5 +1,8 @@
 package org.sejongisc.backend.disclosure.repository;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
@@ -20,6 +23,25 @@ public interface DisclosureCardNewsRepository extends JpaRepository<DisclosureCa
   Optional<DisclosureCardNews> findWithCompanyByCardId(UUID cardId);
 
   @EntityGraph(attributePaths = "company")
+  List<DisclosureCardNews> findAllByCompany_CompanyIdOrderByPublishedDateDescCreatedDateDesc(
+      UUID companyId);
+
+  @EntityGraph(attributePaths = "company")
+  List<DisclosureCardNews> findAllByCompany_CompanyIdAndCategoryOrderByPublishedDateDescCreatedDateDesc(
+      UUID companyId, DisclosureCardCategory category);
+
+  @Query("""
+      select c.company.companyId as companyId,
+             max(c.collectedAt) as latestCollectedAt,
+             max(c.publishedDate) as latestPublishedDate,
+             count(c) as eventCount
+      from DisclosureCardNews c
+      where c.company.companyId in :companyIds
+      group by c.company.companyId
+      """)
+  List<CompanyEventSummary> summarizeByCompanyIds(@Param("companyIds") List<UUID> companyIds);
+
+  @EntityGraph(attributePaths = "company")
   @Query("""
       select c from DisclosureCardNews c
       join c.company comp
@@ -34,4 +56,11 @@ public interface DisclosureCardNewsRepository extends JpaRepository<DisclosureCa
       @Param("category") DisclosureCardCategory category,
       @Param("keyword") String keyword,
       Pageable pageable);
+
+  interface CompanyEventSummary {
+    UUID getCompanyId();
+    LocalDateTime getLatestCollectedAt();
+    LocalDate getLatestPublishedDate();
+    long getEventCount();
+  }
 }

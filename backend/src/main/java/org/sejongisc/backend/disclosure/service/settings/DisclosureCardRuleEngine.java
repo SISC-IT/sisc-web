@@ -1,4 +1,4 @@
-package org.sejongisc.backend.disclosure.service;
+package org.sejongisc.backend.disclosure.service.settings;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -9,9 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse.Metric;
-import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse;
 import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
-import org.sejongisc.backend.disclosure.service.DartDocumentTableParser.ParsedDocument;
+import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser.ParsedDocument;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,15 +25,19 @@ public class DisclosureCardRuleEngine {
   private static final BigDecimal MIN_CAPEX_EQUITY_RATIO = new BigDecimal("5.0");
   private static final BigDecimal MIN_CAPEX_WON = new BigDecimal("30000000000"); // 300억
 
-  // KSIC: 261xx (반도체 제조업), 29271 (반도체 제조용 기계 제조업)
-  private static final Set<String> SEMICONDUCTOR_PREFIXES = Set.of("261", "29271");
+  // 수주 다빈도 업종(조선 311, 건설 41/42, 특수장비 292): 기준 상향
+  private static final Set<String> HIGH_FREQ_ORDER_PREFIXES = Set.of("311", "41", "42", "292");
+  private static final BigDecimal ORDER_RATIO_HIGH_FREQ = new BigDecimal("15.0");
+  private static final BigDecimal ORDER_WON_HIGH_FREQ = new BigDecimal("100000000000"); // 1,000억
+  private static final BigDecimal ORDER_RATIO_DEFAULT = new BigDecimal("10.0");
+  private static final BigDecimal ORDER_WON_DEFAULT = new BigDecimal("10000000000"); // 100억
 
-  public boolean isSemiconductorIndustry(String indutyCode) {
+  public boolean isHighFrequencyOrderIndustry(String indutyCode) {
     if (indutyCode == null || indutyCode.isBlank()) {
       return false;
     }
     String normalized = indutyCode.trim();
-    return SEMICONDUCTOR_PREFIXES.stream().anyMatch(normalized::startsWith);
+    return HIGH_FREQ_ORDER_PREFIXES.stream().anyMatch(normalized::startsWith);
   }
 
   public boolean isCorrectionOrAutonomousNoise(String reportTitle) {
@@ -46,21 +49,72 @@ public class DisclosureCardRuleEngine {
   }
 
   public Optional<DisclosureCardCategory> classifyExchangeTitle(String reportTitle,
-      String indutyCode) {
+      boolean trackCapex) {
     if (reportTitle == null || reportTitle.isBlank() || isCorrectionOrAutonomousNoise(reportTitle)) {
       return Optional.empty();
     }
     String compact = DartDocumentTableParser.compactKey(reportTitle);
+    if (compact.contains("단일판매공급계약체결") || compact.contains("단일판매공급계약해지")) {
+      return Optional.of(DisclosureCardCategory.ORDER_CONTRACT);
+    }
     if (compact.contains("영업잠정실적") || compact.contains("매출액또는손익구조")) {
       return Optional.of(DisclosureCardCategory.PRELIMINARY_EARNINGS);
     }
     if (compact.contains("현금현물배당결정") || compact.contains("주식소각결정")) {
       return Optional.of(DisclosureCardCategory.SHAREHOLDER_RETURN);
     }
-    if (compact.contains("신규시설투자") && isSemiconductorIndustry(indutyCode)) {
-      return Optional.of(DisclosureCardCategory.SEMICONDUCTOR_CAPEX);
+    if (compact.contains("신규시설투자") && trackCapex) {
+      return Optional.of(DisclosureCardCategory.CAPEX);
     }
     return Optional.empty();
+  }
+
+  public Optional<CardDraft> evaluateOrderContract(String companyName, String indutyCode,
+      String reportTitle, LocalDate publishedDate, ParsedDocument doc) {
+    boolean cancellation = reportTitle != null && reportTitle.contains("해지");
+    boolean confidential = doc.plainText().contains("유보") || doc.plainText().contains("비밀유지");
+
+    BigDecimal contractAmount = doc.findValue("확정계약금액", "계약금액", "계약금액총액")
+        .flatMap(DartDocumentTableParser::parseNumber).orElse(null);
+    BigDecimal salesRatio = doc.findValue("매출액대비", "최근매출액대비")
+        .flatMap(DartDocumentTableParser::parseNumber).orElse(null);
+    String counterparty = doc.findValue("계약상대방", "계약상대")
+        .orElse(confidential ? "경영상 비밀유지(유보)" : "-");
+    String detail = doc.findValue("계약내용", "판매공급계약내용").orElse(reportTitle);
+
+    boolean highFreq = isHighFrequencyOrderIndustry(indutyCode);
+    BigDecimal minRatio = highFreq ? ORDER_RATIO_HIGH_FREQ : ORDER_RATIO_DEFAULT;
+    BigDecimal minWon = highFreq ? ORDER_WON_HIGH_FREQ : ORDER_WON_DEFAULT;
+
+    boolean significant = cancellation
+        || confidential
+        || (salesRatio != null && salesRatio.compareTo(minRatio) >= 0)
+        || (contractAmount != null && contractAmount.compareTo(minWon) >= 0);
+    if (!significant) {
+      return Optional.empty();
+    }
+
+    String amountText = contractAmount != null ? formatWon(contractAmount) : (confidential ? "유보" : "-");
+    String ratioText = salesRatio != null ? salesRatio.setScale(1, RoundingMode.HALF_UP) + "%" : "-";
+    String headline = cancellation
+        ? String.format("공급계약 해지 — %s (매출대비 %s)", truncate(detail, 26), ratioText)
+        : String.format("%s — 계약금액 %s (매출대비 %s)", truncate(detail, 26), amountText, ratioText);
+
+    List<Metric> metrics = List.of(
+        new Metric("계약금액", amountText, false),
+        new Metric("매출대비", ratioText, true),
+        new Metric("계약상대방", truncate(counterparty, 18), false)
+    );
+    List<String> tags = new ArrayList<>();
+    tags.add(cancellation ? "계약해지" : "수주공시");
+    if (confidential) {
+      tags.add("유보");
+    }
+    if (highFreq) {
+      tags.add("수주업종기준");
+    }
+    return Optional.of(new CardDraft(DisclosureCardCategory.ORDER_CONTRACT, headline,
+        publishedDate, metrics, tags));
   }
 
   public Optional<CardDraft> evaluatePreliminaryEarnings(String companyName, String reportTitle,
@@ -90,7 +144,7 @@ public class DisclosureCardRuleEngine {
       opDisplay = opDisplay + " (적자전환)";
     }
 
-    String headline = buildPreliminaryHeadline(companyName, reportTitle, opYoy, doc.plainText());
+    String headline = buildPreliminaryHeadline(reportTitle, opYoy, doc.plainText());
     List<Metric> metrics = List.of(
         new Metric("매출액", formatWithUnit(revenue, unit), false),
         new Metric("영업이익", opDisplay, true),
@@ -109,32 +163,6 @@ public class DisclosureCardRuleEngine {
     }
     return Optional.of(new CardDraft(DisclosureCardCategory.PRELIMINARY_EARNINGS, headline,
         publishedDate, metrics, tags));
-  }
-
-  public Optional<CardDraft> evaluateConfirmedEarnings(DisclosureEarningsResponse earnings) {
-    if (earnings == null || earnings.quarters() == null || earnings.quarters().isEmpty()) {
-      return Optional.empty();
-    }
-    DisclosureEarningsResponse.Quarter latest = earnings.quarters().getLast();
-    if (latest.sources() == null || latest.sources().isEmpty()) {
-      return Optional.empty();
-    }
-    if (latest.revenue() == null && latest.operatingProfit() == null && latest.netIncome() == null) {
-      return Optional.empty();
-    }
-    var primarySource = latest.sources().getFirst();
-    String basisLabel = "CFS".equals(latest.basis()) ? "연결" : "별도";
-    String headline = String.format("%d년 %d분기 확정 실적 (%s)",
-        latest.fiscalYear(), latest.quarter(), basisLabel);
-
-    List<Metric> metrics = List.of(
-        new Metric("매출액", formatWonString(latest.revenue()), false),
-        new Metric("영업이익", formatWonString(latest.operatingProfit()), true),
-        new Metric("당기순이익", formatWonString(latest.netIncome()), false)
-    );
-    List<String> tags = List.of("확정실적", basisLabel, latest.fiscalYear() + "Q" + latest.quarter());
-    return Optional.of(new CardDraft(DisclosureCardCategory.CONFIRMED_EARNINGS, headline,
-        primarySource.receivedDate(), metrics, tags));
   }
 
   public Optional<CardDraft> evaluateTreasuryStockAcquisition(String companyName,
@@ -190,7 +218,6 @@ public class DisclosureCardRuleEngine {
           publishedDate, metrics, List.of("주주환원", "자사주 소각")));
     }
 
-    // 현금·현물배당결정
     BigDecimal dps = doc.findValue("1주당배당금", "보통주식배당금")
         .flatMap(DartDocumentTableParser::parseNumber).orElse(null);
     BigDecimal yield = doc.findValue("시가배당율", "시가배당률")
@@ -218,16 +245,16 @@ public class DisclosureCardRuleEngine {
         publishedDate, metrics, List.of("주주환원", "현금배당")));
   }
 
-  public Optional<CardDraft> evaluateSemiconductorCapex(String companyName, String indutyCode,
+  public Optional<CardDraft> evaluateCapex(String companyName, boolean trackCapex,
       String reportTitle, LocalDate publishedDate, ParsedDocument doc) {
-    if (!isSemiconductorIndustry(indutyCode)) {
+    if (!trackCapex) {
       return Optional.empty();
     }
     BigDecimal investAmount = doc.findValue("투자금액", "투자내역투자금액")
         .flatMap(DartDocumentTableParser::parseNumber).orElse(null);
     BigDecimal equityRatio = doc.findValue("자기자본대비")
         .flatMap(DartDocumentTableParser::parseNumber).orElse(null);
-    String purpose = doc.findValue("투자목적", "투자대상").orElse("반도체 설비 증설");
+    String purpose = doc.findValue("투자목적", "투자대상").orElse("신규 시설 투자");
     String startDate = doc.findValue("시작일", "투자기간시작일").orElse("");
     String endDate = doc.findValue("종료일", "투자기간종료일").orElse("");
 
@@ -241,20 +268,18 @@ public class DisclosureCardRuleEngine {
     String ratioText = equityRatio != null ? equityRatio.setScale(1, RoundingMode.HALF_UP) + "%" : "-";
     String periodText = (!startDate.isBlank() && !endDate.isBlank())
         ? extractYear(startDate) + "~" + extractYear(endDate) : "-";
-    String headline = String.format("반도체 신규시설투자 %s 결정 — %s", amountText, truncate(purpose, 24));
+    String headline = String.format("신규시설투자 %s 결정 — %s", amountText, truncate(purpose, 24));
 
     List<Metric> metrics = List.of(
         new Metric("투자금액", amountText, false),
         new Metric("자기자본대비", ratioText, true),
         new Metric("투자기간", periodText, false)
     );
-    List<String> tags = List.of("반도체 CAPEX", indutyCode.startsWith("29271") ? "반도체 장비" : "반도체 제조");
-    return Optional.of(new CardDraft(DisclosureCardCategory.SEMICONDUCTOR_CAPEX, headline,
-        publishedDate, metrics, tags));
+    return Optional.of(new CardDraft(DisclosureCardCategory.CAPEX, headline,
+        publishedDate, metrics, List.of("CAPEX", "시설투자")));
   }
 
-  private String buildPreliminaryHeadline(String companyName, String reportTitle,
-      BigDecimal opYoy, String plainText) {
+  private String buildPreliminaryHeadline(String reportTitle, BigDecimal opYoy, String plainText) {
     if (plainText.contains("흑자전환")) {
       return "잠정 실적 발표 — 영업이익 흑자전환";
     }
@@ -311,15 +336,6 @@ public class DisclosureCardRuleEngine {
       return formatWon(value.multiply(HUNDRED_MILLION));
     }
     return formatWon(value);
-  }
-
-  public static String formatWonString(String raw) {
-    if (raw == null || raw.isBlank()) {
-      return "-";
-    }
-    return DartDocumentTableParser.parseNumber(raw)
-        .map(DisclosureCardRuleEngine::formatWon)
-        .orElse(raw);
   }
 
   public static String formatWon(BigDecimal won) {

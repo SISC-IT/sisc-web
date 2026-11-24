@@ -1,10 +1,10 @@
 package org.sejongisc.backend.disclosure.entity;
 
 public enum DisclosureCardCategory {
-  PRELIMINARY_EARNINGS("잠정 실적"),
-  CONFIRMED_EARNINGS("확정 실적"),
+  ORDER_CONTRACT("수주 공시"),
   SHAREHOLDER_RETURN("주주환원"),
-  SEMICONDUCTOR_CAPEX("반도체 CAPEX");
+  CAPEX("CAPEX"),
+  PRELIMINARY_EARNINGS("잠정 실적");
 
   private final String displayName;
 

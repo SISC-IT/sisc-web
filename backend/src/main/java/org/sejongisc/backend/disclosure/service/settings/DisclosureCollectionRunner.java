@@ -1,10 +1,12 @@
-package org.sejongisc.backend.disclosure.service;
+package org.sejongisc.backend.disclosure.service.settings;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Source;
+import org.sejongisc.backend.disclosure.service.DisclosureCardCollectionService;
+import org.sejongisc.backend.disclosure.service.DisclosureEarningsCollectionService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,6 +21,7 @@ public class DisclosureCollectionRunner implements ApplicationRunner {
   private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
   private final DisclosureEarningsCollectionService earningsCollectionService;
+  private final DisclosureCardCollectionService cardCollectionService;
   private final ConfigurableApplicationContext applicationContext;
 
   @Override
@@ -44,6 +47,13 @@ public class DisclosureCollectionRunner implements ApplicationRunner {
           corpCode, result.counts().filingsInserted(), result.counts().metricsInserted());
       if (!result.pendingPeriods().isEmpty()) {
         log.warn("Quarterly earnings pending: corpCode={}, periods={}", corpCode, result.pendingPeriods());
+      }
+
+      if (cardCollectionService != null && !args.containsOption("skip-events")) {
+        int eventsInserted = cardCollectionService.collectForCompany(
+            corpCode, through.minusYears(1), through);
+        log.info("Disclosure events collection: corpCode={}, eventsInserted={}",
+            corpCode, eventsInserted);
       }
     } finally {
       applicationContext.close();

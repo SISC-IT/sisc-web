@@ -1,4 +1,4 @@
-package org.sejongisc.backend.disclosure.service;
+package org.sejongisc.backend.disclosure.service.settings;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;

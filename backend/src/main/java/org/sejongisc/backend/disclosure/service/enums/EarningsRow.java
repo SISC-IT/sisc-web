@@ -1,9 +1,9 @@
-package org.sejongisc.backend.disclosure.service;
+package org.sejongisc.backend.disclosure.service.enums;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
-record EarningsRow(
+public record EarningsRow(
     String statementDivision,
     String accountId,
     String accountName,
@@ -12,12 +12,12 @@ record EarningsRow(
     BigDecimal cumulativeAmount,
     Map<String, String> rawPayload
 ) {
-  enum AmountKind {
+  public enum AmountKind {
     CURRENT,
     CUMULATIVE
   }
 
-  static EarningsRow fromDartRow(Map<String, String> row) {
+  public static EarningsRow fromDartRow(Map<String, String> row) {
     return new EarningsRow(
         blankToNull(row.get("sj_div")),
         blankToNull(row.get("account_id")),
@@ -29,15 +29,15 @@ record EarningsRow(
     );
   }
 
-  BigDecimal amount(AmountKind kind) {
+  public BigDecimal amount(AmountKind kind) {
     return kind == AmountKind.CURRENT ? currentAmount : cumulativeAmount;
   }
 
-  boolean hasValidCurrency() {
+  public boolean hasValidCurrency() {
     return currency != null && currency.matches("[A-Z]{3}");
   }
 
-  static BigDecimal parseAmount(String value) {
+  public static BigDecimal parseAmount(String value) {
     if (value == null || value.isBlank() || "-".equals(value.trim())) {
       return null;
     }

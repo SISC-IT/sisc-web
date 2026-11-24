@@ -25,7 +25,10 @@ import org.sejongisc.backend.disclosure.entity.DisclosureFinancialMetric;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
-import org.sejongisc.backend.disclosure.service.EarningsRow.AmountKind;
+import org.sejongisc.backend.disclosure.service.enums.EarningsAccount;
+import org.sejongisc.backend.disclosure.service.enums.EarningsRow;
+import org.sejongisc.backend.disclosure.service.enums.EarningsRow.AmountKind;
+import org.sejongisc.backend.disclosure.service.enums.ReportingQuarter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,17 @@ public class DisclosureEarningsQueryService {
 
   public Optional<DisclosureEarningsResponse> latest(String corpCode) {
     return latest(corpCode, null);
+  }
+
+  public List<Quarter> allQuarters(String corpCode) {
+    Map<ReportingQuarter, List<StoredFiling>> reports = storedReports(corpCode, null);
+    if (reports.isEmpty()) {
+      return List.of();
+    }
+    return reports.keySet().stream()
+        .sorted(Comparator.naturalOrder())
+        .map(quarter -> summarize(quarter, reports))
+        .toList();
   }
 
   Optional<DisclosureEarningsResponse> latest(String corpCode, LocalDate through) {

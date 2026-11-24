@@ -6,7 +6,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,7 +18,9 @@ import org.sejongisc.backend.disclosure.entity.DisclosureCardNews;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
 import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
-import org.sejongisc.backend.disclosure.service.DisclosureCardRuleEngine.CardDraft;
+import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser;
+import org.sejongisc.backend.disclosure.service.settings.DisclosureCardRuleEngine;
+import org.sejongisc.backend.disclosure.service.settings.DisclosureCardRuleEngine.CardDraft;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -33,7 +34,6 @@ public class DisclosureCardCollectionService {
   private final OpenDartClient dartClient;
   private final DartDocumentTableParser documentParser;
   private final DisclosureCardRuleEngine ruleEngine;
-  private final DisclosureEarningsQueryService earningsQueryService;
   private final DisclosureCompanyRepository companyRepository;
   private final DisclosureCardNewsRepository cardRepository;
   private final TransactionTemplate transactionTemplate;
@@ -51,19 +51,13 @@ public class DisclosureCardCollectionService {
     int closingMonth = (profile.acc_mt() != null && profile.acc_mt().matches("0[1-9]|1[0-2]"))
         ? Integer.parseInt(profile.acc_mt()) : 12;
 
+    boolean trackCapex = companyRepository.findByCorpCode(corpCode)
+        .map(DisclosureCompany::isTrackCapex)
+        .orElseGet(() -> DisclosureCompany.isDefaultCapexCorp(corpCode));
+
     List<PendingCard> pending = new ArrayList<>();
 
-    // 1. 기존 확정 실적 동기화 (추가 DART 호출 없음)
-    earningsQueryService.latest(corpCode).ifPresent(earnings ->
-        ruleEngine.evaluateConfirmedEarnings(earnings).ifPresent(draft -> {
-          String receiptNo = earnings.quarters().getLast().sources().getFirst().receiptNo();
-          pending.add(new PendingCard(
-              corpCode, profile.stock_code(), profile.corp_name(), profile.corp_cls(),
-              profile.induty_code(), closingMonth, receiptNo, draft.headline(), draft,
-              Map.of("source", "confirmed_earnings")));
-        }));
-
-    // 2. 주주환원 — 자사주 취득 결정 (전용 JSON API)
+    // 1. 주주환원 — 자사주 취득 결정 (전용 JSON API)
     var treasuryRes = dartClient.treasuryStockAcquisitions(corpCode, from, to);
     if (treasuryRes != null && "000".equals(treasuryRes.status()) && treasuryRes.list() != null) {
       for (Map<String, String> row : treasuryRes.list()) {
@@ -80,24 +74,16 @@ public class DisclosureCardCollectionService {
       }
     }
 
-    // 3. 거래소공시(I) — 잠정 실적, 배당/소각, 반도체 CAPEX
-    collectExchangeDisclosures(corpCode, profile.induty_code(), from, to, pending);
+    // 2. 거래소공시(I) — 수주공시, 잠정실적, 배당/소각, CAPEX(지정 기업)
+    collectExchangeDisclosures(corpCode, profile.induty_code(), trackCapex, from, to, pending);
 
     return persistCards(pending);
   }
 
-  public int collectMarketWide(LocalDate from, LocalDate to) {
-    List<PendingCard> pending = new ArrayList<>();
-    collectExchangeDisclosures(null, null, from, to, pending);
-    return persistCards(pending);
-  }
-
-  private void collectExchangeDisclosures(String corpCodeFilter, String knownIndutyCode,
+  private void collectExchangeDisclosures(String corpCode, String indutyCode, boolean trackCapex,
       LocalDate from, LocalDate to, List<PendingCard> pending) {
-    Map<String, DartCompany> companyCache = new HashMap<>();
-
     for (int page = 1; ; page++) {
-      var res = dartClient.searchDisclosures(corpCodeFilter, "I", from, to, page, 100, true);
+      var res = dartClient.searchDisclosures(corpCode, "I", from, to, page, 100, true);
       if (res == null || "013".equals(res.status()) || res.list() == null || res.list().isEmpty()) {
         break;
       }
@@ -110,30 +96,14 @@ public class DisclosureCardCollectionService {
         if (!"Y".equals(marketCls) && !"K".equals(marketCls)) {
           continue;
         }
-        String corpCode = row.get("corp_code");
         String receiptNo = row.get("rcept_no");
         String reportTitle = row.get("report_nm");
-        if (corpCode == null || receiptNo == null || !receiptNo.matches("[0-9]{14}")) {
+        if (receiptNo == null || !receiptNo.matches("[0-9]{14}")) {
           continue;
         }
 
-        String compactTitle = DartDocumentTableParser.compactKey(reportTitle);
-        boolean isCapexCandidate = compactTitle.contains("신규시설투자");
-        String indutyCode = knownIndutyCode;
-        int closingMonth = 12;
-
-        if (isCapexCandidate && indutyCode == null) {
-          DartCompany info = companyCache.computeIfAbsent(corpCode, dartClient::company);
-          if (info != null && "000".equals(info.status())) {
-            indutyCode = info.induty_code();
-            if (info.acc_mt() != null && info.acc_mt().matches("0[1-9]|1[0-2]")) {
-              closingMonth = Integer.parseInt(info.acc_mt());
-            }
-          }
-        }
-
         Optional<DisclosureCardCategory> categoryOpt =
-            ruleEngine.classifyExchangeTitle(reportTitle, indutyCode);
+            ruleEngine.classifyExchangeTitle(reportTitle, trackCapex);
         if (categoryOpt.isEmpty()) {
           continue;
         }
@@ -143,19 +113,20 @@ public class DisclosureCardCollectionService {
         var parsedDoc = documentParser.parse(xml);
 
         Optional<CardDraft> draftOpt = switch (categoryOpt.get()) {
+          case ORDER_CONTRACT -> ruleEngine.evaluateOrderContract(
+              row.get("corp_name"), indutyCode, reportTitle, publishedDate, parsedDoc);
           case PRELIMINARY_EARNINGS -> ruleEngine.evaluatePreliminaryEarnings(
               row.get("corp_name"), reportTitle, publishedDate, parsedDoc);
           case SHAREHOLDER_RETURN -> ruleEngine.evaluateShareholderDocument(
               row.get("corp_name"), reportTitle, publishedDate, parsedDoc);
-          case SEMICONDUCTOR_CAPEX -> ruleEngine.evaluateSemiconductorCapex(
-              row.get("corp_name"), indutyCode, reportTitle, publishedDate, parsedDoc);
-          case CONFIRMED_EARNINGS -> Optional.empty();
+          case CAPEX -> ruleEngine.evaluateCapex(
+              row.get("corp_name"), trackCapex, reportTitle, publishedDate, parsedDoc);
         };
 
         if (draftOpt.isPresent()) {
           pending.add(new PendingCard(
               corpCode, blankToNull(row.get("stock_code")), row.get("corp_name"), marketCls,
-              indutyCode, closingMonth, receiptNo, reportTitle, draftOpt.get(), row));
+              indutyCode, 12, receiptNo, reportTitle, draftOpt.get(), row));
         }
       }
 

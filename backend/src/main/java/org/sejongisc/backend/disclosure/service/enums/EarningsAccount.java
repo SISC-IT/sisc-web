@@ -1,13 +1,13 @@
-package org.sejongisc.backend.disclosure.service;
+package org.sejongisc.backend.disclosure.service.enums;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import org.sejongisc.backend.disclosure.service.EarningsRow.AmountKind;
+import org.sejongisc.backend.disclosure.service.enums.EarningsRow.AmountKind;
 
-enum EarningsAccount {
+public enum EarningsAccount {
   REVENUE(Set.of("ifrs-full_revenue", "ifrs_revenue", "dart_revenue"),
       Set.of("매출액", "수익(매출액)")),
   OPERATING_PROFIT(Set.of("dart_operatingincomeloss", "ifrs-full_operatingprofitloss"),
@@ -16,10 +16,10 @@ enum EarningsAccount {
       Set.of("당기순이익", "당기순이익(손실)", "분기순이익", "분기순이익(손실)",
           "반기순이익", "반기순이익(손실)"));
 
-  static final List<String> METRIC_TYPES = Arrays.stream(values()).map(Enum::name).toList();
-  static final String CURRENT = "CURRENT_PERIOD";
-  static final String ANNUAL = "ANNUAL";
-  static final String YEAR_TO_DATE = "YEAR_TO_DATE";
+  public static final List<String> METRIC_TYPES = Arrays.stream(values()).map(Enum::name).toList();
+  public static final String CURRENT = "CURRENT_PERIOD";
+  public static final String ANNUAL = "ANNUAL";
+  public static final String YEAR_TO_DATE = "YEAR_TO_DATE";
 
   private final Set<String> standardIds;
   private final Set<String> names;
@@ -29,7 +29,7 @@ enum EarningsAccount {
     this.names = names;
   }
 
-  static boolean hasAmounts(List<EarningsRow> rows, boolean needsCumulative) {
+  public static boolean hasAmounts(List<EarningsRow> rows, boolean needsCumulative) {
     for (EarningsAccount account : values()) {
       if (account.select(rows, AmountKind.CURRENT) == null
           || (needsCumulative && account.select(rows, AmountKind.CUMULATIVE) == null)) {
@@ -39,7 +39,7 @@ enum EarningsAccount {
     return true;
   }
 
-  EarningsRow select(List<EarningsRow> rows, AmountKind kind) {
+  public EarningsRow select(List<EarningsRow> rows, AmountKind kind) {
     int bestRank = 0;
     EarningsRow best = null;
     BigDecimal bestAmount = null;
@@ -66,7 +66,7 @@ enum EarningsAccount {
     return ambiguous ? null : best;
   }
 
-  int rank(EarningsRow row) {
+  public int rank(EarningsRow row) {
     String statement = row.statementDivision();
     if (!"IS".equals(statement) && !"CIS".equals(statement)) {
       return 0;
@@ -82,7 +82,7 @@ enum EarningsAccount {
     return names.contains(text(row.accountName()).replaceAll("\\s+", "")) ? 1 : 0;
   }
 
-  static boolean sameAccount(EarningsRow first, EarningsRow second) {
+  public static boolean sameAccount(EarningsRow first, EarningsRow second) {
     String firstId = text(first.accountId());
     String secondId = text(second.accountId());
     if (!firstId.equals(secondId)) {
