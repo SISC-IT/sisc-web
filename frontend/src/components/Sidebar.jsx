@@ -325,6 +325,17 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                 </li>
                 <li>
                   <NavLink
+                    to="/competition"
+                    className={({ isActive }) =>
+                      isActive ? styles['active-link'] : styles['inactive-link']
+                    }
+                    onClick={handleNavLinkClick}
+                  >
+                    모의투자 리그
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
                     to="/backtest"
                     className={({ isActive }) =>
                       isActive ? styles['active-link'] : styles['inactive-link']
