@@ -40,7 +40,6 @@ public record StockQuote(DailyClosePrice latest, DailyClosePrice previous) {
             return null;
         }
         return latest.getClosePrice().subtract(previous.getClosePrice())
-                .multiply(BigDecimal.valueOf(100))
                 .divide(previous.getClosePrice(), 6, RoundingMode.HALF_UP);
     }
 }

@@ -79,7 +79,7 @@ class CompetitionStockControllerTest {
     void searchUsesDefaults() throws Exception {
         CompetitionStockSummary samsung = new CompetitionStockSummary(
                 "005930", "삼성전자", Market.KR, "KRW", UUID.randomUUID(),
-                new BigDecimal("60000"), new BigDecimal("60000"), new BigDecimal("59000"), new BigDecimal("1.694915"),
+                new BigDecimal("60000"), new BigDecimal("60000"), new BigDecimal("59000"), new BigDecimal("0.016949"),
                 LocalDate.of(2026, 11, 9), true, null);
         when(stockService.search(competitionId, null, null, 0, 20))
                 .thenReturn(new CompetitionStockListResponse(0, 20, 1, null, List.of(samsung)));
@@ -92,7 +92,7 @@ class CompetitionStockControllerTest {
                 .andExpect(jsonPath("$.stocks[0].ticker").value("005930"))
                 .andExpect(jsonPath("$.stocks[0].market").value("KR"))
                 .andExpect(jsonPath("$.stocks[0].closePrice").value(60000))
-                .andExpect(jsonPath("$.stocks[0].dailyChangeRate").value(1.694915))
+                .andExpect(jsonPath("$.stocks[0].dailyChangeRate").value(0.016949))
                 .andExpect(jsonPath("$.stocks[0].priceDate").value("2026-11-09"))
                 .andExpect(jsonPath("$.stocks[0].tradable").value(true));
     }
