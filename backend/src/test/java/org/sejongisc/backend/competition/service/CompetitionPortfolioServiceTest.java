@@ -26,19 +26,28 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionHoldingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ParticipationStatus;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ValuationStatus;
 import org.sejongisc.backend.competition.dto.CompetitionTradeResponse;
+import org.sejongisc.backend.competition.entity.LedgerType;
+import org.sejongisc.backend.competition.entity.AccountLedger;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
 import org.sejongisc.backend.competition.entity.CompetitionStock;
+import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
 import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Holding;
 import org.sejongisc.backend.competition.entity.Market;
+import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.entity.Trade;
 import org.sejongisc.backend.competition.entity.TradeSide;
+import org.sejongisc.backend.competition.repository.AccountLedgerRepository;
 import org.sejongisc.backend.competition.repository.CompetitionAccountRepository;
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
+import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
 import org.sejongisc.backend.competition.repository.DailyClosePriceRepository;
 import org.sejongisc.backend.competition.repository.HoldingRepository;
 import org.sejongisc.backend.competition.repository.TradeRepository;
@@ -70,6 +79,12 @@ class CompetitionPortfolioServiceTest {
 
     @Mock
     private DailyClosePriceRepository closePriceRepository;
+
+    @Mock
+    private AccountLedgerRepository ledgerRepository;
+
+    @Mock
+    private DailyAccountSnapshotRepository snapshotRepository;
 
     private final UUID competitionId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
@@ -194,6 +209,180 @@ class CompetitionPortfolioServiceTest {
     }
 
     @Test
+    @DisplayName("오늘 현황은 PROVISIONAL이고 현금 + 예금 + 보유 종목 평가액으로 총자산·수익률을 계산한다")
+    void getSummaryToday() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of(
+                holding(samsung, 10, "60000"),
+                holding(hynix, 5, "180000")));
+        when(closePriceRepository.findLatestTwoByStockIds(anyCollection(), eq(FRI_17)))
+                .thenReturn(List.of(price(samsung, FRI, "63000"), price(hynix, FRI, "190000")));
+        LocalDateTime dayStart = FRI.atStartOfDay();
+        LocalDateTime dayEnd = FRI.plusDays(1).atStartOfDay();
+        when(tradeRepository.sumFeeExecutedBefore(account, dayEnd)).thenReturn(new BigDecimal("60"));
+        when(ledgerRepository.sumInterestForNightsBefore(account, FRI)).thenReturn(new BigDecimal("82.1917"));
+        when(tradeRepository.existsByAccountAndExecutedAtLessThan(account, dayEnd)).thenReturn(true);
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 45))));
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 50))));
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, null);
+
+        // 평가액 630,000 + 950,000 = 1,580,000, 총자산 400,000 + 300,000 + 1,580,000 = 2,280,000
+        assertThat(summary.date()).isEqualTo(FRI);
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PROVISIONAL);
+        assertThat(summary.valuedAt()).isEqualTo(FRI_17);
+        assertThat(summary.initialBalance()).isEqualByComparingTo("2000000");
+        assertThat(summary.cashBalance()).isEqualByComparingTo("400000");
+        assertThat(summary.depositBalance()).isEqualByComparingTo("300000");
+        assertThat(summary.stockValue()).isEqualByComparingTo("1580000");
+        assertThat(summary.totalAssets()).isEqualByComparingTo("2280000");
+        assertThat(summary.profitLoss()).isEqualByComparingTo("280000");
+        assertThat(summary.returnRate()).isEqualByComparingTo("0.140000");
+        assertThat(summary.totalFees()).isEqualByComparingTo("60");
+        assertThat(summary.totalInterest()).isEqualByComparingTo("82.1917");
+        assertThat(summary.participationStatus()).isEqualTo(ParticipationStatus.PARTICIPATED);
+        assertThat(summary.participatedOnDate()).isTrue();
+        assertThat(summary.firstParticipatedAt()).isEqualTo(FRI.atTime(16, 45));
+        assertThat(summary.lastParticipatedAt()).isEqualTo(FRI.atTime(16, 50));
+    }
+
+    @Test
+    @DisplayName("보유 종목이 없으면 평가액은 0이고, 손실이면 손익과 수익률이 음수다")
+    void getSummaryWithoutHoldings() {
+        givenSummaryAccount("1999940", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, FRI);
+
+        // 수수료 60원만큼 손실: 1,999,940 ÷ 2,000,000 − 1 = −0.00003
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PROVISIONAL);
+        assertThat(summary.stockValue()).isEqualByComparingTo("0");
+        assertThat(summary.totalAssets()).isEqualByComparingTo("1999940");
+        assertThat(summary.profitLoss()).isEqualByComparingTo("-60");
+        assertThat(summary.returnRate()).isEqualByComparingTo("-0.000030");
+        verifyNoInteractions(closePriceRepository);
+    }
+
+    @Test
+    @DisplayName("종가가 없는 보유 종목이 있으면 임의로 평가하지 않고 PENDING_DATA로 평가 항목을 비운다")
+    void getSummaryPendingWhenPriceMissing() {
+        givenSummaryAccount("1400000", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of(holding(samsung, 10, "60000")));
+        when(closePriceRepository.findLatestTwoByStockIds(anyCollection(), eq(FRI_17))).thenReturn(List.of());
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, null);
+
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PENDING_DATA);
+        assertThat(summary.cashBalance()).isEqualByComparingTo("1400000");
+        assertThat(summary.stockValue()).isNull();
+        assertThat(summary.totalAssets()).isNull();
+        assertThat(summary.profitLoss()).isNull();
+        assertThat(summary.returnRate()).isNull();
+        assertThat(summary.valuedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("지난 날짜는 그날 마감 기준이다. 스냅샷 총자산에서 스냅샷 이후 저녁 거래 수수료를 빼고, 날짜별 잔액은 비운다")
+    void getSummaryPastDateIsEndOfDay() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+        LocalDate thu = FRI.minusDays(1);
+        LocalDateTime snapshotAt = thu.atTime(16, 5);
+        DailyAccountSnapshot snapshot = DailyAccountSnapshot.builder()
+                .account(account).snapshotDate(thu)
+                .totalValue(new BigDecimal("2100000")).profitRate(new BigDecimal("0.050000")).rank(3)
+                .build();
+        snapshot.setCreatedDate(snapshotAt);
+        when(snapshotRepository.findByAccountAndSnapshotDate(account, thu)).thenReturn(Optional.of(snapshot));
+        // 목요일까지 수수료 30원 중 20원은 스냅샷 전, 10원은 그날 저녁 거래분
+        when(tradeRepository.sumFeeExecutedBefore(account, FRI.atStartOfDay())).thenReturn(new BigDecimal("30"));
+        when(tradeRepository.sumFeeExecutedBefore(account, snapshotAt)).thenReturn(new BigDecimal("20"));
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, thu);
+
+        // 2,100,000 − 10 = 2,099,990, 수익률 2,099,990 ÷ 2,000,000 − 1 = 0.049995
+        assertThat(summary.date()).isEqualTo(thu);
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.FINALIZED);
+        assertThat(summary.valuedAt()).isEqualTo(snapshotAt);
+        assertThat(summary.totalAssets()).isEqualByComparingTo("2099990");
+        assertThat(summary.profitLoss()).isEqualByComparingTo("99990");
+        assertThat(summary.returnRate()).isEqualByComparingTo("0.049995");
+        assertThat(summary.totalFees()).isEqualByComparingTo("30");
+        assertThat(summary.cashBalance()).isNull();
+        assertThat(summary.depositBalance()).isNull();
+        assertThat(summary.stockValue()).isNull();
+        verifyNoInteractions(holdingRepository, closePriceRepository);
+    }
+
+    @Test
+    @DisplayName("스냅샷이 없는 지난 날짜(주말 등)는 PENDING_DATA다")
+    void getSummaryPastDateWithoutSnapshot() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+        LocalDate sat = FRI.minusDays(6);
+        when(snapshotRepository.findByAccountAndSnapshotDate(account, sat)).thenReturn(Optional.empty());
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, sat);
+
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PENDING_DATA);
+        assertThat(summary.totalAssets()).isNull();
+        assertThat(summary.valuedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("오늘 이후 날짜는 400")
+    void getSummaryRejectsFutureDate() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+
+        assertThatThrownBy(() -> service().getSummary(competitionId, userId, FRI.plusDays(1)))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    @Test
+    @DisplayName("예금 입출금만 해도 참여다. 그날 첫·마지막 참여 시각은 거래와 입출금 중 가장 이른·늦은 시각이다")
+    void depositCountsAsParticipation() {
+        givenSummaryAccount("2000000", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+        LocalDateTime dayStart = FRI.atStartOfDay();
+        LocalDateTime dayEnd = FRI.plusDays(1).atStartOfDay();
+        List<LedgerType> transfers = List.of(LedgerType.DEPOSIT, LedgerType.WITHDRAW);
+        when(ledgerRepository.existsByAccountAndTypeInAndExecutedAtLessThan(account, transfers, dayEnd)).thenReturn(true);
+        // 16:40 입금, 16:50 매수, 17:10 출금
+        when(ledgerRepository.findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                account, transfers, dayStart, dayEnd)).thenReturn(Optional.of(ledgerAt(FRI.atTime(16, 40))));
+        when(ledgerRepository.findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                account, transfers, dayStart, dayEnd)).thenReturn(Optional.of(ledgerAt(FRI.atTime(17, 10))));
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 50))));
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 50))));
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, null);
+
+        assertThat(summary.participationStatus()).isEqualTo(ParticipationStatus.PARTICIPATED);
+        assertThat(summary.participatedOnDate()).isTrue();
+        assertThat(summary.firstParticipatedAt()).isEqualTo(FRI.atTime(16, 40));
+        assertThat(summary.lastParticipatedAt()).isEqualTo(FRI.atTime(17, 10));
+    }
+
+    @Test
+    @DisplayName("매수·매도를 한 번도 안 했으면 NOT_PARTICIPATED, 제외됐으면 EXCLUDED")
+    void participationStatus() {
+        givenSummaryAccount("2000000", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+        CompetitionSummaryResponse notYet = service().getSummary(competitionId, userId, null);
+        assertThat(notYet.participationStatus()).isEqualTo(ParticipationStatus.NOT_PARTICIPATED);
+        assertThat(notYet.participatedOnDate()).isFalse();
+        assertThat(notYet.firstParticipatedAt()).isNull();
+
+        givenSummaryAccount("2000000", "0", ParticipantStatus.EXCLUDED);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+        assertThat(service().getSummary(competitionId, userId, null).participationStatus())
+                .isEqualTo(ParticipationStatus.EXCLUDED);
+    }
+
+    @Test
     @DisplayName("대회가 없으면 COMPETITION_NOT_FOUND")
     void competitionNotFound() {
         when(competitionRepository.findById(competitionId)).thenReturn(Optional.empty());
@@ -218,7 +407,27 @@ class CompetitionPortfolioServiceTest {
     private CompetitionPortfolioService service() {
         Clock clock = Clock.fixed(FRI_17.atZone(SEOUL).toInstant(), SEOUL);
         return new CompetitionPortfolioService(competitionRepository, participantRepository, accountRepository,
-                tradeRepository, holdingRepository, closePriceRepository, clock);
+                tradeRepository, holdingRepository, closePriceRepository, ledgerRepository, snapshotRepository, clock);
+    }
+
+    private void givenSummaryAccount(String cash, String deposit, ParticipantStatus status) {
+        competition = Competition.builder().initialCash(new BigDecimal("2000000")).build();
+        participant = CompetitionParticipant.builder()
+                .participantId(UUID.randomUUID()).competition(competition).status(status).build();
+        account = CompetitionAccount.builder()
+                .participant(participant)
+                .cash(new BigDecimal(cash))
+                .deposit(new BigDecimal(deposit))
+                .build();
+        givenAccount();
+    }
+
+    private AccountLedger ledgerAt(LocalDateTime executedAt) {
+        return AccountLedger.builder().account(account).type(LedgerType.DEPOSIT).executedAt(executedAt).build();
+    }
+
+    private Trade tradeAt(LocalDateTime executedAt) {
+        return Trade.builder().account(account).stock(samsung).executedAt(executedAt).build();
     }
 
     private void givenAccount() {

@@ -156,6 +156,28 @@ class TradeRepositoryTest {
     assertThat(trades).allMatch(trade -> Hibernate.isInitialized(trade.getStock()));
   }
 
+  @Test
+  void 그_시각_전_수수료를_합하고_그날의_첫_거래와_마지막_거래를_찾는다() {
+    CompetitionAccount account = saveAccount();
+    tradeRepository.saveAndFlush(trade(account, UUID.randomUUID(), LocalDateTime.of(2026, 11, 19, 17, 0))); // 수수료 60
+    tradeRepository.saveAndFlush(trade(account, UUID.randomUUID(), LocalDateTime.of(2026, 11, 20, 16, 45)));
+    tradeRepository.saveAndFlush(trade(account, UUID.randomUUID(), LocalDateTime.of(2026, 11, 20, 16, 50)));
+    tradeRepository.saveAndFlush(trade(account, UUID.randomUUID(), LocalDateTime.of(2026, 11, 21, 17, 0))); // 다음 날
+    LocalDateTime dayStart = LocalDateTime.of(2026, 11, 20, 0, 0);
+    LocalDateTime dayEnd = LocalDateTime.of(2026, 11, 21, 0, 0);
+
+    assertThat(tradeRepository.sumFeeExecutedBefore(account, dayEnd)).isEqualByComparingTo("180");
+    assertThat(tradeRepository.sumFeeExecutedBefore(saveAccount(), dayEnd)).isEqualByComparingTo("0");
+    assertThat(tradeRepository.existsByAccountAndExecutedAtLessThan(account, dayStart.minusDays(1))).isFalse();
+    assertThat(tradeRepository.existsByAccountAndExecutedAtLessThan(account, dayEnd)).isTrue();
+    assertThat(tradeRepository
+        .findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(account, dayStart, dayEnd))
+        .map(Trade::getExecutedAt).contains(LocalDateTime.of(2026, 11, 20, 16, 45));
+    assertThat(tradeRepository
+        .findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(account, dayStart, dayEnd))
+        .map(Trade::getExecutedAt).contains(LocalDateTime.of(2026, 11, 20, 16, 50));
+  }
+
   private Trade trade(CompetitionAccount account, UUID key) {
     return trade(account, key, LocalDateTime.of(2026, 11, 20, 17, 0));
   }

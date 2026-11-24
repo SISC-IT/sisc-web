@@ -109,6 +109,43 @@ class AccountLedgerRepositoryTest {
   }
 
   @Test
+  void 그날_전날_밤까지의_이자를_이자_날짜로_합한다() {
+    CompetitionAccount account = saveAccount();
+    ledgerRepository.saveAndFlush(interest(account, MON.minusDays(1)));
+    // 월요일 밤 이자를 늦게(수요일에) 지급해도 월요일 밤 몫으로 센다
+    ledgerRepository.saveAndFlush(interest(account, MON, MON.plusDays(2).atTime(15, 0)));
+    ledgerRepository.saveAndFlush(transfer(account, LedgerType.DEPOSIT)); // 입금은 이자가 아니다
+
+    assertThat(ledgerRepository.sumInterestForNightsBefore(account, MON)).isEqualByComparingTo("82.1917");
+    assertThat(ledgerRepository.sumInterestForNightsBefore(account, MON.plusDays(1))).isEqualByComparingTo("164.3834");
+    assertThat(ledgerRepository.sumInterestForNightsBefore(saveAccount(), MON.plusDays(1))).isEqualByComparingTo("0");
+  }
+
+  @Test
+  void 입출금만_골라_참여_여부와_그날_첫_마지막_기록을_찾는다() {
+    CompetitionAccount account = saveAccount();
+    List<LedgerType> transfers = List.of(LedgerType.DEPOSIT, LedgerType.WITHDRAW);
+    LocalDateTime dayStart = MON.atStartOfDay();
+    LocalDateTime dayEnd = MON.plusDays(1).atStartOfDay();
+    ledgerRepository.saveAndFlush(interest(account, MON.minusDays(1))); // 이자는 참여가 아니다 (월 00:00)
+
+    assertThat(ledgerRepository.existsByAccountAndTypeInAndExecutedAtLessThan(account, transfers, dayEnd)).isFalse();
+
+    ledgerRepository.saveAndFlush(transfer(account, LedgerType.DEPOSIT, MON.atTime(16, 40)));
+    ledgerRepository.saveAndFlush(transfer(account, LedgerType.WITHDRAW, MON.atTime(17, 10)));
+
+    assertThat(ledgerRepository.existsByAccountAndTypeInAndExecutedAtLessThan(account, transfers, dayEnd)).isTrue();
+    assertThat(ledgerRepository
+        .findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+            account, transfers, dayStart, dayEnd))
+        .map(AccountLedger::getExecutedAt).contains(MON.atTime(16, 40));
+    assertThat(ledgerRepository
+        .findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+            account, transfers, dayStart, dayEnd))
+        .map(AccountLedger::getExecutedAt).contains(MON.atTime(17, 10));
+  }
+
+  @Test
   void 같은_계좌_같은_날짜_이자는_두_번_저장할_수_없다() {
     CompetitionAccount account = saveAccount();
     ledgerRepository.saveAndFlush(interest(account, MON));

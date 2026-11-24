@@ -25,6 +25,7 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
 import org.sejongisc.backend.competition.dto.CompetitionHoldingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse;
 import org.sejongisc.backend.competition.dto.CompetitionTradeResponse;
 import org.sejongisc.backend.competition.entity.TradeSide;
 import org.sejongisc.backend.competition.service.CompetitionPortfolioService;
@@ -125,5 +126,58 @@ class CompetitionPortfolioControllerTest {
                 .andExpect(jsonPath("$[1].ticker").value("035420"))
                 .andExpect(jsonPath("$[1].closePrice").doesNotExist())
                 .andExpect(jsonPath("$[1].profitRate").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("GET /me/summary - date를 넘기고 명세 필드 이름으로 반환한다")
+    void getSummary() throws Exception {
+        LocalDate date = LocalDate.of(2026, 11, 20);
+        when(portfolioService.getSummary(competitionId, userId, date)).thenReturn(CompetitionSummaryResponse.builder()
+                .date(date)
+                .valuationStatus(CompetitionSummaryResponse.ValuationStatus.PROVISIONAL)
+                .valuedAt(LocalDateTime.of(2026, 11, 20, 17, 0))
+                .initialBalance(new BigDecimal("10000000"))
+                .cashBalance(new BigDecimal("6999900"))
+                .depositBalance(new BigDecimal("2000000"))
+                .stockValue(new BigDecimal("1000000"))
+                .totalAssets(new BigDecimal("9999900"))
+                .profitLoss(new BigDecimal("-100"))
+                .returnRate(new BigDecimal("-0.000010"))
+                .totalFees(new BigDecimal("100"))
+                .totalInterest(BigDecimal.ZERO)
+                .participationStatus(CompetitionSummaryResponse.ParticipationStatus.PARTICIPATED)
+                .participatedOnDate(true)
+                .firstParticipatedAt(LocalDateTime.of(2026, 11, 20, 16, 45))
+                .lastParticipatedAt(LocalDateTime.of(2026, 11, 20, 16, 50))
+                .build());
+
+        mockMvc.perform(get("/api/competitions/{competitionId}/me/summary", competitionId).param("date", "2026-11-20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.date").value("2026-11-20"))
+                .andExpect(jsonPath("$.valuationStatus").value("PROVISIONAL"))
+                .andExpect(jsonPath("$.cashBalance").value(6999900))
+                .andExpect(jsonPath("$.totalAssets").value(9999900))
+                .andExpect(jsonPath("$.returnRate").value(-0.00001))
+                .andExpect(jsonPath("$.participationStatus").value("PARTICIPATED"))
+                .andExpect(jsonPath("$.participatedOnDate").value(true))
+                .andExpect(jsonPath("$.firstParticipatedAt").value("2026-11-20T16:45:00"));
+    }
+
+    @Test
+    @DisplayName("GET /me/summary - date를 생략하면 null을 넘겨 서비스가 오늘로 정한다")
+    void getSummaryWithoutDate() throws Exception {
+        when(portfolioService.getSummary(competitionId, userId, null)).thenReturn(CompetitionSummaryResponse.builder()
+                .valuationStatus(CompetitionSummaryResponse.ValuationStatus.PENDING_DATA).build());
+
+        mockMvc.perform(get("/api/competitions/{competitionId}/me/summary", competitionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valuationStatus").value("PENDING_DATA"));
+    }
+
+    @Test
+    @DisplayName("GET /me/summary - 날짜 형식이 틀리면 400")
+    void getSummaryRejectsBadDate() throws Exception {
+        mockMvc.perform(get("/api/competitions/{competitionId}/me/summary", competitionId).param("date", "2026/11/20"))
+                .andExpect(status().isBadRequest());
     }
 }

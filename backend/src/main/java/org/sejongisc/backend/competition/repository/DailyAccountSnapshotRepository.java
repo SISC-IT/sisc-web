@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.sejongisc.backend.competition.entity.Competition;
+import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
 import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -48,4 +49,6 @@ public interface DailyAccountSnapshotRepository extends JpaRepository<DailyAccou
             @Param("competition") Competition competition,
             @Param("snapshotDate") LocalDate snapshotDate,
             @Param("status") ParticipantStatus status);
+
+    Optional<DailyAccountSnapshot> findByAccountAndSnapshotDate(CompetitionAccount account, LocalDate snapshotDate);
 }
