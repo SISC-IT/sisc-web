@@ -34,8 +34,8 @@ public record CompetitionSummaryResponse(
     }
 
     public enum ParticipationStatus {
-        PARTICIPATED,     // 대회에서 매수·매도를 한 번이라도 했다
-        NOT_PARTICIPATED, // 아직 매수·매도를 하지 않았다
+        PARTICIPATED,     // 매수·매도나 예금 입출금을 한 번이라도 했다
+        NOT_PARTICIPATED, // 아직 아무 거래도 하지 않았다
         EXCLUDED          // 대회에서 제외됐다
     }
 }

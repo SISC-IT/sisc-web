@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.common.exception.CustomException;
@@ -21,12 +22,14 @@ import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse;
 import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ParticipationStatus;
 import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ValuationStatus;
 import org.sejongisc.backend.competition.dto.CompetitionTradeResponse;
+import org.sejongisc.backend.competition.entity.AccountLedger;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
 import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
 import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Holding;
+import org.sejongisc.backend.competition.entity.LedgerType;
 import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.entity.Trade;
 import org.sejongisc.backend.competition.repository.AccountLedgerRepository;
@@ -50,6 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompetitionPortfolioService {
 
     private static final int MAX_PAGE_SIZE = 100;
+    private static final List<LedgerType> TRANSFER_TYPES = List.of(LedgerType.DEPOSIT, LedgerType.WITHDRAW);
 
     // 평가액이 큰 순서. 종가가 없어 평가액이 null인 종목은 뒤로 보낸다.
     private static final Comparator<CompetitionHoldingResponse> BY_EVALUATION_DESC = Comparator.comparing(
@@ -157,34 +161,47 @@ public class CompetitionPortfolioService {
     }
 
     // 날짜와 상관없이 기록으로 알 수 있는 항목: 그날 기준 누적 수수료·이자, 참여 상태, 그날 거래 시각
+    // 참여는 매수·매도나 예금 입출금이다. 이자는 배치가 주는 것이라 참여가 아니다.
     private CompetitionSummaryResponse.CompetitionSummaryResponseBuilder activityOn(
             CompetitionAccount account, LocalDate day) {
         LocalDateTime dayStart = day.atStartOfDay();
         LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
-        Optional<Trade> first = tradeRepository
-                .findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
-                        account, dayStart, dayEnd);
-        Optional<Trade> last = tradeRepository
-                .findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
-                        account, dayStart, dayEnd);
+        Optional<LocalDateTime> first = earliest(
+                tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                        account, dayStart, dayEnd).map(Trade::getExecutedAt),
+                ledgerRepository.findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                        account, TRANSFER_TYPES, dayStart, dayEnd).map(AccountLedger::getExecutedAt));
+        Optional<LocalDateTime> last = latest(
+                tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                        account, dayStart, dayEnd).map(Trade::getExecutedAt),
+                ledgerRepository.findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                        account, TRANSFER_TYPES, dayStart, dayEnd).map(AccountLedger::getExecutedAt));
         return CompetitionSummaryResponse.builder()
                 .totalFees(tradeRepository.sumFeeExecutedBefore(account, dayEnd))
                 .totalInterest(ledgerRepository.sumInterestForNightsBefore(account, day))
                 .participationStatus(participationStatus(account, dayEnd))
                 .participatedOnDate(first.isPresent())
-                .firstParticipatedAt(first.map(Trade::getExecutedAt).orElse(null))
-                .lastParticipatedAt(last.map(Trade::getExecutedAt).orElse(null));
+                .firstParticipatedAt(first.orElse(null))
+                .lastParticipatedAt(last.orElse(null));
     }
 
-    // 그날까지 매수·매도를 한 번이라도 했는지. 예금 입출금은 참여로 치지 않는다.
+    // 그날까지 매수·매도나 예금 입출금을 한 번이라도 했는지.
     // 제외 이력은 남기지 않아 EXCLUDED는 날짜와 상관없이 지금 상태를 따른다.
     private ParticipationStatus participationStatus(CompetitionAccount account, LocalDateTime dayEnd) {
         if (account.getParticipant().getStatus() == ParticipantStatus.EXCLUDED) {
             return ParticipationStatus.EXCLUDED;
         }
-        return tradeRepository.existsByAccountAndExecutedAtLessThan(account, dayEnd)
-                ? ParticipationStatus.PARTICIPATED
-                : ParticipationStatus.NOT_PARTICIPATED;
+        boolean participated = tradeRepository.existsByAccountAndExecutedAtLessThan(account, dayEnd)
+                || ledgerRepository.existsByAccountAndTypeInAndExecutedAtLessThan(account, TRANSFER_TYPES, dayEnd);
+        return participated ? ParticipationStatus.PARTICIPATED : ParticipationStatus.NOT_PARTICIPATED;
+    }
+
+    private static Optional<LocalDateTime> earliest(Optional<LocalDateTime> a, Optional<LocalDateTime> b) {
+        return Stream.of(a, b).flatMap(Optional::stream).min(Comparator.naturalOrder());
+    }
+
+    private static Optional<LocalDateTime> latest(Optional<LocalDateTime> a, Optional<LocalDateTime> b) {
+        return Stream.of(a, b).flatMap(Optional::stream).max(Comparator.naturalOrder());
     }
 
     private List<CompetitionHoldingResponse> holdingResponses(CompetitionAccount account) {

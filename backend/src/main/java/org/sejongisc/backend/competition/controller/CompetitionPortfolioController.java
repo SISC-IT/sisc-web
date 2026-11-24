@@ -77,8 +77,8 @@ public class CompetitionPortfolioController {
             - totalAssets = cashBalance + depositBalance + stockValue, profitLoss = totalAssets − initialBalance입니다. \s
             - returnRate는 초기 자금 대비 비율입니다(0.05는 5%). 개인 순위의 profitRate와 계산식이 같고, 오늘 값은 순위보다 최신입니다. \s
             - totalFees, totalInterest는 그날 기준 누적입니다. totalInterest는 그날 0시까지 지급됐어야 할 이자(전날 밤까지)의 합입니다. \s
-            - participationStatus는 그날까지 매수·매도를 한 번이라도 했으면 PARTICIPATED, 아니면 NOT_PARTICIPATED입니다. 예금 입출금은 참여로 치지 않습니다. EXCLUDED는 날짜와 상관없이 지금 제외 상태이면 반환합니다. \s
-            - participatedOnDate, firstParticipatedAt, lastParticipatedAt은 그날의 매수·매도 기준입니다. \s
+            - participationStatus는 그날까지 매수·매도나 예금 입출금을 한 번이라도 했으면 PARTICIPATED, 아니면 NOT_PARTICIPATED입니다. 이자는 참여로 치지 않습니다. EXCLUDED는 날짜와 상관없이 지금 제외 상태이면 반환합니다. \s
+            - participatedOnDate, firstParticipatedAt, lastParticipatedAt은 그날의 매수·매도와 예금 입출금 기준입니다. \s
             - 대회가 라운드 1개이고 국내 주식만 거래해서 명세의 round, appliedExchangeRate는 없습니다.
             """
     )

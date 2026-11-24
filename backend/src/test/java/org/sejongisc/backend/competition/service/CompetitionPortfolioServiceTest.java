@@ -30,6 +30,8 @@ import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse;
 import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ParticipationStatus;
 import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ValuationStatus;
 import org.sejongisc.backend.competition.dto.CompetitionTradeResponse;
+import org.sejongisc.backend.competition.entity.LedgerType;
+import org.sejongisc.backend.competition.entity.AccountLedger;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
@@ -338,6 +340,33 @@ class CompetitionPortfolioServiceTest {
     }
 
     @Test
+    @DisplayName("예금 입출금만 해도 참여다. 그날 첫·마지막 참여 시각은 거래와 입출금 중 가장 이른·늦은 시각이다")
+    void depositCountsAsParticipation() {
+        givenSummaryAccount("2000000", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+        LocalDateTime dayStart = FRI.atStartOfDay();
+        LocalDateTime dayEnd = FRI.plusDays(1).atStartOfDay();
+        List<LedgerType> transfers = List.of(LedgerType.DEPOSIT, LedgerType.WITHDRAW);
+        when(ledgerRepository.existsByAccountAndTypeInAndExecutedAtLessThan(account, transfers, dayEnd)).thenReturn(true);
+        // 16:40 입금, 16:50 매수, 17:10 출금
+        when(ledgerRepository.findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                account, transfers, dayStart, dayEnd)).thenReturn(Optional.of(ledgerAt(FRI.atTime(16, 40))));
+        when(ledgerRepository.findFirstByAccountAndTypeInAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                account, transfers, dayStart, dayEnd)).thenReturn(Optional.of(ledgerAt(FRI.atTime(17, 10))));
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 50))));
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 50))));
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, null);
+
+        assertThat(summary.participationStatus()).isEqualTo(ParticipationStatus.PARTICIPATED);
+        assertThat(summary.participatedOnDate()).isTrue();
+        assertThat(summary.firstParticipatedAt()).isEqualTo(FRI.atTime(16, 40));
+        assertThat(summary.lastParticipatedAt()).isEqualTo(FRI.atTime(17, 10));
+    }
+
+    @Test
     @DisplayName("매수·매도를 한 번도 안 했으면 NOT_PARTICIPATED, 제외됐으면 EXCLUDED")
     void participationStatus() {
         givenSummaryAccount("2000000", "0", ParticipantStatus.ACTIVE);
@@ -391,6 +420,10 @@ class CompetitionPortfolioServiceTest {
                 .deposit(new BigDecimal(deposit))
                 .build();
         givenAccount();
+    }
+
+    private AccountLedger ledgerAt(LocalDateTime executedAt) {
+        return AccountLedger.builder().account(account).type(LedgerType.DEPOSIT).executedAt(executedAt).build();
     }
 
     private Trade tradeAt(LocalDateTime executedAt) {
