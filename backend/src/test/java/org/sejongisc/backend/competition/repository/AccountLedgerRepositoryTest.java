@@ -109,18 +109,16 @@ class AccountLedgerRepositoryTest {
   }
 
   @Test
-  void 그_시각_전에_더해진_이자만_합한다() {
+  void 그날_전날_밤까지의_이자를_이자_날짜로_합한다() {
     CompetitionAccount account = saveAccount();
-    ledgerRepository.saveAndFlush(interest(account, MON.minusDays(1))); // 11/23 00:00 지급
-    ledgerRepository.saveAndFlush(interest(account, MON));              // 11/24 00:00 지급
+    ledgerRepository.saveAndFlush(interest(account, MON.minusDays(1)));
+    // 월요일 밤 이자를 늦게(수요일에) 지급해도 월요일 밤 몫으로 센다
+    ledgerRepository.saveAndFlush(interest(account, MON, MON.plusDays(2).atTime(15, 0)));
     ledgerRepository.saveAndFlush(transfer(account, LedgerType.DEPOSIT)); // 입금은 이자가 아니다
 
-    assertThat(ledgerRepository.sumInterestExecutedBefore(account, MON.plusDays(1).atStartOfDay()))
-        .isEqualByComparingTo("82.1917");
-    assertThat(ledgerRepository.sumInterestExecutedBefore(account, MON.plusDays(2).atStartOfDay()))
-        .isEqualByComparingTo("164.3834");
-    assertThat(ledgerRepository.sumInterestExecutedBefore(saveAccount(), MON.plusDays(2).atStartOfDay()))
-        .isEqualByComparingTo("0");
+    assertThat(ledgerRepository.sumInterestForNightsBefore(account, MON)).isEqualByComparingTo("82.1917");
+    assertThat(ledgerRepository.sumInterestForNightsBefore(account, MON.plusDays(1))).isEqualByComparingTo("164.3834");
+    assertThat(ledgerRepository.sumInterestForNightsBefore(saveAccount(), MON.plusDays(1))).isEqualByComparingTo("0");
   }
 
   @Test

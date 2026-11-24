@@ -5,7 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.Builder;
 
-// 평가할 수 없는 날(PENDING_DATA)은 평가 항목(stockValue, totalAssets, profitLoss, returnRate, valuedAt)이 null이다.
+// 지난 날짜는 cashBalance, depositBalance, stockValue가 null이다(날짜별로 남기지 않음).
+// PENDING_DATA는 평가 항목(stockValue, totalAssets, profitLoss, returnRate, valuedAt)도 null이다.
 @Builder
 public record CompetitionSummaryResponse(
         LocalDate date,

@@ -69,14 +69,15 @@ public class CompetitionPortfolioController {
     @Operation(
             summary = "내 날짜별 현황 조회",
             description = """
-            로그인한 참가자의 그날 자산·수익률·참여 상태를 반환합니다. date를 생략하면 오늘(KST)입니다. \s
-            - 오늘은 PROVISIONAL입니다. 지금 잔액과 지금 공개된 종가(16:30 공개)로 평가하고, valuedAt은 평가 시각입니다. \s
-            - 오늘이 아닌 날짜는 날짜별 잔액을 아직 남기지 않아 PENDING_DATA이고, 평가 항목(stockValue, totalAssets, profitLoss, returnRate)과 잔액은 null입니다. \s
-            - 종가가 없는 보유 종목이 있으면 오늘도 PENDING_DATA이고 평가 항목은 null입니다. \s
+            로그인한 참가자의 그날 자산·수익률·참여 상태를 반환합니다. date를 생략하면 오늘(KST)이고, 오늘 이후 날짜는 400입니다. \s
+            - 오늘은 PROVISIONAL입니다. 지금 잔액과 지금 공개된 종가로 평가합니다. 종가는 16:30에 공개되므로 그 전에는 전 거래일 종가입니다. valuedAt은 평가 시각입니다. \s
+            - 지난 날짜는 그날 16:00 순위 스냅샷이 있으면 FINALIZED이고 totalAssets, profitLoss, returnRate를 스냅샷 값으로 줍니다. 스냅샷이 없는 날(주말·공휴일 등)은 PENDING_DATA입니다. \s
+            - 지난 날짜의 cashBalance, depositBalance, stockValue는 날짜별로 남기지 않아 null입니다. \s
+            - 오늘이라도 종가가 없는 보유 종목이 있으면 PENDING_DATA이고 평가 항목(stockValue, totalAssets, profitLoss, returnRate)은 null입니다. \s
             - totalAssets = cashBalance + depositBalance + stockValue, profitLoss = totalAssets − initialBalance입니다. \s
-            - returnRate는 초기 자금 대비 비율입니다(0.05는 5%). 개인 순위의 profitRate와 계산식은 같지만, 순위는 하루 한 번 수집 직후 계산해 시점이 다를 수 있습니다. \s
-            - totalFees, totalInterest는 그날까지의 누적입니다. \s
-            - participationStatus는 대회 전체 기준입니다. 매수·매도를 한 번이라도 했으면 PARTICIPATED, 아니면 NOT_PARTICIPATED, 제외됐으면 EXCLUDED입니다. 예금 입출금은 참여로 치지 않습니다. \s
+            - returnRate는 초기 자금 대비 비율입니다(0.05는 5%). 개인 순위의 profitRate와 계산식이 같고, 오늘 값은 순위보다 최신입니다. \s
+            - totalFees, totalInterest는 그날 기준 누적입니다. totalInterest는 그날 0시까지 지급됐어야 할 이자(전날 밤까지)의 합입니다. \s
+            - participationStatus는 그날까지 매수·매도를 한 번이라도 했으면 PARTICIPATED, 아니면 NOT_PARTICIPATED입니다. 예금 입출금은 참여로 치지 않습니다. EXCLUDED는 날짜와 상관없이 지금 제외 상태이면 반환합니다. \s
             - participatedOnDate, firstParticipatedAt, lastParticipatedAt은 그날의 매수·매도 기준입니다. \s
             - 대회가 라운드 1개이고 국내 주식만 거래해서 명세의 round, appliedExchangeRate는 없습니다.
             """

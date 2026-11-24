@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -24,12 +25,12 @@ public interface AccountLedgerRepository extends JpaRepository<AccountLedger, UU
     List<AccountLedger> findAllByAccountInAndExecutedAtGreaterThanEqual(
             Collection<CompetitionAccount> accounts, LocalDateTime from);
 
-    // 그 시각 전에 예금에 더해진 이자 합계
+    // 그날 전날 밤까지의 이자 합계. 이자는 자정에 지급되므로 그날 기준 예금에 들어 있어야 할 이자다.
+    // 지급 시각이 아니라 이자 날짜로 세서, 늦게 지급된 이자도 원래 날짜에 포함한다.
     @Query("""
             select coalesce(sum(l.amount), 0) from AccountLedger l
             where l.account = :account and l.type = org.sejongisc.backend.competition.entity.LedgerType.INTEREST
-              and l.executedAt < :before
+              and l.interestDate < :day
             """)
-    BigDecimal sumInterestExecutedBefore(@Param("account") CompetitionAccount account,
-                                         @Param("before") LocalDateTime before);
+    BigDecimal sumInterestForNightsBefore(@Param("account") CompetitionAccount account, @Param("day") LocalDate day);
 }

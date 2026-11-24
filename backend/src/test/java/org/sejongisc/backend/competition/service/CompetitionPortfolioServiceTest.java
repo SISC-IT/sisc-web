@@ -34,6 +34,7 @@ import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
 import org.sejongisc.backend.competition.entity.CompetitionStock;
+import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
 import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Holding;
 import org.sejongisc.backend.competition.entity.Market;
@@ -44,6 +45,7 @@ import org.sejongisc.backend.competition.repository.AccountLedgerRepository;
 import org.sejongisc.backend.competition.repository.CompetitionAccountRepository;
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
+import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
 import org.sejongisc.backend.competition.repository.DailyClosePriceRepository;
 import org.sejongisc.backend.competition.repository.HoldingRepository;
 import org.sejongisc.backend.competition.repository.TradeRepository;
@@ -78,6 +80,9 @@ class CompetitionPortfolioServiceTest {
 
     @Mock
     private AccountLedgerRepository ledgerRepository;
+
+    @Mock
+    private DailyAccountSnapshotRepository snapshotRepository;
 
     private final UUID competitionId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
@@ -213,7 +218,7 @@ class CompetitionPortfolioServiceTest {
         LocalDateTime dayStart = FRI.atStartOfDay();
         LocalDateTime dayEnd = FRI.plusDays(1).atStartOfDay();
         when(tradeRepository.sumFeeExecutedBefore(account, dayEnd)).thenReturn(new BigDecimal("60"));
-        when(ledgerRepository.sumInterestExecutedBefore(account, dayEnd)).thenReturn(new BigDecimal("82.1917"));
+        when(ledgerRepository.sumInterestForNightsBefore(account, FRI)).thenReturn(new BigDecimal("82.1917"));
         when(tradeRepository.existsByAccountAndExecutedAtLessThan(account, dayEnd)).thenReturn(true);
         when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
                 account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 45))));
@@ -277,22 +282,55 @@ class CompetitionPortfolioServiceTest {
     }
 
     @Test
-    @DisplayName("오늘이 아닌 날짜는 잔액을 평가하지 않고 PENDING_DATA다. 누적 수수료는 그날 끝까지로 센다")
-    void getSummaryPastDateIsPending() {
+    @DisplayName("지난 날짜는 그날 순위 스냅샷으로 FINALIZED 총자산·수익률을 주고, 날짜별 잔액은 비운다")
+    void getSummaryPastDateFromSnapshot() {
         givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
         LocalDate thu = FRI.minusDays(1);
+        DailyAccountSnapshot snapshot = DailyAccountSnapshot.builder()
+                .account(account).snapshotDate(thu)
+                .totalValue(new BigDecimal("2100000")).profitRate(new BigDecimal("0.050000")).rank(3)
+                .build();
+        snapshot.setCreatedDate(thu.atTime(16, 5));
+        when(snapshotRepository.findByAccountAndSnapshotDate(account, thu)).thenReturn(Optional.of(snapshot));
         when(tradeRepository.sumFeeExecutedBefore(account, FRI.atStartOfDay())).thenReturn(new BigDecimal("30"));
 
         CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, thu);
 
         assertThat(summary.date()).isEqualTo(thu);
-        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PENDING_DATA);
-        assertThat(summary.initialBalance()).isEqualByComparingTo("2000000");
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.FINALIZED);
+        assertThat(summary.valuedAt()).isEqualTo(thu.atTime(16, 5));
+        assertThat(summary.totalAssets()).isEqualByComparingTo("2100000");
+        assertThat(summary.profitLoss()).isEqualByComparingTo("100000");
+        assertThat(summary.returnRate()).isEqualByComparingTo("0.050000");
         assertThat(summary.cashBalance()).isNull();
         assertThat(summary.depositBalance()).isNull();
-        assertThat(summary.totalAssets()).isNull();
+        assertThat(summary.stockValue()).isNull();
         assertThat(summary.totalFees()).isEqualByComparingTo("30");
         verifyNoInteractions(holdingRepository, closePriceRepository);
+    }
+
+    @Test
+    @DisplayName("스냅샷이 없는 지난 날짜(주말 등)는 PENDING_DATA다")
+    void getSummaryPastDateWithoutSnapshot() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+        LocalDate sat = FRI.minusDays(6);
+        when(snapshotRepository.findByAccountAndSnapshotDate(account, sat)).thenReturn(Optional.empty());
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, sat);
+
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PENDING_DATA);
+        assertThat(summary.totalAssets()).isNull();
+        assertThat(summary.valuedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("오늘 이후 날짜는 400")
+    void getSummaryRejectsFutureDate() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+
+        assertThatThrownBy(() -> service().getSummary(competitionId, userId, FRI.plusDays(1)))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
     }
 
     @Test
@@ -336,7 +374,7 @@ class CompetitionPortfolioServiceTest {
     private CompetitionPortfolioService service() {
         Clock clock = Clock.fixed(FRI_17.atZone(SEOUL).toInstant(), SEOUL);
         return new CompetitionPortfolioService(competitionRepository, participantRepository, accountRepository,
-                tradeRepository, holdingRepository, closePriceRepository, ledgerRepository, clock);
+                tradeRepository, holdingRepository, closePriceRepository, ledgerRepository, snapshotRepository, clock);
     }
 
     private void givenSummaryAccount(String cash, String deposit, ParticipantStatus status) {
