@@ -26,6 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionHoldingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ParticipationStatus;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse.ValuationStatus;
 import org.sejongisc.backend.competition.dto.CompetitionTradeResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
@@ -34,8 +37,10 @@ import org.sejongisc.backend.competition.entity.CompetitionStock;
 import org.sejongisc.backend.competition.entity.DailyClosePrice;
 import org.sejongisc.backend.competition.entity.Holding;
 import org.sejongisc.backend.competition.entity.Market;
+import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.entity.Trade;
 import org.sejongisc.backend.competition.entity.TradeSide;
+import org.sejongisc.backend.competition.repository.AccountLedgerRepository;
 import org.sejongisc.backend.competition.repository.CompetitionAccountRepository;
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
@@ -70,6 +75,9 @@ class CompetitionPortfolioServiceTest {
 
     @Mock
     private DailyClosePriceRepository closePriceRepository;
+
+    @Mock
+    private AccountLedgerRepository ledgerRepository;
 
     private final UUID competitionId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
@@ -194,6 +202,116 @@ class CompetitionPortfolioServiceTest {
     }
 
     @Test
+    @DisplayName("오늘 현황은 PROVISIONAL이고 현금 + 예금 + 보유 종목 평가액으로 총자산·수익률을 계산한다")
+    void getSummaryToday() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of(
+                holding(samsung, 10, "60000"),
+                holding(hynix, 5, "180000")));
+        when(closePriceRepository.findLatestTwoByStockIds(anyCollection(), eq(FRI_17)))
+                .thenReturn(List.of(price(samsung, FRI, "63000"), price(hynix, FRI, "190000")));
+        LocalDateTime dayStart = FRI.atStartOfDay();
+        LocalDateTime dayEnd = FRI.plusDays(1).atStartOfDay();
+        when(tradeRepository.sumFeeExecutedBefore(account, dayEnd)).thenReturn(new BigDecimal("60"));
+        when(ledgerRepository.sumInterestExecutedBefore(account, dayEnd)).thenReturn(new BigDecimal("82.1917"));
+        when(tradeRepository.existsByAccountAndExecutedAtLessThan(account, dayEnd)).thenReturn(true);
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtAsc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 45))));
+        when(tradeRepository.findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(
+                account, dayStart, dayEnd)).thenReturn(Optional.of(tradeAt(FRI.atTime(16, 50))));
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, null);
+
+        // 평가액 630,000 + 950,000 = 1,580,000, 총자산 400,000 + 300,000 + 1,580,000 = 2,280,000
+        assertThat(summary.date()).isEqualTo(FRI);
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PROVISIONAL);
+        assertThat(summary.valuedAt()).isEqualTo(FRI_17);
+        assertThat(summary.initialBalance()).isEqualByComparingTo("2000000");
+        assertThat(summary.cashBalance()).isEqualByComparingTo("400000");
+        assertThat(summary.depositBalance()).isEqualByComparingTo("300000");
+        assertThat(summary.stockValue()).isEqualByComparingTo("1580000");
+        assertThat(summary.totalAssets()).isEqualByComparingTo("2280000");
+        assertThat(summary.profitLoss()).isEqualByComparingTo("280000");
+        assertThat(summary.returnRate()).isEqualByComparingTo("0.140000");
+        assertThat(summary.totalFees()).isEqualByComparingTo("60");
+        assertThat(summary.totalInterest()).isEqualByComparingTo("82.1917");
+        assertThat(summary.participationStatus()).isEqualTo(ParticipationStatus.PARTICIPATED);
+        assertThat(summary.participatedOnDate()).isTrue();
+        assertThat(summary.firstParticipatedAt()).isEqualTo(FRI.atTime(16, 45));
+        assertThat(summary.lastParticipatedAt()).isEqualTo(FRI.atTime(16, 50));
+    }
+
+    @Test
+    @DisplayName("보유 종목이 없으면 평가액은 0이고, 손실이면 손익과 수익률이 음수다")
+    void getSummaryWithoutHoldings() {
+        givenSummaryAccount("1999940", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, FRI);
+
+        // 수수료 60원만큼 손실: 1,999,940 ÷ 2,000,000 − 1 = −0.00003
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PROVISIONAL);
+        assertThat(summary.stockValue()).isEqualByComparingTo("0");
+        assertThat(summary.totalAssets()).isEqualByComparingTo("1999940");
+        assertThat(summary.profitLoss()).isEqualByComparingTo("-60");
+        assertThat(summary.returnRate()).isEqualByComparingTo("-0.000030");
+        verifyNoInteractions(closePriceRepository);
+    }
+
+    @Test
+    @DisplayName("종가가 없는 보유 종목이 있으면 임의로 평가하지 않고 PENDING_DATA로 평가 항목을 비운다")
+    void getSummaryPendingWhenPriceMissing() {
+        givenSummaryAccount("1400000", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of(holding(samsung, 10, "60000")));
+        when(closePriceRepository.findLatestTwoByStockIds(anyCollection(), eq(FRI_17))).thenReturn(List.of());
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, null);
+
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PENDING_DATA);
+        assertThat(summary.cashBalance()).isEqualByComparingTo("1400000");
+        assertThat(summary.stockValue()).isNull();
+        assertThat(summary.totalAssets()).isNull();
+        assertThat(summary.profitLoss()).isNull();
+        assertThat(summary.returnRate()).isNull();
+        assertThat(summary.valuedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("오늘이 아닌 날짜는 잔액을 평가하지 않고 PENDING_DATA다. 누적 수수료는 그날 끝까지로 센다")
+    void getSummaryPastDateIsPending() {
+        givenSummaryAccount("400000", "300000", ParticipantStatus.ACTIVE);
+        LocalDate thu = FRI.minusDays(1);
+        when(tradeRepository.sumFeeExecutedBefore(account, FRI.atStartOfDay())).thenReturn(new BigDecimal("30"));
+
+        CompetitionSummaryResponse summary = service().getSummary(competitionId, userId, thu);
+
+        assertThat(summary.date()).isEqualTo(thu);
+        assertThat(summary.valuationStatus()).isEqualTo(ValuationStatus.PENDING_DATA);
+        assertThat(summary.initialBalance()).isEqualByComparingTo("2000000");
+        assertThat(summary.cashBalance()).isNull();
+        assertThat(summary.depositBalance()).isNull();
+        assertThat(summary.totalAssets()).isNull();
+        assertThat(summary.totalFees()).isEqualByComparingTo("30");
+        verifyNoInteractions(holdingRepository, closePriceRepository);
+    }
+
+    @Test
+    @DisplayName("매수·매도를 한 번도 안 했으면 NOT_PARTICIPATED, 제외됐으면 EXCLUDED")
+    void participationStatus() {
+        givenSummaryAccount("2000000", "0", ParticipantStatus.ACTIVE);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+        CompetitionSummaryResponse notYet = service().getSummary(competitionId, userId, null);
+        assertThat(notYet.participationStatus()).isEqualTo(ParticipationStatus.NOT_PARTICIPATED);
+        assertThat(notYet.participatedOnDate()).isFalse();
+        assertThat(notYet.firstParticipatedAt()).isNull();
+
+        givenSummaryAccount("2000000", "0", ParticipantStatus.EXCLUDED);
+        when(holdingRepository.findAllByAccount(account)).thenReturn(List.of());
+        assertThat(service().getSummary(competitionId, userId, null).participationStatus())
+                .isEqualTo(ParticipationStatus.EXCLUDED);
+    }
+
+    @Test
     @DisplayName("대회가 없으면 COMPETITION_NOT_FOUND")
     void competitionNotFound() {
         when(competitionRepository.findById(competitionId)).thenReturn(Optional.empty());
@@ -218,7 +336,23 @@ class CompetitionPortfolioServiceTest {
     private CompetitionPortfolioService service() {
         Clock clock = Clock.fixed(FRI_17.atZone(SEOUL).toInstant(), SEOUL);
         return new CompetitionPortfolioService(competitionRepository, participantRepository, accountRepository,
-                tradeRepository, holdingRepository, closePriceRepository, clock);
+                tradeRepository, holdingRepository, closePriceRepository, ledgerRepository, clock);
+    }
+
+    private void givenSummaryAccount(String cash, String deposit, ParticipantStatus status) {
+        competition = Competition.builder().initialCash(new BigDecimal("2000000")).build();
+        participant = CompetitionParticipant.builder()
+                .participantId(UUID.randomUUID()).competition(competition).status(status).build();
+        account = CompetitionAccount.builder()
+                .participant(participant)
+                .cash(new BigDecimal(cash))
+                .deposit(new BigDecimal(deposit))
+                .build();
+        givenAccount();
+    }
+
+    private Trade tradeAt(LocalDateTime executedAt) {
+        return Trade.builder().account(account).stock(samsung).executedAt(executedAt).build();
     }
 
     private void givenAccount() {

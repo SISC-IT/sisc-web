@@ -2,11 +2,13 @@ package org.sejongisc.backend.competition.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.common.auth.dto.CustomUserDetails;
 import org.sejongisc.backend.competition.dto.CompetitionHoldingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionSummaryResponse;
 import org.sejongisc.backend.competition.dto.CompetitionTradeResponse;
 import org.sejongisc.backend.competition.service.CompetitionPortfolioService;
 import org.springframework.data.domain.Page;
@@ -21,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/competitions/{competitionId}/me")
-@Tag(name = "수익률 대결 내 계좌 API", description = "수익률 대결 내 거래 내역·보유 종목 조회 API")
+@Tag(name = "수익률 대결 내 계좌 API", description = "수익률 대결 내 현황·거래 내역·보유 종목 조회 API")
 public class CompetitionPortfolioController {
 
     private final CompetitionPortfolioService portfolioService;
@@ -62,5 +64,29 @@ public class CompetitionPortfolioController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ResponseEntity.ok(portfolioService.getHoldings(competitionId, userDetails.getUserId()));
+    }
+
+    @Operation(
+            summary = "내 날짜별 현황 조회",
+            description = """
+            로그인한 참가자의 그날 자산·수익률·참여 상태를 반환합니다. date를 생략하면 오늘(KST)입니다. \s
+            - 오늘은 PROVISIONAL입니다. 지금 잔액과 지금 공개된 종가(16:30 공개)로 평가하고, valuedAt은 평가 시각입니다. \s
+            - 오늘이 아닌 날짜는 날짜별 잔액을 아직 남기지 않아 PENDING_DATA이고, 평가 항목(stockValue, totalAssets, profitLoss, returnRate)과 잔액은 null입니다. \s
+            - 종가가 없는 보유 종목이 있으면 오늘도 PENDING_DATA이고 평가 항목은 null입니다. \s
+            - totalAssets = cashBalance + depositBalance + stockValue, profitLoss = totalAssets − initialBalance입니다. \s
+            - returnRate는 초기 자금 대비 비율입니다(0.05는 5%). 개인 순위의 profitRate와 계산식은 같지만, 순위는 하루 한 번 수집 직후 계산해 시점이 다를 수 있습니다. \s
+            - totalFees, totalInterest는 그날까지의 누적입니다. \s
+            - participationStatus는 대회 전체 기준입니다. 매수·매도를 한 번이라도 했으면 PARTICIPATED, 아니면 NOT_PARTICIPATED, 제외됐으면 EXCLUDED입니다. 예금 입출금은 참여로 치지 않습니다. \s
+            - participatedOnDate, firstParticipatedAt, lastParticipatedAt은 그날의 매수·매도 기준입니다. \s
+            - 대회가 라운드 1개이고 국내 주식만 거래해서 명세의 round, appliedExchangeRate는 없습니다.
+            """
+    )
+    @GetMapping("/summary")
+    public ResponseEntity<CompetitionSummaryResponse> getSummary(
+            @PathVariable UUID competitionId,
+            @RequestParam(required = false) LocalDate date,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(portfolioService.getSummary(competitionId, userDetails.getUserId(), date));
     }
 }
