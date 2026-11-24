@@ -109,6 +109,21 @@ class AccountLedgerRepositoryTest {
   }
 
   @Test
+  void 그_시각_전에_더해진_이자만_합한다() {
+    CompetitionAccount account = saveAccount();
+    ledgerRepository.saveAndFlush(interest(account, MON.minusDays(1))); // 11/23 00:00 지급
+    ledgerRepository.saveAndFlush(interest(account, MON));              // 11/24 00:00 지급
+    ledgerRepository.saveAndFlush(transfer(account, LedgerType.DEPOSIT)); // 입금은 이자가 아니다
+
+    assertThat(ledgerRepository.sumInterestExecutedBefore(account, MON.plusDays(1).atStartOfDay()))
+        .isEqualByComparingTo("82.1917");
+    assertThat(ledgerRepository.sumInterestExecutedBefore(account, MON.plusDays(2).atStartOfDay()))
+        .isEqualByComparingTo("164.3834");
+    assertThat(ledgerRepository.sumInterestExecutedBefore(saveAccount(), MON.plusDays(2).atStartOfDay()))
+        .isEqualByComparingTo("0");
+  }
+
+  @Test
   void 같은_계좌_같은_날짜_이자는_두_번_저장할_수_없다() {
     CompetitionAccount account = saveAccount();
     ledgerRepository.saveAndFlush(interest(account, MON));
