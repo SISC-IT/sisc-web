@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import styles from './StockOrder.module.css';
 import { placeOrder } from '../../utils/competitionApi';
-import { ratePercent, shortDate, won } from '../../utils/competitionFormat';
+import {
+  digitsOnly,
+  ratePercent,
+  shortDate,
+  won,
+} from '../../utils/competitionFormat';
 
 // 서버와 같은 계산: 수수료는 소수 4자리에서 버린다. 부동소수점 오차를 반올림으로 없앤 뒤 버린다.
 const feeOf = (amount, feeRate) =>
@@ -34,8 +39,7 @@ const OrderForm = ({ competitionId, detail, pendingKey, onOrdered }) => {
   const maxQty = isBuy ? maxBuy : detail.holdingQuantity;
 
   let inputError = '';
-  if (!Number.isInteger(quantity) || quantity <= 0)
-    inputError = '수량은 1주 이상의 정수로 입력하세요.';
+  if (quantity <= 0) inputError = '수량은 1주 이상 입력하세요.';
   else if (isBuy && total > cash)
     inputError = `현금이 부족해요. 최대 ${maxBuy.toLocaleString('ko-KR')}주까지 살 수 있어요.`;
   else if (!isBuy && quantity > detail.holdingQuantity) {
@@ -80,6 +84,11 @@ const OrderForm = ({ competitionId, detail, pendingKey, onOrdered }) => {
     }
   };
 
+  const changeQty = (next) => {
+    setQty(String(next));
+    setResult(null);
+  };
+
   const changeSide = (next) => {
     setSide(next);
     setResult(null);
@@ -116,29 +125,39 @@ const OrderForm = ({ competitionId, detail, pendingKey, onOrdered }) => {
           disabled={maxQty === 0}
           onClick={() => setQty(String(maxQty))}
         >
-          최대 {isBuy ? '매수' : '매도'} {maxQty.toLocaleString('ko-KR')}주
+          주문 가능 {maxQty.toLocaleString('ko-KR')}주
         </button>
       </div>
-      <input
-        id="order-qty"
-        type="number"
-        min="1"
-        inputMode="numeric"
-        value={qty}
-        onChange={(e) => {
-          setQty(e.target.value);
-          setResult(null);
-        }}
-        className={styles.qtyInput}
-      />
+      <div className={styles.stepper}>
+        <input
+          id="order-qty"
+          type="text"
+          inputMode="numeric"
+          value={qty}
+          onChange={(e) => changeQty(digitsOnly(e.target.value))}
+          className={styles.qtyInput}
+        />
+        <span className={styles.unit}>주</span>
+        <button
+          type="button"
+          aria-label="1주 빼기"
+          disabled={quantity <= 1}
+          onClick={() => changeQty(quantity - 1)}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          aria-label="1주 더하기"
+          onClick={() => changeQty(quantity + 1)}
+        >
+          +
+        </button>
+      </div>
 
       <dl className={styles.costs}>
         <div>
-          <dt>체결가 ({shortDate(detail.priceDate)} 종가)</dt>
-          <dd>{won(price)}원</dd>
-        </div>
-        <div>
-          <dt>거래 금액</dt>
+          <dt>주문 금액</dt>
           <dd>{won(amount)}원</dd>
         </div>
         <div>
@@ -146,15 +165,14 @@ const OrderForm = ({ competitionId, detail, pendingKey, onOrdered }) => {
           <dd>{won(fee)}원</dd>
         </div>
         <div className={styles.totalRow}>
-          <dt>{isBuy ? '필요한 현금' : '받을 금액'}</dt>
+          <dt>{isBuy ? '총 주문 금액' : '정산 금액'}</dt>
           <dd>{won(total)}원</dd>
         </div>
         <div>
-          <dt>주문 가능 현금</dt>
+          <dt>주문 가능 금액</dt>
           <dd>{won(cash)}원</dd>
         </div>
       </dl>
-      <p className={styles.muted}>예금은 인출해야 주문에 쓸 수 있어요.</p>
 
       {detail.tradable && inputError && (
         <p role="alert" className={styles.errorBox}>

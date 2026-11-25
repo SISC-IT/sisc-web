@@ -100,11 +100,11 @@ const StockOrder = ({ competition }) => {
         )}
         {isParticipant && detail && (
           <>
-            <p className={detail.tradable ? styles.openBar : styles.closedBar}>
-              {detail.tradable
-                ? `지금 주문 가능(${ORDER_HOURS})`
-                : unavailableText(detail.unavailableReason)}
-            </p>
+            {!detail.tradable && (
+              <p className={styles.closedBar}>
+                {unavailableText(detail.unavailableReason)}
+              </p>
+            )}
 
             <div className={styles.quote}>
               <div>

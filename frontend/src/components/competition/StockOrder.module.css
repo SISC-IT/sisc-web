@@ -18,7 +18,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .sectionTitle {
@@ -59,6 +59,9 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .stockItem {
@@ -107,21 +110,12 @@
   color: #6b7280;
 }
 
-.openBar,
 .closedBar {
   margin: 0;
   border-radius: 14px;
-  padding: 14px 18px;
+  padding: 10px 16px;
   font-size: 15px;
   font-weight: 500;
-}
-
-.openBar {
-  background: #eff6ff;
-  color: #1e3a8a;
-}
-
-.closedBar {
   background: #f3f4f6;
   color: #374151;
 }
@@ -129,7 +123,7 @@
 .quote {
   background: #f7f7f8;
   border-radius: 24px;
-  padding: 28px;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -139,7 +133,7 @@
 
 .detailName {
   margin: 0 0 4px;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -154,14 +148,14 @@
 }
 
 .bigPrice {
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 800;
 }
 
 .orderBox {
   border: 1px solid #e5e7eb;
   border-radius: 24px;
-  padding: 28px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -182,7 +176,7 @@
   font-weight: 800;
   border: 0;
   border-radius: 10px;
-  min-height: 48px;
+  min-height: 44px;
   cursor: pointer;
 }
 
@@ -223,24 +217,60 @@
   min-height: 44px;
 }
 
+.stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  min-height: 48px;
+  overflow: hidden;
+}
+
+.stepper:focus-within {
+  border-color: #2563eb;
+}
+
 .qtyInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px 4px 10px 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  padding-right: 12px;
+  font-size: 16px;
+  color: #4b5563;
+}
+
+.stepper button {
   font: inherit;
   font-size: 20px;
   font-weight: 700;
-  padding: 14px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  min-height: 56px;
-  box-sizing: border-box;
-  width: 100%;
-  font-variant-numeric: tabular-nums;
+  width: 48px;
+  align-self: stretch;
+  border: 0;
+  border-left: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 .costs {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
@@ -260,8 +290,8 @@
 
 .costs .totalRow {
   border-top: 1px solid #e5e7eb;
-  padding-top: 12px;
-  font-size: 18px;
+  padding-top: 10px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -294,7 +324,7 @@
   font-weight: 800;
   border: 0;
   border-radius: 14px;
-  min-height: 56px;
+  min-height: 48px;
   cursor: pointer;
   color: #ffffff;
 }

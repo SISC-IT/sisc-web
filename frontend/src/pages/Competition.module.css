@@ -1,17 +1,17 @@
 .page {
   max-width: 1040px;
-  padding: 40px 32px 80px;
+  padding: 24px 32px 80px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
   color: #111111;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .title {

@@ -74,21 +74,22 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
 }
 
 .card {
   background: #f7f7f8;
   border-radius: 20px;
-  padding: 24px;
+  padding: 20px;
+  word-break: keep-all;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -101,7 +102,7 @@
 }
 
 .cardValue {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }

@@ -51,18 +51,14 @@ const CompetitionHome = ({ competition }) => {
     {
       label: '주문 가능 시간',
       value: ORDER_HOURS,
-      note: '그날 종가가 있는 날만 · 종료 전날까지',
+      note: '주말·공휴일 제외 · 종료 전날까지',
     },
-    {
-      label: '체결 가격',
-      value: '당일 종가',
-      note: '주문 즉시 오늘 종가로 체결',
-    },
-    { label: '수수료', value: `거래 금액의 ${ratePercent(feeRate)}` },
+    { label: '체결 가격', value: '당일 종가' },
+    { label: '수수료', value: ratePercent(feeRate) },
     {
       label: '예금 이자',
       value: `연 ${interest}`,
-      note: `매일 00시에 예금 × 연 ${interest} ÷ 365 지급`,
+      note: '매일 00시 지급',
     },
   ];
 
@@ -78,8 +74,7 @@ const CompetitionHome = ({ competition }) => {
             {name}
           </h2>
           <p className={styles.period}>
-            {fullDate(startDate)} – {fullDate(endDate)} · 매일 종가로 체결되고,
-            수익률로 순위를 겨룹니다.
+            {fullDate(startDate)} – {fullDate(endDate)}
           </p>
         </div>
         {myStatus !== 'ACTIVE' && (
