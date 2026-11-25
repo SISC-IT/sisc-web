@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import styles from './StockOrder.module.css';
 import { getStockDetail, placeOrder, searchStocks } from '../../utils/competitionApi';
-import { changeColor, ratePercent, shortDate, signedPercent, won } from '../../utils/competitionFormat';
+import { changeColor, daysUntil, ratePercent, shortDate, signedPercent, won } from '../../utils/competitionFormat';
 
 // 서버가 tradable=false일 때 주는 이유
 const UNAVAILABLE_TEXT = {
@@ -23,8 +23,10 @@ const maxBuyQuantity = (cash, price, feeRate) => {
 };
 
 const StockOrder = ({ competition }) => {
-  const { competitionId, myStatus } = competition;
+  const { competitionId, myStatus, status, endDate } = competition;
   const isParticipant = myStatus === 'ACTIVE';
+  // 종료일에는 대회가 아직 진행 중이지만 서버는 COMPETITION_NOT_ACTIVE로 주문을 막는다
+  const isEndDay = status === 'ACTIVE' && daysUntil(endDate) === 0;
 
   const [query, setQuery] = useState('');
   const [stocks, setStocks] = useState([]);
@@ -182,7 +184,9 @@ const StockOrder = ({ competition }) => {
             <p className={detail.tradable ? styles.openBar : styles.closedBar}>
               {detail.tradable
                 ? `지금 주문 가능 · 21:00 마감 — 주문하면 ${shortDate(detail.priceDate)} 종가로 바로 체결됩니다`
-                : UNAVAILABLE_TEXT[detail.unavailableReason]}
+                : isEndDay && detail.unavailableReason === 'COMPETITION_NOT_ACTIVE'
+                  ? '오늘은 종료일이라 주문할 수 없어요. 오늘 종가로 최종 순위가 정해져요.'
+                  : UNAVAILABLE_TEXT[detail.unavailableReason]}
             </p>
 
             <div className={styles.quote}>
