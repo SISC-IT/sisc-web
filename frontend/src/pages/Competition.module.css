@@ -1,0 +1,85 @@
+.page {
+  max-width: 1040px;
+  padding: 24px 32px 80px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: #111111;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusBadge {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.statusBadge.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.title {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e5e7eb;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 14px 22px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  color: #6b7280;
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.activeTab {
+  font-weight: 800;
+  color: #111111;
+  border-bottom-color: #111111;
+}
+
+.notice {
+  margin: 0;
+  font-size: 16px;
+  color: #4b5563;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 24px 16px 60px;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+}
