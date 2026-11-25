@@ -97,9 +97,10 @@ class DisclosureEventRuleEngineTest {
   @Test
   void evaluatesShareholderReturnTreasuryAndDividend() {
     var treasury = engine.evaluateTreasuryStockAcquisition("KB금융",
-        Map.of("aqplnprc_ostk", "400000000000", "aqpln_stk_ostk", "5000000", "aq_pp", "주주가치 제고 및 소각"),
+        Map.of("aqpln_prc_ostk", "400000000000", "aqpln_stk_ostk", "5000000", "aq_pp", "주주가치 제고 및 소각"),
         LocalDate.of(2026, 11, 16));
     assertThat(treasury).isPresent();
+    assertThat(treasury.get().headline()).contains("4,000억");
     assertThat(treasury.get().tags()).contains("자사주 소각");
 
     String dividendHtml = """

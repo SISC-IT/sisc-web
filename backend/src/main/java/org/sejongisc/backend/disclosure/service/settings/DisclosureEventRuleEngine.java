@@ -168,10 +168,13 @@ public class DisclosureEventRuleEngine {
 
   public Optional<EventDraft> evaluateTreasuryStockAcquisition(String companyName,
       Map<String, String> dartRow, LocalDate publishedDate) {
-    BigDecimal plannedAmount = DartDocumentTableParser.parseNumber(dartRow.get("aqplnprc_ostk"))
+    BigDecimal plannedAmount = DartDocumentTableParser.parseNumber(dartRow.get("aqpln_prc_ostk"))
+        .or(() -> DartDocumentTableParser.parseNumber(dartRow.get("aqpln_prc_estk")))
+        .or(() -> DartDocumentTableParser.parseNumber(dartRow.get("aqplnprc_ostk")))
         .or(() -> DartDocumentTableParser.parseNumber(dartRow.get("aqplnprc_estk")))
         .orElse(null);
     BigDecimal plannedShares = DartDocumentTableParser.parseNumber(dartRow.get("aqpln_stk_ostk"))
+        .or(() -> DartDocumentTableParser.parseNumber(dartRow.get("aqpln_stk_estk")))
         .orElse(null);
     String purpose = dartRow.getOrDefault("aq_pp", "");
     boolean cancellation = purpose.contains("소각");
@@ -182,10 +185,11 @@ public class DisclosureEventRuleEngine {
 
     String amountText = plannedAmount != null ? formatWon(plannedAmount) : "-";
     String sharesText = plannedShares != null ? String.format("%,d주", plannedShares.longValue()) : "-";
+    String headlineMetric = plannedAmount != null ? amountText : sharesText;
     String purposeShort = cancellation ? "주주가치 제고 (소각)" : (purpose.isBlank() ? "주주가치 제고" : truncate(purpose, 18));
     String headline = cancellation
-        ? String.format("자기주식 %s 취득 및 소각 결정", amountText)
-        : String.format("자기주식 %s 취득 결정", amountText);
+        ? String.format("자기주식 %s 취득 및 소각 결정", headlineMetric)
+        : String.format("자기주식 %s 취득 결정", headlineMetric);
 
     List<Metric> metrics = List.of(
         new Metric("취득예정금액", amountText, true),
