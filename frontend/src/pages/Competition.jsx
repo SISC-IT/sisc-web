@@ -42,8 +42,11 @@ const TabContent = ({ tab, competition }) => {
 const Competition = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [competition, setCompetition] = useState(null);
-  // 참가자가 아니면 내 계좌가 없어서 대회 정보로 연다
-  const defaultTab = competition && !competition.myStatus ? 'info' : 'account';
+  // 참가자가 아니거나 시작 전이면 계좌에 볼 게 없어서 대회 정보로 연다
+  const defaultTab =
+    competition && (!competition.myStatus || competition.status === 'READY')
+      ? 'info'
+      : 'account';
   const tab = TABS.some((t) => t.key === searchParams.get('tab'))
     ? searchParams.get('tab')
     : defaultTab;
