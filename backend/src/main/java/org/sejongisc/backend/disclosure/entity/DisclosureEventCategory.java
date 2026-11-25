@@ -1,6 +1,6 @@
 package org.sejongisc.backend.disclosure.entity;
 
-public enum DisclosureCardCategory {
+public enum DisclosureEventCategory {
   ORDER_CONTRACT("수주 공시"),
   SHAREHOLDER_RETURN("주주환원"),
   CAPEX("CAPEX"),
@@ -8,7 +8,7 @@ public enum DisclosureCardCategory {
 
   private final String displayName;
 
-  DisclosureCardCategory(String displayName) {
+  DisclosureEventCategory(String displayName) {
     this.displayName = displayName;
   }
 

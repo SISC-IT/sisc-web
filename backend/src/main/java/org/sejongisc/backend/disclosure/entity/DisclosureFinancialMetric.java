@@ -11,10 +11,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.UUID;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 @Entity
@@ -24,35 +24,35 @@ import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 public class DisclosureFinancialMetric extends BasePostgresEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
-  @Column(name = "metric_id", nullable = false, updatable = false)
+  @Column(nullable = false, updatable = false)
   private UUID metricId;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "filing_id", nullable = false)
   private DisclosureFiling filing;
 
-  @Column(name = "metric_type", nullable = false, length = 40)
+  @Column(nullable = false, length = 40)
   private String metricType;
 
-  @Column(name = "dart_account_id", length = 200)
+  @Column(length = 200)
   private String accountId;
 
-  @Column(name = "account_name", nullable = false, columnDefinition = "text")
+  @Column(nullable = false, columnDefinition = "text")
   private String accountName;
 
-  @Column(name = "basis", nullable = false, length = 3)
+  @Column(nullable = false, length = 3)
   private String basis;
 
-  @Column(name = "period_type", nullable = false, length = 20)
+  @Column(nullable = false, length = 20)
   private String periodType;
 
-  @Column(name = "amount", precision = 30, scale = 4)
+  @Column(precision = 30, scale = 4)
   private BigDecimal amount;
 
-  @Column(name = "currency", length = 10)
+  @Column(length = 10)
   private String currency;
 
-  @Column(name = "raw_payload", nullable = false, columnDefinition = "jsonb")
+  @Column(nullable = false, columnDefinition = "jsonb")
   @JdbcTypeCode(SqlTypes.JSON)
   private String rawPayload;
 

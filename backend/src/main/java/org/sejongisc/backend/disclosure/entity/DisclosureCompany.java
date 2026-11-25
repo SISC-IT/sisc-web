@@ -18,31 +18,31 @@ import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 public class DisclosureCompany extends BasePostgresEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
-  @Column(name = "company_id", nullable = false, updatable = false)
+  @Column(nullable = false, updatable = false)
   private UUID companyId;
 
-  @Column(name = "dart_corp_code", nullable = false, unique = true, length = 8)
+  @Column(nullable = false, unique = true, length = 8)
   private String corpCode;
 
-  @Column(name = "stock_code", length = 6)
+  @Column(length = 6)
   private String stockCode;
 
-  @Column(name = "company_name", nullable = false, length = 200)
+  @Column(nullable = false, length = 200)
   private String companyName;
 
-  @Column(name = "dart_corp_cls", length = 1)
+  @Column(length = 1)
   private String corporationClass;
 
-  @Column(name = "induty_code", length = 20)
+  @Column(length = 20)
   private String indutyCode;
 
-  @Column(name = "is_tracked", nullable = false)
+  @Column(nullable = false)
   private boolean tracked = true;
 
-  @Column(name = "track_capex", nullable = false)
+  @Column(nullable = false)
   private boolean trackCapex = false;
 
-  @Column(name = "closing_month", nullable = false)
+  @Column(nullable = false)
   private Integer closingMonth;
 
   public DisclosureCompany(String corpCode, String stockCode, String companyName,

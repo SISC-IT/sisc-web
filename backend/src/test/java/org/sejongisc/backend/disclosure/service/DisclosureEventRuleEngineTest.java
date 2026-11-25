@@ -5,14 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
+import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser;
-import org.sejongisc.backend.disclosure.service.settings.DisclosureCardRuleEngine;
+import org.sejongisc.backend.disclosure.service.settings.DisclosureEventRuleEngine;
 
-class DisclosureCardRuleEngineTest {
+class DisclosureEventRuleEngineTest {
   private final DartDocumentTableParser parser = new DartDocumentTableParser();
-  private final DisclosureCardRuleEngine engine = new DisclosureCardRuleEngine();
+  private final DisclosureEventRuleEngine engine = new DisclosureEventRuleEngine();
 
   @Test
   void classifiesCapexOnlyWhenTrackCapexEnabledAndDefaultsSamsungAndHynix() {
@@ -21,7 +21,7 @@ class DisclosureCardRuleEngineTest {
     assertThat(DisclosureCompany.isDefaultCapexCorp("00164742")).isFalse(); // 현대차 (추후 DB 플래그로 활성화)
 
     assertThat(engine.classifyExchangeTitle("신규시설투자등", true))
-        .contains(DisclosureCardCategory.CAPEX);
+        .contains(DisclosureEventCategory.CAPEX);
     assertThat(engine.classifyExchangeTitle("신규시설투자등", false))
         .isEmpty();
     assertThat(engine.classifyExchangeTitle("[기재정정]신규시설투자등", true))
@@ -31,7 +31,7 @@ class DisclosureCardRuleEngineTest {
   @Test
   void evaluatesOrderContractWithIndustryAdjustedThresholds() {
     assertThat(engine.classifyExchangeTitle("단일판매ㆍ공급계약체결", false))
-        .contains(DisclosureCardCategory.ORDER_CONTRACT);
+        .contains(DisclosureEventCategory.ORDER_CONTRACT);
 
     String mediumOrderHtml = """
         <table>
@@ -41,15 +41,13 @@ class DisclosureCardRuleEngineTest {
           <tr><td>계약상대방</td><td>유럽 선주사</td></tr>
         </table>
         """;
-    // 조선업(311xx, 수주 다빈도 업종)은 15% 미만 & 1,000억 미만이면 필터링
     assertThat(engine.evaluateOrderContract("조선사", "31111", "단일판매ㆍ공급계약체결",
         LocalDate.of(2026, 11, 19), parser.parse(mediumOrderHtml))).isEmpty();
 
-    // 일반 업종(261xx)은 10% 이상이므로 통과
     var generalDraft = engine.evaluateOrderContract("장비사", "26110", "단일판매ㆍ공급계약체결",
         LocalDate.of(2026, 11, 19), parser.parse(mediumOrderHtml));
     assertThat(generalDraft).isPresent();
-    assertThat(generalDraft.get().category()).isEqualTo(DisclosureCardCategory.ORDER_CONTRACT);
+    assertThat(generalDraft.get().category()).isEqualTo(DisclosureEventCategory.ORDER_CONTRACT);
     assertThat(generalDraft.get().metrics().get(1).value()).isEqualTo("12.0%");
   }
 
@@ -70,7 +68,7 @@ class DisclosureCardRuleEngineTest {
         "연결재무제표기준영업(잠정)실적(공정공시)", LocalDate.of(2026, 11, 18), parser.parse(html));
 
     assertThat(draft).isPresent();
-    assertThat(draft.get().category()).isEqualTo(DisclosureCardCategory.PRELIMINARY_EARNINGS);
+    assertThat(draft.get().category()).isEqualTo(DisclosureEventCategory.PRELIMINARY_EARNINGS);
     assertThat(draft.get().headline()).contains("+34.2%");
     assertThat(draft.get().metrics()).hasSize(3);
   }
@@ -89,7 +87,7 @@ class DisclosureCardRuleEngineTest {
     var largeDraft = engine.evaluateCapex("SK하이닉스", true,
         "신규시설투자등", LocalDate.of(2026, 11, 17), parser.parse(largeCapexHtml));
     assertThat(largeDraft).isPresent();
-    assertThat(largeDraft.get().category()).isEqualTo(DisclosureCardCategory.CAPEX);
+    assertThat(largeDraft.get().category()).isEqualTo(DisclosureEventCategory.CAPEX);
     assertThat(largeDraft.get().metrics().get(1).value()).isEqualTo("19.8%");
 
     assertThat(engine.evaluateCapex("현대차", false,

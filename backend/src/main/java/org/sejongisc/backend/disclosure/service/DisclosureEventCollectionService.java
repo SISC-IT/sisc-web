@@ -13,14 +13,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.disclosure.client.OpenDartClient;
 import org.sejongisc.backend.disclosure.client.OpenDartClient.DartCompany;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardNews;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
-import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository;
+import org.sejongisc.backend.disclosure.entity.DisclosureEvent;
+import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureEventRepository;
 import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser;
-import org.sejongisc.backend.disclosure.service.settings.DisclosureCardRuleEngine;
-import org.sejongisc.backend.disclosure.service.settings.DisclosureCardRuleEngine.CardDraft;
+import org.sejongisc.backend.disclosure.service.settings.DisclosureEventRuleEngine;
+import org.sejongisc.backend.disclosure.service.settings.DisclosureEventRuleEngine.EventDraft;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
@@ -33,9 +33,9 @@ public class DisclosureEventCollectionService {
 
   private final OpenDartClient dartClient;
   private final DartDocumentTableParser documentParser;
-  private final DisclosureCardRuleEngine ruleEngine;
+  private final DisclosureEventRuleEngine ruleEngine;
   private final DisclosureCompanyRepository companyRepository;
-  private final DisclosureCardNewsRepository cardRepository;
+  private final DisclosureEventRepository eventRepository;
   private final TransactionOperations transactionOperations;
   private final ObjectMapper objectMapper;
 
@@ -102,14 +102,14 @@ public class DisclosureEventCollectionService {
           continue;
         }
 
-        Optional<DisclosureCardCategory> categoryOpt =
+        Optional<DisclosureEventCategory> categoryOpt =
             ruleEngine.classifyExchangeTitle(reportTitle, trackCapex);
         if (categoryOpt.isEmpty()) {
           continue;
         }
 
         // 이미 DB에 저장된 공시면 원문(/document.xml) 재다운로드 및 파싱 생략
-        if (cardRepository.findByReceiptNoAndCategory(receiptNo, categoryOpt.get()).isPresent()) {
+        if (eventRepository.findByReceiptNoAndCategory(receiptNo, categoryOpt.get()).isPresent()) {
           continue;
         }
 
@@ -117,7 +117,7 @@ public class DisclosureEventCollectionService {
         String xml = dartClient.downloadDocument(receiptNo);
         var parsedDoc = documentParser.parse(xml);
 
-        Optional<CardDraft> draftOpt = switch (categoryOpt.get()) {
+        Optional<EventDraft> draftOpt = switch (categoryOpt.get()) {
           case ORDER_CONTRACT -> ruleEngine.evaluateOrderContract(
               row.get("corp_name"), indutyCode, reportTitle, publishedDate, parsedDoc);
           case PRELIMINARY_EARNINGS -> ruleEngine.evaluatePreliminaryEarnings(
@@ -161,13 +161,13 @@ public class DisclosureEventCollectionService {
         String rawJson = toJson(item.rawPayload());
         LocalDateTime now = LocalDateTime.now();
 
-        var existing = cardRepository.findByReceiptNoAndCategory(
+        var existing = eventRepository.findByReceiptNoAndCategory(
             item.receiptNo(), item.draft().category());
         if (existing.isPresent()) {
           existing.get().refresh(item.reportTitle(), item.draft().headline(),
               item.draft().publishedDate(), item.marketCls(), metricsJson, tagsJson, rawJson, now);
         } else {
-          cardRepository.save(new DisclosureCardNews(
+          eventRepository.save(new DisclosureEvent(
               company, item.receiptNo(), item.draft().category(), item.reportTitle(),
               item.draft().headline(), item.draft().publishedDate(), item.marketCls(),
               metricsJson, tagsJson, DART_VIEWER_URL + item.receiptNo(), rawJson, now));
@@ -211,7 +211,7 @@ public class DisclosureEventCollectionService {
       int closingMonth,
       String receiptNo,
       String reportTitle,
-      CardDraft draft,
+      EventDraft draft,
       Map<String, String> rawPayload) {
   }
 }

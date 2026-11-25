@@ -10,56 +10,55 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 
 @Entity
 @Table(name = "disclosure_filing", uniqueConstraints =
-    @UniqueConstraint(name = "uq_disclosure_filing_dart_rcept_no", columnNames = "dart_rcept_no"))
+    @UniqueConstraint(name = "uq_disclosure_filing_receipt_no", columnNames = "receipt_no"))
 @Getter
 @NoArgsConstructor
 public class DisclosureFiling extends BasePostgresEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
-  @Column(name = "filing_id", nullable = false, updatable = false)
+  @Column(nullable = false, updatable = false)
   private UUID filingId;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "company_id", nullable = false)
   private DisclosureCompany company;
 
-  @Column(name = "dart_rcept_no", nullable = false, length = 14)
+  @Column(nullable = false, length = 14)
   private String receiptNo;
 
-  @Column(name = "report_title", nullable = false, columnDefinition = "text")
+  @Column(nullable = false, columnDefinition = "text")
   private String title;
 
-  @Column(name = "dart_submitter_name", columnDefinition = "text")
+  @Column(columnDefinition = "text")
   private String submitterName;
 
-  @Column(name = "received_date", nullable = false)
+  @Column(nullable = false)
   private LocalDate receivedDate;
 
-  @Column(name = "fiscal_year")
   private Integer businessYear;
 
-  @Column(name = "dart_report_code", length = 5)
+  @Column(length = 5)
   private String reportCode;
 
-  @Column(name = "dart_remarks", columnDefinition = "text")
+  @Column(columnDefinition = "text")
   private String remarks;
 
-  @Column(name = "raw_payload", nullable = false, columnDefinition = "jsonb")
+  @Column(nullable = false, columnDefinition = "jsonb")
   @JdbcTypeCode(SqlTypes.JSON)
   private String rawPayload;
 
-  @Column(name = "collected_at", nullable = false)
+  @Column(nullable = false)
   private LocalDateTime collectedAt;
 
   public void setFinancialReport(int businessYear, String reportCode) {

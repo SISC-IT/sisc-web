@@ -36,6 +36,6 @@ public final class DisclosureCompanyResponse {
       boolean trackCapex,
       Quarter latestQuarter,
       List<Quarter> earningsTrend,
-      List<DisclosureCardResponse> events) {
+      List<DisclosureEventResponse> events) {
   }
 }

@@ -8,14 +8,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse.Metric;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
+import org.sejongisc.backend.disclosure.dto.DisclosureEventResponse.Metric;
+import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser.ParsedDocument;
 import org.springframework.stereotype.Component;
 
 // 4대 이벤트 공시 규칙 기반 필터링 엔진
 @Component
-public class DisclosureCardRuleEngine {
+public class DisclosureEventRuleEngine {
   private static final BigDecimal HUNDRED_MILLION = new BigDecimal("100000000");
   private static final BigDecimal TRILLION = new BigDecimal("1000000000000");
 
@@ -49,28 +49,28 @@ public class DisclosureCardRuleEngine {
     return title.startsWith("[기재정정]") || title.contains("(자율공시)");
   }
 
-  public Optional<DisclosureCardCategory> classifyExchangeTitle(String reportTitle,
+  public Optional<DisclosureEventCategory> classifyExchangeTitle(String reportTitle,
       boolean trackCapex) {
     if (reportTitle == null || reportTitle.isBlank() || isCorrectionOrAutonomousNoise(reportTitle)) {
       return Optional.empty();
     }
     String compact = DartDocumentTableParser.compactKey(reportTitle);
     if (compact.contains("단일판매공급계약체결") || compact.contains("단일판매공급계약해지")) {
-      return Optional.of(DisclosureCardCategory.ORDER_CONTRACT);
+      return Optional.of(DisclosureEventCategory.ORDER_CONTRACT);
     }
     if (compact.contains("영업잠정실적") || compact.contains("매출액또는손익구조")) {
-      return Optional.of(DisclosureCardCategory.PRELIMINARY_EARNINGS);
+      return Optional.of(DisclosureEventCategory.PRELIMINARY_EARNINGS);
     }
     if (compact.contains("현금현물배당결정") || compact.contains("주식소각결정")) {
-      return Optional.of(DisclosureCardCategory.SHAREHOLDER_RETURN);
+      return Optional.of(DisclosureEventCategory.SHAREHOLDER_RETURN);
     }
     if (compact.contains("신규시설투자") && trackCapex) {
-      return Optional.of(DisclosureCardCategory.CAPEX);
+      return Optional.of(DisclosureEventCategory.CAPEX);
     }
     return Optional.empty();
   }
 
-  public Optional<CardDraft> evaluateOrderContract(String companyName, String indutyCode,
+  public Optional<EventDraft> evaluateOrderContract(String companyName, String indutyCode,
       String reportTitle, LocalDate publishedDate, ParsedDocument doc) {
     boolean cancellation = reportTitle != null && reportTitle.contains("해지");
     boolean confidential = doc.plainText().contains("유보") || doc.plainText().contains("비밀유지");
@@ -114,11 +114,11 @@ public class DisclosureCardRuleEngine {
     if (highFreq) {
       tags.add("수주업종기준");
     }
-    return Optional.of(new CardDraft(DisclosureCardCategory.ORDER_CONTRACT, headline,
+    return Optional.of(new EventDraft(DisclosureEventCategory.ORDER_CONTRACT, headline,
         publishedDate, metrics, tags));
   }
 
-  public Optional<CardDraft> evaluatePreliminaryEarnings(String companyName, String reportTitle,
+  public Optional<EventDraft> evaluatePreliminaryEarnings(String companyName, String reportTitle,
       LocalDate publishedDate, ParsedDocument doc) {
     String unit = detectAmountUnit(doc.plainText());
     String revenue = extractRowLatestValue(doc, "매출액", "영업수익").orElse("-");
@@ -162,11 +162,11 @@ public class DisclosureCardRuleEngine {
     } else if (opYoy != null && opYoy.compareTo(MIN_PRELIM_OP_YOY_PERCENT.negate()) <= 0) {
       tags.add("영업이익 20%↓");
     }
-    return Optional.of(new CardDraft(DisclosureCardCategory.PRELIMINARY_EARNINGS, headline,
+    return Optional.of(new EventDraft(DisclosureEventCategory.PRELIMINARY_EARNINGS, headline,
         publishedDate, metrics, tags));
   }
 
-  public Optional<CardDraft> evaluateTreasuryStockAcquisition(String companyName,
+  public Optional<EventDraft> evaluateTreasuryStockAcquisition(String companyName,
       Map<String, String> dartRow, LocalDate publishedDate) {
     BigDecimal plannedAmount = DartDocumentTableParser.parseNumber(dartRow.get("aqplnprc_ostk"))
         .or(() -> DartDocumentTableParser.parseNumber(dartRow.get("aqplnprc_estk")))
@@ -195,11 +195,11 @@ public class DisclosureCardRuleEngine {
     List<String> tags = cancellation
         ? List.of("주주환원", "자사주 소각")
         : List.of("주주환원", "자사주 취득");
-    return Optional.of(new CardDraft(DisclosureCardCategory.SHAREHOLDER_RETURN, headline,
+    return Optional.of(new EventDraft(DisclosureEventCategory.SHAREHOLDER_RETURN, headline,
         publishedDate, metrics, tags));
   }
 
-  public Optional<CardDraft> evaluateShareholderDocument(String companyName, String reportTitle,
+  public Optional<EventDraft> evaluateShareholderDocument(String companyName, String reportTitle,
       LocalDate publishedDate, ParsedDocument doc) {
     String compactTitle = DartDocumentTableParser.compactKey(reportTitle);
     if (compactTitle.contains("주식소각결정")) {
@@ -215,7 +215,7 @@ public class DisclosureCardRuleEngine {
           new Metric("소각주식수", truncate(shares, 16), false),
           new Metric("구분", "주식소각", false)
       );
-      return Optional.of(new CardDraft(DisclosureCardCategory.SHAREHOLDER_RETURN, headline,
+      return Optional.of(new EventDraft(DisclosureEventCategory.SHAREHOLDER_RETURN, headline,
           publishedDate, metrics, List.of("주주환원", "자사주 소각")));
     }
 
@@ -242,11 +242,11 @@ public class DisclosureCardRuleEngine {
         new Metric("시가배당률", yieldText, true),
         new Metric("배당금총액", totalText, false)
     );
-    return Optional.of(new CardDraft(DisclosureCardCategory.SHAREHOLDER_RETURN, headline,
+    return Optional.of(new EventDraft(DisclosureEventCategory.SHAREHOLDER_RETURN, headline,
         publishedDate, metrics, List.of("주주환원", "현금배당")));
   }
 
-  public Optional<CardDraft> evaluateCapex(String companyName, boolean trackCapex,
+  public Optional<EventDraft> evaluateCapex(String companyName, boolean trackCapex,
       String reportTitle, LocalDate publishedDate, ParsedDocument doc) {
     if (!trackCapex) {
       return Optional.empty();
@@ -276,7 +276,7 @@ public class DisclosureCardRuleEngine {
         new Metric("자기자본대비", ratioText, true),
         new Metric("투자기간", periodText, false)
     );
-    return Optional.of(new CardDraft(DisclosureCardCategory.CAPEX, headline,
+    return Optional.of(new EventDraft(DisclosureEventCategory.CAPEX, headline,
         publishedDate, metrics, List.of("CAPEX", "시설투자")));
   }
 
@@ -373,8 +373,8 @@ public class DisclosureCardRuleEngine {
     return clean.length() <= maxLen ? clean : clean.substring(0, maxLen - 1) + "…";
   }
 
-  public record CardDraft(
-      DisclosureCardCategory category,
+  public record EventDraft(
+      DisclosureEventCategory category,
       String headline,
       LocalDate publishedDate,
       List<Metric> metrics,

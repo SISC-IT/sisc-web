@@ -7,7 +7,7 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyDetailResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListResponse;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
+import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.service.DisclosureQueryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class DisclosureController {
   private final DisclosureQueryService queryService;
 
-  //1. 리스트 조회
   @GetMapping
   public ResponseEntity<CompanyListResponse> list(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -34,7 +33,6 @@ public class DisclosureController {
     return ResponseEntity.ok(queryService.listCompanies(userId, keyword, page, size));
   }
 
-  //2. 상세 정보 조회
   @GetMapping("/{corpCode}")
   public ResponseEntity<CompanyDetailResponse> detail(
       @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -44,17 +42,16 @@ public class DisclosureController {
       throw new CustomException(ErrorCode.INVALID_INPUT);
     }
     UUID userId = userDetails == null ? null : userDetails.getUserId();
-    DisclosureCardCategory parsedType = parseCategory(eventType);
+    DisclosureEventCategory parsedType = parseCategory(eventType);
     return ResponseEntity.of(queryService.companyDetail(userId, corpCode, parsedType));
   }
 
-  //parsing
-  private DisclosureCardCategory parseCategory(String raw) {
+  private DisclosureEventCategory parseCategory(String raw) {
     if (raw == null || raw.isBlank() || "ALL".equalsIgnoreCase(raw)) {
       return null;
     }
     try {
-      return DisclosureCardCategory.valueOf(raw.trim().toUpperCase());
+      return DisclosureEventCategory.valueOf(raw.trim().toUpperCase());
     } catch (IllegalArgumentException e) {
       throw new CustomException(ErrorCode.INVALID_INPUT);
     }

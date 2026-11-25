@@ -18,7 +18,7 @@ public class OpenDartConfig {
         .build();
     return builder.clientConnector(new JdkClientHttpConnector(jdkClient))
         .baseUrl(properties.baseUrl())
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
+        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
         .build();
   }
 }

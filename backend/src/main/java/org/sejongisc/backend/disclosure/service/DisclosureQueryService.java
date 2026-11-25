@@ -17,22 +17,22 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse;
-import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse.Metric;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyDetailResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListItem;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Quarter;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardNews;
+import org.sejongisc.backend.disclosure.dto.DisclosureEventResponse;
+import org.sejongisc.backend.disclosure.dto.DisclosureEventResponse.Metric;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
+import org.sejongisc.backend.disclosure.entity.DisclosureEvent;
+import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.entity.DisclosureFiling;
 import org.sejongisc.backend.disclosure.entity.DisclosureFinancialMetric;
 import org.sejongisc.backend.disclosure.entity.DisclosureUserRead;
-import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository;
-import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository.CompanyEventSummary;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureEventRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureEventRepository.CompanyEventSummary;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureFilingRepository.CompanyFilingSummary;
 import org.sejongisc.backend.disclosure.repository.DisclosureFinancialMetricRepository;
@@ -56,7 +56,7 @@ public class DisclosureQueryService {
   private final DisclosureCompanyRepository companyRepository;
   private final DisclosureFilingRepository filingRepository;
   private final DisclosureFinancialMetricRepository metricRepository;
-  private final DisclosureCardNewsRepository cardRepository;
+  private final DisclosureEventRepository eventRepository;
   private final DisclosureUserReadRepository userReadRepository;
   private final QuarterlyEarningsCalculator earningsCalculator;
   private final ObjectMapper objectMapper;
@@ -75,7 +75,7 @@ public class DisclosureQueryService {
 
     Map<UUID, CompanyEventSummary> eventSummaryByCompany = companyIds.isEmpty()
         ? Map.of()
-        : cardRepository.summarizeByCompanyIds(companyIds).stream()
+        : eventRepository.summarizeByCompanyIds(companyIds).stream()
             .collect(Collectors.toMap(CompanyEventSummary::getCompanyId, Function.identity()));
 
     Map<UUID, LocalDateTime> latestFilingAtByCompany = companyIds.isEmpty()
@@ -102,7 +102,6 @@ public class DisclosureQueryService {
           LocalDate latestDate = eventSummary == null ? null : eventSummary.getLatestPublishedDate();
           long eventCount = eventSummary == null ? 0L : eventSummary.getEventCount();
           LocalDateTime lastViewedAt = viewedAtByCompany.get(company.getCompanyId());
-          // 이벤트 공시 또는 새 정기 분기 실적 중 하나라도 마지막 확인 시각 이후 수집됐으면 빨간 점 표시
           boolean hasUnread = latestActivityAt != null
               && (lastViewedAt == null || latestActivityAt.isAfter(lastViewedAt));
           return new CompanyListItem(
@@ -127,7 +126,7 @@ public class DisclosureQueryService {
 
   @Transactional
   public Optional<CompanyDetailResponse> companyDetail(UUID userId, String corpCode,
-      DisclosureCardCategory eventType) {
+      DisclosureEventCategory eventType) {
     Optional<DisclosureCompany> companyOpt = companyRepository.findByCorpCode(corpCode);
     if (companyOpt.isEmpty()) {
       return Optional.empty();
@@ -136,23 +135,20 @@ public class DisclosureQueryService {
 
     if (userId != null) {
       LocalDateTime now = LocalDateTime.now();
-      userReadRepository.findByUserIdAndCompany_CompanyId(userId, company.getCompanyId())
-          .ifPresentOrElse(
-              read -> read.markViewed(now),
-              () -> userReadRepository.save(new DisclosureUserRead(userId, company, now)));
+      userReadRepository.upsertLastViewedAt(UUID.randomUUID(), userId, company.getCompanyId(), now);
     }
 
     List<Quarter> earningsTrend = allQuarters(corpCode);
     Quarter latestQuarter = earningsTrend.isEmpty() ? null : earningsTrend.getLast();
 
-    List<DisclosureCardNews> rawEvents = eventType == null
-        ? cardRepository.findAllByCompany_CompanyIdOrderByPublishedDateDescCreatedDateDesc(
+    List<DisclosureEvent> rawEvents = eventType == null
+        ? eventRepository.findAllByCompany_CompanyIdOrderByPublishedDateDescCreatedDateDesc(
             company.getCompanyId())
-        : cardRepository.findAllByCompany_CompanyIdAndCategoryOrderByPublishedDateDescCreatedDateDesc(
+        : eventRepository.findAllByCompany_CompanyIdAndCategoryOrderByPublishedDateDescCreatedDateDesc(
             company.getCompanyId(), eventType);
 
-    List<DisclosureCardResponse> events = rawEvents.stream()
-        .map(this::toCardResponse)
+    List<DisclosureEventResponse> events = rawEvents.stream()
+        .map(this::toEventResponse)
         .toList();
 
     return Optional.of(new CompanyDetailResponse(
@@ -260,10 +256,10 @@ public class DisclosureQueryService {
     }
   }
 
-  private DisclosureCardResponse toCardResponse(DisclosureCardNews entity) {
+  private DisclosureEventResponse toEventResponse(DisclosureEvent entity) {
     var company = entity.getCompany();
-    return new DisclosureCardResponse(
-        entity.getCardId(),
+    return new DisclosureEventResponse(
+        entity.getEventId(),
         entity.getReceiptNo(),
         entity.getCategory().name(),
         entity.getCategory().displayName(),

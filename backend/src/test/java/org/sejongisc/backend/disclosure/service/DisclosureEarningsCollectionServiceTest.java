@@ -27,8 +27,8 @@ import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Source;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
 import org.sejongisc.backend.disclosure.entity.DisclosureFiling;
 import org.sejongisc.backend.disclosure.entity.DisclosureFinancialMetric;
-import org.sejongisc.backend.disclosure.repository.DisclosureCardNewsRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureCompanyRepository;
+import org.sejongisc.backend.disclosure.repository.DisclosureEventRepository;
 import org.sejongisc.backend.disclosure.repository.DisclosureUserReadRepository;
 import org.sejongisc.backend.disclosure.service.enums.ReportingQuarter;
 import org.sejongisc.backend.disclosure.service.settings.QuarterlyEarningsCalculator;
@@ -56,7 +56,7 @@ class DisclosureEarningsCollectionServiceTest {
   private final List<DisclosureFinancialMetric> storedMetrics = new ArrayList<>();
   private final ObjectMapper mapper = new ObjectMapper();
   private final DisclosureQueryService query = new DisclosureQueryService(
-      companies, filings, metrics, mock(DisclosureCardNewsRepository.class),
+      companies, filings, metrics, mock(DisclosureEventRepository.class),
       mock(DisclosureUserReadRepository.class), new QuarterlyEarningsCalculator(), mapper);
   private final DisclosureEarningsCollectionService collection = new DisclosureEarningsCollectionService(
       client, companies, filings, metrics, query, TransactionOperations.withoutTransaction(), mapper);

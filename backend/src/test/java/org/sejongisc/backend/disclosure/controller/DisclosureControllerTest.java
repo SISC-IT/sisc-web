@@ -13,13 +13,13 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
-import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse;
-import org.sejongisc.backend.disclosure.dto.DisclosureCardResponse.Metric;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyDetailResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListItem;
 import org.sejongisc.backend.disclosure.dto.DisclosureCompanyResponse.CompanyListResponse;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Quarter;
-import org.sejongisc.backend.disclosure.entity.DisclosureCardCategory;
+import org.sejongisc.backend.disclosure.dto.DisclosureEventResponse;
+import org.sejongisc.backend.disclosure.dto.DisclosureEventResponse.Metric;
+import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.service.DisclosureQueryService;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
@@ -51,7 +51,7 @@ class DisclosureControllerTest {
   @Test
   void returnsUnifiedCompanyDetailWithEarningsTrendAndFilteredEvents() throws Exception {
     var q3 = new Quarter(2026, 3, "2026-09", "CFS", "KRW", "9007199254740993", "7200000000000", "5600000000000", List.of());
-    var ev = new DisclosureCardResponse(
+    var ev = new DisclosureEventResponse(
         UUID.randomUUID(), "20261118000001", "CAPEX", "CAPEX",
         "00164779", "SK하이닉스", "000660", "KOSPI", "26110",
         "신규시설투자등", "신규시설투자 1.98조 결정",
@@ -63,7 +63,7 @@ class DisclosureControllerTest {
         "00164779", "SK하이닉스", "000660", "KOSPI", "26110", true,
         q3, List.of(q3), List.of(ev));
 
-    when(queryService.companyDetail(null, "00164779", DisclosureCardCategory.CAPEX))
+    when(queryService.companyDetail(null, "00164779", DisclosureEventCategory.CAPEX))
         .thenReturn(Optional.of(detail));
 
     mvc.perform(get("/api/disclosures/companies/{corpCode}", "00164779")

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   getDisclosureCompanies,
   getDisclosureCompanyDetail,
-} from '../utils/disclosureCardApi';
-import styles from './DisclosureCardBoard.module.css';
+} from '../utils/disclosureApi';
+import styles from './DisclosureBoard.module.css';
 
 const EVENT_FILTERS = [
   { id: 'ALL', label: '전체' },
@@ -28,7 +28,7 @@ const formatWon = (raw) => {
   return `${sign}${Math.round(abs).toLocaleString()}원`;
 };
 
-const DisclosureCardBoard = () => {
+const DisclosureBoard = () => {
   const [searchInput, setSearchInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [companies, setCompanies] = useState([]);
@@ -69,7 +69,6 @@ const DisclosureCardBoard = () => {
     try {
       const data = await getDisclosureCompanyDetail(corpCode, filterType);
       setDetail(data);
-      // 상세 조회로 읽음 처리되었으므로 목록의 빨간 점 즉시 해제
       setCompanies((prev) =>
         prev.map((item) =>
           item.corpCode === corpCode ? { ...item, hasUnread: false } : item
@@ -238,7 +237,7 @@ const DisclosureCardBoard = () => {
                     </thead>
                     <tbody>
                       {detail.events.map((ev) => (
-                        <tr key={ev.cardId}>
+                        <tr key={ev.eventId}>
                           <td className={styles.nowrap}>{ev.publishedDate}</td>
                           <td className={styles.nowrap}>{ev.categoryLabel}</td>
                           <td>
@@ -367,4 +366,4 @@ const DisclosureCardBoard = () => {
   );
 };
 
-export default DisclosureCardBoard;
+export default DisclosureBoard;

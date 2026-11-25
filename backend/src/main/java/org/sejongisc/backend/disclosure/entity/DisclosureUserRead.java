@@ -24,17 +24,17 @@ import org.sejongisc.backend.common.entity.postgres.BasePostgresEntity;
 public class DisclosureUserRead extends BasePostgresEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
-  @Column(name = "read_id", nullable = false, updatable = false)
+  @Column(nullable = false, updatable = false)
   private UUID readId;
 
-  @Column(name = "user_id", nullable = false)
+  @Column(nullable = false)
   private UUID userId;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "company_id", nullable = false)
   private DisclosureCompany company;
 
-  @Column(name = "last_viewed_at", nullable = false)
+  @Column(nullable = false)
   private LocalDateTime lastViewedAt;
 
   public DisclosureUserRead(UUID userId, DisclosureCompany company, LocalDateTime lastViewedAt) {

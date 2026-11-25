@@ -4,8 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-public record DisclosureCardResponse(
-    UUID cardId,
+public record DisclosureEventResponse(
+    UUID eventId,
     String receiptNo,
     String category,
     String categoryLabel,
@@ -22,13 +22,5 @@ public record DisclosureCardResponse(
     String dartUrl) {
 
   public record Metric(String label, String value, boolean highlight) {
-  }
-
-  public record PageResponse(
-      List<DisclosureCardResponse> items,
-      long totalCount,
-      int page,
-      int size,
-      int totalPages) {
   }
 }

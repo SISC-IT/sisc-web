@@ -58,13 +58,13 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
           return 0;
         });
 
-        uniqueBoards.push({ name: '공시 카드 뉴스', path: '/board/disclosure-cards' });
+        uniqueBoards.push({ name: '공시 리서치', path: '/board/disclosures' });
 
         setBoardList(uniqueBoards);
       } catch {
         setBoardList([
           { name: '전체 게시판', path: '/board' },
-          { name: '공시 카드 뉴스', path: '/board/disclosure-cards' },
+          { name: '공시 리서치', path: '/board/disclosures' },
         ]);
       }
     };
