@@ -47,13 +47,12 @@ export const fullDate = (isoDate) => {
 export const shortDate = (isoDate) =>
   isoDate ? isoDate.slice(5).replace('-', '.') : '';
 
-// 오늘(브라우저 날짜)부터 그 날짜까지 남은 일수
+// 오늘(KST)부터 그 날짜까지 남은 일수. 대회 날짜는 KST 기준이다.
 export const daysUntil = (isoDate) => {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  const target = new Date(y, m - 1, d);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.round((target - today) / 86400000);
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+  }).format(new Date());
+  return Math.round((Date.parse(isoDate) - Date.parse(today)) / 86400000);
 };
 
 // '2026-12-08T18:42:10.123' → '12.08 18:42' (서버가 KST로 준다)

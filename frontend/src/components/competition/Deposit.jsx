@@ -35,17 +35,23 @@ const Deposit = ({ competition }) => {
   );
   const history = usePagedList(fetchPage, 'ledgerId');
 
+  const loadBalance = useCallback(
+    () =>
+      getMySummary(competitionId)
+        .then((s) =>
+          setBalance({
+            cash: Number(s.cashBalance),
+            deposit: Number(s.depositBalance),
+            interest: Number(s.totalInterest),
+          })
+        )
+        .catch((err) => setBalanceError(err.message)),
+    [competitionId]
+  );
+
   useEffect(() => {
-    getMySummary(competitionId)
-      .then((s) =>
-        setBalance({
-          cash: Number(s.cashBalance),
-          deposit: Number(s.depositBalance),
-          interest: Number(s.totalInterest),
-        })
-      )
-      .catch((err) => setBalanceError(err.message));
-  }, [competitionId]);
+    loadBalance();
+  }, [loadBalance]);
 
   if (balanceError) return <p className={styles.errorBox}>{balanceError}</p>;
   if (!balance) return <p className={styles.muted}>불러오는 중…</p>;
@@ -87,7 +93,10 @@ const Deposit = ({ competition }) => {
       });
       history.reload();
     } catch (err) {
+      // 응답만 못 받았을 수도 있어서, 다시 보내기 전에 실제 잔고와 내역을 보여 준다
       setResult({ ok: false, text: err.message });
+      loadBalance();
+      history.reload();
     } finally {
       setSubmitting(false);
     }
@@ -204,7 +213,16 @@ const Deposit = ({ competition }) => {
 
 const DepositHistory = ({ history }) => {
   const { items, last, error, loading, loadMore } = history;
-  if (error && !items) return <p className={styles.errorBox}>{error}</p>;
+  if (error && !items) {
+    return (
+      <>
+        <p className={styles.errorBox}>{error}</p>
+        <button type="button" className={styles.moreButton} onClick={loadMore}>
+          다시 시도
+        </button>
+      </>
+    );
+  }
   if (!items) return <p className={styles.muted}>불러오는 중…</p>;
   if (items.length === 0) {
     return <p className={styles.muted}>아직 예금 내역이 없어요.</p>;
@@ -248,14 +266,14 @@ const DepositHistory = ({ history }) => {
         </table>
       </div>
       {error && <p className={styles.errorBox}>{error}</p>}
-      {!last && (
+      {(!last || error) && (
         <button
           type="button"
           className={styles.moreButton}
           disabled={loading}
           onClick={loadMore}
         >
-          {loading ? '불러오는 중…' : '더 보기'}
+          {loading ? '불러오는 중…' : error ? '다시 시도' : '더 보기'}
         </button>
       )}
     </>

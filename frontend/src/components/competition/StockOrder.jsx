@@ -30,7 +30,7 @@ const StockOrder = ({ competition }) => {
   // 주문 뒤 현금·보유 수량을 다시 읽을 때 올린다
   const [reloadCount, setReloadCount] = useState(0);
   // 응답을 못 받은 주문을 다시 보낼 때 같은 키를 써야 서버가 두 번 체결하지 않는다
-  const pendingKey = useRef(null);
+  const pendingKeys = useRef(new Map());
   const reload = () => setReloadCount((count) => count + 1);
 
   // 처음 검색 결과가 오면 첫 종목을 골라 둔다
@@ -135,7 +135,7 @@ const StockOrder = ({ competition }) => {
               competitionId={competitionId}
               detail={detail}
               stale={!!detailError}
-              pendingKey={pendingKey}
+              pendingKeys={pendingKeys}
               onOrdered={reload}
             />
           </>

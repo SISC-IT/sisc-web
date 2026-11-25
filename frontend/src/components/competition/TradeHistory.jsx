@@ -14,7 +14,16 @@ const TradeHistory = ({ competitionId }) => {
     'tradeId'
   );
 
-  if (error && !items) return <p className={styles.errorBox}>{error}</p>;
+  if (error && !items) {
+    return (
+      <>
+        <p className={styles.errorBox}>{error}</p>
+        <button type="button" className={styles.moreButton} onClick={loadMore}>
+          다시 시도
+        </button>
+      </>
+    );
+  }
   if (!items) return <p className={styles.muted}>불러오는 중…</p>;
   if (items.length === 0) {
     return <p className={styles.muted}>아직 거래가 없어요.</p>;
@@ -68,14 +77,14 @@ const TradeHistory = ({ competitionId }) => {
         </table>
       </div>
       {error && <p className={styles.errorBox}>{error}</p>}
-      {!last && (
+      {(!last || error) && (
         <button
           type="button"
           className={styles.moreButton}
           disabled={loading}
           onClick={loadMore}
         >
-          {loading ? '불러오는 중…' : '더 보기'}
+          {loading ? '불러오는 중…' : error ? '다시 시도' : '더 보기'}
         </button>
       )}
     </>

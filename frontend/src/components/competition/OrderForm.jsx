@@ -15,13 +15,22 @@ const feeOf = (amount, feeRate) =>
 
 const maxBuyQuantity = (cash, price, feeRate) => {
   if (!price) return 0;
+  const fits = (q) => q * price + feeOf(q * price, feeRate) <= cash;
+  // 어림값에서 시작해, 수수료를 버린 실제 금액으로 위아래를 맞춘다
   let qty = Math.floor(cash / (price * (1 + feeRate)));
-  while (qty > 0 && qty * price + feeOf(qty * price, feeRate) > cash) qty -= 1;
+  while (qty > 0 && !fits(qty)) qty -= 1;
+  while (fits(qty + 1)) qty += 1;
   return qty;
 };
 
-// pendingKey는 종목을 바꿔도 남아야 해서 부모(StockOrder)가 가진다
-const OrderForm = ({ competitionId, detail, stale, pendingKey, onOrdered }) => {
+// pendingKeys(주문 내용 → 키)는 종목을 바꿔도 남아야 해서 부모(StockOrder)가 가진다
+const OrderForm = ({
+  competitionId,
+  detail,
+  stale,
+  pendingKeys,
+  onOrdered,
+}) => {
   const [side, setSide] = useState('BUY');
   const [qty, setQty] = useState('1');
   const [submitting, setSubmitting] = useState(false);
@@ -60,8 +69,8 @@ const OrderForm = ({ competitionId, detail, stale, pendingKey, onOrdered }) => {
       closePriceId: detail.closePriceId,
     };
     const signature = JSON.stringify(order);
-    if (pendingKey.current?.signature !== signature) {
-      pendingKey.current = { signature, key: uuidv4() };
+    if (!pendingKeys.current.has(signature)) {
+      pendingKeys.current.set(signature, uuidv4());
     }
     setSubmitting(true);
     setResult(null);
@@ -69,9 +78,9 @@ const OrderForm = ({ competitionId, detail, stale, pendingKey, onOrdered }) => {
       const trade = await placeOrder(
         competitionId,
         order,
-        pendingKey.current.key
+        pendingKeys.current.get(signature)
       );
-      pendingKey.current = null;
+      pendingKeys.current.delete(signature);
       setResult({
         ok: true,
         text: `${trade.companyName} ${trade.quantity.toLocaleString('ko-KR')}주 ${isBuy ? '매수' : '매도'} 체결 — ${won(trade.price)}원 (${shortDate(detail.priceDate)} 종가)`,

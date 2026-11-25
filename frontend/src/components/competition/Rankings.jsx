@@ -35,17 +35,13 @@ const Rankings = ({ competitionId }) => {
       .catch(() => {});
   }, [competitionId]);
 
-  if (error) return <p className={styles.errorBox}>{error}</p>;
-  if (!people) return <p className={styles.muted}>불러오는 중…</p>;
-  if (!people.snapshotDate) {
-    return (
-      <p className={styles.muted}>
-        아직 순위가 없어요. 거래일 16:00에 처음 매겨져요.
-      </p>
-    );
-  }
-
-  const myTeam = people.rankings.find((r) => r.userId === me?.id)?.teamName;
+  const myTeam = people?.rankings.find((r) => r.userId === me?.id)?.teamName;
+  const snapshotDate = people?.snapshotDate ?? teams?.snapshotDate;
+  const NO_RANKING = (
+    <p className={styles.muted}>
+      아직 순위가 없어요. 거래일 16:00에 처음 매겨져요.
+    </p>
+  );
 
   return (
     <div className={styles.panel}>
@@ -68,64 +64,76 @@ const Rankings = ({ competitionId }) => {
             팀 순위
           </button>
         </div>
-        <span className={styles.muted}>
-          {shortDate(people.snapshotDate)} 16:00 기준
-        </span>
+        {snapshotDate && (
+          <span className={styles.muted}>
+            {shortDate(snapshotDate)} 16:00 기준
+          </span>
+        )}
       </div>
 
       {view === 'person' ? (
-        <div className={styles.tableBox}>
-          <table className={styles.table}>
-            <colgroup>
-              <col style={{ width: '12%' }} />
-              <col />
-              <col style={{ width: '22%' }} />
-              <col style={{ width: '18%' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th scope="col" className={styles.center}>
-                  순위
-                </th>
-                <th scope="col" className={styles.left}>
-                  이름
-                </th>
-                <th scope="col">총자산</th>
-                <th scope="col">수익률</th>
-              </tr>
-            </thead>
-            <tbody>
-              {people.rankings.map((r) => (
-                <tr
-                  key={r.userId}
-                  className={r.userId === me?.id ? styles.mine : undefined}
-                >
-                  <td className={`${styles.center} ${styles.strong}`}>
-                    {r.rank}
-                    <span className={styles.sub}>
-                      {rankChangeText(r.rankChange)}
-                    </span>
-                  </td>
-                  <td className={styles.left}>
-                    <span className={styles.strong}>{r.userName}</span>
-                    <span className={styles.sub}>{r.teamName}</span>
-                  </td>
-                  <td>{won(r.totalValue)}</td>
-                  <td
-                    className={styles.strong}
-                    style={{ color: changeColor(r.profitRate) }}
-                  >
-                    {signedPercent(r.profitRate)}
-                  </td>
+        error ? (
+          <p className={styles.errorBox}>{error}</p>
+        ) : !people ? (
+          <p className={styles.muted}>불러오는 중…</p>
+        ) : !people.snapshotDate ? (
+          NO_RANKING
+        ) : (
+          <div className={styles.tableBox}>
+            <table className={styles.table}>
+              <colgroup>
+                <col style={{ width: '12%' }} />
+                <col />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '18%' }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col" className={styles.center}>
+                    순위
+                  </th>
+                  <th scope="col" className={styles.left}>
+                    이름
+                  </th>
+                  <th scope="col">총자산</th>
+                  <th scope="col">수익률</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {people.rankings.map((r) => (
+                  <tr
+                    key={r.userId}
+                    className={r.userId === me?.id ? styles.mine : undefined}
+                  >
+                    <td className={`${styles.center} ${styles.strong}`}>
+                      {r.rank}
+                      <span className={styles.sub}>
+                        {rankChangeText(r.rankChange)}
+                      </span>
+                    </td>
+                    <td className={styles.left}>
+                      <span className={styles.strong}>{r.userName}</span>
+                      <span className={styles.sub}>{r.teamName}</span>
+                    </td>
+                    <td>{won(r.totalValue)}</td>
+                    <td
+                      className={styles.strong}
+                      style={{ color: changeColor(r.profitRate) }}
+                    >
+                      {signedPercent(r.profitRate)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : teamError ? (
         <p className={styles.errorBox}>{teamError}</p>
       ) : !teams ? (
         <p className={styles.muted}>불러오는 중…</p>
+      ) : !teams.snapshotDate ? (
+        NO_RANKING
       ) : (
         <>
           <div className={styles.tableBox}>
