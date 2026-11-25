@@ -1,5 +1,5 @@
 import styles from './CompetitionHome.module.css';
-import { daysUntil, fullDate, ratePercent, won } from '../../utils/competitionFormat';
+import { ORDER_HOURS, daysUntil, fullDate, ratePercent, won } from '../../utils/competitionFormat';
 
 const STATUS_LABELS = {
   READY: '시작 전',
@@ -9,10 +9,10 @@ const STATUS_LABELS = {
 };
 
 const MY_STATUS_TEXT = {
-  ACTIVE: '참가 중이에요 — 활동 회원은 대회가 열릴 때 자동으로 참가돼요',
+  ACTIVE: '참가 중이에요',
   EXCLUDED: '대회에서 제외되어 거래할 수 없어요',
 };
-const NOT_PARTICIPANT_TEXT = '이번 대회 참가자가 아니에요 — 대회가 열린 뒤 가입한 회원은 참가할 수 없어요';
+const NOT_PARTICIPANT_TEXT = '이번 대회 참가자가 아니에요';
 
 const dDay = (days) => (days === 0 ? 'D-DAY' : `D-${days}`);
 
@@ -20,17 +20,19 @@ const dDay = (days) => (days === 0 ? 'D-DAY' : `D-${days}`);
 // 상태 전환이 늦어 날짜가 이미 지났으면(음수) 보여주지 않는다.
 const countdown = ({ status, startDate, endDate }) => {
   const target = status === 'READY' ? startDate : status === 'ACTIVE' ? endDate : null;
-  if (!target || daysUntil(target) < 0) return null;
-  return `${status === 'READY' ? '시작까지' : '종료까지'} ${dDay(daysUntil(target))}`;
+  const days = target ? daysUntil(target) : -1;
+  if (days < 0) return null;
+  return `${status === 'READY' ? '시작까지' : '종료까지'} ${dDay(days)}`;
 };
 
 const CompetitionHome = ({ competition }) => {
   const { name, status, startDate, endDate, initialCash, feeRate, depositInterestRate, myStatus } = competition;
   const interest = ratePercent(depositInterestRate);
+  const remaining = countdown(competition);
 
   const rules = [
     { label: '초기 자금', value: `${won(initialCash)}원` },
-    { label: '주문 가능 시간', value: '16:30 – 21:00', note: '그날 종가가 있는 날만 · 종료 전날까지' },
+    { label: '주문 가능 시간', value: ORDER_HOURS, note: '그날 종가가 있는 날만 · 종료 전날까지' },
     { label: '체결 가격', value: '당일 종가', note: '주문 즉시 오늘 종가로 체결' },
     { label: '수수료', value: `거래 금액의 ${ratePercent(feeRate)}` },
     { label: '예금 이자', value: `연 ${interest}`, note: `매일 00시에 예금 × 연 ${interest} ÷ 365 지급` },
@@ -38,7 +40,7 @@ const CompetitionHome = ({ competition }) => {
 
   const flow = [
     { time: '16:00', title: '오늘 종가 수집 · 순위 갱신', text: '오늘 종가를 모아 총자산과 순위를 새로 매깁니다.' },
-    { time: '16:30 – 21:00', title: '사고팔기 · 예금 입출금', text: '오늘 종가로 바로 체결됩니다. 그날 거래는 다음 거래일 순위에 반영돼요.' },
+    { time: ORDER_HOURS, title: '사고팔기 · 예금 입출금', text: '오늘 종가로 바로 체결됩니다. 그날 거래는 다음 거래일 순위에 반영돼요.' },
     { time: '00:00', title: '예금 이자 지급', text: `예금 잔고에 연 ${interest} ÷ 365만큼 이자가 붙습니다.` },
   ];
 
@@ -47,7 +49,7 @@ const CompetitionHome = ({ competition }) => {
       <section aria-labelledby="competition-name" className={styles.hero}>
         <div className={styles.badges}>
           <span className={styles.statusBadge}>{STATUS_LABELS[status]}</span>
-          {countdown(competition) && <span className={styles.countdown}>{countdown(competition)}</span>}
+          {remaining && <span className={styles.countdown}>{remaining}</span>}
         </div>
         <div className={styles.heroText}>
           <h2 id="competition-name" className={styles.name}>{name}</h2>

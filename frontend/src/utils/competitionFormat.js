@@ -1,3 +1,6 @@
+// 주문·입출금 가능 시간. 서버의 국내 주문 시간과 같다.
+export const ORDER_HOURS = '16:30 – 21:00';
+
 // 서버는 금액을 소수 4자리까지 준다. 화면에는 원 미만을 버려서(0 쪽으로) 보여준다.
 export const won = (value) => {
   if (value === null || value === undefined) return '-';

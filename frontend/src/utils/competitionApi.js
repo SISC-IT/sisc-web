@@ -20,7 +20,6 @@ export const getStockDetail = async (competitionId, ticker) => {
   return res.data;
 };
 
-// idempotencyKey: 같은 주문을 다시 보낼 때 같은 키를 쓰면 서버가 한 번만 체결한다.
 export const placeOrder = async (competitionId, order, idempotencyKey) => {
   const res = await api.post(`/api/competitions/${competitionId}/me/trades`, order, {
     headers: { 'Idempotency-Key': idempotencyKey },
