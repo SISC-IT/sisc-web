@@ -35,3 +35,51 @@ export const placeOrder = async (competitionId, order, idempotencyKey) => {
   );
   return res.data;
 };
+
+const me = (competitionId) => `/api/competitions/${competitionId}/me`;
+
+// date를 생략하면 오늘(KST) 현황이다
+export const getMySummary = async (competitionId) => {
+  const res = await api.get(`${me(competitionId)}/summary`);
+  return res.data;
+};
+
+export const getMyHoldings = async (competitionId) => {
+  const res = await api.get(`${me(competitionId)}/holdings`);
+  return res.data;
+};
+
+export const getMyTrades = async (competitionId, page) => {
+  const res = await api.get(`${me(competitionId)}/trades`, {
+    params: { page },
+  });
+  return res.data;
+};
+
+// type: DEPOSIT(현금 → 예금) | WITHDRAW(예금 → 현금)
+export const transferDeposit = async (competitionId, type, amount) => {
+  const res = await api.post(`${me(competitionId)}/deposit-transactions`, {
+    type,
+    amount,
+  });
+  return res.data;
+};
+
+export const getDepositTransactions = async (competitionId, page) => {
+  const res = await api.get(`${me(competitionId)}/deposit-transactions`, {
+    params: { page },
+  });
+  return res.data;
+};
+
+export const getRankings = async (competitionId) => {
+  const res = await api.get(`/api/competitions/${competitionId}/rankings`);
+  return res.data;
+};
+
+export const getTeamRankings = async (competitionId) => {
+  const res = await api.get(
+    `/api/competitions/${competitionId}/rankings/teams`
+  );
+  return res.data;
+};

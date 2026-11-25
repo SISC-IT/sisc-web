@@ -3,20 +3,50 @@ import { useSearchParams } from 'react-router-dom';
 import styles from './Competition.module.css';
 import CompetitionHome from '../components/competition/CompetitionHome';
 import StockOrder from '../components/competition/StockOrder';
+import MyAccount from '../components/competition/MyAccount';
+import Deposit from '../components/competition/Deposit';
+import Rankings from '../components/competition/Rankings';
 import { getCurrentCompetition } from '../utils/competitionApi';
 
 // 탭은 주소(?tab=)에 남겨서 새로고침하거나 링크로 들어와도 같은 탭이 열린다.
 const TABS = [
-  { key: 'home', label: '대회 홈' },
+  { key: 'account', label: '내 계좌' },
   { key: 'stocks', label: '종목 · 주문' },
+  { key: 'deposit', label: '예금' },
+  { key: 'rankings', label: '순위' },
+  { key: 'info', label: '대회 정보' },
 ];
+
+// 내 계좌를 보는 탭. 참가자가 아니면 계좌가 없다(제외된 참가자는 볼 수 있다).
+const ACCOUNT_TABS = ['account', 'deposit'];
+
+const TabContent = ({ tab, competition }) => {
+  const { competitionId, myStatus } = competition;
+  if (ACCOUNT_TABS.includes(tab) && !myStatus) {
+    return <p className={styles.notice}>대회 참가자만 볼 수 있어요.</p>;
+  }
+  switch (tab) {
+    case 'account':
+      return <MyAccount competitionId={competitionId} />;
+    case 'stocks':
+      return <StockOrder competition={competition} />;
+    case 'deposit':
+      return <Deposit competition={competition} />;
+    case 'rankings':
+      return <Rankings competitionId={competitionId} />;
+    default:
+      return <CompetitionHome competition={competition} />;
+  }
+};
 
 const Competition = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [competition, setCompetition] = useState(null);
+  // 참가자가 아니면 내 계좌가 없어서 대회 정보로 연다
+  const defaultTab = competition && !competition.myStatus ? 'info' : 'account';
   const tab = TABS.some((t) => t.key === searchParams.get('tab'))
     ? searchParams.get('tab')
-    : 'home';
-  const [competition, setCompetition] = useState(null);
+    : defaultTab;
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -50,12 +80,7 @@ const Competition = () => {
         </p>
       )}
       {!error && !competition && <p className={styles.notice}>불러오는 중…</p>}
-      {competition && tab === 'home' && (
-        <CompetitionHome competition={competition} />
-      )}
-      {competition && tab === 'stocks' && (
-        <StockOrder competition={competition} />
-      )}
+      {competition && <TabContent tab={tab} competition={competition} />}
     </div>
   );
 };

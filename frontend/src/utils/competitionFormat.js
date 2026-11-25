@@ -47,3 +47,16 @@ export const daysUntil = (isoDate) => {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((target - today) / 86400000);
 };
+
+// '2026-12-08T18:42:10.123' → '12.08 18:42' (서버가 KST로 준다)
+export const shortDateTime = (isoDateTime) =>
+  isoDateTime
+    ? isoDateTime.slice(5, 16).replace('-', '.').replace('T', ' ')
+    : '';
+
+// 입력칸에서 숫자만 남긴다. 붙여넣은 쉼표·공백도 지운다.
+export const digitsOnly = (text) =>
+  text
+    .replace(/\D/g, '')
+    .replace(/^0+(?=\d)/, '')
+    .slice(0, 15);
