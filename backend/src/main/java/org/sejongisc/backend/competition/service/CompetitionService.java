@@ -29,7 +29,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -150,29 +149,24 @@ public class CompetitionService {
     }
   }
 
-  // 종료일 스냅샷이 없으면(휴장일, 수집 실패) 종료일이 지난 뒤 가장 최근 스냅샷으로 닫는다.
+  // 종료일 스냅샷의 등수를 최종 등수로 쓴다. 종료일에는 그날 스냅샷이 생길 때까지 기다린다.
   @Transactional
   public void endDueCompetitions() {
     LocalDate today = LocalDate.now(clock);
     List<Competition> due = competitionRepository.findAllByStatusAndEndDateLessThanEqual(
         CompetitionStatus.ACTIVE, today);
     for (Competition competition : due) {
-      Optional<LocalDate> latestSnapshotDate = snapshotRepository.findLatestSnapshotDate(competition);
-      if (!isFinalSnapshotReady(competition, latestSnapshotDate, today)) {
+      LocalDate endDate = competition.getEndDate();
+      if (snapshotRepository.existsByCompetitionAndSnapshotDate(competition, endDate)) {
+        assignFinalRanks(competition, endDate);
+      } else if (endDate.isBefore(today)) {
+        log.warn("[대회 종료] 종료일 스냅샷이 없어 최종 등수 없이 닫습니다: competitionId={}", competition.getCompetitionId());
+      } else {
         continue;
       }
-      latestSnapshotDate.ifPresentOrElse(
-          snapshotDate -> assignFinalRanks(competition, snapshotDate),
-          () -> log.warn("[대회 종료] 스냅샷이 없어 최종 등수 없이 닫습니다: competitionId={}", competition.getCompetitionId()));
       competition.end();
-      log.info("[대회 종료] competitionId={}, endDate={}, 평가일={}",
-          competition.getCompetitionId(), competition.getEndDate(), latestSnapshotDate.orElse(null));
+      log.info("[대회 종료] competitionId={}, endDate={}", competition.getCompetitionId(), endDate);
     }
-  }
-
-  private static boolean isFinalSnapshotReady(
-      Competition competition, Optional<LocalDate> latestSnapshotDate, LocalDate today) {
-    return competition.getEndDate().isBefore(today) || latestSnapshotDate.filter(today::equals).isPresent();
   }
 
   private void assignFinalRanks(Competition competition, LocalDate snapshotDate) {

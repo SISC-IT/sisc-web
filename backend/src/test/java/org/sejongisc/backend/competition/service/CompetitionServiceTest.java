@@ -223,7 +223,7 @@ class CompetitionServiceTest {
     CompetitionParticipant first = participant(competition);
     CompetitionParticipant second = participant(competition);
     givenDue(competition);
-    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(TODAY));
+    given(snapshotRepository.existsByCompetitionAndSnapshotDate(competition, TODAY)).willReturn(true);
     given(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, TODAY, ParticipantStatus.ACTIVE))
         .willReturn(List.of(snapshot(first, 1), snapshot(second, 2)));
 
@@ -239,7 +239,7 @@ class CompetitionServiceTest {
   void waitForEndDateSnapshot() {
     Competition competition = activeEndingOn(TODAY);
     givenDue(competition);
-    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(TODAY.minusDays(1)));
+    given(snapshotRepository.existsByCompetitionAndSnapshotDate(competition, TODAY)).willReturn(false);
 
     competitionService.endDueCompetitions();
 
@@ -248,15 +248,14 @@ class CompetitionServiceTest {
   }
 
   @Test
-  @DisplayName("종료일이 휴장일이라 그날 스냅샷이 없으면 종료일이 지난 뒤 직전 거래일 스냅샷으로 닫는다")
-  void endWithLastTradingDaySnapshotAfterEndDate() {
+  @DisplayName("종료일이 지난 뒤에 만든 종료일 스냅샷의 등수로 닫는다")
+  void endWithFinalSnapshotAfterEndDate() {
     LocalDate endDate = TODAY.minusDays(1);
-    LocalDate lastTradingDay = TODAY.minusDays(2);
     Competition competition = activeEndingOn(endDate);
     CompetitionParticipant participant = participant(competition);
     givenDue(competition);
-    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(lastTradingDay));
-    given(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, lastTradingDay, ParticipantStatus.ACTIVE))
+    given(snapshotRepository.existsByCompetitionAndSnapshotDate(competition, endDate)).willReturn(true);
+    given(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, endDate, ParticipantStatus.ACTIVE))
         .willReturn(List.of(snapshot(participant, 1)));
 
     competitionService.endDueCompetitions();
@@ -272,7 +271,7 @@ class CompetitionServiceTest {
     CompetitionParticipant active = participant(competition);
     CompetitionParticipant excluded = participant(competition);
     givenDue(competition);
-    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.of(TODAY));
+    given(snapshotRepository.existsByCompetitionAndSnapshotDate(competition, TODAY)).willReturn(true);
     given(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, TODAY, ParticipantStatus.ACTIVE))
         .willReturn(List.of(snapshot(active, 1)));
 
@@ -283,11 +282,12 @@ class CompetitionServiceTest {
   }
 
   @Test
-  @DisplayName("스냅샷이 한 번도 없으면 종료일이 지난 뒤 최종 등수 없이 닫는다")
-  void endWithoutAnySnapshot() {
-    Competition competition = activeEndingOn(TODAY.minusDays(1));
+  @DisplayName("종료일이 지났는데 종료일 스냅샷이 없으면 최종 등수 없이 닫는다")
+  void endWithoutEndDateSnapshot() {
+    LocalDate endDate = TODAY.minusDays(1);
+    Competition competition = activeEndingOn(endDate);
     givenDue(competition);
-    given(snapshotRepository.findLatestSnapshotDate(competition)).willReturn(Optional.empty());
+    given(snapshotRepository.existsByCompetitionAndSnapshotDate(competition, endDate)).willReturn(false);
 
     competitionService.endDueCompetitions();
 
