@@ -102,7 +102,7 @@ const StockOrder = ({ competition }) => {
           <>
             <p className={detail.tradable ? styles.openBar : styles.closedBar}>
               {detail.tradable
-                ? `지금 주문 가능(${ORDER_HOURS}) — 주문하면 ${shortDate(detail.priceDate)} 종가로 바로 체결됩니다`
+                ? `지금 주문 가능(${ORDER_HOURS})`
                 : unavailableText(detail.unavailableReason)}
             </p>
 

@@ -14,11 +14,11 @@ const STATUS_LABELS = {
   FINALIZED: '종료',
 };
 
+// 참가 중이면 안내하지 않고, 거래할 수 없는 경우만 알린다
 const MY_STATUS_TEXT = {
-  ACTIVE: '참가 중이에요',
   EXCLUDED: '대회에서 제외되어 거래할 수 없어요',
+  NOT_PARTICIPANT: '이번 대회 참가자가 아니에요',
 };
-const NOT_PARTICIPANT_TEXT = '이번 대회 참가자가 아니에요';
 
 const dDay = (days) => (days === 0 ? 'D-DAY' : `D-${days}`);
 
@@ -66,24 +66,6 @@ const CompetitionHome = ({ competition }) => {
     },
   ];
 
-  const flow = [
-    {
-      time: '16:00',
-      title: '오늘 종가 수집 · 순위 갱신',
-      text: '오늘 종가를 모아 총자산과 순위를 새로 매깁니다.',
-    },
-    {
-      time: ORDER_HOURS,
-      title: '사고팔기 · 예금 입출금',
-      text: '오늘 종가로 바로 체결됩니다. 그날 거래는 다음 거래일 순위에 반영돼요.',
-    },
-    {
-      time: '00:00',
-      title: '예금 이자 지급',
-      text: `예금 잔고에 연 ${interest} ÷ 365만큼 이자가 붙습니다.`,
-    },
-  ];
-
   return (
     <div className={styles.home}>
       <section aria-labelledby="competition-name" className={styles.hero}>
@@ -100,9 +82,11 @@ const CompetitionHome = ({ competition }) => {
             수익률로 순위를 겨룹니다.
           </p>
         </div>
-        <p className={styles.myStatus}>
-          {MY_STATUS_TEXT[myStatus] ?? NOT_PARTICIPANT_TEXT}
-        </p>
+        {myStatus !== 'ACTIVE' && (
+          <p className={styles.myStatus}>
+            {MY_STATUS_TEXT[myStatus ?? 'NOT_PARTICIPANT']}
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="rules-title" className={styles.section}>
@@ -120,21 +104,6 @@ const CompetitionHome = ({ competition }) => {
             </div>
           ))}
         </div>
-      </section>
-
-      <section aria-labelledby="flow-title" className={styles.section}>
-        <h2 id="flow-title" className={styles.sectionTitle}>
-          하루 흐름
-        </h2>
-        <ol className={styles.flow}>
-          {flow.map((step) => (
-            <li key={step.time} className={styles.step}>
-              <span className={styles.stepTime}>{step.time}</span>
-              <span className={styles.stepTitle}>{step.title}</span>
-              <span className={styles.stepText}>{step.text}</span>
-            </li>
-          ))}
-        </ol>
       </section>
     </div>
   );
