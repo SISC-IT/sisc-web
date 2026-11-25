@@ -4,7 +4,8 @@ export const ORDER_HOURS = '16:30 – 21:00';
 // 서버는 금액을 소수 4자리까지 준다. 화면에는 원 미만을 버려서(0 쪽으로) 보여준다.
 export const won = (value) => {
   if (value === null || value === undefined) return '-';
-  return Math.trunc(Number(value)).toLocaleString('ko-KR');
+  const n = Math.trunc(Number(value));
+  return `${n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('ko-KR')}`;
 };
 
 // 비율(0.0523)을 부호 있는 퍼센트(+5.23%)로

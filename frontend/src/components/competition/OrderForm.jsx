@@ -21,7 +21,7 @@ const maxBuyQuantity = (cash, price, feeRate) => {
 };
 
 // pendingKey는 종목을 바꿔도 남아야 해서 부모(StockOrder)가 가진다
-const OrderForm = ({ competitionId, detail, pendingKey, onOrdered }) => {
+const OrderForm = ({ competitionId, detail, stale, pendingKey, onOrdered }) => {
   const [side, setSide] = useState('BUY');
   const [qty, setQty] = useState('1');
   const [submitting, setSubmitting] = useState(false);
@@ -48,7 +48,8 @@ const OrderForm = ({ competitionId, detail, pendingKey, onOrdered }) => {
         ? '보유하지 않은 종목은 팔 수 없어요.'
         : `보유 수량(${detail.holdingQuantity}주)보다 많이 팔 수 없어요.`;
   }
-  const canSubmit = detail.tradable && !inputError && !submitting;
+  // 다시 읽기에 실패하면 잔고가 예전 값이라 주문을 막는다
+  const canSubmit = detail.tradable && !stale && !inputError && !submitting;
 
   const submit = async () => {
     // 종가가 바뀌면 closePriceId가 달라져 키도 새로 만든다

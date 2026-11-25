@@ -130,15 +130,14 @@ const StockOrder = ({ competition }) => {
             </div>
 
             {/* 종목이 바뀌면 새로 그려서 이전 종목의 수량·주문 결과가 남지 않게 한다 */}
-            {!detailError && (
-              <OrderForm
-                key={detail.ticker}
-                competitionId={competitionId}
-                detail={detail}
-                pendingKey={pendingKey}
-                onOrdered={reload}
-              />
-            )}
+            <OrderForm
+              key={detail.ticker}
+              competitionId={competitionId}
+              detail={detail}
+              stale={!!detailError}
+              pendingKey={pendingKey}
+              onOrdered={reload}
+            />
           </>
         )}
       </section>

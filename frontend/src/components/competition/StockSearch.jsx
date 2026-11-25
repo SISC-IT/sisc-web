@@ -12,16 +12,18 @@ const StockSearch = ({
   const [query, setQuery] = useState('');
   // 첫 응답 전에는 null이라 '검색 결과가 없어요'가 잠깐 뜨지 않는다
   const [stocks, setStocks] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState('');
 
   // 입력이 멈추고 0.3초 뒤에 검색한다. 검색어가 바뀐 뒤 늦게 온 예전 응답은 버린다.
   useEffect(() => {
     let stale = false;
     const timer = setTimeout(() => {
-      searchStocks(competitionId, { query: query.trim() })
+      searchStocks(competitionId, { query: query.trim(), size: 100 })
         .then((res) => {
           if (stale) return;
           setStocks(res.stocks);
+          setTotalCount(res.totalCount);
           setError('');
           onResults(res.stocks);
         })
@@ -76,6 +78,11 @@ const StockSearch = ({
           </li>
         ))}
       </ul>
+      {stocks && totalCount > stocks.length && (
+        <p className={styles.muted}>
+          {stocks.length}개만 보여요. 나머지는 검색해 주세요.
+        </p>
+      )}
     </section>
   );
 };

@@ -33,7 +33,7 @@ const Deposit = ({ competition }) => {
     (page) => getDepositTransactions(competitionId, page),
     [competitionId]
   );
-  const history = usePagedList(fetchPage);
+  const history = usePagedList(fetchPage, 'ledgerId');
 
   useEffect(() => {
     getMySummary(competitionId)

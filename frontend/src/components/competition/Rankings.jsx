@@ -20,19 +20,19 @@ const Rankings = ({ competitionId }) => {
   const [teams, setTeams] = useState(null);
   const [me, setMe] = useState(null);
   const [error, setError] = useState('');
+  const [teamError, setTeamError] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      getRankings(competitionId),
-      getTeamRankings(competitionId),
-      getUserDetails(),
-    ])
-      .then(([p, t, user]) => {
-        setPeople(p);
-        setTeams(t);
-        setMe(user);
-      })
+    // 하나가 실패해도 나머지는 보여 준다. 내 정보가 없으면 내 행만 표시하지 않는다.
+    getRankings(competitionId)
+      .then(setPeople)
       .catch((err) => setError(err.message));
+    getTeamRankings(competitionId)
+      .then(setTeams)
+      .catch((err) => setTeamError(err.message));
+    getUserDetails()
+      .then(setMe)
+      .catch(() => {});
   }, [competitionId]);
 
   if (error) return <p className={styles.errorBox}>{error}</p>;
@@ -45,7 +45,7 @@ const Rankings = ({ competitionId }) => {
     );
   }
 
-  const myTeam = people.rankings.find((r) => r.userId === me.id)?.teamName;
+  const myTeam = people.rankings.find((r) => r.userId === me?.id)?.teamName;
 
   return (
     <div className={styles.panel}>
@@ -95,7 +95,7 @@ const Rankings = ({ competitionId }) => {
               {people.rankings.map((r) => (
                 <tr
                   key={r.userId}
-                  className={r.userId === me.id ? styles.mine : undefined}
+                  className={r.userId === me?.id ? styles.mine : undefined}
                 >
                   <td className={`${styles.center} ${styles.strong}`}>
                     {r.rank}
@@ -119,6 +119,10 @@ const Rankings = ({ competitionId }) => {
             </tbody>
           </table>
         </div>
+      ) : teamError ? (
+        <p className={styles.errorBox}>{teamError}</p>
+      ) : !teams ? (
+        <p className={styles.muted}>불러오는 중…</p>
       ) : (
         <>
           <div className={styles.tableBox}>

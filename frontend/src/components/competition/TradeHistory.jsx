@@ -9,7 +9,10 @@ const TradeHistory = ({ competitionId }) => {
     (page) => getMyTrades(competitionId, page),
     [competitionId]
   );
-  const { items, last, error, loading, loadMore } = usePagedList(fetchPage);
+  const { items, last, error, loading, loadMore } = usePagedList(
+    fetchPage,
+    'tradeId'
+  );
 
   if (error && !items) return <p className={styles.errorBox}>{error}</p>;
   if (!items) return <p className={styles.muted}>불러오는 중…</p>;
