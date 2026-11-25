@@ -43,6 +43,6 @@
 - **주의사항:** 공시 원문 HTML은 DB에 저장하지 않으며, 에러 로그에 `crtfc_key`가 노출되지 않도록 `OpenDartClientException`으로 마스킹한다.
 
 ## 6. 구현 상태 및 완료 기준
-- **백엔드:** `controller/DisclosureController`, `service/(DisclosureEarningsCollectionService, DisclosureEventCollectionService, DisclosureQueryService)`, `service/enums/*`, `service/settings/*`, `entity/*`, `repository/*`, Flyway `V8`·`V9` 구현 완료
+- **백엔드:** `controller/DisclosureController`, `service/(DisclosureEarningsCollectionService, DisclosureEventCollectionService, DisclosureQueryService)`, `service/enums/*`, `service/settings/*`, `entity/*`, `repository/*`, Flyway `V12`·`V13` 구현 완료
 - **프론트엔드:** `pages/DisclosureBoard.jsx`, `pages/DisclosureBoard.module.css`, `utils/disclosureApi.js`, `App.jsx`, `Sidebar.jsx` 연동 완료
 - **검증:** `cd backend && .\gradlew.bat test --tests "org.sejongisc.backend.disclosure.*"` (17/17 통과)
