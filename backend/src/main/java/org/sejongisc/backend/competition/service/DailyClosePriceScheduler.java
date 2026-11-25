@@ -10,9 +10,22 @@ import org.springframework.stereotype.Component;
 public class DailyClosePriceScheduler {
 
     private final DailyClosePriceCollector collector;
+    private final DepositInterestService interestService;
+    private final AccountSnapshotService snapshotService;
+    private final CompetitionService competitionService;
 
-    @Scheduled(cron = "${competition.price-collection.cron:0 0 16 * * MON-FRI}", zone = "Asia/Seoul")
+    @Scheduled(
+            cron = "${competition.price-collection.cron:0 0 16 * * MON-FRI}",
+            zone = "Asia/Seoul",
+            scheduler = "closePriceScheduler"
+    )
     public void collectDomesticClosePrices() {
+        if (!competitionService.hasOpenCompetition()) {
+            return;
+        }
         collector.collectDomestic();
+        // 00:00, 15:00 지급을 모두 놓쳤어도 스냅샷 전에 지급한다
+        interestService.payDailyInterest();
+        snapshotService.createDailySnapshot();
     }
 }

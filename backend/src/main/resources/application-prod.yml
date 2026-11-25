@@ -26,11 +26,18 @@ kiwoom:
       connect-ms: ${KIWOOM_CONNECT_TIMEOUT_MS:3000}
       response-ms: ${KIWOOM_RESPONSE_TIMEOUT_MS:5000}
       block-ms: ${KIWOOM_BLOCK_TIMEOUT_MS:7000}
+    # 종목 목록(ka10099)은 한 페이지가 기본 버퍼 256KB를 넘을 수 있다.
+    max-response-bytes: ${KIWOOM_MAX_RESPONSE_BYTES:5242880}
     pagination:
       max-pages: ${KIWOOM_MAX_PAGES:20}
+      stock-list-max-pages: ${KIWOOM_STOCK_LIST_MAX_PAGES:100}
     rate-limit:
       max-concurrent: ${KIWOOM_MAX_CONCURRENT_REQUESTS:3}
-      min-interval-ms: ${KIWOOM_MIN_INTERVAL_MS:100}
+      min-interval-ms: ${KIWOOM_MIN_INTERVAL_MS:200}
+      restricted:
+        min-interval-ms: ${KIWOOM_RESTRICTED_MIN_INTERVAL_MS:1000}
+        api-ids: >-
+          ${KIWOOM_RESTRICTED_API_IDS:kt00001,kt00002,kt00003,kt00004,kt00005,kt00007,kt00008,kt00009,kt00013,kt00015,kt00016,kt00017,kt00018,kt50020,kt50021,kt50030,kt50031,kt50032,kt50075}
 
 opendart:
   api:
@@ -39,6 +46,11 @@ opendart:
     timeout-ms: ${OPENDART_TIMEOUT_MS:10000}
 
 competition:
+  stock-sync:
+    # 평일 15:40. 종가 수집(16:00) 전에 종목 목록을 맞춘다.
+    cron: ${COMPETITION_STOCK_SYNC_CRON:0 40 15 * * MON-FRI}
+    # 키움 ka10099 시장구분. 0은 코스피, 10은 코스닥
+    market-types: ${COMPETITION_STOCK_SYNC_MARKET_TYPES:0,10}
   price-collection:
     # 평일 16:00. 장 마감(15:30) 이후, 주문 접수 시작(16:30) 전에 수집한다.
     cron: ${COMPETITION_PRICE_COLLECTION_CRON:0 0 16 * * MON-FRI}

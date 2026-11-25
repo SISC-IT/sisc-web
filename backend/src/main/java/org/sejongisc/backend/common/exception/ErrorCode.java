@@ -10,6 +10,18 @@ public enum ErrorCode {
 
   INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에 문제가 발생했습니다."),
 
+  INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
+
+  ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 리소스에 접근할 권한이 없습니다."),
+
+  RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 주소를 찾을 수 없습니다."),
+
+  METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP 메서드입니다."),
+
+  UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 Content-Type입니다."),
+
+  UPLOAD_SIZE_EXCEEDED(HttpStatus.PAYLOAD_TOO_LARGE, "업로드 크기 제한을 넘었습니다."),
+
   // PRICE DATA
 
   PRICE_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 주식의 가격 데이터가 존재하지 않습니다."),
@@ -106,9 +118,59 @@ public enum ErrorCode {
 
   INVALID_KIWOOM_STOCK_CODE(HttpStatus.BAD_REQUEST, "종목코드는 비어 있을 수 없습니다."),
 
+  INVALID_KIWOOM_MARKET_TYPE(HttpStatus.BAD_REQUEST, "시장구분은 비어 있을 수 없습니다."),
+
   KIWOOM_CHART_API_FAILED(HttpStatus.BAD_GATEWAY, "키움증권 차트 조회 중 오류가 발생했습니다."),
 
   KIWOOM_CHART_MALFORMED_RESPONSE(HttpStatus.BAD_GATEWAY, "키움증권 차트 응답 형식이 올바르지 않습니다."),
+
+  // COMPETITION
+
+  COMPETITION_ALREADY_OPEN(HttpStatus.CONFLICT, "시작 전이거나 진행 중인 대회가 이미 있습니다."),
+
+  INVALID_COMPETITION_PERIOD(HttpStatus.BAD_REQUEST, "대회 종료일은 시작일보다 늦어야 합니다."),
+
+  COMPETITION_START_DATE_PAST(HttpStatus.BAD_REQUEST, "대회 시작일은 오늘 이후여야 합니다."),
+
+  COMPETITION_NO_PARTICIPANTS(HttpStatus.BAD_REQUEST, "참가할 활동 회원이 없습니다."),
+
+  COMPETITION_TEAM_UNASSIGNED(HttpStatus.BAD_REQUEST, "팀이 배정되지 않은 활동 회원이 있습니다. 회원 관리에서 팀을 배정해 주세요."),
+
+  COMPETITION_NOT_FOUND(HttpStatus.NOT_FOUND, "대회를 찾을 수 없습니다."),
+
+  COMPETITION_STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "거래 대상 종목을 찾을 수 없습니다."),
+
+  COMPETITION_PARTICIPANT_NOT_FOUND(HttpStatus.NOT_FOUND, "대회 참가 정보를 찾을 수 없습니다."),
+
+  INVALID_COMPETITION_MARKET(HttpStatus.BAD_REQUEST, "지원하지 않는 시장 구분입니다. KR 또는 US만 사용할 수 있습니다."),
+
+  COMPETITION_INSUFFICIENT_CASH(HttpStatus.BAD_REQUEST, "현금이 부족합니다."),
+
+  COMPETITION_INSUFFICIENT_HOLDING(HttpStatus.BAD_REQUEST, "보유 수량이 부족합니다."),
+
+  COMPETITION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "진행 중인 대회가 아닙니다."),
+
+  COMPETITION_NOT_ENDED(HttpStatus.CONFLICT, "종료되어 결과 확인을 기다리는 대회만 결과를 공개할 수 있습니다."),
+
+  COMPETITION_PARTICIPANT_EXCLUDED(HttpStatus.FORBIDDEN, "대회에서 제외되어 거래할 수 없습니다."),
+
+  COMPETITION_MARKET_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "국내 종목만 거래할 수 있습니다."),
+
+  COMPETITION_ORDER_CLOSED(HttpStatus.BAD_REQUEST, "주문 가능 시간이 아닙니다."),
+
+  COMPETITION_PRICE_UNAVAILABLE(HttpStatus.BAD_REQUEST, "오늘 종가가 아직 없어 주문할 수 없습니다."),
+
+  PRICE_CHANGED(HttpStatus.CONFLICT, "종가가 바뀌었습니다. 새 종가를 확인한 뒤 다시 주문해 주세요."),
+
+  COMPETITION_IDEMPOTENCY_KEY_REUSED(HttpStatus.CONFLICT, "같은 주문 키로 다른 주문이 이미 접수되었습니다."),
+
+  COMPETITION_ORDER_CONFLICT(HttpStatus.CONFLICT, "동시에 처리 중인 주문이 있습니다. 잠시 후 다시 시도해 주세요."),
+
+  COMPETITION_INSUFFICIENT_DEPOSIT(HttpStatus.BAD_REQUEST, "예금이 부족합니다."),
+
+  COMPETITION_TRANSFER_CLOSED(HttpStatus.BAD_REQUEST, "입출금 가능 시간이 아닙니다."),
+
+  COMPETITION_TRANSFER_CONFLICT(HttpStatus.CONFLICT, "같은 계좌의 다른 요청과 겹쳤습니다. 잠시 후 다시 시도해 주세요."),
 
   // USER
 

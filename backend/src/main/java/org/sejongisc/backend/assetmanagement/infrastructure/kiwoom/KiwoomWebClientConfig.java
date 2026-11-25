@@ -18,7 +18,8 @@ public class KiwoomWebClientConfig {
       WebClient.Builder builder,
       @Value("${kiwoom.api.base-url:https://api.kiwoom.com}") String baseUrl,
       @Value("${kiwoom.api.timeout.connect-ms:3000}") int connectTimeoutMillis,
-      @Value("${kiwoom.api.timeout.response-ms:5000}") long responseTimeoutMillis
+      @Value("${kiwoom.api.timeout.response-ms:5000}") long responseTimeoutMillis,
+      @Value("${kiwoom.api.max-response-bytes:5242880}") int maxResponseBytes
   ) {
     HttpClient httpClient = HttpClient.create()
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.max(100, connectTimeoutMillis))
@@ -27,6 +28,7 @@ public class KiwoomWebClientConfig {
     return builder
         .baseUrl(baseUrl)
         .clientConnector(new ReactorClientHttpConnector(httpClient))
+        .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(maxResponseBytes))
         .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
         .build();
   }

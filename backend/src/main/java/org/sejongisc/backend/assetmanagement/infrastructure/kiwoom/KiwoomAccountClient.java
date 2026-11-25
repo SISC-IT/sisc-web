@@ -236,7 +236,7 @@ public class KiwoomAccountClient implements AssetManagementAccountClient {
       String token
   ) {
     try {
-      return rateLimiter.call(() -> kiwoomWebClient.post()
+      return rateLimiter.call(apiId, () -> kiwoomWebClient.post()
           .uri(ACCOUNT_ENDPOINT)
           .header("authorization", "Bearer " + token)
           .header("api-id", apiId)

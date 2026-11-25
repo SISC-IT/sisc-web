@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
@@ -40,6 +42,23 @@ class CompetitionAccountRepositoryTest {
   @Autowired EntityManager entityManager;
   @Autowired EntityManagerFactory entityManagerFactory;
   @Autowired DataSource dataSource;
+
+  @Test
+  void 시작일이_가장_늦은_대회를_현재_대회로_찾는다() {
+    competitionRepository.saveAndFlush(competitionBuilder(CompetitionStatus.FINALIZED)
+        .startDate(LocalDate.of(2026, 9, 1)).endDate(LocalDate.of(2026, 9, 26)).build());
+    Competition latestEnded = competitionRepository.saveAndFlush(competitionBuilder(CompetitionStatus.ENDED)
+        .startDate(LocalDate.of(2026, 10, 6)).endDate(LocalDate.of(2026, 10, 31)).build());
+
+    assertThat(competitionRepository.findFirstByOrderByStartDateDesc())
+        .map(Competition::getCompetitionId).contains(latestEnded.getCompetitionId());
+
+    Competition ready = competitionRepository.saveAndFlush(competitionBuilder(CompetitionStatus.READY)
+        .startDate(LocalDate.of(2026, 11, 30)).endDate(LocalDate.of(2026, 12, 25)).build());
+
+    assertThat(competitionRepository.findFirstByOrderByStartDateDesc())
+        .map(Competition::getCompetitionId).contains(ready.getCompetitionId());
+  }
 
   @Test
   void 대회_참가자_계좌_보유종목을_저장하고_다시_읽는다() {
@@ -79,8 +98,30 @@ class CompetitionAccountRepositoryTest {
     saveCompetition(CompetitionStatus.ENDED); // 종료된 대회는 여러 개여도 된다
     saveCompetition(CompetitionStatus.ACTIVE);
 
-    assertThatThrownBy(() -> saveCompetition(CompetitionStatus.ACTIVE))
-        .isInstanceOf(DataIntegrityViolationException.class);
+    assertSingleOpenViolation(() -> saveCompetition(CompetitionStatus.ACTIVE));
+  }
+
+  @Test
+  void 진행_중인_대회가_있으면_시작_전_대회를_만들_수_없다() {
+    saveCompetition(CompetitionStatus.ACTIVE);
+
+    assertSingleOpenViolation(() -> saveCompetition(CompetitionStatus.READY));
+  }
+
+  @Test
+  void 시작_전_대회는_하나만_있을_수_있다() {
+    saveCompetition(CompetitionStatus.READY);
+
+    assertSingleOpenViolation(() -> saveCompetition(CompetitionStatus.READY));
+  }
+
+  // 다른 제약(이름 등)이 아니라 열린 대회 인덱스 때문에 실패했는지 확인한다
+  private static void assertSingleOpenViolation(ThrowingCallable save) {
+    assertThatThrownBy(save)
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .cause()
+        .isInstanceOf(ConstraintViolationException.class)
+        .extracting("constraintName").isEqualTo("uk_competition_single_open");
   }
 
   @Test
@@ -194,6 +235,18 @@ class CompetitionAccountRepositoryTest {
       // 이 테스트는 실제로 커밋해서 롤백되지 않으므로 만든 데이터를 직접 지운다
       new JdbcTemplate(dataSource).execute("truncate table users, competition cascade");
     }
+  }
+
+  @Test
+  void 시작할_대회는_시작일이_지난_시작_전_대회만_가져온다() {
+    saveCompetition(CompetitionStatus.ENDED);  // 시작일 11/16, 종료된 대회
+    Competition ready = saveCompetition(CompetitionStatus.READY); // 시작일 11/16
+
+    assertThat(competitionRepository.findAllByStatusAndStartDateLessThanEqual(
+        CompetitionStatus.READY, LocalDate.of(2026, 11, 15))).isEmpty();
+    assertThat(competitionRepository.findAllByStatusAndStartDateLessThanEqual(
+        CompetitionStatus.READY, LocalDate.of(2026, 11, 16)))
+        .extracting(Competition::getCompetitionId).containsExactly(ready.getCompetitionId());
   }
 
   private Competition saveCompetition(CompetitionStatus status) {

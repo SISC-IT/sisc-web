@@ -82,6 +82,21 @@ class CompetitionPriceRepositoryTest {
   }
 
   @Test
+  void 주문에_쓸_최신_종가_1건은_공개_시각이_지난_것_중에서_가져온다() {
+    CompetitionStock samsung = saveStock("005930");
+    CompetitionStock hynix = saveStock("000660");
+    savePrice(samsung, FRI, "101");
+    savePrice(samsung, MON, "102");
+
+    assertThat(priceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+        samsung, MON.atTime(16, 29, 59))).get().extracting(DailyClosePrice::getPriceDate).isEqualTo(FRI);
+    assertThat(priceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+        samsung, MON.atTime(OPEN))).get().extracting(DailyClosePrice::getPriceDate).isEqualTo(MON);
+    assertThat(priceRepository.findFirstByStockAndAvailableAtLessThanEqualOrderByPriceDateDesc(
+        hynix, MON.atTime(OPEN))).isEmpty();
+  }
+
+  @Test
   void 여러_날짜를_한_번에_적재해_공개_시각이_같아도_날짜순으로_가져온다() {
     CompetitionStock samsung = saveStock("005930");
     LocalDateTime sameOpen = MON.atTime(OPEN);
@@ -100,6 +115,43 @@ class CompetitionPriceRepositoryTest {
 
     assertThat(latestTwo(samsung, MON.atTime(17, 0))).hasSize(1);
     assertThat(latestTwo(hynix, MON.atTime(17, 0))).isEmpty();
+  }
+
+  @Test
+  void 여러_종목의_최신_종가_2건을_한_번에_가져온다() {
+    CompetitionStock samsung = saveStock("005930");
+    CompetitionStock hynix = saveStock("000660");
+    CompetitionStock naver = saveStock("035420");
+    CompetitionStock kakao = saveStock("035720");
+    savePrice(samsung, THU, "100");
+    savePrice(samsung, FRI, "101");
+    savePrice(samsung, MON, "102");
+    savePrice(hynix, MON, "999");
+    savePrice(kakao, MON, "500");
+    entityManager.clear();
+
+    List<DailyClosePrice> result = priceRepository.findLatestTwoByStockIds(
+        List.of(samsung.getStockId(), hynix.getStockId(), naver.getStockId()), MON.atTime(17, 0));
+
+    assertThat(result).filteredOn(price -> price.getStock().getStockId().equals(samsung.getStockId()))
+        .extracting(DailyClosePrice::getPriceDate).containsExactly(MON, FRI);
+    assertThat(result).filteredOn(price -> price.getStock().getStockId().equals(hynix.getStockId()))
+        .extracting(DailyClosePrice::getPriceDate).containsExactly(MON);
+    assertThat(result).hasSize(3);
+    assertThat(result.get(0).getClosePrice()).isNotNull();
+  }
+
+  @Test
+  void 한_번에_가져올_때도_거래_가능_시각_전_종가는_빠진다() {
+    CompetitionStock samsung = saveStock("005930");
+    savePrice(samsung, THU, "100");
+    savePrice(samsung, FRI, "101");
+    savePrice(samsung, MON, "102");
+
+    assertThat(priceRepository.findLatestTwoByStockIds(List.of(samsung.getStockId()), MON.atTime(16, 29, 59)))
+        .extracting(DailyClosePrice::getPriceDate).containsExactly(FRI, THU);
+    assertThat(priceRepository.findLatestTwoByStockIds(List.of(samsung.getStockId()), MON.atTime(OPEN)))
+        .extracting(DailyClosePrice::getPriceDate).containsExactly(MON, FRI);
   }
 
   @Test

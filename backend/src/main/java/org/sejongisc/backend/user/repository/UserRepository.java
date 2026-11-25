@@ -1,6 +1,7 @@
 package org.sejongisc.backend.user.repository;
 
 
+import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,6 +32,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByStudentId(String studentId);
 
     List<User> findAllByStatus(UserStatus status);
+
+    List<User> findAllByStatusAndRoleNot(UserStatus status, Role role);
 
     @Query("""
         SELECT u

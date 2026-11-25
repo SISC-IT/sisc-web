@@ -23,6 +23,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @Slf4j
 @Component
 public class KiwoomAuthClient {
+  private static final String TOKEN_API_ID = "au10001";
   private static final DateTimeFormatter KIWOOM_EXPIRES_FORMATTER =
       DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -58,7 +59,7 @@ public class KiwoomAuthClient {
     KiwoomTokenRequest request = KiwoomTokenRequest.of(appKey, appSecret);
 
     try {
-      KiwoomTokenResponse response = rateLimiter.call(() -> kiwoomWebClient.post()
+      KiwoomTokenResponse response = rateLimiter.call(TOKEN_API_ID, () -> kiwoomWebClient.post()
           .uri("/oauth2/token")
           .contentType(MediaType.APPLICATION_JSON)
           .bodyValue(request)
