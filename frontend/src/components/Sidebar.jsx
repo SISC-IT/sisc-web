@@ -332,6 +332,7 @@ const Sidebar = ({ isOpen, isRoot, onClose }) => {
                     onClick={handleNavLinkClick}
                   >
                     모의투자 리그
+                    <span className={styles.newBadge}>NEW</span>
                   </NavLink>
                 </li>
                 <li>
