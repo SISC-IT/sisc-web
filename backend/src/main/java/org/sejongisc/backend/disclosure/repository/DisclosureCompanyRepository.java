@@ -24,7 +24,7 @@ public interface DisclosureCompanyRepository extends JpaRepository<DisclosureCom
   @Query("""
       select c from DisclosureCompany c
       where c.tracked = true
-        and (:keyword is null
+        and (:keyword = ''
              or lower(c.companyName) like lower(concat('%', :keyword, '%'))
              or lower(coalesce(c.stockCode, '')) like lower(concat('%', :keyword, '%'))
              or c.corpCode like concat('%', :keyword, '%'))

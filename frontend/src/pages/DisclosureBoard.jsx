@@ -13,6 +13,12 @@ const EVENT_FILTERS = [
   { id: 'PRELIMINARY_EARNINGS', label: '잠정실적' },
 ];
 
+const formatBasis = (basis) => {
+  if (basis === 'CFS') return 'CFS(연결)';
+  if (basis === 'OFS') return 'OFS(별도)';
+  return basis || '-';
+};
+
 const formatWon = (raw) => {
   if (raw === null || raw === undefined || raw === '') return '-';
   const num = Number(raw);
@@ -132,12 +138,12 @@ const DisclosureBoard = () => {
             </header>
 
             <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>1. 분기 실적 &amp; 수집 기간 추이</h2>
+              <h2 className={styles.sectionTitle}>1. 분기 실적</h2>
               {detail.latestQuarter ? (
                 <div className={styles.summaryLine}>
                   <strong>
                     최근 분기 ({detail.latestQuarter.fiscalYear}Q{detail.latestQuarter.quarter},{' '}
-                    {detail.latestQuarter.basis || '-'})
+                    {formatBasis(detail.latestQuarter.basis)})
                   </strong>
                   <span>매출액: {formatWon(detail.latestQuarter.revenue)}</span>
                   <span>영업이익: {formatWon(detail.latestQuarter.operatingProfit)}</span>
@@ -162,13 +168,15 @@ const DisclosureBoard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {detail.earningsTrend.map((q) => (
+                      {[...detail.earningsTrend]
+                        .sort((a, b) => (b.fiscalYear - a.fiscalYear) || (b.quarter - a.quarter))
+                        .map((q) => (
                         <tr key={`${q.fiscalYear}-Q${q.quarter}`}>
                           <td>
                             {q.fiscalYear}년 {q.quarter}분기
                           </td>
                           <td>{q.periodEnd}</td>
-                          <td>{q.basis || '-'}</td>
+                          <td>{formatBasis(q.basis)}</td>
                           <td className={styles.numCol}>{formatWon(q.revenue)}</td>
                           <td className={styles.numCol}>{formatWon(q.operatingProfit)}</td>
                           <td className={styles.numCol}>{formatWon(q.netIncome)}</td>
@@ -196,7 +204,7 @@ const DisclosureBoard = () => {
 
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>2. 공시 이벤트 스프레드시트</h2>
+                <h2 className={styles.sectionTitle}>2. 거래소 공시</h2>
                 <div className={styles.filterGroup}>
                   {EVENT_FILTERS.map((f) => (
                     <button

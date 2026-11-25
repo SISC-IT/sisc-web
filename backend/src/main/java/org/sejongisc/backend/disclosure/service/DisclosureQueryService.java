@@ -65,7 +65,7 @@ public class DisclosureQueryService {
   public CompanyListResponse listCompanies(UUID userId, String keyword, int page, int size) {
     int safePage = Math.max(page, 0);
     int safeSize = Math.min(Math.max(size, 1), 200);
-    String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+    String normalizedKeyword = (keyword == null || keyword.isBlank()) ? "" : keyword.trim();
 
     Page<DisclosureCompany> companies = companyRepository.findTrackedCompanies(
         normalizedKeyword, PageRequest.of(safePage, safeSize));
