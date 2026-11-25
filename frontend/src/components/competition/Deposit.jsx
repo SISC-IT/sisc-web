@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from './Account.module.css';
-import usePagedList from './usePagedList';
+import usePagedList from '../../hooks/usePagedList';
 import {
   getDepositTransactions,
   getMySummary,

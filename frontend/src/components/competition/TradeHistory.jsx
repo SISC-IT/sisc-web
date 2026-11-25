@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import styles from './Account.module.css';
-import usePagedList from './usePagedList';
+import usePagedList from '../../hooks/usePagedList';
 import { getMyTrades } from '../../utils/competitionApi';
 import { shortDateTime, won } from '../../utils/competitionFormat';
 

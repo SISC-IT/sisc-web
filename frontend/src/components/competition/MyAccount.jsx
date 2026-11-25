@@ -9,6 +9,9 @@ import {
   won,
 } from '../../utils/competitionFormat';
 
+const wonText = (value) =>
+  value === null || value === undefined ? '-' : `${won(value)}원`;
+
 const signedWon = (value) =>
   value === null || value === undefined
     ? '-'
@@ -44,27 +47,35 @@ const MyAccount = ({ competitionId }) => {
       <section aria-label="요약" className={styles.cards}>
         <div className={styles.mainCard}>
           <span className={styles.cardLabel}>총자산</span>
-          <span className={styles.cardValue}>{won(summary.totalAssets)}원</span>
-          <span className={styles.cardNote}>
-            {signedWon(summary.profitLoss)} ({signedPercent(summary.returnRate)}
-            )
+          <span className={styles.cardValue}>
+            {wonText(summary.totalAssets)}
           </span>
+          {summary.profitLoss !== null && (
+            <span className={styles.cardNote}>
+              {signedWon(summary.profitLoss)} (
+              {signedPercent(summary.returnRate)})
+            </span>
+          )}
         </div>
         <div className={styles.card}>
           <span className={styles.cardLabel}>주식 평가액</span>
-          <span className={styles.cardValue}>{won(summary.stockValue)}원</span>
+          <span className={styles.cardValue}>
+            {wonText(summary.stockValue)}
+          </span>
         </div>
         <div className={styles.card}>
           <span className={styles.cardLabel}>현금</span>
-          <span className={styles.cardValue}>{won(summary.cashBalance)}원</span>
+          <span className={styles.cardValue}>
+            {wonText(summary.cashBalance)}
+          </span>
         </div>
         <div className={styles.card}>
           <span className={styles.cardLabel}>예금</span>
           <span className={styles.cardValue}>
-            {won(summary.depositBalance)}원
+            {wonText(summary.depositBalance)}
           </span>
           <span className={styles.cardNote}>
-            누적 이자 {won(summary.totalInterest)}원
+            누적 이자 {wonText(summary.totalInterest)}
           </span>
         </div>
       </section>
