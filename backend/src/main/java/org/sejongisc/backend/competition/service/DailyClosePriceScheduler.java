@@ -27,6 +27,5 @@ public class DailyClosePriceScheduler {
         // 00:00, 15:00 지급을 모두 놓쳤어도 스냅샷 전에 지급한다
         interestService.payDailyInterest();
         snapshotService.createDailySnapshot();
-        competitionService.endDueCompetitions();
     }
 }

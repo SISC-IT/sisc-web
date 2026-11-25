@@ -3,6 +3,7 @@ package org.sejongisc.backend.competition.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -61,17 +62,17 @@ class DailyClosePriceSchedulerTest {
     }
 
     @Test
-    @DisplayName("밀린 이자를 지급한 뒤 스냅샷을 만들고, 종료일이면 그 스냅샷으로 대회를 닫는다")
-    void paysInterestBeforeSnapshotAndEndsAfter() {
+    @DisplayName("밀린 이자를 지급한 뒤 스냅샷을 만들고, 대회는 닫지 않는다")
+    void paysInterestBeforeSnapshotWithoutEnding() {
         when(competitionService.hasOpenCompetition()).thenReturn(true);
 
         scheduler.collectDomesticClosePrices();
 
-        InOrder order = inOrder(collector, interestService, snapshotService, competitionService);
+        InOrder order = inOrder(collector, interestService, snapshotService);
         order.verify(collector).collectDomestic();
         order.verify(interestService).payDailyInterest();
         order.verify(snapshotService).createDailySnapshot();
-        order.verify(competitionService).endDueCompetitions();
+        verify(competitionService, never()).endDueCompetitions();
     }
 
     @Test
