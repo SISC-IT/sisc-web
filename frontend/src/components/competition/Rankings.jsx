@@ -76,6 +76,12 @@ const Rankings = ({ competitionId }) => {
       {view === 'person' ? (
         <div className={styles.tableBox}>
           <table className={styles.table}>
+            <colgroup>
+              <col style={{ width: '12%' }} />
+              <col />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '18%' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col" className={styles.center}>
@@ -83,9 +89,6 @@ const Rankings = ({ competitionId }) => {
                 </th>
                 <th scope="col" className={styles.left}>
                   이름
-                </th>
-                <th scope="col" className={styles.left}>
-                  팀
                 </th>
                 <th scope="col">총자산</th>
                 <th scope="col">수익률</th>
@@ -103,10 +106,10 @@ const Rankings = ({ competitionId }) => {
                       {rankChangeText(r.rankChange)}
                     </span>
                   </td>
-                  <td className={`${styles.left} ${styles.strong}`}>
-                    {r.userName}
+                  <td className={styles.left}>
+                    <span className={styles.strong}>{r.userName}</span>
+                    <span className={styles.sub}>{r.teamName}</span>
                   </td>
-                  <td className={styles.left}>{r.teamName}</td>
                   <td>{won(r.totalValue)}</td>
                   <td
                     className={styles.strong}
@@ -127,6 +130,11 @@ const Rankings = ({ competitionId }) => {
         <>
           <div className={styles.tableBox}>
             <table className={styles.table}>
+              <colgroup>
+                <col style={{ width: '12%' }} />
+                <col />
+                <col style={{ width: '22%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col" className={styles.center}>
@@ -135,7 +143,6 @@ const Rankings = ({ competitionId }) => {
                   <th scope="col" className={styles.left}>
                     팀
                   </th>
-                  <th scope="col">인원</th>
                   <th scope="col">평균 등수</th>
                 </tr>
               </thead>
@@ -148,10 +155,10 @@ const Rankings = ({ competitionId }) => {
                     <td className={`${styles.center} ${styles.strong}`}>
                       {t.rank}
                     </td>
-                    <td className={`${styles.left} ${styles.strong}`}>
-                      {t.teamName}
+                    <td className={styles.left}>
+                      <span className={styles.strong}>{t.teamName}</span>
+                      <span className={styles.sub}>{t.memberCount}명</span>
                     </td>
-                    <td>{t.memberCount}명</td>
                     <td className={styles.strong}>{t.averageRank}등</td>
                   </tr>
                 ))}
