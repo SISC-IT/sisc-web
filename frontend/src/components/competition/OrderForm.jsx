@@ -74,6 +74,7 @@ const OrderForm = ({
     }
     setSubmitting(true);
     setResult(null);
+    const sentAt = Date.now();
     try {
       const trade = await placeOrder(
         competitionId,
@@ -81,12 +82,24 @@ const OrderForm = ({
         pendingKeys.current.get(signature)
       );
       pendingKeys.current.delete(signature);
+      const what = `${trade.companyName} ${trade.quantity.toLocaleString('ko-KR')}주 ${isBuy ? '매수' : '매도'}`;
+      // 같은 키로 다시 보내면 서버는 예전 체결을 돌려준다. 체결 시각(KST)이 보낸 시각보다 이르면 예전 체결이다.
+      const replayed =
+        Date.parse(`${trade.executedAt.slice(0, 23)}+09:00`) < sentAt - 3000;
       setResult({
         ok: true,
-        text: `${trade.companyName} ${trade.quantity.toLocaleString('ko-KR')}주 ${isBuy ? '매수' : '매도'} 체결 — ${won(trade.price)}원 (${shortDate(detail.priceDate)} 종가)`,
+        text: replayed
+          ? `이미 체결된 주문이에요 — ${what}, ${won(trade.price)}원`
+          : `${what} 체결 — ${won(trade.price)}원 (${shortDate(detail.priceDate)} 종가)`,
       });
     } catch (err) {
-      setResult({ ok: false, text: err.message });
+      const uncertain = !err.status || err.status >= 500;
+      setResult({
+        ok: false,
+        text: uncertain
+          ? '주문 결과를 확인하지 못했어요. 매매 내역에서 체결 여부를 확인해 주세요.'
+          : err.message,
+      });
     } finally {
       // 성공해도 실패해도 현금·보유 수량·주문 가능 여부를 다시 읽는다
       onOrdered();
