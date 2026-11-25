@@ -12,8 +12,9 @@ const UNAVAILABLE_TEXT = {
   PRICE_UNAVAILABLE: '오늘 종가가 아직 없어요. 주말·공휴일이거나 종가를 모으는 중이에요.',
 };
 
-// 서버와 같은 계산: 수수료는 소수 4자리에서 버린다
-const feeOf = (amount, feeRate) => Math.floor(amount * feeRate * 10000) / 10000;
+// 서버와 같은 계산: 수수료는 소수 4자리에서 버린다.
+// 900 × 0.00015 × 10000이 1349.999…로 나오는 부동소수점 오차를 먼저 반올림으로 없앤 뒤 버린다.
+const feeOf = (amount, feeRate) => Math.floor(Math.round(amount * feeRate * 1e8) / 1e4) / 1e4;
 
 const maxBuyQuantity = (cash, price, feeRate) => {
   if (!price) return 0;
@@ -81,7 +82,8 @@ const StockOrder = ({ competition }) => {
   const reloadDetail = () => setReloadCount((count) => count + 1);
 
   const pick = (nextTicker) => {
-    if (nextTicker === ticker) return;
+    // 주문 중에 종목을 바꾸면 체결 결과가 다른 종목 화면에 뜬다
+    if (nextTicker === ticker || submitting) return;
     setTicker(nextTicker);
     setDetail(null);
     setDetailError('');
@@ -176,8 +178,15 @@ const StockOrder = ({ competition }) => {
       </section>
 
       <section aria-label="종목 상세와 주문" className={styles.detailColumn}>
-        {!isParticipant && <p className={styles.muted}>대회 참가자만 종목 상세를 보고 주문할 수 있어요.</p>}
-        {isParticipant && !detail && detailError && <p role="alert" className={styles.errorBox}>{detailError}</p>}
+        {!isParticipant && (
+          <p className={styles.muted}>
+            {myStatus === 'EXCLUDED'
+              ? '대회에서 제외되어 거래할 수 없어요.'
+              : '대회 참가자만 종목 상세를 보고 주문할 수 있어요.'}
+          </p>
+        )}
+        {/* 주문 뒤 다시 읽기에 실패하면 화면의 현금·보유 수량이 예전 값이라 알려야 한다 */}
+        {isParticipant && detailError && <p role="alert" className={styles.errorBox}>{detailError}</p>}
         {isParticipant && !detail && !detailError && <p className={styles.muted}>왼쪽에서 종목을 골라 주세요.</p>}
         {isParticipant && detail && (
           <>
