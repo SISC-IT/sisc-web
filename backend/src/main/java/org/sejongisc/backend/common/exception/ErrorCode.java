@@ -128,7 +128,7 @@ public enum ErrorCode {
 
   COMPETITION_ALREADY_OPEN(HttpStatus.CONFLICT, "시작 전이거나 진행 중인 대회가 이미 있습니다."),
 
-  INVALID_COMPETITION_PERIOD(HttpStatus.BAD_REQUEST, "대회 종료일은 시작일보다 빠를 수 없습니다."),
+  INVALID_COMPETITION_PERIOD(HttpStatus.BAD_REQUEST, "대회 종료일은 시작일보다 늦어야 합니다."),
 
   COMPETITION_START_DATE_PAST(HttpStatus.BAD_REQUEST, "대회 시작일은 오늘 이후여야 합니다."),
 
@@ -149,6 +149,8 @@ public enum ErrorCode {
   COMPETITION_INSUFFICIENT_HOLDING(HttpStatus.BAD_REQUEST, "보유 수량이 부족합니다."),
 
   COMPETITION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "진행 중인 대회가 아닙니다."),
+
+  COMPETITION_NOT_ENDED(HttpStatus.CONFLICT, "종료되어 결과 확인을 기다리는 대회만 결과를 공개할 수 있습니다."),
 
   COMPETITION_PARTICIPANT_EXCLUDED(HttpStatus.FORBIDDEN, "대회에서 제외되어 거래할 수 없습니다."),
 

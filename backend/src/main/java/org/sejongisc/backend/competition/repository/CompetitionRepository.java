@@ -20,6 +20,8 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 
     List<Competition> findAllByStatusAndStartDateLessThanEqual(CompetitionStatus status, LocalDate date);
 
+    List<Competition> findAllByStatusAndEndDateLessThanEqual(CompetitionStatus status, LocalDate date);
+
     boolean existsByStatusInAndEndDateGreaterThanEqual(Collection<CompetitionStatus> statuses, LocalDate date);
 
     // 이 컬럼만 바꾼다. 엔티티로 저장하면 행 전체를 덮어써서, 그 사이 바뀐 대회 상태를 되돌릴 수 있다.

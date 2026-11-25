@@ -3,6 +3,7 @@ package org.sejongisc.backend.competition.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -185,6 +186,54 @@ class AccountSnapshotServiceTest {
 
         assertThat(snapshotService.createDailySnapshot()).isZero();
         verify(snapshotRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("종료일이 지났는데 종료일 스냅샷이 없으면 가장 최근 종가와 지금 계좌로 종료일 스냅샷을 만든다")
+    void createsFinalSnapshotAfterEndDate() {
+        givenCompetitionEndingOn(THU);
+        CompetitionAccount account = account("1000000", "500000");
+        when(snapshotRepository.existsByCompetitionAndSnapshotDate(competition, THU)).thenReturn(false);
+        when(accountRepository.findAllByCompetitionAndParticipantStatus(competition, ParticipantStatus.ACTIVE))
+                .thenReturn(List.of(account));
+        givenHoldings(holding(account, samsung, 10L));
+        givenPrices(price(samsung, THU.minusDays(1), "60000"));
+
+        assertThat(snapshotService.createFinalSnapshot()).isEqualTo(1);
+
+        DailyAccountSnapshot snapshot = savedSnapshots().get(0);
+        assertThat(snapshot.getSnapshotDate()).isEqualTo(THU);
+        assertThat(snapshot.getTotalValue()).isEqualByComparingTo("2100000");
+        verify(closePriceRepository).findLatestByStockIds(anyCollection(), eq(THU));
+    }
+
+    @Test
+    @DisplayName("종료일이 지나지 않았으면 종료일 스냅샷을 만들지 않는다")
+    void skipsFinalSnapshotBeforeEndDatePasses() {
+        givenCompetitionEndingOn(FRI);
+
+        assertThat(snapshotService.createFinalSnapshot()).isZero();
+        verify(snapshotRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("종료일 스냅샷이 이미 있으면 다시 만들지 않는다")
+    void skipsFinalSnapshotWhenAlreadyCreated() {
+        givenCompetitionEndingOn(THU);
+        when(snapshotRepository.existsByCompetitionAndSnapshotDate(competition, THU)).thenReturn(true);
+
+        assertThat(snapshotService.createFinalSnapshot()).isZero();
+        verify(snapshotRepository, never()).saveAll(any());
+    }
+
+    private void givenCompetitionEndingOn(LocalDate endDate) {
+        competition = Competition.builder()
+                .competitionId(competition.getCompetitionId())
+                .status(CompetitionStatus.ACTIVE)
+                .initialCash(competition.getInitialCash())
+                .endDate(endDate)
+                .build();
+        givenActiveCompetition();
     }
 
     private void givenActiveCompetition() {

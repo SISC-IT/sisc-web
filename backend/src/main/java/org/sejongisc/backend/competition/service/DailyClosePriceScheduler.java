@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 public class DailyClosePriceScheduler {
 
     private final DailyClosePriceCollector collector;
+    private final DepositInterestService interestService;
     private final AccountSnapshotService snapshotService;
     private final CompetitionService competitionService;
 
@@ -23,6 +24,8 @@ public class DailyClosePriceScheduler {
             return;
         }
         collector.collectDomestic();
+        // 00:00, 15:00 지급을 모두 놓쳤어도 스냅샷 전에 지급한다
+        interestService.payDailyInterest();
         snapshotService.createDailySnapshot();
     }
 }

@@ -23,6 +23,8 @@ import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.common.exception.controller.GlobalExceptionHandler;
 import org.sejongisc.backend.competition.dto.CompetitionRankingEntry;
 import org.sejongisc.backend.competition.dto.CompetitionRankingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionTeamRankingEntry;
+import org.sejongisc.backend.competition.dto.CompetitionTeamRankingResponse;
 import org.sejongisc.backend.competition.service.CompetitionRankingService;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -86,5 +88,22 @@ class CompetitionRankingControllerTest {
         mockMvc.perform(get("/api/competitions/{competitionId}/rankings", competitionId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("COMPETITION_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("GET /rankings/teams - 스냅샷 날짜와 팀 순위를 반환한다")
+    void returnsTeamRankings() throws Exception {
+        when(rankingService.getTeamRankings(competitionId)).thenReturn(new CompetitionTeamRankingResponse(
+                LocalDate.of(2026, 11, 20),
+                List.of(new CompetitionTeamRankingEntry(1, "퀀트팀", new BigDecimal("1.50"), 3, 2))));
+
+        mockMvc.perform(get("/api/competitions/{competitionId}/rankings/teams", competitionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.snapshotDate").value("2026-11-20"))
+                .andExpect(jsonPath("$.rankings[0].rank").value(1))
+                .andExpect(jsonPath("$.rankings[0].teamName").value("퀀트팀"))
+                .andExpect(jsonPath("$.rankings[0].averageRank").value(1.5))
+                .andExpect(jsonPath("$.rankings[0].rankSum").value(3))
+                .andExpect(jsonPath("$.rankings[0].memberCount").value(2));
     }
 }

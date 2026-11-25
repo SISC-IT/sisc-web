@@ -2,11 +2,13 @@ package org.sejongisc.backend.competition.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +23,8 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionRankingEntry;
 import org.sejongisc.backend.competition.dto.CompetitionRankingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionTeamRankingEntry;
+import org.sejongisc.backend.competition.dto.CompetitionTeamRankingResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
@@ -165,6 +169,71 @@ class CompetitionRankingServiceTest {
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
     }
 
+    @Test
+    @DisplayName("팀 순위는 팀원 등수의 평균이 낮은 순이고 인원이 적은 팀이 유리하지 않다")
+    void teamRankingsByAverageRank() {
+        givenCompetition();
+        givenLatestDate(FRI);
+        CompetitionAccount park = account("매크로팀");
+        CompetitionAccount choi = account("퀀트팀");
+        CompetitionAccount jung = account("가치팀");
+        // 매크로팀 1, 4등(평균 2.5), 퀀트팀 2, 3등(평균 2.5), 가치팀 5등. 합으로 보면 가치팀이 앞선다.
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE)).thenReturn(List.of(
+                snapshot(kim, FRI, "10500000", "0.05", 1),
+                snapshot(lee, FRI, "10400000", "0.04", 2),
+                snapshot(choi, FRI, "10300000", "0.03", 3),
+                snapshot(park, FRI, "10200000", "0.02", 4),
+                snapshot(jung, FRI, "10100000", "0.01", 5)));
+
+        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId);
+
+        assertThat(response.snapshotDate()).isEqualTo(FRI);
+        assertThat(response.rankings())
+                .extracting(CompetitionTeamRankingEntry::rank, CompetitionTeamRankingEntry::teamName,
+                        CompetitionTeamRankingEntry::rankSum, CompetitionTeamRankingEntry::memberCount)
+                .containsExactly(
+                        tuple(1, "매크로팀", 5, 2),
+                        tuple(1, "퀀트팀", 5, 2),
+                        tuple(3, "가치팀", 5, 1));
+        assertThat(response.rankings().get(0).averageRank()).isEqualByComparingTo("2.5");
+    }
+
+    @Test
+    @DisplayName("반올림하면 같아 보이는 평균 등수도 실제로 다르면 다른 등수다")
+    void teamRankingsCompareExactAverage() {
+        givenCompetition();
+        givenLatestDate(FRI);
+        // 매크로팀 5/3 = 1.666..., 퀀트팀 167/100 = 1.67. 둘 다 반올림하면 1.67이다.
+        List<DailyAccountSnapshot> snapshots = new ArrayList<>();
+        snapshots.addAll(teamSnapshots("매크로팀", 1, 1));
+        snapshots.addAll(teamSnapshots("매크로팀", 2, 2));
+        snapshots.addAll(teamSnapshots("퀀트팀", 33, 1));
+        snapshots.addAll(teamSnapshots("퀀트팀", 67, 2));
+        when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE))
+                .thenReturn(snapshots);
+
+        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId);
+
+        assertThat(response.rankings())
+                .extracting(CompetitionTeamRankingEntry::rank, CompetitionTeamRankingEntry::teamName,
+                        CompetitionTeamRankingEntry::averageRank)
+                .containsExactly(
+                        tuple(1, "매크로팀", new BigDecimal("1.67")),
+                        tuple(2, "퀀트팀", new BigDecimal("1.67")));
+    }
+
+    @Test
+    @DisplayName("스냅샷이 아직 없으면 빈 팀 순위를 반환한다")
+    void teamRankingsEmptyWhenNoSnapshot() {
+        givenCompetition();
+        when(snapshotRepository.findLatestSnapshotDate(competition)).thenReturn(Optional.empty());
+
+        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId);
+
+        assertThat(response.snapshotDate()).isNull();
+        assertThat(response.rankings()).isEmpty();
+    }
+
     private void givenCompetition() {
         when(competitionRepository.findById(competitionId)).thenReturn(Optional.of(competition));
     }
@@ -176,6 +245,14 @@ class CompetitionRankingServiceTest {
     private void givenPreviousDate(LocalDate latest, LocalDate previous) {
         when(snapshotRepository.findLatestSnapshotDateBefore(competition, latest))
                 .thenReturn(Optional.ofNullable(previous));
+    }
+
+    private List<DailyAccountSnapshot> teamSnapshots(String teamName, int count, int rank) {
+        List<DailyAccountSnapshot> snapshots = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            snapshots.add(snapshot(account(teamName), FRI, "10000000", "0", rank));
+        }
+        return snapshots;
     }
 
     private void givenUsers(User... users) {

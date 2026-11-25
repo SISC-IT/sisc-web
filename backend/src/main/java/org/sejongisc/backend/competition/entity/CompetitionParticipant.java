@@ -34,4 +34,8 @@ public class CompetitionParticipant extends BasePostgresEntity {
     private ParticipantStatus status;
 
     private Integer finalRank; // 종료 전·제외자는 null
+
+    public void assignFinalRank(int rank) {
+        finalRank = rank;
+    }
 }

@@ -51,6 +51,17 @@ class OrderRuleTest {
     }
 
     @Test
+    @DisplayName("종료일에는 종료일 종가로 최종 평가하므로 주문할 수 없다")
+    void endDateNotOrderable() {
+        LocalDate endDate = LocalDate.of(2026, 11, 27);
+
+        assertThat(OrderRule.unavailableReason(active, samsung, fridayPrice, endDate.minusDays(1).atTime(20, 59)))
+                .isNotEqualTo(UnavailableReason.COMPETITION_NOT_ACTIVE);
+        assertThat(OrderRule.unavailableReason(active, samsung, fridayPrice, endDate.atTime(17, 0)))
+                .isEqualTo(UnavailableReason.COMPETITION_NOT_ACTIVE);
+    }
+
+    @Test
     @DisplayName("미국 종목은 아직 주문할 수 없다")
     void usStockNotSupported() {
         CompetitionStock apple = CompetitionStock.builder().ticker("AAPL").market(Market.US).build();

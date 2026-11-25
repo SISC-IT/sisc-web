@@ -3,6 +3,7 @@ package org.sejongisc.backend.competition.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -25,6 +26,9 @@ class DailyClosePriceSchedulerTest {
 
     @Mock
     private DailyClosePriceCollector collector;
+
+    @Mock
+    private DepositInterestService interestService;
 
     @Mock
     private AccountSnapshotService snapshotService;
@@ -58,6 +62,20 @@ class DailyClosePriceSchedulerTest {
     }
 
     @Test
+    @DisplayName("밀린 이자를 지급한 뒤 스냅샷을 만들고, 대회는 닫지 않는다")
+    void paysInterestBeforeSnapshotWithoutEnding() {
+        when(competitionService.hasOpenCompetition()).thenReturn(true);
+
+        scheduler.collectDomesticClosePrices();
+
+        InOrder order = inOrder(collector, interestService, snapshotService);
+        order.verify(collector).collectDomestic();
+        order.verify(interestService).payDailyInterest();
+        order.verify(snapshotService).createDailySnapshot();
+        verify(competitionService, never()).endDueCompetitions();
+    }
+
+    @Test
     @DisplayName("수집이 예외로 중단되면 스냅샷을 만들지 않는다")
     void skipsSnapshotWhenCollectionFails() {
         when(competitionService.hasOpenCompetition()).thenReturn(true);
@@ -65,7 +83,7 @@ class DailyClosePriceSchedulerTest {
 
         assertThatThrownBy(() -> scheduler.collectDomesticClosePrices())
                 .isInstanceOf(IllegalStateException.class);
-        verifyNoInteractions(snapshotService);
+        verifyNoInteractions(interestService, snapshotService);
     }
 
     @Test
@@ -75,7 +93,7 @@ class DailyClosePriceSchedulerTest {
 
         scheduler.collectDomesticClosePrices();
 
-        verifyNoInteractions(collector, snapshotService);
+        verifyNoInteractions(collector, interestService, snapshotService);
     }
 
     @Test

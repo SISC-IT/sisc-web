@@ -48,4 +48,12 @@ public class Competition extends BasePostgresEntity {
     public void start() {
         status = CompetitionStatus.ACTIVE;
     }
+
+    public void end() {
+        status = CompetitionStatus.ENDED;
+    }
+
+    public void finalizeResult() {
+        status = CompetitionStatus.FINALIZED;
+    }
 }
