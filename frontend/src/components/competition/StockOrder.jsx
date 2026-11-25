@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './StockOrder.module.css';
 import StockSearch from './StockSearch';
 import OrderForm from './OrderForm';
@@ -29,6 +29,9 @@ const StockOrder = ({ competition }) => {
   const [detailError, setDetailError] = useState('');
   // 주문 뒤 현금·보유 수량을 다시 읽을 때 올린다
   const [reloadCount, setReloadCount] = useState(0);
+  // 응답을 못 받은 주문을 다시 보낼 때 같은 키를 써야 서버가 두 번 체결하지 않는다
+  const pendingKey = useRef(null);
+  const reload = () => setReloadCount((count) => count + 1);
 
   // 처음 검색 결과가 오면 첫 종목을 골라 둔다
   const selectFirst = useCallback((stocks) => {
@@ -52,7 +55,11 @@ const StockOrder = ({ competition }) => {
   }, [competitionId, ticker, isParticipant, reloadCount]);
 
   const select = (nextTicker) => {
-    if (nextTicker === ticker) return;
+    // 같은 종목을 다시 누르면 새로 읽는다. 페이지를 열어 둔 사이 주문 가능 시간이 바뀔 수 있다.
+    if (nextTicker === ticker) {
+      reload();
+      return;
+    }
     setTicker(nextTicker);
     setDetail(null);
     setDetailError('');
@@ -62,7 +69,7 @@ const StockOrder = ({ competition }) => {
     // 종료일에는 대회가 아직 진행 중이지만 서버는 COMPETITION_NOT_ACTIVE로 주문을 막는다
     reason === 'COMPETITION_NOT_ACTIVE' && daysUntil(endDate) === 0
       ? '오늘은 종료일이라 주문할 수 없어요. 오늘 종가로 최종 순위가 정해져요.'
-      : UNAVAILABLE_TEXT[reason];
+      : (UNAVAILABLE_TEXT[reason] ?? '지금은 주문할 수 없어요.');
 
   return (
     <div className={styles.layout}>
@@ -95,7 +102,7 @@ const StockOrder = ({ competition }) => {
           <>
             <p className={detail.tradable ? styles.openBar : styles.closedBar}>
               {detail.tradable
-                ? `지금 주문 가능 · 21:00 마감 — 주문하면 ${shortDate(detail.priceDate)} 종가로 바로 체결됩니다`
+                ? `지금 주문 가능(${ORDER_HOURS}) — 주문하면 ${shortDate(detail.priceDate)} 종가로 바로 체결됩니다`
                 : unavailableText(detail.unavailableReason)}
             </p>
 
@@ -123,12 +130,15 @@ const StockOrder = ({ competition }) => {
             </div>
 
             {/* 종목이 바뀌면 새로 그려서 이전 종목의 수량·주문 결과가 남지 않게 한다 */}
-            <OrderForm
-              key={detail.ticker}
-              competitionId={competitionId}
-              detail={detail}
-              onOrdered={() => setReloadCount((count) => count + 1)}
-            />
+            {!detailError && (
+              <OrderForm
+                key={detail.ticker}
+                competitionId={competitionId}
+                detail={detail}
+                pendingKey={pendingKey}
+                onOrdered={reload}
+              />
+            )}
           </>
         )}
       </section>

@@ -10,7 +10,8 @@ const StockSearch = ({
   onResults,
 }) => {
   const [query, setQuery] = useState('');
-  const [stocks, setStocks] = useState([]);
+  // 첫 응답 전에는 null이라 '검색 결과가 없어요'가 잠깐 뜨지 않는다
+  const [stocks, setStocks] = useState(null);
   const [error, setError] = useState('');
 
   // 입력이 멈추고 0.3초 뒤에 검색한다. 검색어가 바뀐 뒤 늦게 온 예전 응답은 버린다.
@@ -49,11 +50,11 @@ const StockSearch = ({
         className={styles.searchInput}
       />
       {error && <p className={styles.muted}>{error}</p>}
-      {!error && stocks.length === 0 && (
+      {!error && stocks?.length === 0 && (
         <p className={styles.muted}>검색 결과가 없어요.</p>
       )}
       <ul className={styles.stockList}>
-        {stocks.map((s) => (
+        {stocks?.map((s) => (
           <li key={s.ticker}>
             <button
               type="button"

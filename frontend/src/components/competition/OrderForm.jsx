@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import styles from './StockOrder.module.css';
 import { placeOrder } from '../../utils/competitionApi';
@@ -15,13 +15,12 @@ const maxBuyQuantity = (cash, price, feeRate) => {
   return qty;
 };
 
-const OrderForm = ({ competitionId, detail, onOrdered }) => {
+// pendingKey는 종목을 바꿔도 남아야 해서 부모(StockOrder)가 가진다
+const OrderForm = ({ competitionId, detail, pendingKey, onOrdered }) => {
   const [side, setSide] = useState('BUY');
   const [qty, setQty] = useState('1');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
-  // 응답을 못 받은 주문을 다시 보낼 때 같은 키를 써야 서버가 두 번 체결하지 않는다
-  const pendingKey = useRef(null);
 
   const price = Number(detail.closePrice);
   const feeRate = Number(detail.tradingFeeRate);
@@ -114,6 +113,7 @@ const OrderForm = ({ competitionId, detail, onOrdered }) => {
         <button
           type="button"
           className={styles.maxButton}
+          disabled={maxQty === 0}
           onClick={() => setQty(String(maxQty))}
         >
           최대 {isBuy ? '매수' : '매도'} {maxQty.toLocaleString('ko-KR')}주
