@@ -1,3 +1,10 @@
+export const STATUS_LABELS = {
+  READY: '시작 전',
+  ACTIVE: '진행 중',
+  ENDED: '결과 집계 중',
+  FINALIZED: '종료',
+};
+
 // 주문·입출금 가능 시간. 서버의 국내 주문 시간과 같다.
 export const ORDER_HOURS = '16:30 – 21:00';
 

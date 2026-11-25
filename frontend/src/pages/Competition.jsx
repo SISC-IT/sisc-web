@@ -7,6 +7,7 @@ import MyAccount from '../components/competition/MyAccount';
 import Deposit from '../components/competition/Deposit';
 import Rankings from '../components/competition/Rankings';
 import { getCurrentCompetition } from '../utils/competitionApi';
+import { STATUS_LABELS } from '../utils/competitionFormat';
 
 // 탭은 주소(?tab=)에 남겨서 새로고침하거나 링크로 들어와도 같은 탭이 열린다.
 const TABS = [
@@ -61,7 +62,16 @@ const Competition = () => {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>모의투자 리그</h1>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>모의투자 리그</h1>
+          {competition && (
+            <span
+              className={`${styles.statusBadge} ${competition.status === 'ACTIVE' ? styles.active : ''}`}
+            >
+              {STATUS_LABELS[competition.status]}
+            </span>
+          )}
+        </div>
         <nav aria-label="리그 메뉴" className={styles.tabs}>
           {TABS.map((t) => (
             <button

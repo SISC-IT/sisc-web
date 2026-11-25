@@ -1,18 +1,12 @@
 import styles from './CompetitionHome.module.css';
 import {
+  STATUS_LABELS,
   ORDER_HOURS,
   daysUntil,
   fullDate,
   ratePercent,
   won,
 } from '../../utils/competitionFormat';
-
-const STATUS_LABELS = {
-  READY: '시작 전',
-  ACTIVE: '진행 중',
-  ENDED: '결과 집계 중',
-  FINALIZED: '종료',
-};
 
 // 참가 중이면 안내하지 않고, 거래할 수 없는 경우만 알린다
 const MY_STATUS_TEXT = {
