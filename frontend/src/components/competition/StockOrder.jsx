@@ -3,13 +3,21 @@ import styles from './StockOrder.module.css';
 import StockSearch from './StockSearch';
 import OrderForm from './OrderForm';
 import { getStockDetail } from '../../utils/competitionApi';
-import { ORDER_HOURS, changeColor, daysUntil, shortDate, signedPercent, won } from '../../utils/competitionFormat';
+import {
+  ORDER_HOURS,
+  changeColor,
+  daysUntil,
+  shortDate,
+  signedPercent,
+  won,
+} from '../../utils/competitionFormat';
 
 // 서버가 tradable=false일 때 주는 이유
 const UNAVAILABLE_TEXT = {
   COMPETITION_NOT_ACTIVE: '진행 중인 대회가 아니라 주문할 수 없어요.',
   ORDER_CLOSED: `주문 가능 시간(${ORDER_HOURS})이 아니에요.`,
-  PRICE_UNAVAILABLE: '오늘 종가가 아직 없어요. 주말·공휴일이거나 종가를 모으는 중이에요.',
+  PRICE_UNAVAILABLE:
+    '오늘 종가가 아직 없어요. 주말·공휴일이거나 종가를 모으는 중이에요.',
 };
 
 const StockOrder = ({ competition }) => {
@@ -73,9 +81,15 @@ const StockOrder = ({ competition }) => {
               : '대회 참가자만 종목 상세를 보고 주문할 수 있어요.'}
           </p>
         )}
-        {isParticipant && detailError && <p role="alert" className={styles.errorBox}>{detailError}</p>}
+        {isParticipant && detailError && (
+          <p role="alert" className={styles.errorBox}>
+            {detailError}
+          </p>
+        )}
         {isParticipant && !detail && !detailError && (
-          <p className={styles.muted}>{ticker ? '불러오는 중…' : '왼쪽에서 종목을 골라 주세요.'}</p>
+          <p className={styles.muted}>
+            {ticker ? '불러오는 중…' : '왼쪽에서 종목을 골라 주세요.'}
+          </p>
         )}
         {isParticipant && detail && (
           <>
@@ -89,12 +103,19 @@ const StockOrder = ({ competition }) => {
               <div>
                 <h2 className={styles.detailName}>{detail.companyName}</h2>
                 <span className={styles.muted}>
-                  {detail.ticker} · 보유 {detail.holdingQuantity.toLocaleString('ko-KR')}주
+                  {detail.ticker} · 보유{' '}
+                  {detail.holdingQuantity.toLocaleString('ko-KR')}주
                 </span>
               </div>
               <div className={styles.quotePrice}>
-                <span className={styles.muted}>{detail.priceDate ? `${shortDate(detail.priceDate)} 종가` : '종가 없음'}</span>
-                <strong className={styles.bigPrice}>{won(detail.closePrice)}원</strong>
+                <span className={styles.muted}>
+                  {detail.priceDate
+                    ? `${shortDate(detail.priceDate)} 종가`
+                    : '종가 없음'}
+                </span>
+                <strong className={styles.bigPrice}>
+                  {won(detail.closePrice)}원
+                </strong>
                 <span style={{ color: changeColor(detail.dailyChangeRate) }}>
                   전일 대비 {signedPercent(detail.dailyChangeRate)}
                 </span>

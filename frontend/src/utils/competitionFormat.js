@@ -16,11 +16,13 @@ export const signedPercent = (rate) => {
 };
 
 // 수수료율·이율(0.0001)을 퍼센트(0.01%)로. 끝자리 0은 지운다.
-export const ratePercent = (rate) => `${Number((Number(rate) * 100).toFixed(4))}%`;
+export const ratePercent = (rate) =>
+  `${Number((Number(rate) * 100).toFixed(4))}%`;
 
 // 오르면 파랑, 내리면 빨강 (디자인 기준)
 export const changeColor = (rate) => {
-  if (rate === null || rate === undefined || Number(rate) === 0) return '#4b5563';
+  if (rate === null || rate === undefined || Number(rate) === 0)
+    return '#4b5563';
   return Number(rate) > 0 ? '#2563eb' : '#dc2626';
 };
 
@@ -34,7 +36,8 @@ export const fullDate = (isoDate) => {
 };
 
 // '2026-12-09' → '12.09'
-export const shortDate = (isoDate) => (isoDate ? isoDate.slice(5).replace('-', '.') : '');
+export const shortDate = (isoDate) =>
+  isoDate ? isoDate.slice(5).replace('-', '.') : '';
 
 // 오늘(브라우저 날짜)부터 그 날짜까지 남은 일수
 export const daysUntil = (isoDate) => {

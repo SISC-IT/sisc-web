@@ -8,7 +8,10 @@ export const getCurrentCompetition = async () => {
   return res.data;
 };
 
-export const searchStocks = async (competitionId, { query, page = 0, size = 20 } = {}) => {
+export const searchStocks = async (
+  competitionId,
+  { query, page = 0, size = 20 } = {}
+) => {
   const res = await api.get(`/api/competitions/${competitionId}/stocks`, {
     params: { market: 'KR', query: query || undefined, page, size },
   });
@@ -16,13 +19,19 @@ export const searchStocks = async (competitionId, { query, page = 0, size = 20 }
 };
 
 export const getStockDetail = async (competitionId, ticker) => {
-  const res = await api.get(`/api/competitions/${competitionId}/stocks/${ticker}`);
+  const res = await api.get(
+    `/api/competitions/${competitionId}/stocks/${ticker}`
+  );
   return res.data;
 };
 
 export const placeOrder = async (competitionId, order, idempotencyKey) => {
-  const res = await api.post(`/api/competitions/${competitionId}/me/trades`, order, {
-    headers: { 'Idempotency-Key': idempotencyKey },
-  });
+  const res = await api.post(
+    `/api/competitions/${competitionId}/me/trades`,
+    order,
+    {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    }
+  );
   return res.data;
 };

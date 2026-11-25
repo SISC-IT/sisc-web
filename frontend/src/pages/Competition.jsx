@@ -13,7 +13,9 @@ const TABS = [
 
 const Competition = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = TABS.some((t) => t.key === searchParams.get('tab')) ? searchParams.get('tab') : 'home';
+  const tab = TABS.some((t) => t.key === searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'home';
   const [competition, setCompetition] = useState(null);
   const [error, setError] = useState(null);
 
@@ -48,8 +50,12 @@ const Competition = () => {
         </p>
       )}
       {!error && !competition && <p className={styles.notice}>불러오는 중…</p>}
-      {competition && tab === 'home' && <CompetitionHome competition={competition} />}
-      {competition && tab === 'stocks' && <StockOrder competition={competition} />}
+      {competition && tab === 'home' && (
+        <CompetitionHome competition={competition} />
+      )}
+      {competition && tab === 'stocks' && (
+        <StockOrder competition={competition} />
+      )}
     </div>
   );
 };

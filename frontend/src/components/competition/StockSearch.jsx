@@ -3,7 +3,12 @@ import styles from './StockOrder.module.css';
 import { searchStocks } from '../../utils/competitionApi';
 import { changeColor, signedPercent, won } from '../../utils/competitionFormat';
 
-const StockSearch = ({ competitionId, selectedTicker, onSelect, onResults }) => {
+const StockSearch = ({
+  competitionId,
+  selectedTicker,
+  onSelect,
+  onResults,
+}) => {
   const [query, setQuery] = useState('');
   const [stocks, setStocks] = useState([]);
   const [error, setError] = useState('');
@@ -29,8 +34,12 @@ const StockSearch = ({ competitionId, selectedTicker, onSelect, onResults }) => 
 
   return (
     <section aria-labelledby="search-title" className={styles.search}>
-      <h2 id="search-title" className={styles.sectionTitle}>종목 검색</h2>
-      <label htmlFor="stock-query" className={styles.srOnly}>종목명 또는 코드</label>
+      <h2 id="search-title" className={styles.sectionTitle}>
+        종목 검색
+      </h2>
+      <label htmlFor="stock-query" className={styles.srOnly}>
+        종목명 또는 코드
+      </label>
       <input
         id="stock-query"
         type="search"
@@ -40,7 +49,9 @@ const StockSearch = ({ competitionId, selectedTicker, onSelect, onResults }) => 
         className={styles.searchInput}
       />
       {error && <p className={styles.muted}>{error}</p>}
-      {!error && stocks.length === 0 && <p className={styles.muted}>검색 결과가 없어요.</p>}
+      {!error && stocks.length === 0 && (
+        <p className={styles.muted}>검색 결과가 없어요.</p>
+      )}
       <ul className={styles.stockList}>
         {stocks.map((s) => (
           <li key={s.ticker}>
@@ -56,7 +67,9 @@ const StockSearch = ({ competitionId, selectedTicker, onSelect, onResults }) => 
               </span>
               <span className={styles.stockPrice}>
                 <strong>{won(s.closePrice)}</strong>
-                <span style={{ color: changeColor(s.dailyChangeRate) }}>{signedPercent(s.dailyChangeRate)}</span>
+                <span style={{ color: changeColor(s.dailyChangeRate) }}>
+                  {signedPercent(s.dailyChangeRate)}
+                </span>
               </span>
             </button>
           </li>
