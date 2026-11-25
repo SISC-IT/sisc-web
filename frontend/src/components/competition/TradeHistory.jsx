@@ -14,7 +14,7 @@ const TradeHistory = ({ competitionId }) => {
     'tradeId'
   );
 
-  if (error && !items) {
+  if (error && !items?.length) {
     return (
       <>
         <p className={styles.errorBox}>{error}</p>

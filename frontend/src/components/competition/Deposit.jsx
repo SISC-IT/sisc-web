@@ -93,10 +93,16 @@ const Deposit = ({ competition }) => {
       });
       history.reload();
     } catch (err) {
-      // 응답만 못 받았을 수도 있어서, 다시 보내기 전에 실제 잔고와 내역을 보여 준다
-      setResult({ ok: false, text: err.message });
-      loadBalance();
+      // 서버가 거절한 게 아니면 응답만 못 받았을 수 있다. 실제 잔고를 다시 읽을 때까지 버튼을 막는다.
+      const uncertain = !err.status || err.status >= 500;
+      setResult({
+        ok: false,
+        text: uncertain
+          ? '처리 결과를 확인하지 못했어요. 아래 잔고와 내역을 확인한 뒤 다시 시도하세요.'
+          : err.message,
+      });
       history.reload();
+      await loadBalance();
     } finally {
       setSubmitting(false);
     }
@@ -213,7 +219,7 @@ const Deposit = ({ competition }) => {
 
 const DepositHistory = ({ history }) => {
   const { items, last, error, loading, loadMore } = history;
-  if (error && !items) {
+  if (error && !items?.length) {
     return (
       <>
         <p className={styles.errorBox}>{error}</p>
