@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
 import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser;
@@ -107,23 +109,34 @@ class DisclosureEventRuleEngineTest {
         LocalDate.of(2026, 11, 19), doc)).isEmpty();
   }
 
-  @Test
-  void readsOnlyCurrentAmountsAndUsesTheirOwnTableUnit() {
+  @ParameterizedTest
+  @CsvSource(textBlock = """
+      '', '<tr><td colspan="4">단위: 백만원</td></tr>', '주당순이익(원)', '1억'
+      '<p>(단위: 백만원)</p>', '', '주당순이익(원)', '1억'
+      '<p>(단위: 천원)</p>', '<tr><td colspan="4">단위: 백만원</td></tr>', '주당순이익(원)', '1억'
+      '', '<caption>(백만원)</caption>', '주당순이익(원)', '1억'
+      '', '<tr><td colspan="4">(백만원)</td></tr>', '주당순이익(원)', '1억'
+      '', '', '주당순이익 (천원)', '100원'
+      """)
+  void readsOnlyCurrentAmountsAndUsesTheirOwnTableUnit(
+      String precedingUnit, String tableUnit, String rowLabel, String expectedProfit) {
     var doc = parser.parse("""
         <table><tr><td>단위 : 원</td><td>주가 300</td></tr></table>
+        %s
         <table>
-          <tr><td colspan="4">단위: 백만원</td></tr>
-          <tr><th>구분</th><th>당기실적</th><th>전기실적</th><th>전년동기대비(%)</th></tr>
+          %s
+          <tr><th>구분</th><th>당기실적</th><th>전기실적</th><th>전년동기대비(%%)</th></tr>
           <tr><td>매출액</td><td>-</td><td>500</td><td>20</td></tr>
           <tr><td>영업이익</td><td>100</td><td>90</td><td>30</td></tr>
           <tr><td>당기순이익</td><td>0</td><td>20</td><td>-</td></tr>
+          <tr><td>%s</td><td>5</td><td>4</td><td>25</td></tr>
         </table>
-        """);
+        """.formatted(precedingUnit, tableUnit, rowLabel));
     var draft = engine.evaluatePreliminaryEarnings("예시", "잠정실적",
         LocalDate.of(2026, 11, 18), doc).orElseThrow();
 
     assertThat(draft.metrics()).extracting(metric -> metric.value())
-        .containsExactly("-", "1억 (+30.0%)", "0원");
+        .containsExactly("-", expectedProfit + " (+30.0%)", "0원");
   }
 
   @Test

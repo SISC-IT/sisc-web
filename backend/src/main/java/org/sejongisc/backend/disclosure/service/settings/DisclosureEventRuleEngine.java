@@ -12,6 +12,7 @@ import java.util.Set;
 import org.sejongisc.backend.disclosure.dto.DisclosureEventResponse.Metric;
 import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
 import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser.ParsedDocument;
+import org.sejongisc.backend.disclosure.service.settings.DartDocumentTableParser.ParsedTable;
 import org.springframework.stereotype.Component;
 
 // 4대 이벤트 공시 규칙 기반 필터링 엔진
@@ -309,8 +310,7 @@ public class DisclosureEventRuleEngine {
       for (var row : table.rows()) {
         if (currentColumn >= 0 && row.width() == headerWidth
             && DartDocumentTableParser.matchesRow(row.cells(), labels)) {
-          String unit = detectAmountUnit(table.unitContext())
-              .or(() -> detectAmountUnit(table.precedingUnitContext())).orElse("원");
+          String unit = detectAmountUnit(table);
           return formatWithUnit(row.valueAtColumn(currentColumn), unit);
         }
         int offset = 0;
@@ -367,11 +367,27 @@ public class DisclosureEventRuleEngine {
   }
 
   private static final Pattern AMOUNT_UNIT = Pattern.compile("단위\\s*[:：]\\s*([^\\s,;()]+)");
+  private static final Pattern PARENTHESIZED_WON_UNIT = Pattern.compile("\\(\\s*(백만원|천원|억원|원)\\s*\\)");
 
-  private Optional<String> detectAmountUnit(String text) {
-    // Per-row labels such as "주당순이익(원)" do not declare the table's unit.
+  private String detectAmountUnit(ParsedTable table) {
+    return detectExplicitAmountUnit(table.unitContext())
+        .or(() -> detectExplicitAmountUnit(table.precedingUnitContext()))
+        .or(() -> table.unitCandidates().stream()
+            .map(this::detectStandaloneAmountUnit)
+            .flatMap(Optional::stream)
+            .findFirst())
+        .orElse("원");
+  }
+
+  private Optional<String> detectExplicitAmountUnit(String text) {
     var declaration = AMOUNT_UNIT.matcher(text);
     return declaration.find() ? Optional.of(declaration.group(1)) : Optional.empty();
+  }
+
+  private Optional<String> detectStandaloneAmountUnit(String text) {
+    // Per-row labels such as "주당순이익(원)" do not declare the table's unit.
+    var implicitUnit = PARENTHESIZED_WON_UNIT.matcher(text);
+    return implicitUnit.matches() ? Optional.of(implicitUnit.group(1)) : Optional.empty();
   }
 
   private String formatWithUnit(String rawNumber, String unit) {

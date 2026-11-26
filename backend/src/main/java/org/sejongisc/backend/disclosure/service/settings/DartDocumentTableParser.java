@@ -55,19 +55,22 @@ public class DartDocumentTableParser {
       }
     }
     var parsedTables = tables.entrySet().stream()
-        .map(entry -> new ParsedTable(entry.getValue(), tableText(entry.getKey()),
-            precedingUnitContext(entry.getKey())))
+        .map(entry -> parseTable(entry.getKey(), entry.getValue()))
         .toList();
     return new ParsedDocument(keyValues, parsedTables);
   }
 
-  private static String tableText(Element table) {
+  private static ParsedTable parseTable(Element table, List<TableRow> rows) {
     if (table == null) {
-      return "";
+      return new ParsedTable(rows, "", "", List.of());
     }
     Element copy = table.clone();
     copy.select("table").stream().filter(nested -> nested != copy).forEach(Element::remove);
-    return normalizeWhitespace(copy.text());
+    var unitCandidates = copy.select("caption, th, td, te, tu").stream()
+        .map(cell -> normalizeWhitespace(cell.text()))
+        .toList();
+    return new ParsedTable(rows, normalizeWhitespace(copy.text()),
+        precedingUnitContext(table), unitCandidates);
   }
 
   private static String precedingUnitContext(Element table) {
@@ -150,7 +153,9 @@ public class DartDocumentTableParser {
     }
   }
 
-  public record ParsedTable(List<TableRow> rows, String unitContext, String precedingUnitContext) {}
+  public record ParsedTable(
+      List<TableRow> rows, String unitContext, String precedingUnitContext,
+      List<String> unitCandidates) {}
 
   public record ParsedDocument(
       Map<String, String> keyValues,
