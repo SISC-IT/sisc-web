@@ -60,11 +60,7 @@ public class DisclosureEventCollectionService {
 
     // 1. 주주환원 — 자사주 취득 결정 (전용 JSON API)
     var treasuryRes = dartClient.treasuryStockAcquisitions(corpCode, from, to);
-    String treasuryStatus = treasuryRes == null ? null : treasuryRes.status();
-    if (!"013".equals(treasuryStatus) && (!"000".equals(treasuryStatus) || treasuryRes.list() == null)) {
-      throw new IllegalStateException("OpenDART treasury acquisition lookup failed: status=" + treasuryStatus);
-    }
-    if ("000".equals(treasuryStatus)) {
+    if ("000".equals(treasuryRes.status())) {
       for (Map<String, String> row : treasuryRes.list()) {
         String receiptNo = row.get("rcept_no");
         if (receiptNo == null || !receiptNo.matches("[0-9]{14}")) {
@@ -93,8 +89,13 @@ public class DisclosureEventCollectionService {
       if (page == 1 && "013".equals(status)) {
         break;
       }
-      if (!"000".equals(status) || res.list() == null || res.list().isEmpty()
-          || res.total_page() == null || res.total_page() < page
+      if (!"000".equals(status)) {
+        throw new IllegalStateException("OpenDART exchange disclosure page failed: status=" + status);
+      }
+      if (res.list() == null || res.list().isEmpty()) {
+        break;
+      }
+      if (res.total_page() == null || res.total_page() < page
           || (res.page_no() != null && res.page_no() != page)) {
         throw new IllegalStateException("OpenDART exchange disclosure page failed: status=" + status);
       }

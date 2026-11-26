@@ -66,9 +66,14 @@ public class OpenDartClient {
   }
 
   public DartListResponse treasuryStockAcquisitions(String corpCode, LocalDate from, LocalDate to) {
-    return request("/tsstkAqDecsn.json", corpCode, uri -> uri
+    var response = request("/tsstkAqDecsn.json", corpCode, uri -> uri
         .queryParam("bgn_de", from.format(DateTimeFormatter.BASIC_ISO_DATE))
         .queryParam("end_de", to.format(DateTimeFormatter.BASIC_ISO_DATE)), DartListResponse.class);
+    String status = response == null ? null : response.status();
+    if (!"013".equals(status) && (!"000".equals(status) || response.list() == null)) {
+      throw new OpenDartClientException("OpenDART treasury acquisition lookup failed: status=" + status);
+    }
+    return response;
   }
 
   public String downloadDocument(String receiptNo) {

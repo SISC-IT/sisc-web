@@ -2,6 +2,8 @@ package org.sejongisc.backend.disclosure.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -99,6 +101,51 @@ class DisclosureEventRuleEngineTest {
           <tr><td>매출액대비(%)</td><td>1</td></tr>
           <tr><td>공시유보 관련내용</td><td>유보사유</td><td>-</td></tr>
           <tr><td>유보기한</td><td>-</td></tr>
+        </table>
+        """);
+    assertThat(engine.evaluateOrderContract("예시", "26110", "단일판매ㆍ공급계약체결",
+        LocalDate.of(2026, 11, 19), doc)).isEmpty();
+  }
+
+  @Test
+  void readsGroupedYoyColumnsFromAnActualDartFiling() throws IOException {
+    try (var input = getClass().getResourceAsStream("/disclosure/dart-20251030800790-earnings.html")) {
+      var doc = parser.parse(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+      assertThat(doc.findRowContaining("영업이익").orElseThrow())
+          .containsExactly("영업이익", "당해실적", "19,316", "58,741", "-67.12", "-", "44,658", "-56.75", "-");
+
+      var draft = engine.evaluatePreliminaryEarnings("HS효성첨단소재", "잠정실적",
+          LocalDate.of(2025, 10, 30), doc).orElseThrow();
+      assertThat(draft.headline()).contains("-56.8%");
+      assertThat(draft.metrics().get(1).value()).isEqualTo("193억 (-56.8%)");
+      assertThat(draft.tags()).contains("영업이익 20%↓");
+    }
+  }
+
+  @Test
+  void usesTheOperatingProfitYoyTurnaroundCellInsteadOfTheQoqCell() {
+    var doc = parser.parse("""
+        <table>
+          <tr><th>구분</th><th>당기실적</th><th colspan="2">전기대비</th><th colspan="2">전년동기대비</th></tr>
+          <tr><td>영업이익</td><td>100</td><td>-</td><td>적자전환</td><td>-</td><td>흑자전환</td></tr>
+          <tr><td>법인세비용차감전계속사업이익</td><td>50</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+        </table>
+        """);
+    var draft = engine.evaluatePreliminaryEarnings("예시", "잠정실적", LocalDate.of(2026, 11, 18), doc)
+        .orElseThrow();
+
+    assertThat(draft.headline()).endsWith("영업이익 흑자전환");
+    assertThat(draft.metrics().get(1).value()).isEqualTo("100원 (흑자전환)");
+    assertThat(draft.metrics().get(2).value()).isEqualTo("-");
+    assertThat(draft.tags()).contains("흑자전환").doesNotContain("적자전환");
+  }
+
+  @Test
+  void aConfidentialityDeadlineWithoutAReasonDoesNotBypassThresholds() {
+    var doc = parser.parse("""
+        <table>
+          <tr><td>계약금액(원)</td><td>5,000,000,000</td></tr>
+          <tr><td>유보기한</td><td>2026-12-31</td></tr>
         </table>
         """);
     assertThat(engine.evaluateOrderContract("예시", "26110", "단일판매ㆍ공급계약체결",

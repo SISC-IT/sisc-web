@@ -73,7 +73,7 @@ public class DisclosureEventRuleEngine {
   public Optional<EventDraft> evaluateOrderContract(String companyName, String indutyCode,
       String reportTitle, LocalDate publishedDate, ParsedDocument doc) {
     boolean cancellation = reportTitle != null && reportTitle.contains("해지");
-    boolean confidential = doc.findValue("유보사유", "유보기한")
+    boolean confidential = doc.findValue("유보사유")
         .map(DartDocumentTableParser::compactKey)
         .filter(value -> !List.of("", "-", "–", "—", "해당없음", "해당사항없음", "없음").contains(value))
         .isPresent();
@@ -126,7 +126,7 @@ public class DisclosureEventRuleEngine {
     String unit = detectAmountUnit(doc.plainText());
     String revenue = extractRowLatestValue(doc, "매출액", "영업수익").orElse("-");
     String opProfit = extractRowLatestValue(doc, "영업이익").orElse("-");
-    String opYoyRaw = extractRowYoyPercent(doc, "영업이익").orElse(null);
+    String opYoyRaw = extractRowYoyComparison(doc, "영업이익").orElse(null);
     String netIncome = extractRowLatestValue(doc, "당기순이익", "분기순이익", "반기순이익").orElse("-");
 
     String comparison = opYoyRaw == null ? "" : DartDocumentTableParser.compactKey(opYoyRaw);
@@ -309,26 +309,41 @@ public class DisclosureEventRuleEngine {
             .findFirst());
   }
 
-  private Optional<String> extractRowYoyPercent(ParsedDocument doc, String... labels) {
-    return doc.findRowContaining(labels)
-        .flatMap(row -> {
-          for (List<String> header : doc.rows()) {
-            if (header == row) {
-              break;
-            }
-            if (header.size() != row.size()) {
-              continue;
-            }
-            for (int i = 1; i < header.size(); i++) {
-              String label = DartDocumentTableParser.compactKey(header.get(i));
-              if ((label.contains("전년동기") || label.contains("전년동기대비"))
-                  && (label.contains("대비") || label.contains("%") || label.contains("증감률"))) {
-                return Optional.of(row.get(i));
-              }
-            }
+  private Optional<String> extractRowYoyComparison(ParsedDocument doc, String... labels) {
+    for (var table : doc.tables()) {
+      for (int rowIndex = 0; rowIndex < table.size(); rowIndex++) {
+        var row = table.get(rowIndex);
+        if (!DartDocumentTableParser.matchesRow(row.cells(), labels)) {
+          continue;
+        }
+        for (int headerIndex = rowIndex - 1; headerIndex >= 0; headerIndex--) {
+          var header = table.get(headerIndex);
+          if (header.width() != row.width()) {
+            continue;
           }
-          return Optional.empty();
-        });
+          int offset = header.spans().getFirst();
+          for (int cell = 1; cell < header.cells().size(); cell++) {
+            String label = DartDocumentTableParser.compactKey(header.cells().get(cell));
+            int span = header.spans().get(cell);
+            if (label.startsWith("전년동기")
+                && (label.contains("대비") || label.contains("%")
+                    || label.contains("증감률") || label.contains("증감율"))) {
+              // In DART's two-column comparison group, the rate precedes the turnaround flag.
+              if (span == 2) {
+                String flag = DartDocumentTableParser.compactKey(row.valueAtColumn(offset + 1));
+                if ("흑자전환".equals(flag) || "적자전환".equals(flag)) {
+                  return Optional.of(flag);
+                }
+              }
+              return Optional.of(row.valueAtColumn(offset));
+            }
+            offset += span;
+          }
+        }
+        return Optional.empty();
+      }
+    }
+    return Optional.empty();
   }
 
   private String detectAmountUnit(String plainText) {

@@ -152,6 +152,30 @@ class DisclosureEarningsCollectionServiceTest {
   }
 
   @Test
+  void subtractsThirdQuarterNetIncomeWhenTheAnnualAndQuarterlyAliasesDiffer() {
+    setReports(List.of(filing(ANNUAL_2025, "사업보고서 (2025.12)", "연"),
+        filing(THIRD_2025, "분기보고서 (2025.09)", "연")));
+    financial(2025, "11014", THIRD_2025, "CFS", "60", "200", "분기 순이익", "-");
+    financial(2025, "11011", ANNUAL_2025, "CFS", "300", null, "당기순이익", "");
+
+    var quarters = collection.collect(COMPANY, THROUGH).earnings().orElseThrow().quarters();
+
+    assertThat(quarters.getLast().netIncome()).isEqualTo("100");
+  }
+
+  @Test
+  void doesNotSubtractNetIncomeWithDifferentStandardAccountIds() {
+    setReports(List.of(filing(ANNUAL_2025, "사업보고서 (2025.12)", "연"),
+        filing(THIRD_2025, "분기보고서 (2025.09)", "연")));
+    financial(2025, "11014", THIRD_2025, "CFS", "60", "200", "당기순이익", "ifrs_ProfitLoss");
+    financial(2025, "11011", ANNUAL_2025, "CFS", "300", null, "당기순이익", "ifrs-full_ProfitLoss");
+
+    var quarters = collection.collect(COMPANY, THROUGH).earnings().orElseThrow().quarters();
+
+    assertThat(quarters.getLast().netIncome()).isNull();
+  }
+
+  @Test
   void leavesConsolidatedReportPendingUntilTheFinancialApiHasThatReceipt() {
     setReports(List.of(filing(THIRD_2026, "분기보고서 (2026.09)", "연")));
     when(client.financialStatements(COMPANY, 2026, "11014", "CFS"))
@@ -251,11 +275,20 @@ class DisclosureEarningsCollectionServiceTest {
   }
 
   private void financial(int year, String code, String receipt, String basis, String value, String cumulative) {
+    financial(year, code, receipt, basis, value, cumulative, "ifrs-full_ProfitLoss", "ifrs-full_ProfitLoss");
+  }
+
+  private void financial(int year, String code, String receipt, String basis, String value, String cumulative,
+      String netName, String netId) {
     var rows = new ArrayList<Map<String, String>>();
     for (String account : List.of("ifrs-full_Revenue", "dart_OperatingIncomeLoss", "ifrs-full_ProfitLoss")) {
       var row = new LinkedHashMap<>(Map.of("rcept_no", receipt, "corp_code", COMPANY,
           "bsns_year", Integer.toString(year), "reprt_code", code, "account_id", account,
           "account_nm", account, "sj_div", "IS", "currency", "KRW", "thstrm_amount", value));
+      if (account.equals("ifrs-full_ProfitLoss")) {
+        row.put("account_id", netId);
+        row.put("account_nm", netName);
+      }
       if (cumulative != null) {
         row.put("thstrm_add_amount", cumulative);
       }

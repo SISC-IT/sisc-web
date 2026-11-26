@@ -50,6 +50,21 @@ class OpenDartClientTest {
         .hasNoCause();
   }
 
+  @Test
+  void distinguishesTreasuryNoDataFromBusinessErrors() {
+    var client = client(WebClient.builder().exchangeFunction(request -> {
+      String status = request.url().getQuery().contains("corp_code=" + COMPANY) ? "013" : "020";
+      return Mono.just(ClientResponse.create(HttpStatus.OK)
+          .header("Content-Type", "application/json").body("{\"status\":\"" + status + "\"}").build());
+    }));
+    LocalDate date = LocalDate.of(2026, 11, 19);
+
+    assertThat(client.treasuryStockAcquisitions(COMPANY, date, date).status()).isEqualTo("013");
+    assertThatThrownBy(() -> client.treasuryStockAcquisitions("00000002", date, date))
+        .isInstanceOf(OpenDartClientException.class)
+        .hasMessageContaining("020");
+  }
+
   private OpenDartClient client(WebClient.Builder builder) {
     return new OpenDartClient(builder.baseUrl(BASE_URL).build(),
         new OpenDartProperties(BASE_URL, "fixture-only", 10000));

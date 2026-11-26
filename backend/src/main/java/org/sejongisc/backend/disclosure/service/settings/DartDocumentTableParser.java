@@ -12,7 +12,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Parser;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 // OpenDART 공시 원문 HTML/XML 표 파서
@@ -29,10 +28,9 @@ public class DartDocumentTableParser {
         : Jsoup.parse(xmlOrHtml);
 
     Map<String, String> keyValues = new LinkedHashMap<>();
-    List<List<String>> rows = new ArrayList<>();
+    Map<Element, List<TableRow>> tables = new LinkedHashMap<>();
 
-    Elements trs = doc.select("tr, TR");
-    for (Element tr : trs) {
+    for (Element tr : doc.select("tr, TR")) {
       List<Element> cells = tr.children().stream()
           .filter(cell -> List.of("th", "td", "te", "tu").contains(cell.normalName()))
           .toList();
@@ -45,7 +43,9 @@ public class DartDocumentTableParser {
       if (rowValues.stream().allMatch(String::isBlank)) {
         continue;
       }
-      rows.add(rowValues);
+      var spans = cells.stream().map(cell -> columnSpan(cell.attr("colspan"))).toList();
+      tables.computeIfAbsent(tr.closest("table"), ignored -> new ArrayList<>())
+          .add(new TableRow(rowValues, spans));
       if (rowValues.size() == 2) {
         keyValues.putIfAbsent(compactKey(rowValues.get(0)), rowValues.get(1));
       } else if (rowValues.size() >= 3) {
@@ -54,7 +54,15 @@ public class DartDocumentTableParser {
         keyValues.putIfAbsent(compactKey(rowValues.get(0)), rowValues.get(rowValues.size() - 1));
       }
     }
-    return new ParsedDocument(keyValues, rows, normalizeWhitespace(doc.text()));
+    return new ParsedDocument(keyValues, new ArrayList<>(tables.values()), normalizeWhitespace(doc.text()));
+  }
+
+  private static int columnSpan(String value) {
+    try {
+      return Math.clamp(Integer.parseInt(value), 1, 1000);
+    } catch (NumberFormatException ignored) {
+      return 1;
+    }
   }
 
   public static String compactKey(String raw) {
@@ -91,9 +99,25 @@ public class DartDocumentTableParser {
     return value == null ? "" : value.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
   }
 
+  public record TableRow(List<String> cells, List<Integer> spans) {
+    public int width() {
+      return spans.stream().mapToInt(Integer::intValue).sum();
+    }
+
+    public String valueAtColumn(int column) {
+      for (int i = 0; i < spans.size(); i++) {
+        column -= spans.get(i);
+        if (column < 0) {
+          return cells.get(i);
+        }
+      }
+      return "";
+    }
+  }
+
   public record ParsedDocument(
       Map<String, String> keyValues,
-      List<List<String>> rows,
+      List<List<TableRow>> tables,
       String plainText) {
 
     public Optional<String> findValue(String... keyFragments) {
@@ -109,15 +133,19 @@ public class DartDocumentTableParser {
     }
 
     public Optional<List<String>> findRowContaining(String... fragments) {
-      for (List<String> row : rows) {
-        String joined = compactKey(row.getFirst());
-        for (String fragment : fragments) {
-          if (joined.contains(compactKey(fragment))) {
-            return Optional.of(row);
-          }
-        }
-      }
-      return Optional.empty();
+      return tables.stream().flatMap(List::stream).map(TableRow::cells)
+          .filter(row -> matchesRow(row, fragments))
+          .findFirst();
     }
+  }
+
+  static boolean matchesRow(List<String> row, String... fragments) {
+    String label = compactKey(row.getFirst());
+    for (String fragment : fragments) {
+      if (label.contains(compactKey(fragment))) {
+        return true;
+      }
+    }
+    return false;
   }
 }

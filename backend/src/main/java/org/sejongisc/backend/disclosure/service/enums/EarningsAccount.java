@@ -80,18 +80,28 @@ public enum EarningsAccount {
     if (id.startsWith("ifrs") || id.startsWith("dart_")) {
       return 0;
     }
-    return names.contains(text(row.accountName()).replaceAll("\\s+", "")) ? 1 : 0;
+    return names.contains(normalizeName(row.accountName())) ? 1 : 0;
   }
 
   public static boolean sameAccount(EarningsRow first, EarningsRow second) {
-    String firstId = text(first.accountId());
-    String secondId = text(second.accountId());
+    String firstId = normalizeId(first.accountId());
+    String secondId = normalizeId(second.accountId());
     if (!firstId.equals(secondId)) {
       return false;
     }
-    return (!firstId.isBlank() && !firstId.startsWith("-"))
-        || text(first.accountName()).equals(text(second.accountName()))
-        || (NET_INCOME.rank(first) > 0 && NET_INCOME.rank(second) > 0);
+    if (!firstId.isEmpty() || normalizeName(first.accountName()).equals(normalizeName(second.accountName()))) {
+      return true;
+    }
+    return Arrays.stream(values()).anyMatch(account -> account.rank(first) == 1 && account.rank(second) == 1);
+  }
+
+  private static String normalizeId(String value) {
+    String id = text(value).strip();
+    return id.startsWith("-") ? "" : id.toLowerCase(Locale.ROOT);
+  }
+
+  private static String normalizeName(String value) {
+    return text(value).replaceAll("\\s+", "");
   }
 
   private static String text(String value) {
