@@ -15,6 +15,7 @@ import {
   Shield,
   Upload,
   Globe2,
+  Trophy,
 } from 'lucide-react';
 import styles from './AdminSidebar.module.css';
 
@@ -34,6 +35,7 @@ const presidentMenuItems = [
       { label: '공개 페이지 관리', href: '/admin/public-pages', icon: Globe2 },
       { label: '출석 관리', href: '/admin/attendance', icon: Calendar },
       { label: '포인트 관리', href: '/admin/points', icon: Star },
+      { label: '수익률 대결', href: '/admin/competition', icon: Trophy },
       { label: '피드백 확인하기', href: '/admin/feedbacks', icon: MessageSquare },
     ],
   },

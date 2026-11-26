@@ -22,6 +22,7 @@ import AdminMemberApproval from './pages/AdminMemberApproval.jsx';
 import AdminMemberManage from './pages/AdminMemberManage.jsx';
 import AdminExcelUpload from './pages/AdminExcelUpload.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import AdminCompetition from './pages/AdminCompetition.jsx';
 import AdminFeedback from './pages/AdminFeedback.jsx';
 import AdminPublicPages from './pages/AdminPublicPages.jsx';
 
@@ -112,6 +113,7 @@ function App() {
               element={<AdminExcelUpload />}
             />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/competition" element={<AdminCompetition />} />
             <Route path="/admin/feedbacks" element={<AdminFeedback />} />
             <Route path="/admin/public-pages" element={<AdminPublicPages />} />
           </Route>
