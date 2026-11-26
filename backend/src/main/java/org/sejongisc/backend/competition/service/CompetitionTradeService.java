@@ -73,7 +73,7 @@ public class CompetitionTradeService {
         DailyClosePrice closePrice = findOrderPrice(stock, request.closePriceId(), now);
 
         BigDecimal amount = closePrice.getClosePrice().multiply(BigDecimal.valueOf(request.quantity()));
-        BigDecimal fee = amount.multiply(competition.getFeeRate()).setScale(4, RoundingMode.DOWN);
+        BigDecimal fee = amount.multiply(competition.getFeeRate()).setScale(0, RoundingMode.DOWN);
         if (request.side() == TradeSide.BUY) {
             buy(account, stock, request.quantity(), closePrice.getClosePrice(), amount.add(fee));
         } else {

@@ -35,7 +35,7 @@ public class CompetitionTradeController {
             - 확인한 종가가 최신 종가와 다르면 409 PRICE_CHANGED를 반환합니다. \s
             - Idempotency-Key 헤더에 주문마다 새 UUID를 보냅니다. 같은 키로 다시 보내면 새로 체결하지 않고 처음 결과를 반환합니다. \s
             - 409 COMPETITION_ORDER_CONFLICT는 같은 계좌의 다른 요청과 겹친 경우입니다. 같은 Idempotency-Key로 다시 보내면 처음 주문이 체결됐을 때 그 결과를 받습니다. \s
-            - 수수료는 체결 금액 × 대회 수수료율이고, 소수 4자리에서 버립니다.
+            - 수수료는 체결 금액 × 대회 수수료율이고, 원 미만을 버립니다.
             """
     )
     @PostMapping
