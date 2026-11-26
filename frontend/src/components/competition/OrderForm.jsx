@@ -9,9 +9,9 @@ import {
   won,
 } from '../../utils/competitionFormat';
 
-// 서버와 같은 계산: 수수료는 소수 4자리에서 버린다. 부동소수점 오차를 반올림으로 없앤 뒤 버린다.
+// 서버와 같은 계산: 수수료는 원 미만을 버린다. 부동소수점 오차를 반올림으로 없앤 뒤 버린다.
 const feeOf = (amount, feeRate) =>
-  Math.floor(Math.round(amount * feeRate * 1e8) / 1e4) / 1e4;
+  Math.floor(Math.round(amount * feeRate * 1e8) / 1e8);
 
 const maxBuyQuantity = (cash, price, feeRate) => {
   if (!price) return 0;
