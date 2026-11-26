@@ -73,7 +73,10 @@ public class DisclosureEventRuleEngine {
   public Optional<EventDraft> evaluateOrderContract(String companyName, String indutyCode,
       String reportTitle, LocalDate publishedDate, ParsedDocument doc) {
     boolean cancellation = reportTitle != null && reportTitle.contains("해지");
-    boolean confidential = doc.plainText().contains("유보") || doc.plainText().contains("비밀유지");
+    boolean confidential = doc.findValue("유보사유", "유보기한")
+        .map(DartDocumentTableParser::compactKey)
+        .filter(value -> !List.of("", "-", "–", "—", "해당없음", "해당사항없음", "없음").contains(value))
+        .isPresent();
 
     BigDecimal contractAmount = doc.findValue("확정계약금액", "계약금액", "계약금액총액")
         .flatMap(DartDocumentTableParser::parseNumber).orElse(null);
@@ -124,9 +127,10 @@ public class DisclosureEventRuleEngine {
     String revenue = extractRowLatestValue(doc, "매출액", "영업수익").orElse("-");
     String opProfit = extractRowLatestValue(doc, "영업이익").orElse("-");
     String opYoyRaw = extractRowYoyPercent(doc, "영업이익").orElse(null);
-    String netIncome = extractRowLatestValue(doc, "당기순이익", "법인세비용차감전").orElse("-");
+    String netIncome = extractRowLatestValue(doc, "당기순이익", "분기순이익", "반기순이익").orElse("-");
 
-    boolean turnaround = doc.plainText().contains("흑자전환") || doc.plainText().contains("적자전환");
+    String comparison = opYoyRaw == null ? "" : DartDocumentTableParser.compactKey(opYoyRaw);
+    boolean turnaround = "흑자전환".equals(comparison) || "적자전환".equals(comparison);
     BigDecimal opYoy = opYoyRaw != null ? DartDocumentTableParser.parseNumber(opYoyRaw).orElse(null) : null;
 
     boolean significant = turnaround
@@ -139,13 +143,13 @@ public class DisclosureEventRuleEngine {
     String opDisplay = formatWithUnit(opProfit, unit);
     if (opYoy != null) {
       opDisplay = opDisplay + " (" + formatSignedPercent(opYoy) + ")";
-    } else if (doc.plainText().contains("흑자전환")) {
+    } else if ("흑자전환".equals(comparison)) {
       opDisplay = opDisplay + " (흑자전환)";
-    } else if (doc.plainText().contains("적자전환")) {
+    } else if ("적자전환".equals(comparison)) {
       opDisplay = opDisplay + " (적자전환)";
     }
 
-    String headline = buildPreliminaryHeadline(reportTitle, opYoy, doc.plainText());
+    String headline = buildPreliminaryHeadline(reportTitle, opYoy, comparison);
     List<Metric> metrics = List.of(
         new Metric("매출액", formatWithUnit(revenue, unit), false),
         new Metric("영업이익", opDisplay, true),
@@ -153,9 +157,9 @@ public class DisclosureEventRuleEngine {
     );
     List<String> tags = new ArrayList<>();
     tags.add("잠정실적");
-    if (doc.plainText().contains("흑자전환")) {
+    if ("흑자전환".equals(comparison)) {
       tags.add("흑자전환");
-    } else if (doc.plainText().contains("적자전환")) {
+    } else if ("적자전환".equals(comparison)) {
       tags.add("적자전환");
     } else if (opYoy != null && opYoy.compareTo(MIN_PRELIM_OP_YOY_PERCENT) >= 0) {
       tags.add("영업이익 20%↑");
@@ -284,11 +288,11 @@ public class DisclosureEventRuleEngine {
         publishedDate, metrics, List.of("CAPEX", "시설투자")));
   }
 
-  private String buildPreliminaryHeadline(String reportTitle, BigDecimal opYoy, String plainText) {
-    if (plainText.contains("흑자전환")) {
+  private String buildPreliminaryHeadline(String reportTitle, BigDecimal opYoy, String comparison) {
+    if ("흑자전환".equals(comparison)) {
       return "잠정 실적 발표 — 영업이익 흑자전환";
     }
-    if (plainText.contains("적자전환")) {
+    if ("적자전환".equals(comparison)) {
       return "잠정 실적 발표 — 영업이익 적자전환";
     }
     if (opYoy != null) {
@@ -308,10 +312,22 @@ public class DisclosureEventRuleEngine {
   private Optional<String> extractRowYoyPercent(ParsedDocument doc, String... labels) {
     return doc.findRowContaining(labels)
         .flatMap(row -> {
-          List<String> numericCells = row.stream().skip(1)
-              .filter(cell -> DartDocumentTableParser.parseNumber(cell).isPresent())
-              .toList();
-          return numericCells.size() >= 2 ? Optional.of(numericCells.getLast()) : Optional.empty();
+          for (List<String> header : doc.rows()) {
+            if (header == row) {
+              break;
+            }
+            if (header.size() != row.size()) {
+              continue;
+            }
+            for (int i = 1; i < header.size(); i++) {
+              String label = DartDocumentTableParser.compactKey(header.get(i));
+              if ((label.contains("전년동기") || label.contains("전년동기대비"))
+                  && (label.contains("대비") || label.contains("%") || label.contains("증감률"))) {
+                return Optional.of(row.get(i));
+              }
+            }
+          }
+          return Optional.empty();
         });
   }
 

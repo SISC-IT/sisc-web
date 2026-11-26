@@ -32,7 +32,7 @@
 | :--- | :--- | :--- |
 | `GET /api/disclosures/companies` | `q`, `page`, `size` (기본 200), JWT | `CompanyListResponse` (기업 목록 + `hasUnread`) |
 | `GET /api/disclosures/companies/{corpCode}` | `corpCode`(8자리), `type`(선택), JWT | `CompanyDetailResponse` (최근 분기 + 전체 추이 + 이벤트 목록) |
-| 프론트엔드 (`/board/disclosures`) | `DisclosureBoard.jsx` ↔ `disclosureApi.js` | 기업 목록(빨간 점) + 기업 상세(실적 표 + 필터 스프레드시트) |
+| 프론트엔드 (`/board/disclosure`) | `DisclosureBoard.jsx` ↔ `disclosureApi.js` | 기업 목록(빨간 점) + 기업 상세(실적 표 + 필터 스프레드시트) |
 
 ## 5. 운영 및 로컬 QA 가드레일
 - **필수 환경변수:** `OPENDART_API_KEY` (GitHub Environments `development` / `production` 시크릿 등록 및 워크플로우 `.env` 주입 필요)
@@ -46,3 +46,8 @@
 - **백엔드:** `controller/DisclosureController`, `service/(DisclosureEarningsCollectionService, DisclosureEventCollectionService, DisclosureQueryService)`, `service/enums/*`, `service/settings/*`, `entity/*`, `repository/*`, Flyway `V12`·`V13` 구현 완료
 - **프론트엔드:** `pages/DisclosureBoard.jsx`, `pages/DisclosureBoard.module.css`, `utils/disclosureApi.js`, `App.jsx`, `Sidebar.jsx` 연동 완료
 - **검증:** `cd backend && .\gradlew.bat test --tests "org.sejongisc.backend.disclosure.*"` (17/17 통과)
+
+### 분기 비교와 로컬 DB
+
+- YoY는 전년 동기, QoQ는 직전 분기와 비교합니다. 현재값과 기준값의 차이를 기준값의 절댓값으로 나눕니다. 기준값이 0이거나 값·통화·연결 기준을 비교할 수 없으면 증감률은 제공하지 않습니다.
+- 로컬 수집에 사용하는 DB는 공시 전용으로 준비하세요. 공용 마이그레이션을 적용한 DB에 로컬 Flyway 경로를 적용하면 서로 다른 이력이 충돌합니다.

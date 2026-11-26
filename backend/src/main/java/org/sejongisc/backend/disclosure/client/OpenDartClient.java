@@ -96,15 +96,17 @@ public class OpenDartClient {
       try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(payload))) {
         ZipEntry entry;
         StringBuilder combined = new StringBuilder();
+        int remaining = MAX_DOCUMENT_BYTES;
         while ((entry = zis.getNextEntry()) != null) {
           if (entry.isDirectory()) {
             continue;
           }
-          byte[] entryBytes = zis.readNBytes(MAX_DOCUMENT_BYTES);
-          combined.append(decodeXmlText(entryBytes)).append('\n');
-          if (combined.length() > MAX_DOCUMENT_BYTES) {
-            break;
+          byte[] entryBytes = zis.readNBytes(remaining + 1);
+          if (entryBytes.length > remaining) {
+            throw new OpenDartClientException("OpenDART document exceeds the unpacked size limit");
           }
+          remaining -= entryBytes.length;
+          combined.append(decodeXmlText(entryBytes)).append('\n');
         }
         return combined.toString();
       } catch (IOException e) {

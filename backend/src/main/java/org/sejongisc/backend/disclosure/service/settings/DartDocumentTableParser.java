@@ -33,15 +33,16 @@ public class DartDocumentTableParser {
 
     Elements trs = doc.select("tr, TR");
     for (Element tr : trs) {
-      Elements cells = tr.select("th, td, TH, TD");
+      List<Element> cells = tr.children().stream()
+          .filter(cell -> List.of("th", "td", "te", "tu").contains(cell.normalName()))
+          .toList();
       if (cells.isEmpty()) {
         continue;
       }
       List<String> rowValues = cells.stream()
           .map(cell -> normalizeWhitespace(cell.text()))
-          .filter(text -> !text.isBlank())
           .toList();
-      if (rowValues.isEmpty()) {
+      if (rowValues.stream().allMatch(String::isBlank)) {
         continue;
       }
       rows.add(rowValues);
@@ -109,7 +110,7 @@ public class DartDocumentTableParser {
 
     public Optional<List<String>> findRowContaining(String... fragments) {
       for (List<String> row : rows) {
-        String joined = compactKey(String.join("", row));
+        String joined = compactKey(row.getFirst());
         for (String fragment : fragments) {
           if (joined.contains(compactKey(fragment))) {
             return Optional.of(row);

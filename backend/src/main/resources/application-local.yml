@@ -1,3 +1,8 @@
+# Use a dedicated database with the disclosure-local Flyway history.
+point:
+  initialization:
+    enabled: false
+
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver

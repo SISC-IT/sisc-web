@@ -14,6 +14,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -97,6 +98,11 @@ public class DisclosureEvent extends BasePostgresEntity {
   public void refresh(String reportTitle, String headline, LocalDate publishedDate,
       String marketClass, String metricsJson, String tagsJson, String rawPayload,
       LocalDateTime collectedAt) {
+    if (Objects.equals(this.reportTitle, reportTitle) && Objects.equals(this.headline, headline)
+        && Objects.equals(this.publishedDate, publishedDate) && Objects.equals(this.marketClass, marketClass)
+        && Objects.equals(this.metricsJson, metricsJson) && Objects.equals(this.tagsJson, tagsJson)) {
+      return;
+    }
     this.reportTitle = reportTitle;
     this.headline = headline;
     this.publishedDate = publishedDate;

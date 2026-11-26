@@ -191,6 +191,12 @@
 }
 
 .companyNameCell {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -251,4 +257,9 @@
   border-radius: 6px;
   font-size: 12px;
   color: #92400e;
+}
+
+.quarterGrowth {
+  display: block;
+  white-space: nowrap;
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   getDisclosureCompanies,
   getDisclosureCompanyDetail,
@@ -34,9 +34,20 @@ const formatWon = (raw) => {
   return `${sign}${Math.round(abs).toLocaleString()}원`;
 };
 
+const Growth = ({ yoy, qoq }) => {
+  if (yoy == null && qoq == null) return null;
+  return (
+    <small className={styles.quarterGrowth}>
+      전년 {yoy == null ? '-' : yoy + '%'} · 전분기 {qoq == null ? '-' : qoq + '%'}
+    </small>
+  );
+};
+
 const DisclosureBoard = () => {
   const [searchInput, setSearchInput] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [search, setSearch] = useState({ keyword: '' });
+  const { keyword } = search;
+  const submitSearch = () => setSearch({ keyword: searchInput.trim() });
   const [companies, setCompanies] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [listLoading, setListLoading] = useState(false);
@@ -48,51 +59,55 @@ const DisclosureBoard = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
 
-  const fetchCompanies = useCallback(async () => {
-    setListLoading(true);
-    setListError('');
-    try {
-      const data = await getDisclosureCompanies({ q: keyword, page: 0, size: 200 });
-      setCompanies(data?.items || []);
-      setTotalCount(data?.totalCount || 0);
-    } catch {
-      setListError('기업 목록을 불러오지 못했습니다.');
-      setCompanies([]);
-      setTotalCount(0);
-    } finally {
-      setListLoading(false);
-    }
-  }, [keyword]);
+  useEffect(() => {
+    let active = true;
+    const loadCompanies = async () => {
+      setListLoading(true);
+      setListError('');
+      try {
+        const data = await getDisclosureCompanies({ q: search.keyword, page: 0, size: 200 });
+        if (!active) return;
+        setCompanies(data?.items || []);
+        setTotalCount(data?.totalCount || 0);
+      } catch {
+        if (!active) return;
+        setListError('기업 목록을 불러오지 못했습니다.');
+        setCompanies([]);
+        setTotalCount(0);
+      } finally {
+        if (active) setListLoading(false);
+      }
+    };
+    loadCompanies();
+    return () => { active = false; };
+  }, [search]);
 
   useEffect(() => {
-    fetchCompanies();
-  }, [fetchCompanies]);
-
-  const fetchDetail = useCallback(async (corpCode, filterType) => {
-    if (!corpCode) return;
-    setDetailLoading(true);
-    setDetailError('');
-    try {
-      const data = await getDisclosureCompanyDetail(corpCode, filterType);
-      setDetail(data);
-      setCompanies((prev) =>
-        prev.map((item) =>
-          item.corpCode === corpCode ? { ...item, hasUnread: false } : item
-        )
-      );
-    } catch {
-      setDetailError('기업 상세 공시 데이터를 불러오지 못했습니다.');
-      setDetail(null);
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedCorpCode) {
-      fetchDetail(selectedCorpCode, eventFilter);
-    }
-  }, [selectedCorpCode, eventFilter, fetchDetail]);
+    if (!selectedCorpCode) return;
+    let active = true;
+    const loadDetail = async () => {
+      setDetailLoading(true);
+      setDetailError('');
+      try {
+        const data = await getDisclosureCompanyDetail(selectedCorpCode, eventFilter);
+        if (!active) return;
+        setDetail(data);
+        setCompanies((prev) =>
+          prev.map((item) =>
+            item.corpCode === selectedCorpCode ? { ...item, hasUnread: false } : item
+          )
+        );
+      } catch {
+        if (!active) return;
+        setDetailError('기업 상세 공시 데이터를 불러오지 못했습니다.');
+        setDetail(null);
+      } finally {
+        if (active) setDetailLoading(false);
+      }
+    };
+    loadDetail();
+    return () => { active = false; };
+  }, [selectedCorpCode, eventFilter]);
 
   const handleSelectCompany = (corpCode) => {
     setSelectedCorpCode(corpCode);
@@ -177,9 +192,9 @@ const DisclosureBoard = () => {
                           </td>
                           <td>{q.periodEnd}</td>
                           <td>{formatBasis(q.basis)}</td>
-                          <td className={styles.numCol}>{formatWon(q.revenue)}</td>
-                          <td className={styles.numCol}>{formatWon(q.operatingProfit)}</td>
-                          <td className={styles.numCol}>{formatWon(q.netIncome)}</td>
+                          <td className={styles.numCol}>{formatWon(q.revenue)}<Growth yoy={q.yoy?.revenue} qoq={q.qoq?.revenue} /></td>
+                          <td className={styles.numCol}>{formatWon(q.operatingProfit)}<Growth yoy={q.yoy?.operatingProfit} qoq={q.qoq?.operatingProfit} /></td>
+                          <td className={styles.numCol}>{formatWon(q.netIncome)}<Growth yoy={q.yoy?.netIncome} qoq={q.qoq?.netIncome} /></td>
                           <td>
                             {q.sources?.[0]?.url ? (
                               <a
@@ -297,13 +312,13 @@ const DisclosureBoard = () => {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') setKeyword(searchInput.trim());
+            if (e.key === 'Enter') submitSearch();
           }}
         />
         <button
           type="button"
           className={styles.searchBtn}
-          onClick={() => setKeyword(searchInput.trim())}
+          onClick={submitSearch}
         >
           검색
         </button>
@@ -313,7 +328,7 @@ const DisclosureBoard = () => {
             className={styles.resetBtn}
             onClick={() => {
               setSearchInput('');
-              setKeyword('');
+              setSearch({ keyword: '' });
             }}
           >
             초기화
@@ -348,7 +363,10 @@ const DisclosureBoard = () => {
                   onClick={() => handleSelectCompany(c.corpCode)}
                 >
                   <td>
-                    <span className={styles.companyNameCell}>
+                    <button type="button" className={styles.companyNameCell} onClick={(event) => {
+                      event.stopPropagation();
+                      handleSelectCompany(c.corpCode);
+                    }}>
                       {c.hasUnread && (
                         <span
                           className={styles.unreadDot}
@@ -357,7 +375,7 @@ const DisclosureBoard = () => {
                         />
                       )}
                       {c.companyName}
-                    </span>
+                    </button>
                   </td>
                   <td className={styles.nowrap}>{c.stockCode || c.corpCode}</td>
                   <td className={styles.nowrap}>{c.market}</td>

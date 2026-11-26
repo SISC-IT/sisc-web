@@ -74,6 +74,38 @@ class DisclosureEventRuleEngineTest {
   }
 
   @Test
+  void usesOnlyTheOperatingProfitYoyCellAndReadsDartAmountTags() {
+    var doc = parser.parse("""
+        <DOCUMENT><BODY><TABLE>
+          <TR><TH>구분</TH><TH>당기실적</TH><TH>전년동기금액</TH><TH>전년동기대비(%)</TH></TR>
+          <TR><TD>영업이익</TD><TE>-3378</TE><TE>-44972</TE><TU>-</TU></TR>
+          <TR><TD>법인세비용차감전</TD><TE>1669</TE><TE>100</TE><TU>1569</TU></TR>
+          <TR><TD>당기순이익</TD><TE>2248</TE><TE>-190</TE><TU>흑자전환</TU></TR>
+        </TABLE></BODY></DOCUMENT>
+        """);
+    var draft = engine.evaluatePreliminaryEarnings("예시", "잠정실적", LocalDate.of(2026, 11, 18), doc)
+        .orElseThrow();
+
+    assertThat(draft.metrics().get(1).value()).isEqualTo("-3,378원");
+    assertThat(draft.metrics().get(2).value()).isEqualTo("2,248원");
+    assertThat(draft.tags()).doesNotContain("흑자전환");
+  }
+
+  @Test
+  void emptyConfidentialityFieldsDoNotBypassTheContractThreshold() {
+    var doc = parser.parse("""
+        <table>
+          <tr><td>계약금액(원)</td><td>5,000,000,000</td></tr>
+          <tr><td>매출액대비(%)</td><td>1</td></tr>
+          <tr><td>공시유보 관련내용</td><td>유보사유</td><td>-</td></tr>
+          <tr><td>유보기한</td><td>-</td></tr>
+        </table>
+        """);
+    assertThat(engine.evaluateOrderContract("예시", "26110", "단일판매ㆍ공급계약체결",
+        LocalDate.of(2026, 11, 19), doc)).isEmpty();
+  }
+
+  @Test
   void evaluatesCapexWhenTrackedAndFiltersSmallInvestments() {
     String largeCapexHtml = """
         <table>

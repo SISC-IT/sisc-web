@@ -168,7 +168,7 @@ npm run build
 #### 구현 기능
 - **정기보고서 기반 분기 실적 수집 배치** (`DisclosureEarningsCollectionService`, `DisclosureCollectionRunner`)
   - OpenDART 기업개황(`/company.json`)의 `acc_mt`로 결산월을 확인하고, 정기공시 목록(`/list.json`, `pblntf_ty=A`, `last_reprt_at=N`) 전체 페이지를 조회합니다.
-  - 최초 실행 시 최신 정기보고서 기준 최근 연속 4개 회계분기를 적재하며, 이후 재실행 시 신규 분기만 추가하고 동일 접수번호 중복 적재를 방지합니다.
+  - 최초 실행 시 전년 동기 비교에 필요한 최근 8개 회계분기를 적재하며, 이후 재실행 시 신규 분기만 추가하고 동일 접수번호 중복 적재를 방지합니다.
   - 정정공시는 별도 접수번호로 이력을 보존하며, 원본 공시와의 관계가 확인된 경우 해당 분기 실적에 반영합니다.
   - 재무제표(`/fnlttSinglAcntAll.json`)는 연결(`CFS`)을 우선 조회하고 연결재무제표가 없는 경우 별도(`OFS`)를 사용합니다.
   - 손익계산서(`IS`/`CIS`)에서 XBRL 표준계정 ID 우선순위로 매출액·영업이익·당기순이익을 추출하며, 실제 `0`과 결측(`null`)을 구분합니다.
@@ -176,7 +176,7 @@ npm run build
   - 공시 기본 정보를 먼저 저장하고, 조회에 성공한 재무 데이터는 분기별로 저장합니다. 재무 API 장애로 실행이 멈춰도 이미 저장한 값은 유지됩니다.
   - 재무 API 미반영 분기는 `pending`으로 남겨 다음 실행 시 재조회합니다.
 - **단일 기업 최근 4분기 실적 조회 API** (`DisclosureEarningsController`, `DisclosureEarningsQueryService`)
-  - `GET /api/disclosures/companies/{corpCode}/financials` (정회원 이상 `TEAM_MEMBER` 권한 필요)
+  - `GET /api/disclosures/companies/{corpCode}` (정회원 이상 `TEAM_MEMBER` 권한 필요)
   - 분기별 회계연도·분기·결산연월, 연결/별도 기준, 통화, 매출액·영업이익·당기순이익(정밀도 보존 십진 문자열, 결측 `null`), DART 원문 링크를 반환합니다.
   - 잘못된 8자리 고유번호 형식은 `400`, 미저장 기업은 `404`를 반환합니다.
 - **DB 스키마 (PostgreSQL / Flyway)** (공용 `V8__disclosure_research.sql`, 로컬 `disclosure-local/V1~V3`)

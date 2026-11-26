@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.disclosure.client.OpenDartClient;
@@ -59,7 +60,11 @@ public class DisclosureEventCollectionService {
 
     // 1. 주주환원 — 자사주 취득 결정 (전용 JSON API)
     var treasuryRes = dartClient.treasuryStockAcquisitions(corpCode, from, to);
-    if (treasuryRes != null && "000".equals(treasuryRes.status()) && treasuryRes.list() != null) {
+    String treasuryStatus = treasuryRes == null ? null : treasuryRes.status();
+    if (!"013".equals(treasuryStatus) && (!"000".equals(treasuryStatus) || treasuryRes.list() == null)) {
+      throw new IllegalStateException("OpenDART treasury acquisition lookup failed: status=" + treasuryStatus);
+    }
+    if ("000".equals(treasuryStatus)) {
       for (Map<String, String> row : treasuryRes.list()) {
         String receiptNo = row.get("rcept_no");
         if (receiptNo == null || !receiptNo.matches("[0-9]{14}")) {
@@ -83,12 +88,15 @@ public class DisclosureEventCollectionService {
   private void collectExchangeDisclosures(String corpCode, String indutyCode, int closingMonth,
       boolean trackCapex, LocalDate from, LocalDate to, List<PendingEvent> pending) {
     for (int page = 1; ; page++) {
-      var res = dartClient.searchDisclosures(corpCode, "I", from, to, page, 100, true);
-      if (res == null || "013".equals(res.status()) || res.list() == null || res.list().isEmpty()) {
+      var res = dartClient.searchDisclosures(corpCode, "I", from, to, page, 100, false);
+      String status = res == null ? null : res.status();
+      if (page == 1 && "013".equals(status)) {
         break;
       }
-      if (!"000".equals(res.status())) {
-        throw new IllegalStateException("OpenDART exchange disclosure list failed: status=" + res.status());
+      if (!"000".equals(status) || res.list() == null || res.list().isEmpty()
+          || res.total_page() == null || res.total_page() < page
+          || (res.page_no() != null && res.page_no() != page)) {
+        throw new IllegalStateException("OpenDART exchange disclosure page failed: status=" + status);
       }
 
       for (Map<String, String> row : res.list()) {
@@ -135,7 +143,7 @@ public class DisclosureEventCollectionService {
         }
       }
 
-      if (res.total_page() == null || page >= res.total_page()) {
+      if (page == res.total_page()) {
         break;
       }
     }
@@ -148,10 +156,9 @@ public class DisclosureEventCollectionService {
     Integer saved = transactionOperations.execute(status -> {
       int count = 0;
       for (PendingEvent item : pending) {
-        DisclosureCompany company = companyRepository.findForUpdate(item.corpCode())
-            .orElseGet(() -> companyRepository.saveAndFlush(new DisclosureCompany(
-                item.corpCode(), item.stockCode(), item.companyName(),
-                item.marketCls(), item.closingMonth())));
+        companyRepository.insertIfAbsent(UUID.randomUUID(), item.corpCode(), item.stockCode(), item.companyName(),
+            item.marketCls(), item.closingMonth(), DisclosureCompany.isDefaultCapexCorp(item.corpCode()));
+        DisclosureCompany company = companyRepository.findForUpdate(item.corpCode()).orElseThrow();
         company.updateProfile(item.stockCode(), item.companyName(),
             item.marketCls(), item.closingMonth());
         company.updateIndutyCode(item.indutyCode());

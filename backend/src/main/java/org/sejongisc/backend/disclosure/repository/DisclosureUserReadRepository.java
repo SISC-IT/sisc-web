@@ -20,8 +20,8 @@ public interface DisclosureUserReadRepository extends JpaRepository<DisclosureUs
       insert into disclosure_user_read (read_id, user_id, company_id, last_viewed_at, created_date, updated_date)
       values (:readId, :userId, :companyId, :viewedAt, :viewedAt, :viewedAt)
       on conflict (user_id, company_id)
-      do update set last_viewed_at = excluded.last_viewed_at,
-                    updated_date = excluded.updated_date
+      do update set last_viewed_at = greatest(disclosure_user_read.last_viewed_at, excluded.last_viewed_at),
+                    updated_date = greatest(disclosure_user_read.updated_date, excluded.updated_date)
       """, nativeQuery = true)
   void upsertLastViewedAt(
       @Param("readId") UUID readId,

@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,6 +20,17 @@ public interface DisclosureCompanyRepository extends JpaRepository<DisclosureCom
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select company from DisclosureCompany company where company.corpCode = :corpCode")
   Optional<DisclosureCompany> findForUpdate(@Param("corpCode") String corpCode);
+
+  @Modifying
+  @Query(value = """
+      insert into disclosure_company (company_id, corp_code, stock_code, company_name, corporation_class,
+          closing_month, track_capex, created_date, updated_date)
+      values (:id, :corpCode, :stockCode, :name, :market, :closingMonth, :trackCapex, now(), now())
+      on conflict (corp_code) do nothing
+      """, nativeQuery = true)
+  void insertIfAbsent(@Param("id") UUID id, @Param("corpCode") String corpCode,
+      @Param("stockCode") String stockCode, @Param("name") String name, @Param("market") String market,
+      @Param("closingMonth") int closingMonth, @Param("trackCapex") boolean trackCapex);
 
   // 추적 대상 기업 목록 및 키워드(기업명·종목코드·고유번호) 검색
   @Query("""

@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.disclosure.client.OpenDartClient;
 import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse;
@@ -127,7 +128,7 @@ public class DisclosureEarningsCollectionService {
   //2번 메서드
   private TargetQuarters selectTargetQuarters(TreeMap<ReportingQuarter, List<RegularReport>> available,
       Map<ReportingQuarter, List<StoredFiling>> previous) {
-    ReportingQuarter earliest = available.lastKey().previous(3);
+    ReportingQuarter earliest = available.lastKey().previous(7);
     ReportingQuarter firstTracked = previous.keySet().stream().min(Comparator.naturalOrder()).orElse(earliest);
     ReportingQuarter start = firstTracked.compareTo(earliest) < 0 ? firstTracked : earliest;
 
@@ -246,9 +247,9 @@ public class DisclosureEarningsCollectionService {
     Integer saved = transactionOperations.execute(status -> {
       RegularReport sample = regularReports.getFirst();
       // 4-1 방어 로직: 비관적 락(findForUpdate)으로 동시 수집 시 중복 기업 생성 방지
-      DisclosureCompany company = companyRepository.findForUpdate(corpCode).orElseGet(() ->
-          companyRepository.saveAndFlush(new DisclosureCompany(
-              corpCode, sample.stockCode(), sample.companyName(), sample.corporationClass(), closingMonth)));
+      companyRepository.insertIfAbsent(UUID.randomUUID(), corpCode, sample.stockCode(), sample.companyName(),
+          sample.corporationClass(), closingMonth, DisclosureCompany.isDefaultCapexCorp(corpCode));
+      DisclosureCompany company = companyRepository.findForUpdate(corpCode).orElseThrow();
       company.updateProfile(sample.stockCode(), sample.companyName(), sample.corporationClass(), closingMonth);
 
       int inserted = 0;

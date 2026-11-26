@@ -50,7 +50,7 @@ class DisclosureControllerTest {
 
   @Test
   void returnsUnifiedCompanyDetailWithEarningsTrendAndFilteredEvents() throws Exception {
-    var q3 = new Quarter(2026, 3, "2026-09", "CFS", "KRW", "9007199254740993", "7200000000000", "5600000000000", List.of());
+    var q3 = new Quarter(2026, 3, "2026-09", "CFS", "KRW", "9007199254740993", "7200000000000", "5600000000000", List.of(), null, null);
     var ev = new DisclosureEventResponse(
         UUID.randomUUID(), "20261118000001", "CAPEX", "CAPEX",
         "00164779", "SK하이닉스", "000660", "KOSPI", "26110",

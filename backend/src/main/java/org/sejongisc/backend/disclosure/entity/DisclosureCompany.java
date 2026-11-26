@@ -64,9 +64,6 @@ public class DisclosureCompany extends BasePostgresEntity {
     }
     this.corporationClass = corporationClass;
     this.closingMonth = closingMonth;
-    if (isDefaultCapexCorp(this.corpCode)) {
-      this.trackCapex = true;
-    }
   }
 
   public void updateIndutyCode(String indutyCode) {

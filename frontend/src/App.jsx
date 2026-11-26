@@ -83,6 +83,7 @@ function App() {
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/attendance-manage" element={<AttendanceManage />} />
             <Route path="/board" element={<Board />} />
+            <Route path="/board/disclosure" element={<DisclosureBoard />} />
             <Route path="/board/disclosures" element={<DisclosureBoard />} />
             <Route path="/board/:team" element={<Board />} />
             <Route path="/board/write" element={<BoardWrite />} />

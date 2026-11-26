@@ -1,7 +1,9 @@
 package org.sejongisc.backend.disclosure.service.settings;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import org.sejongisc.backend.disclosure.dto.DisclosureEarningsResponse.Growth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,6 +26,36 @@ public class QuarterlyEarningsCalculator {
   private static final String DART_URL = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=";
 
   public Quarter summarize(ReportingQuarter quarter, Map<ReportingQuarter, List<StoredFiling>> reports) {
+    Quarter current = summarizeAmounts(quarter, reports);
+    return new Quarter(current.fiscalYear(), current.quarter(), current.periodEnd(), current.basis(),
+        current.currency(), current.revenue(), current.operatingProfit(), current.netIncome(), current.sources(),
+        growth(current, summarizeAmounts(quarter.previous(4), reports)),
+        growth(current, summarizeAmounts(quarter.previous(1), reports)));
+  }
+
+  private Growth growth(Quarter current, Quarter previous) {
+    if (current.basis() == null || current.currency() == null || !current.basis().equals(previous.basis())
+        || !current.currency().equals(previous.currency())) {
+      return null;
+    }
+    return new Growth(percentChange(current.revenue(), previous.revenue()),
+        percentChange(current.operatingProfit(), previous.operatingProfit()),
+        percentChange(current.netIncome(), previous.netIncome()));
+  }
+
+  private String percentChange(String current, String previous) {
+    if (current == null || previous == null) {
+      return null;
+    }
+    BigDecimal base = new BigDecimal(previous);
+    if (base.signum() == 0) {
+      return null;
+    }
+    return new BigDecimal(current).subtract(base).movePointRight(2)
+        .divide(base.abs(), 2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+  }
+
+  private Quarter summarizeAmounts(ReportingQuarter quarter, Map<ReportingQuarter, List<StoredFiling>> reports) {
     Optional<StoredFiling> current = preferred(reports.getOrDefault(quarter, List.of()));
     Optional<StoredFiling> third = quarter.number() == 4
         ? preferred(reports.getOrDefault(quarter.previous(1), List.of())) : Optional.empty();
@@ -50,7 +82,7 @@ public class QuarterlyEarningsCalculator {
     }
 
     return new Quarter(quarter.fiscalYear(), quarter.number(), quarter.end().toString(), basis, currency,
-        revenueValue, operatingProfitValue, netIncomeValue, List.copyOf(sources));
+        revenueValue, operatingProfitValue, netIncomeValue, List.copyOf(sources), null, null);
   }
 
   private Amount calculateAmount(EarningsAccount account, ReportingQuarter quarter,

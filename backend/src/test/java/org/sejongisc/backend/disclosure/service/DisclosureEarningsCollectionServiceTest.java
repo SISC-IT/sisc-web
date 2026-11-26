@@ -66,11 +66,13 @@ class DisclosureEarningsCollectionServiceTest {
     when(client.company(COMPANY)).thenReturn(new DartCompany("000", "12"));
     when(companies.findByCorpCode(COMPANY)).thenAnswer(invocation -> Optional.ofNullable(storedCompanies.get(COMPANY)));
     when(companies.findForUpdate(COMPANY)).thenAnswer(invocation -> Optional.ofNullable(storedCompanies.get(COMPANY)));
-    when(companies.saveAndFlush(any(DisclosureCompany.class))).thenAnswer(invocation -> {
-      DisclosureCompany company = invocation.getArgument(0);
-      storedCompanies.put(company.getCorpCode(), company);
-      return company;
-    });
+    doAnswer(invocation -> {
+      String corpCode = invocation.getArgument(1);
+      storedCompanies.computeIfAbsent(corpCode, ignored -> new DisclosureCompany(corpCode,
+          invocation.getArgument(2), invocation.getArgument(3), invocation.getArgument(4),
+          invocation.getArgument(5)));
+      return null;
+    }).when(companies).insertIfAbsent(any(), anyString(), any(), anyString(), any(), anyInt(), anyBoolean());
     when(filings.findByReceiptNo(anyString())).thenAnswer(invocation ->
         Optional.ofNullable(storedFilings.get(invocation.getArgument(0))));
     when(filings.save(any(DisclosureFiling.class))).thenAnswer(invocation -> {
@@ -120,6 +122,9 @@ class DisclosureEarningsCollectionServiceTest {
     assertThat(quarters).extracting(Quarter::periodEnd)
         .containsExactly("2025-12", "2026-03", "2026-06", "2026-09");
     assertThat(quarters).extracting(Quarter::revenue).containsExactly("100", "0", "-15", "90");
+    assertThat(quarters.getLast().yoy().revenue()).isEqualTo("50");
+    assertThat(quarters.getLast().qoq().revenue()).isEqualTo("700");
+    assertThat(quarters.get(2).qoq().revenue()).isNull();
     assertThat(quarters.getFirst().sources()).extracting(Source::receiptNo)
         .containsExactly(ANNUAL_2025, THIRD_2025);
     assertThat(first.pendingPeriods()).isEmpty();

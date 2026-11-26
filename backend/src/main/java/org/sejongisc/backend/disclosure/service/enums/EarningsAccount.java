@@ -90,7 +90,8 @@ public enum EarningsAccount {
       return false;
     }
     return (!firstId.isBlank() && !firstId.startsWith("-"))
-        || text(first.accountName()).equals(text(second.accountName()));
+        || text(first.accountName()).equals(text(second.accountName()))
+        || (NET_INCOME.rank(first) > 0 && NET_INCOME.rank(second) > 0);
   }
 
   private static String text(String value) {
