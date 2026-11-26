@@ -165,6 +165,7 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "KIWOOM_APP_KEY=${{ secrets.KIWOOM_APP_KEY }}" >> .env
           echo "KIWOOM_APP_SECRET=${{ secrets.KIWOOM_APP_SECRET }}" >> .env
+          echo "OPENDART_API_KEY=${{ secrets.OPENDART_API_KEY }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
           echo "SBA_ADMIN_NAME=${{ secrets.SBA_ADMIN_NAME }}" >> .env
