@@ -9,6 +9,7 @@ import DisclosureBoard from './pages/DisclosureBoard';
 import BoardWrite from './pages/BoardWrite';
 import PostDetail from './pages/PostDetail';
 import StockGame from './pages/StockGame';
+import Competition from './pages/Competition';
 import BackTest from './pages/BackTest';
 import Mypage from './pages/Mypage';
 import AttendanceManage from './pages/AttendanceManage';
@@ -94,6 +95,7 @@ function App() {
               element={<AssetManagementAccounts />}
             />
             <Route path="/stock-game" element={<StockGame />} />
+            <Route path="/competition" element={<Competition />} />
             <Route path="/backtest" element={<BackTest />} />
             <Route path="/backtest/result" element={<BacktestResult />} />
             <Route path="/mypage" element={<Mypage />} />

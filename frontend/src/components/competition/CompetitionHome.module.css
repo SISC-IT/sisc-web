@@ -1,0 +1,123 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.hero {
+  background: #0a0f2c;
+  color: #ffffff;
+  border-radius: 28px;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.statusBadge {
+  font-size: 14px;
+  font-weight: 700;
+  background: #2563eb;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.countdown {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c7d2fe;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.name {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.period {
+  margin: 0;
+  font-size: 17px;
+  color: #c7d2fe;
+  line-height: 1.6;
+}
+
+.myStatus {
+  margin: 0;
+  align-self: flex-start;
+  background: #1b2350;
+  border-radius: 14px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: #f7f7f8;
+  border-radius: 20px;
+  padding: 20px;
+  word-break: keep-all;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cardLabel {
+  font-size: 15px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.cardValue {
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardNote {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 28px 22px;
+  }
+
+  .name {
+    font-size: 28px;
+  }
+}
