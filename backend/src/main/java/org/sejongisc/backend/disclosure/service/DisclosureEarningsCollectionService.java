@@ -73,7 +73,7 @@ public class DisclosureEarningsCollectionService {
     TargetQuarters targets = selectTargetQuarters(available, previous);
     List<RegularReport> selectedReports = targets.byQuarter().values().stream().flatMap(List::stream).toList();
     RegularReport latestReport = available.values().stream().flatMap(List::stream)
-        .max(Comparator.comparing(RegularReport::receivedDate).thenComparing(RegularReport::receiptNo))
+        .max(Comparator.comparing(RegularReport::receiptNo))
         .orElseThrow();
     int filingsInserted = saveReports(corpCode, closingMonth, selectedReports, latestReport);
     FetchOutcome outcome = fetchMissingFinancials(corpCode, closingMonth, targets, previous);

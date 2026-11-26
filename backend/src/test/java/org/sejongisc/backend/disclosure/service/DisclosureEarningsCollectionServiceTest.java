@@ -152,6 +152,27 @@ class DisclosureEarningsCollectionServiceTest {
   }
 
   @Test
+  void usesTheHighestReceiptNumberForBothNewAndExistingCompanyProfiles() {
+    var highestReceipt = new LinkedHashMap<>(filing(SECOND_2026, "반기보고서 (2026.06)", "연"));
+    highestReceipt.put("corp_name", "Company with highest receipt number");
+    highestReceipt.put("rcept_dt", "20260514");
+    setReports(List.of(filing(FIRST_2026, "분기보고서 (2026.03)", "연"), highestReceipt));
+    when(client.financialStatements(eq(COMPANY), anyInt(), anyString(), eq("CFS")))
+        .thenReturn(new DartFinancialResponse("013", null, null));
+
+    collection.collect(COMPANY, THROUGH);
+
+    verify(companies).insertIfAbsent(any(), eq(COMPANY), isNull(),
+        eq("Company with highest receipt number"), isNull(), eq(12), eq(false));
+    var company = storedCompanies.get(COMPANY);
+    company.updateProfile(null, "Stale company name", null, 12);
+
+    collection.collect(COMPANY, THROUGH);
+
+    assertThat(company.getCompanyName()).isEqualTo("Company with highest receipt number");
+  }
+
+  @Test
   void subtractsThirdQuarterNetIncomeWhenTheAnnualAndQuarterlyAliasesDiffer() {
     setReports(List.of(filing(ANNUAL_2025, "사업보고서 (2025.12)", "연"),
         filing(THIRD_2025, "분기보고서 (2025.09)", "연")));
