@@ -7,7 +7,7 @@ import org.sejongisc.backend.assetmanagement.model.ListedStock;
 import org.sejongisc.backend.assetmanagement.model.UsExchangeType;
 
 public interface MarketDataClient {
-  /** 일자 오름차순으로 반환한다. */
+  /** 기준일부터 과거 방향 첫 페이지만 받아 일자 오름차순으로 반환한다. */
   List<DailyCandle> fetchDomesticDailyCandles(String stockCode, LocalDate baseDate);
 
   /** 일자 오름차순으로 반환한다. 종가는 환율 미적용 USD 원본이다. */

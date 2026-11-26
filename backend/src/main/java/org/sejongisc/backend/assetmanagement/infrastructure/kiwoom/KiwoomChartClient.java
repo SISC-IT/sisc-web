@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.DomesticDailyChartRequest;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.DomesticDailyChartResponse;
@@ -74,15 +75,16 @@ public class KiwoomChartClient implements MarketDataClient {
     validateStockCode(stockCode);
     validateDate(baseDate);
 
-    List<DomesticDailyChartResponse> pages = executePagingTemplate(
+    DomesticDailyChartResponse firstPage = requestPage(
         DOMESTIC_CHART_ENDPOINT,
         DOMESTIC_DAILY_CHART_API_ID,
         DomesticDailyChartRequest.of(stockCode, baseDate.format(DATE_FORMAT)),
         DomesticDailyChartResponse.class,
-        maxPages
-    );
+        "N",
+        ""
+    ).getBody();
 
-    return pages.stream()
+    return Stream.of(firstPage)
         .filter(page -> page.getCandles() != null)
         .flatMap(page -> page.getCandles().stream())
         .map(candle -> toDailyCandle(
@@ -271,16 +273,9 @@ public class KiwoomChartClient implements MarketDataClient {
     List<T> allPages = new ArrayList<>();
 
     for (int page = 1; page <= maxPages; page++) {
-      ResponseEntity<T> responseEntity = requestWithTokenRefresh(
+      ResponseEntity<T> responseEntity = requestPage(
           endpoint, apiId, requestBody, responseType, contYn, nextKey);
-      T body = responseEntity.getBody();
-
-      if (body == null) {
-        throw new CustomException(ErrorCode.KIWOOM_EMPTY_RESPONSE);
-      }
-
-      validateKiwoomResponse(apiId, body);
-      allPages.add(body);
+      allPages.add(responseEntity.getBody());
 
       String responseContYn = responseEntity.getHeaders().getFirst("cont-yn");
       String responseNextKey = responseEntity.getHeaders().getFirst("next-key");
@@ -299,6 +294,26 @@ public class KiwoomChartClient implements MarketDataClient {
     }
 
     throw new CustomException(ErrorCode.KIWOOM_PAGING_LIMIT_EXCEEDED);
+  }
+
+  private <T extends KiwoomResponse> ResponseEntity<T> requestPage(
+      String endpoint,
+      String apiId,
+      Object requestBody,
+      Class<T> responseType,
+      String contYn,
+      String nextKey
+  ) {
+    ResponseEntity<T> responseEntity = requestWithTokenRefresh(
+        endpoint, apiId, requestBody, responseType, contYn, nextKey);
+    T body = responseEntity.getBody();
+
+    if (body == null) {
+      throw new CustomException(ErrorCode.KIWOOM_EMPTY_RESPONSE);
+    }
+
+    validateKiwoomResponse(apiId, body);
+    return responseEntity;
   }
 
   private <T extends KiwoomResponse> ResponseEntity<T> requestWithTokenRefresh(
