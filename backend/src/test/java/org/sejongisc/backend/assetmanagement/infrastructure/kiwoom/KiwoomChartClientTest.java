@@ -251,21 +251,39 @@ class KiwoomChartClientTest {
   }
 
   @Test
+  @DisplayName("국내 일봉은 cont-yn이 Y여도 첫 페이지만 조회한다")
+  void fetchesOnlyFirstPageOfDomesticDailyCandles() {
+    mockWebServer.enqueue(new MockResponse()
+        .setBody("""
+            {"stk_cd":"005930","stk_dt_pole_chart_qry":[{"dt":"20261105","cur_prc":"61000"},{"dt":"20261104","cur_prc":"60000"}],"return_code":"0"}
+            """)
+        .addHeader("Content-Type", "application/json")
+        .addHeader("cont-yn", "Y")
+        .addHeader("next-key", "key-page-2"));
+
+    List<DailyCandle> candles =
+        chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 5));
+
+    assertThat(candles).hasSize(2);
+    assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
+  }
+
+  @Test
   @DisplayName("cont-yn이 Y면 next-key로 연속 조회한다")
   void followsPaginationWhenContYnIsY() throws Exception {
     mockWebServer.enqueue(new MockResponse()
         .setBody("""
-            {"stk_cd":"005930","stk_dt_pole_chart_qry":[{"dt":"20261105","cur_prc":"61000"}],"return_code":"0"}
+            {"result_list":[{"dt":"20261105","cur_prc":"342.3400"}],"return_code":"0"}
             """)
         .addHeader("Content-Type", "application/json")
         .addHeader("cont-yn", "Y")
         .addHeader("next-key", "key-page-2"));
     enqueueJson("""
-        {"stk_cd":"005930","stk_dt_pole_chart_qry":[{"dt":"20261104","cur_prc":"60000"}],"return_code":"0"}
+        {"result_list":[{"dt":"20261104","cur_prc":"349.5100"}],"return_code":"0"}
         """);
 
-    List<DailyCandle> candles =
-        chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 5));
+    List<DailyCandle> candles = chartClient.fetchUsDailyCandles(
+        UsExchangeType.NASDAQ, "AAPL", LocalDate.of(2026, 11, 4));
 
     assertThat(candles).hasSize(2);
     assertThat(mockWebServer.getRequestCount()).isEqualTo(2);
@@ -283,17 +301,17 @@ class KiwoomChartClientTest {
     for (int page = 1; page <= 4; page++) {
       mockWebServer.enqueue(new MockResponse()
           .setBody("""
-              {"stk_cd":"005930","stk_dt_pole_chart_qry":[],"return_code":"0"}
+              {"result_list":[],"return_code":"0"}
               """)
           .addHeader("Content-Type", "application/json")
           .addHeader("cont-yn", "Y")
           .addHeader("next-key", "key-" + page));
     }
     enqueueJson("""
-        {"stk_cd":"005930","stk_dt_pole_chart_qry":[],"return_code":"0"}
+        {"result_list":[],"return_code":"0"}
         """);
 
-    chartClient.fetchDomesticDailyCandles("005930", LocalDate.of(2026, 11, 5));
+    chartClient.fetchUsDailyCandles(UsExchangeType.NASDAQ, "AAPL", LocalDate.of(2026, 11, 4));
 
     assertThat(mockWebServer.getRequestCount()).isEqualTo(5);
   }
