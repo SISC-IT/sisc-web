@@ -179,7 +179,7 @@ npm run build
   - `GET /api/disclosures/companies/{corpCode}` (정회원 이상 `TEAM_MEMBER` 권한 필요)
   - 분기별 회계연도·분기·결산연월, 연결/별도 기준, 통화, 매출액·영업이익·당기순이익(정밀도 보존 십진 문자열, 결측 `null`), DART 원문 링크를 반환합니다.
   - 잘못된 8자리 고유번호 형식은 `400`, 미저장 기업은 `404`를 반환합니다.
-- **DB 스키마 (PostgreSQL / Flyway)** (공용 `V8__disclosure_research.sql`, 로컬 `disclosure-local/V1~V3`)
+- **DB 스키마 (PostgreSQL / Flyway)** (공용 `V12__disclosure_research.sql` 및 `V13__disclosure_event.sql`, 로컬 `disclosure-local/V1~V4`)
   - `disclosure_company`: DART 고유번호(`dart_corp_code` unique), 종목코드, 기업명, 법인구분, 결산월(`closing_month`)
   - `disclosure_filing`: 접수번호(`dart_rcept_no` unique), 보고서명, 접수일, 회계연도, 보고서 코드, 원본 `jsonb`
   - `disclosure_financial_metric`: 지표 유형, 계정 ID/명, 회계 기준(`CFS`/`OFS`), 기간 유형(`CURRENT_PERIOD`/`ANNUAL`/`YEAR_TO_DATE`), 금액(`numeric(30,4)`), 통화, `unique nulls not distinct` 중복 방지 제약

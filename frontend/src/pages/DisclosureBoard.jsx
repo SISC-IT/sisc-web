@@ -45,11 +45,12 @@ const Growth = ({ yoy, qoq }) => {
 
 const DisclosureBoard = () => {
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState({ keyword: '' });
-  const { keyword } = search;
-  const submitSearch = () => setSearch({ keyword: searchInput.trim() });
+  const [search, setSearch] = useState({ keyword: '', page: 0 });
+  const { keyword, page } = search;
+  const submitSearch = () => setSearch({ keyword: searchInput.trim(), page: 0 });
   const [companies, setCompanies] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState('');
 
@@ -65,15 +66,20 @@ const DisclosureBoard = () => {
       setListLoading(true);
       setListError('');
       try {
-        const data = await getDisclosureCompanies({ q: search.keyword, page: 0, size: 200 });
+        const data = await getDisclosureCompanies({ q: search.keyword, page: search.page, size: 200 });
         if (!active) return;
         setCompanies(data?.items || []);
         setTotalCount(data?.totalCount || 0);
+        setTotalPages(data?.totalPages || 0);
+        if (search.page > 0 && search.page >= data?.totalPages) {
+          setSearch({ ...search, page: Math.max(0, data.totalPages - 1) });
+        }
       } catch {
         if (!active) return;
         setListError('기업 목록을 불러오지 못했습니다.');
         setCompanies([]);
         setTotalCount(0);
+        setTotalPages(0);
       } finally {
         if (active) setListLoading(false);
       }
@@ -328,7 +334,7 @@ const DisclosureBoard = () => {
             className={styles.resetBtn}
             onClick={() => {
               setSearchInput('');
-              setSearch({ keyword: '' });
+              setSearch({ keyword: '', page: 0 });
             }}
           >
             초기화
@@ -387,6 +393,19 @@ const DisclosureBoard = () => {
             </tbody>
           </table>
         </div>
+      )}
+      {!listLoading && !listError && totalPages > 1 && (
+        <nav className={styles.pagination} aria-label="기업 목록 페이지">
+          <button type="button" className={styles.searchBtn} disabled={page === 0}
+            onClick={() => setSearch({ keyword, page: page - 1 })}>
+            이전
+          </button>
+          <span>{page + 1} / {totalPages}</span>
+          <button type="button" className={styles.searchBtn} disabled={page + 1 >= totalPages}
+            onClick={() => setSearch({ keyword, page: page + 1 })}>
+            다음
+          </button>
+        </nav>
       )}
     </div>
   );

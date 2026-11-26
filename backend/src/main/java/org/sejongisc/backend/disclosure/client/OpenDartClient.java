@@ -90,14 +90,14 @@ public class OpenDartClient {
         .onErrorMap(error -> new OpenDartClientException("OpenDART request failed: /document.xml"))
         .block();
     if (payload == null || payload.length == 0) {
-      return "";
+      throw new OpenDartClientException("OpenDART returned an empty document response");
     }
-    return unzipFirstXmlOrText(payload);
+    return unzipDocument(payload);
   }
 
-  private String unzipFirstXmlOrText(byte[] payload) {
+  private String unzipDocument(byte[] payload) {
     // ZIP magic bytes: PK\x03\x04
-    if (payload.length >= 4 && payload[0] == 0x50 && payload[1] == 0x4B) {
+    if (payload.length >= 4 && payload[0] == 0x50 && payload[1] == 0x4B && payload[2] == 0x03 && payload[3] == 0x04) {
       try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(payload))) {
         ZipEntry entry;
         StringBuilder combined = new StringBuilder();
@@ -113,12 +113,15 @@ public class OpenDartClient {
           remaining -= entryBytes.length;
           combined.append(decodeXmlText(entryBytes)).append('\n');
         }
+        if (combined.toString().isBlank()) {
+          throw new OpenDartClientException("OpenDART document archive contains no content");
+        }
         return combined.toString();
       } catch (IOException e) {
         throw new OpenDartClientException("Failed to unpack OpenDART document archive");
       }
     }
-    return decodeXmlText(payload);
+    throw new OpenDartClientException("OpenDART document response is not a ZIP archive");
   }
 
   private String decodeXmlText(byte[] bytes) {

@@ -47,14 +47,20 @@ public class DartDocumentTableParser {
       tables.computeIfAbsent(tr.closest("table"), ignored -> new ArrayList<>())
           .add(new TableRow(rowValues, spans));
       if (rowValues.size() == 2) {
-        keyValues.putIfAbsent(compactKey(rowValues.get(0)), rowValues.get(1));
+        putValueIfPresent(keyValues, compactKey(rowValues.get(0)), rowValues.get(1));
       } else if (rowValues.size() >= 3) {
         String combinedKey = compactKey(rowValues.get(0) + ":" + rowValues.get(1));
-        keyValues.putIfAbsent(combinedKey, rowValues.get(2));
-        keyValues.putIfAbsent(compactKey(rowValues.get(0)), rowValues.get(rowValues.size() - 1));
+        putValueIfPresent(keyValues, combinedKey, rowValues.get(2));
+        putValueIfPresent(keyValues, compactKey(rowValues.get(0)), rowValues.get(rowValues.size() - 1));
       }
     }
     return new ParsedDocument(keyValues, new ArrayList<>(tables.values()), normalizeWhitespace(doc.text()));
+  }
+
+  private static void putValueIfPresent(Map<String, String> values, String key, String value) {
+    if (!value.isBlank() && !List.of("-", "–", "—", "해당없음", "해당사항없음", "없음").contains(compactKey(value))) {
+      values.putIfAbsent(key, value);
+    }
   }
 
   private static int columnSpan(String value) {

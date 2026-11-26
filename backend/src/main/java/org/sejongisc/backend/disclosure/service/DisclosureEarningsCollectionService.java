@@ -72,7 +72,10 @@ public class DisclosureEarningsCollectionService {
     Map<ReportingQuarter, List<StoredFiling>> previous = query.storedReports(corpCode, through);
     TargetQuarters targets = selectTargetQuarters(available, previous);
     List<RegularReport> selectedReports = targets.byQuarter().values().stream().flatMap(List::stream).toList();
-    int filingsInserted = saveReports(corpCode, closingMonth, selectedReports);
+    RegularReport latestReport = available.values().stream().flatMap(List::stream)
+        .max(Comparator.comparing(RegularReport::receivedDate).thenComparing(RegularReport::receiptNo))
+        .orElseThrow();
+    int filingsInserted = saveReports(corpCode, closingMonth, selectedReports, latestReport);
     FetchOutcome outcome = fetchMissingFinancials(corpCode, closingMonth, targets, previous);
     Counts counts = new Counts(filingsInserted, outcome.metricsInserted());
     return new CollectionResult(counts, List.copyOf(outcome.pendingPeriods()), query.latestEarnings(corpCode, through));
@@ -240,12 +243,12 @@ public class DisclosureEarningsCollectionService {
   }
 
   //4번 메서드
-  private int saveReports(String corpCode, int closingMonth, List<RegularReport> regularReports) {
+  private int saveReports(String corpCode, int closingMonth, List<RegularReport> regularReports,
+      RegularReport sample) {
     if (regularReports.isEmpty()) {
       return 0;
     }
     Integer saved = transactionOperations.execute(status -> {
-      RegularReport sample = regularReports.getFirst();
       // 4-1 방어 로직: 비관적 락(findForUpdate)으로 동시 수집 시 중복 기업 생성 방지
       companyRepository.insertIfAbsent(UUID.randomUUID(), corpCode, sample.stockCode(), sample.companyName(),
           sample.corporationClass(), closingMonth, DisclosureCompany.isDefaultCapexCorp(corpCode));

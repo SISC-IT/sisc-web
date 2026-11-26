@@ -182,6 +182,19 @@
   border-bottom: none;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .clickableRow {
   cursor: pointer;
 }

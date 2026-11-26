@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.disclosure.client.OpenDartClient;
 import org.sejongisc.backend.disclosure.client.OpenDartClient.DartCompany;
+import org.sejongisc.backend.disclosure.client.OpenDartClientException;
 import org.sejongisc.backend.disclosure.entity.DisclosureCompany;
 import org.sejongisc.backend.disclosure.entity.DisclosureEvent;
 import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
@@ -76,13 +77,19 @@ public class DisclosureEventCollectionService {
     }
 
     // 2. 거래소공시(I) — 수주공시, 잠정실적, 배당/소각, CAPEX(지정 기업)
-    collectExchangeDisclosures(corpCode, profile.induty_code(), closingMonth, trackCapex, from, to, pending);
-
-    return persistEvents(pending);
+    int documentFailures = collectExchangeDisclosures(
+        corpCode, profile.induty_code(), closingMonth, trackCapex, from, to, pending);
+    int saved = persistEvents(pending);
+    if (documentFailures > 0) {
+      throw new IllegalStateException("OpenDART document download failed for " + documentFailures
+          + " filings; saved " + saved + " events for corpCode=" + corpCode);
+    }
+    return saved;
   }
 
-  private void collectExchangeDisclosures(String corpCode, String indutyCode, int closingMonth,
+  private int collectExchangeDisclosures(String corpCode, String indutyCode, int closingMonth,
       boolean trackCapex, LocalDate from, LocalDate to, List<PendingEvent> pending) {
+    int documentFailures = 0;
     for (int page = 1; ; page++) {
       var res = dartClient.searchDisclosures(corpCode, "I", from, to, page, 100, false);
       String status = res == null ? null : res.status();
@@ -123,7 +130,14 @@ public class DisclosureEventCollectionService {
         }
 
         LocalDate publishedDate = parseDartDate(row.get("rcept_dt"), receiptNo);
-        String xml = dartClient.downloadDocument(receiptNo);
+        String xml;
+        try {
+          xml = dartClient.downloadDocument(receiptNo);
+        } catch (OpenDartClientException e) {
+          documentFailures++;
+          log.warn("OpenDART document download failed for receiptNo={}: {}", receiptNo, e.getMessage());
+          continue;
+        }
         var parsedDoc = documentParser.parse(xml);
 
         Optional<EventDraft> draftOpt = switch (categoryOpt.get()) {
@@ -148,6 +162,7 @@ public class DisclosureEventCollectionService {
         break;
       }
     }
+    return documentFailures;
   }
 
   private int persistEvents(List<PendingEvent> pending) {

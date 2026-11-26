@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.Set;
 import org.sejongisc.backend.disclosure.dto.DisclosureEventResponse.Metric;
 import org.sejongisc.backend.disclosure.entity.DisclosureEventCategory;
@@ -346,32 +347,32 @@ public class DisclosureEventRuleEngine {
     return Optional.empty();
   }
 
+  private static final Pattern AMOUNT_UNIT = Pattern.compile("단위\\s*[:：]\\s*([^\\s,;()]+)");
+  private static final Pattern PARENTHESIZED_WON_UNIT = Pattern.compile("\\(\\s*(백만원|천원|억원|원)\\s*\\)");
+
   private String detectAmountUnit(String plainText) {
-    if (plainText.contains("단위 : 백만원") || plainText.contains("단위:백만원") || plainText.contains("(백만원)")) {
-      return "백만원";
+    var explicitUnit = AMOUNT_UNIT.matcher(plainText);
+    if (explicitUnit.find()) {
+      return explicitUnit.group(1);
     }
-    if (plainText.contains("단위 : 억원") || plainText.contains("단위:억원") || plainText.contains("(억원)")) {
-      return "억원";
-    }
-    return "원";
+    var implicitUnit = PARENTHESIZED_WON_UNIT.matcher(plainText);
+    return implicitUnit.find() ? implicitUnit.group(1) : "원";
   }
 
   private String formatWithUnit(String rawNumber, String unit) {
-    if (rawNumber == null || "-".equals(rawNumber)) {
+    BigDecimal multiplier = switch (unit) {
+      case "원" -> BigDecimal.ONE;
+      case "천원" -> BigDecimal.valueOf(1_000);
+      case "백만원" -> BigDecimal.valueOf(1_000_000);
+      case "억원" -> HUNDRED_MILLION;
+      default -> null;
+    };
+    if (multiplier == null) {
       return "-";
     }
-    Optional<BigDecimal> parsed = DartDocumentTableParser.parseNumber(rawNumber);
-    if (parsed.isEmpty()) {
-      return rawNumber;
-    }
-    BigDecimal value = parsed.get();
-    if ("백만원".equals(unit)) {
-      return formatWon(value.multiply(new BigDecimal("1000000")));
-    }
-    if ("억원".equals(unit)) {
-      return formatWon(value.multiply(HUNDRED_MILLION));
-    }
-    return formatWon(value);
+    return DartDocumentTableParser.parseNumber(rawNumber)
+        .map(value -> formatWon(value.multiply(multiplier)))
+        .orElse("-");
   }
 
   public static String formatWon(BigDecimal won) {
