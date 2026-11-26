@@ -100,7 +100,7 @@ public class DepositInterestService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    // 수수료와 같이 소수 4자리에서 버린다. 버려서 0이 되면 기록하지 않는다.
+    // 소수 4자리에서 버린다. 버려서 0이 되면 기록하지 않는다.
     private Optional<AccountLedger> payInterest(CompetitionAccount account, BigDecimal nightDeposit,
                                                 BigDecimal annualRate, LocalDate interestDate, LocalDateTime now) {
         BigDecimal interest = nightDeposit.multiply(annualRate)

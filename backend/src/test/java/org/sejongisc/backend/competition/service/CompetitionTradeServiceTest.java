@@ -198,18 +198,18 @@ class CompetitionTradeServiceTest {
     }
 
     @Test
-    @DisplayName("수수료는 소수 4자리에서 버린다")
+    @DisplayName("수수료는 원 미만을 버린다")
     void feeIsRoundedDown() {
-        competition = competition(CompetitionStatus.ACTIVE, "0.000015");
-        todayPrice = price(samsung, FRI, "59999.0000");
+        competition = competition(CompetitionStatus.ACTIVE, "0.0001");
+        todayPrice = price(samsung, FRI, "55300.0000");
         givenOrderable();
         when(holdingRepository.findByAccountAndStock(account, samsung)).thenReturn(Optional.empty());
         givenTradeSaved();
 
         service(FRI_17).order(competitionId, userId, key, buy(1));
 
-        // 59,999 × 0.000015 = 0.899985 → 0.8999
-        assertThat(savedTrade().getFee()).isEqualByComparingTo("0.8999");
+        // 55,300 × 0.0001 = 5.53 → 5
+        assertThat(savedTrade().getFee()).isEqualByComparingTo("5");
     }
 
     @Test
