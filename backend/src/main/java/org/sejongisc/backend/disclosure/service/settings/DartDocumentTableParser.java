@@ -21,7 +21,7 @@ public class DartDocumentTableParser {
 
   public ParsedDocument parse(String xmlOrHtml) {
     if (xmlOrHtml == null || xmlOrHtml.isBlank()) {
-      return new ParsedDocument(Map.of(), List.of(), "");
+      return new ParsedDocument(Map.of(), List.of());
     }
     Document doc = xmlOrHtml.contains("<DOCUMENT") || xmlOrHtml.contains("<BODY")
         ? Jsoup.parse(xmlOrHtml, "", Parser.xmlParser())
@@ -54,7 +54,36 @@ public class DartDocumentTableParser {
         putValueIfPresent(keyValues, compactKey(rowValues.get(0)), rowValues.get(rowValues.size() - 1));
       }
     }
-    return new ParsedDocument(keyValues, new ArrayList<>(tables.values()), normalizeWhitespace(doc.text()));
+    var parsedTables = tables.entrySet().stream()
+        .map(entry -> new ParsedTable(entry.getValue(), tableText(entry.getKey()),
+            precedingUnitContext(entry.getKey())))
+        .toList();
+    return new ParsedDocument(keyValues, parsedTables);
+  }
+
+  private static String tableText(Element table) {
+    if (table == null) {
+      return "";
+    }
+    Element copy = table.clone();
+    copy.select("table").stream().filter(nested -> nested != copy).forEach(Element::remove);
+    return normalizeWhitespace(copy.text());
+  }
+
+  private static String precedingUnitContext(Element table) {
+    if (table == null) {
+      return "";
+    }
+    // A DART unit label can be in the table or in the paragraph directly above it.
+    Element previous = table.previousElementSibling();
+    if (previous != null && List.of("p", "div", "span").contains(previous.normalName())
+        && previous.selectFirst("table") == null) {
+      String preceding = normalizeWhitespace(previous.text());
+      if (preceding.startsWith("단위") || preceding.startsWith("(단위")) {
+        return preceding;
+      }
+    }
+    return "";
   }
 
   private static void putValueIfPresent(Map<String, String> values, String key, String value) {
@@ -121,10 +150,11 @@ public class DartDocumentTableParser {
     }
   }
 
+  public record ParsedTable(List<TableRow> rows, String unitContext, String precedingUnitContext) {}
+
   public record ParsedDocument(
       Map<String, String> keyValues,
-      List<List<TableRow>> tables,
-      String plainText) {
+      List<ParsedTable> tables) {
 
     public Optional<String> findValue(String... keyFragments) {
       for (String fragment : keyFragments) {
@@ -139,7 +169,7 @@ public class DartDocumentTableParser {
     }
 
     public Optional<List<String>> findRowContaining(String... fragments) {
-      return tables.stream().flatMap(List::stream).map(TableRow::cells)
+      return tables.stream().flatMap(table -> table.rows().stream()).map(TableRow::cells)
           .filter(row -> matchesRow(row, fragments))
           .findFirst();
     }

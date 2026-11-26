@@ -124,11 +124,10 @@ public class DisclosureEventRuleEngine {
 
   public Optional<EventDraft> evaluatePreliminaryEarnings(String companyName, String reportTitle,
       LocalDate publishedDate, ParsedDocument doc) {
-    String unit = detectAmountUnit(doc.plainText());
-    String revenue = extractRowLatestValue(doc, "매출액", "영업수익").orElse("-");
-    String opProfit = extractRowLatestValue(doc, "영업이익").orElse("-");
+    String revenue = extractCurrentAmount(doc, "매출액", "영업수익");
+    String opProfit = extractCurrentAmount(doc, "영업이익");
     String opYoyRaw = extractRowYoyComparison(doc, "영업이익").orElse(null);
-    String netIncome = extractRowLatestValue(doc, "당기순이익", "분기순이익", "반기순이익").orElse("-");
+    String netIncome = extractCurrentAmount(doc, "당기순이익", "분기순이익", "반기순이익");
 
     String comparison = opYoyRaw == null ? "" : DartDocumentTableParser.compactKey(opYoyRaw);
     boolean turnaround = "흑자전환".equals(comparison) || "적자전환".equals(comparison);
@@ -141,7 +140,7 @@ public class DisclosureEventRuleEngine {
       return Optional.empty();
     }
 
-    String opDisplay = formatWithUnit(opProfit, unit);
+    String opDisplay = opProfit;
     if (opYoy != null) {
       opDisplay = opDisplay + " (" + formatSignedPercent(opYoy) + ")";
     } else if ("흑자전환".equals(comparison)) {
@@ -152,9 +151,9 @@ public class DisclosureEventRuleEngine {
 
     String headline = buildPreliminaryHeadline(reportTitle, opYoy, comparison);
     List<Metric> metrics = List.of(
-        new Metric("매출액", formatWithUnit(revenue, unit), false),
+        new Metric("매출액", revenue, false),
         new Metric("영업이익", opDisplay, true),
-        new Metric("당기순이익", formatWithUnit(netIncome, unit), false)
+        new Metric("당기순이익", netIncome, false)
     );
     List<String> tags = new ArrayList<>();
     tags.add("잠정실적");
@@ -303,15 +302,35 @@ public class DisclosureEventRuleEngine {
     return truncate(reportTitle, 42);
   }
 
-  private Optional<String> extractRowLatestValue(ParsedDocument doc, String... labels) {
-    return doc.findRowContaining(labels)
-        .flatMap(row -> row.stream().skip(1)
-            .filter(cell -> DartDocumentTableParser.parseNumber(cell).isPresent())
-            .findFirst());
+  private String extractCurrentAmount(ParsedDocument doc, String... labels) {
+    for (var table : doc.tables()) {
+      int currentColumn = -1;
+      int headerWidth = 0;
+      for (var row : table.rows()) {
+        if (currentColumn >= 0 && row.width() == headerWidth
+            && DartDocumentTableParser.matchesRow(row.cells(), labels)) {
+          String unit = detectAmountUnit(table.unitContext())
+              .or(() -> detectAmountUnit(table.precedingUnitContext())).orElse("원");
+          return formatWithUnit(row.valueAtColumn(currentColumn), unit);
+        }
+        int offset = 0;
+        for (int i = 0; i < row.cells().size(); i++) {
+          String label = DartDocumentTableParser.compactKey(row.cells().get(i));
+          if ("당기실적".equals(label)) {
+            currentColumn = offset;
+            headerWidth = row.width();
+            break;
+          }
+          offset += row.spans().get(i);
+        }
+      }
+    }
+    return "-";
   }
 
   private Optional<String> extractRowYoyComparison(ParsedDocument doc, String... labels) {
-    for (var table : doc.tables()) {
+    for (var parsedTable : doc.tables()) {
+      var table = parsedTable.rows();
       for (int rowIndex = 0; rowIndex < table.size(); rowIndex++) {
         var row = table.get(rowIndex);
         if (!DartDocumentTableParser.matchesRow(row.cells(), labels)) {
@@ -350,13 +369,13 @@ public class DisclosureEventRuleEngine {
   private static final Pattern AMOUNT_UNIT = Pattern.compile("단위\\s*[:：]\\s*([^\\s,;()]+)");
   private static final Pattern PARENTHESIZED_WON_UNIT = Pattern.compile("\\(\\s*(백만원|천원|억원|원)\\s*\\)");
 
-  private String detectAmountUnit(String plainText) {
+  private Optional<String> detectAmountUnit(String plainText) {
     var explicitUnit = AMOUNT_UNIT.matcher(plainText);
     if (explicitUnit.find()) {
-      return explicitUnit.group(1);
+      return Optional.of(explicitUnit.group(1));
     }
     var implicitUnit = PARENTHESIZED_WON_UNIT.matcher(plainText);
-    return implicitUnit.find() ? implicitUnit.group(1) : "원";
+    return implicitUnit.find() ? Optional.of(implicitUnit.group(1)) : Optional.empty();
   }
 
   private String formatWithUnit(String rawNumber, String unit) {

@@ -19,8 +19,14 @@ const formatBasis = (basis) => {
   return basis || '-';
 };
 
-const formatWon = (raw) => {
+const formatAmount = (raw, currency) => {
   if (raw === null || raw === undefined || raw === '') return '-';
+  if (currency !== 'KRW') {
+    const [integer, fraction] = String(raw).split('.');
+    const grouped = integer.replace(/\B(?=(\d{3})+$)/g, ',');
+    const amount = fraction === undefined ? grouped : grouped + '.' + fraction;
+    return currency ? amount + ' ' + currency : amount;
+  }
   const num = Number(raw);
   if (Number.isNaN(num)) return String(raw);
   const abs = Math.abs(num);
@@ -166,9 +172,9 @@ const DisclosureBoard = () => {
                     최근 분기 ({detail.latestQuarter.fiscalYear}Q{detail.latestQuarter.quarter},{' '}
                     {formatBasis(detail.latestQuarter.basis)})
                   </strong>
-                  <span>매출액: {formatWon(detail.latestQuarter.revenue)}</span>
-                  <span>영업이익: {formatWon(detail.latestQuarter.operatingProfit)}</span>
-                  <span>당기순이익: {formatWon(detail.latestQuarter.netIncome)}</span>
+                  <span>매출액: {formatAmount(detail.latestQuarter.revenue, detail.latestQuarter.currency)}</span>
+                  <span>영업이익: {formatAmount(detail.latestQuarter.operatingProfit, detail.latestQuarter.currency)}</span>
+                  <span>당기순이익: {formatAmount(detail.latestQuarter.netIncome, detail.latestQuarter.currency)}</span>
                 </div>
               ) : (
                 <p className={styles.emptyText}>수집된 분기 실적 데이터가 없습니다.</p>
@@ -198,9 +204,9 @@ const DisclosureBoard = () => {
                           </td>
                           <td>{q.periodEnd}</td>
                           <td>{formatBasis(q.basis)}</td>
-                          <td className={styles.numCol}>{formatWon(q.revenue)}<Growth yoy={q.yoy?.revenue} qoq={q.qoq?.revenue} /></td>
-                          <td className={styles.numCol}>{formatWon(q.operatingProfit)}<Growth yoy={q.yoy?.operatingProfit} qoq={q.qoq?.operatingProfit} /></td>
-                          <td className={styles.numCol}>{formatWon(q.netIncome)}<Growth yoy={q.yoy?.netIncome} qoq={q.qoq?.netIncome} /></td>
+                          <td className={styles.numCol}>{formatAmount(q.revenue, q.currency)}<Growth yoy={q.yoy?.revenue} qoq={q.qoq?.revenue} /></td>
+                          <td className={styles.numCol}>{formatAmount(q.operatingProfit, q.currency)}<Growth yoy={q.yoy?.operatingProfit} qoq={q.qoq?.operatingProfit} /></td>
+                          <td className={styles.numCol}>{formatAmount(q.netIncome, q.currency)}<Growth yoy={q.yoy?.netIncome} qoq={q.qoq?.netIncome} /></td>
                           <td>
                             {q.sources?.[0]?.url ? (
                               <a

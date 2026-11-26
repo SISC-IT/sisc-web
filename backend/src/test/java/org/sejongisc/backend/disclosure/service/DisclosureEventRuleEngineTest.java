@@ -108,6 +108,25 @@ class DisclosureEventRuleEngineTest {
   }
 
   @Test
+  void readsOnlyCurrentAmountsAndUsesTheirOwnTableUnit() {
+    var doc = parser.parse("""
+        <table><tr><td>단위 : 원</td><td>주가 300</td></tr></table>
+        <table>
+          <tr><td colspan="4">단위: 백만원</td></tr>
+          <tr><th>구분</th><th>당기실적</th><th>전기실적</th><th>전년동기대비(%)</th></tr>
+          <tr><td>매출액</td><td>-</td><td>500</td><td>20</td></tr>
+          <tr><td>영업이익</td><td>100</td><td>90</td><td>30</td></tr>
+          <tr><td>당기순이익</td><td>0</td><td>20</td><td>-</td></tr>
+        </table>
+        """);
+    var draft = engine.evaluatePreliminaryEarnings("예시", "잠정실적",
+        LocalDate.of(2026, 11, 18), doc).orElseThrow();
+
+    assertThat(draft.metrics()).extracting(metric -> metric.value())
+        .containsExactly("-", "1억 (+30.0%)", "0원");
+  }
+
+  @Test
   void readsGroupedYoyColumnsFromAnActualDartFiling() throws IOException {
     try (var input = getClass().getResourceAsStream("/disclosure/dart-20251030800790-earnings.html")) {
       var doc = parser.parse(new String(input.readAllBytes(), StandardCharsets.UTF_8));
