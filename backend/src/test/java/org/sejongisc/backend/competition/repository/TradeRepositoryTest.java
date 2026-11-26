@@ -2,6 +2,7 @@ package org.sejongisc.backend.competition.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -176,6 +177,25 @@ class TradeRepositoryTest {
     assertThat(tradeRepository
         .findFirstByAccountAndExecutedAtGreaterThanEqualAndExecutedAtLessThanOrderByExecutedAtDesc(account, dayStart, dayEnd))
         .map(Trade::getExecutedAt).contains(LocalDateTime.of(2026, 11, 20, 16, 50));
+  }
+
+  @Test
+  void 대회의_계좌별_거래_횟수와_마지막_체결_시각을_모은다() {
+    CompetitionAccount kim = saveAccount();
+    CompetitionAccount lee = saveAccount();
+    saveAccount(); // 거래 없는 계좌는 결과에 없다
+    tradeRepository.saveAndFlush(trade(kim, UUID.randomUUID(), LocalDateTime.of(2026, 11, 18, 17, 0)));
+    tradeRepository.saveAndFlush(trade(kim, UUID.randomUUID(), LocalDateTime.of(2026, 11, 20, 17, 0)));
+    tradeRepository.saveAndFlush(trade(lee, UUID.randomUUID(), LocalDateTime.of(2026, 11, 19, 17, 0)));
+
+    List<TradeRepository.TradeActivity> activities = tradeRepository.findTradeActivities(competition);
+
+    assertThat(activities)
+        .extracting(TradeRepository.TradeActivity::getAccountId, TradeRepository.TradeActivity::getTradeCount,
+            TradeRepository.TradeActivity::getLastTradedAt)
+        .containsExactlyInAnyOrder(
+            tuple(kim.getAccountId(), 2L, LocalDateTime.of(2026, 11, 20, 17, 0)),
+            tuple(lee.getAccountId(), 1L, LocalDateTime.of(2026, 11, 19, 17, 0)));
   }
 
   private Trade trade(CompetitionAccount account, UUID key) {

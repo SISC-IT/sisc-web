@@ -20,6 +20,13 @@ public interface CompetitionAccountRepository extends JpaRepository<CompetitionA
             select a from CompetitionAccount a
             join fetch a.participant p
             where p.competition = :competition
+            """)
+    List<CompetitionAccount> findAllByCompetition(@Param("competition") Competition competition);
+
+    @Query("""
+            select a from CompetitionAccount a
+            join fetch a.participant p
+            where p.competition = :competition
               and p.status = :status
             """)
     List<CompetitionAccount> findAllByCompetitionAndParticipantStatus(

@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +29,7 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
 import org.sejongisc.backend.competition.dto.CompetitionCreateResponse;
+import org.sejongisc.backend.competition.dto.CompetitionParticipantResponse;
 import org.sejongisc.backend.competition.dto.CompetitionResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
@@ -39,6 +41,8 @@ import org.sejongisc.backend.competition.repository.CompetitionAccountRepository
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
 import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
+import org.sejongisc.backend.competition.repository.TradeRepository;
+import org.sejongisc.backend.competition.repository.TradeRepository.TradeActivity;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
@@ -55,6 +59,7 @@ class CompetitionServiceTest {
   @Mock CompetitionParticipantRepository participantRepository;
   @Mock CompetitionAccountRepository accountRepository;
   @Mock DailyAccountSnapshotRepository snapshotRepository;
+  @Mock TradeRepository tradeRepository;
   @Mock UserRepository userRepository;
   CompetitionService competitionService;
 
@@ -67,7 +72,8 @@ class CompetitionServiceTest {
     Clock clock = Clock.fixed(ZonedDateTime.of(2026, 11, 18, 10, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant(),
         ZoneId.of("Asia/Seoul"));
     competitionService = new CompetitionService(
-        competitionRepository, participantRepository, accountRepository, snapshotRepository, userRepository, clock);
+        competitionRepository, participantRepository, accountRepository, snapshotRepository, tradeRepository,
+        userRepository, clock);
   }
 
   @Test
@@ -428,6 +434,66 @@ class CompetitionServiceTest {
     assertThatThrownBy(() -> competitionService.getCurrent(UUID.randomUUID()))
         .isInstanceOf(CustomException.class)
         .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("참여 현황은 제외된 참가자까지 팀, 이름 순으로 주고 거래가 없으면 0건이다")
+  void getParticipants() {
+    Competition active = competition(CompetitionStatus.ACTIVE);
+    User kim = User.builder().userId(UUID.randomUUID()).name("김민준").build();
+    User lee = User.builder().userId(UUID.randomUUID()).name("이서연").build();
+    User park = User.builder().userId(UUID.randomUUID()).name("박지호").build();
+    CompetitionAccount kimAccount = account(active, kim, "리서치팀", ParticipantStatus.ACTIVE);
+    CompetitionAccount leeAccount = account(active, lee, "매크로팀", ParticipantStatus.EXCLUDED);
+    CompetitionAccount parkAccount = account(active, park, "리서치팀", ParticipantStatus.ACTIVE);
+    LocalDateTime lastTradedAt = LocalDateTime.of(2026, 11, 20, 17, 0);
+    given(competitionRepository.findById(active.getCompetitionId())).willReturn(Optional.of(active));
+    given(accountRepository.findAllByCompetition(active)).willReturn(List.of(kimAccount, leeAccount, parkAccount));
+    given(tradeRepository.findTradeActivities(active))
+        .willReturn(List.of(activity(kimAccount.getAccountId(), 3, lastTradedAt)));
+    given(userRepository.findAllById(anyList())).willReturn(List.of(kim, lee, park));
+
+    List<CompetitionParticipantResponse> participants = competitionService.getParticipants(active.getCompetitionId());
+
+    assertThat(participants)
+        .extracting(CompetitionParticipantResponse::userName, CompetitionParticipantResponse::teamName,
+            CompetitionParticipantResponse::status, CompetitionParticipantResponse::tradeCount,
+            CompetitionParticipantResponse::lastTradedAt)
+        .containsExactly(
+            tuple("김민준", "리서치팀", ParticipantStatus.ACTIVE, 3L, lastTradedAt),
+            tuple("박지호", "리서치팀", ParticipantStatus.ACTIVE, 0L, null),
+            tuple("이서연", "매크로팀", ParticipantStatus.EXCLUDED, 0L, null));
+  }
+
+  @Test
+  @DisplayName("없는 대회의 참여 현황은 COMPETITION_NOT_FOUND")
+  void getParticipantsWithoutCompetition() {
+    UUID competitionId = UUID.randomUUID();
+    given(competitionRepository.findById(competitionId)).willReturn(Optional.empty());
+
+    assertThatThrownBy(() -> competitionService.getParticipants(competitionId))
+        .isInstanceOf(CustomException.class)
+        .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
+  }
+
+  private static CompetitionAccount account(
+      Competition competition, User user, String teamName, ParticipantStatus status) {
+    CompetitionParticipant participant = CompetitionParticipant.builder()
+        .participantId(UUID.randomUUID())
+        .competition(competition)
+        .userId(user.getUserId())
+        .teamName(teamName)
+        .status(status)
+        .build();
+    return CompetitionAccount.builder().accountId(UUID.randomUUID()).participant(participant).build();
+  }
+
+  private static TradeActivity activity(UUID accountId, long tradeCount, LocalDateTime lastTradedAt) {
+    return new TradeActivity() {
+      public UUID getAccountId() { return accountId; }
+      public long getTradeCount() { return tradeCount; }
+      public LocalDateTime getLastTradedAt() { return lastTradedAt; }
+    };
   }
 
   private static Competition competition(CompetitionStatus status) {

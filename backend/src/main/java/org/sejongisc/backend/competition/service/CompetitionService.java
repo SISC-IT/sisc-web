@@ -7,6 +7,7 @@ import org.sejongisc.backend.common.exception.CustomException;
 import org.sejongisc.backend.common.exception.ErrorCode;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
 import org.sejongisc.backend.competition.dto.CompetitionCreateResponse;
+import org.sejongisc.backend.competition.dto.CompetitionParticipantResponse;
 import org.sejongisc.backend.competition.dto.CompetitionResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
@@ -17,6 +18,8 @@ import org.sejongisc.backend.competition.repository.CompetitionAccountRepository
 import org.sejongisc.backend.competition.repository.CompetitionParticipantRepository;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
 import org.sejongisc.backend.competition.repository.DailyAccountSnapshotRepository;
+import org.sejongisc.backend.competition.repository.TradeRepository;
+import org.sejongisc.backend.competition.repository.TradeRepository.TradeActivity;
 import org.sejongisc.backend.user.entity.Role;
 import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.entity.UserStatus;
@@ -28,8 +31,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -43,10 +50,15 @@ public class CompetitionService {
 
   private static final String SINGLE_OPEN_INDEX = "uk_competition_single_open";
 
+  private static final Comparator<CompetitionParticipantResponse> BY_TEAM_THEN_NAME =
+      Comparator.comparing(CompetitionParticipantResponse::teamName)
+          .thenComparing(CompetitionParticipantResponse::userName, Comparator.nullsLast(Comparator.naturalOrder()));
+
   private final CompetitionRepository competitionRepository;
   private final CompetitionParticipantRepository participantRepository;
   private final CompetitionAccountRepository accountRepository;
   private final DailyAccountSnapshotRepository snapshotRepository;
+  private final TradeRepository tradeRepository;
   private final UserRepository userRepository;
   private final Clock clock;
 
@@ -183,6 +195,42 @@ public class CompetitionService {
     }
     competition.finalizeResult();
     log.info("[결과 공개] competitionId={}", competitionId);
+  }
+
+  // 운영진용 참여 현황. 제외된 참가자도 포함한다.
+  @Transactional(readOnly = true)
+  public List<CompetitionParticipantResponse> getParticipants(UUID competitionId) {
+    Competition competition = competitionRepository.findById(competitionId)
+        .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+    List<CompetitionAccount> accounts = accountRepository.findAllByCompetition(competition);
+    Map<UUID, TradeActivity> activities = tradeRepository.findTradeActivities(competition).stream()
+        .collect(Collectors.toMap(TradeActivity::getAccountId, Function.identity()));
+    Map<UUID, String> userNames = userNames(accounts);
+
+    return accounts.stream()
+        .map(account -> toParticipantResponse(account, activities.get(account.getAccountId()), userNames))
+        .sorted(BY_TEAM_THEN_NAME)
+        .toList();
+  }
+
+  private Map<UUID, String> userNames(List<CompetitionAccount> accounts) {
+    List<UUID> userIds = accounts.stream()
+        .map(account -> account.getParticipant().getUserId())
+        .toList();
+    return userRepository.findAllById(userIds).stream()
+        .collect(Collectors.toMap(User::getUserId, User::getName));
+  }
+
+  private static CompetitionParticipantResponse toParticipantResponse(
+      CompetitionAccount account, TradeActivity activity, Map<UUID, String> userNames) {
+    CompetitionParticipant participant = account.getParticipant();
+    return new CompetitionParticipantResponse(
+        participant.getUserId(),
+        userNames.get(participant.getUserId()),
+        participant.getTeamName(),
+        participant.getStatus(),
+        activity == null ? 0 : activity.getTradeCount(),
+        activity == null ? null : activity.getLastTradedAt());
   }
 
   // 시작 전·진행 중 대회가 이미 있으면 uk_competition_single_open 인덱스가 막는다(동시 요청 포함).

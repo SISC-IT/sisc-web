@@ -6,12 +6,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
 import org.sejongisc.backend.competition.dto.CompetitionCreateResponse;
+import org.sejongisc.backend.competition.dto.CompetitionParticipantResponse;
 import org.sejongisc.backend.competition.service.CompetitionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -38,6 +40,21 @@ public class AdminCompetitionController {
   @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
   public ResponseEntity<CompetitionCreateResponse> create(@Valid @RequestBody CompetitionCreateRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.create(request));
+  }
+
+  @Operation(
+      summary = "참여 현황 조회",
+      description = """
+      대회 참가자 전원의 참여 현황을 팀, 이름 순으로 반환합니다. 제외(EXCLUDED)된 참가자도 포함합니다. \s
+      - tradeCount는 매수와 매도 체결 횟수입니다. 예금 입출금은 세지 않습니다. \s
+      - lastTradedAt은 마지막 체결 시각(KST)이고, 거래가 없으면 null입니다. \s
+      - 대회가 없으면 404 COMPETITION_NOT_FOUND입니다.
+      """
+  )
+  @GetMapping("/{competitionId}/participants")
+  @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
+  public ResponseEntity<List<CompetitionParticipantResponse>> getParticipants(@PathVariable UUID competitionId) {
+    return ResponseEntity.ok(competitionService.getParticipants(competitionId));
   }
 
   @Operation(

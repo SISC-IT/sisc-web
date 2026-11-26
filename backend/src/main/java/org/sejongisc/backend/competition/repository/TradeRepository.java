@@ -1,5 +1,6 @@
 package org.sejongisc.backend.competition.repository;
 
+import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionAccount;
 import org.sejongisc.backend.competition.entity.Trade;
 import org.springframework.data.domain.Page;
@@ -11,10 +12,26 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface TradeRepository extends JpaRepository<Trade, UUID> {
+
+    interface TradeActivity {
+        UUID getAccountId();
+        long getTradeCount();
+        LocalDateTime getLastTradedAt();
+    }
+
+    // 거래가 없는 계좌는 결과에 없다.
+    @Query("""
+            select t.account.accountId as accountId, count(t) as tradeCount, max(t.executedAt) as lastTradedAt
+            from Trade t
+            where t.account.participant.competition = :competition
+            group by t.account.accountId
+            """)
+    List<TradeActivity> findTradeActivities(@Param("competition") Competition competition);
 
     Optional<Trade> findByAccountAndIdempotencyKey(CompetitionAccount account, UUID idempotencyKey);
 
