@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Attendance from './pages/Attendance';
 import Board from './pages/Board';
+import DisclosureBoard from './pages/DisclosureBoard';
 import BoardWrite from './pages/BoardWrite';
 import PostDetail from './pages/PostDetail';
 import StockGame from './pages/StockGame';
@@ -82,6 +83,8 @@ function App() {
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/attendance-manage" element={<AttendanceManage />} />
             <Route path="/board" element={<Board />} />
+            <Route path="/board/disclosure" element={<DisclosureBoard />} />
+            <Route path="/board/disclosures" element={<DisclosureBoard />} />
             <Route path="/board/:team" element={<Board />} />
             <Route path="/board/write" element={<BoardWrite />} />
             <Route path="/board/:team/write" element={<BoardWrite />} />

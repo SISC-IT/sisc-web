@@ -39,6 +39,12 @@ kiwoom:
         api-ids: >-
           ${KIWOOM_RESTRICTED_API_IDS:kt00001,kt00002,kt00003,kt00004,kt00005,kt00007,kt00008,kt00009,kt00013,kt00015,kt00016,kt00017,kt00018,kt50020,kt50021,kt50030,kt50031,kt50032,kt50075}
 
+opendart:
+  api:
+    base-url: ${OPENDART_API_BASE_URL:https://opendart.fss.or.kr/api}
+    key: ${OPENDART_API_KEY:}
+    timeout-ms: ${OPENDART_TIMEOUT_MS:10000}
+
 competition:
   stock-sync:
     # 평일 15:40. 종가 수집(16:00) 전에 종목 목록을 맞춘다.

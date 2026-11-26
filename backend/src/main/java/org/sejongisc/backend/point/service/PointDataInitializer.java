@@ -11,6 +11,7 @@ import org.sejongisc.backend.user.entity.User;
 import org.sejongisc.backend.user.service.UserService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "point.initialization.enabled", havingValue = "true", matchIfMissing = true)
 public class PointDataInitializer implements CommandLineRunner {
   private final AccountService accountService;
   private final PointLedgerService pointLedgerService;

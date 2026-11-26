@@ -29,6 +29,8 @@ public class SecurityConstants {
     public static final String[] MEMBER_ONLY_URLS = {
         "/api/user/**",
         "/api/user-bets/**",
+        "/api/disclosures/companies",
+        "/api/disclosures/companies/**",
         //"/api/board/**",
         //"/api/backtest/**",
         //"/api/quant-bot/**",
