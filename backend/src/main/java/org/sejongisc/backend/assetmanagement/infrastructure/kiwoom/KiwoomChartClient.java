@@ -9,7 +9,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.DomesticDailyChartRequest;
 import org.sejongisc.backend.assetmanagement.infrastructure.kiwoom.dto.DomesticDailyChartResponse;
@@ -84,9 +83,11 @@ public class KiwoomChartClient implements MarketDataClient {
         ""
     ).getBody();
 
-    return Stream.of(firstPage)
-        .filter(page -> page.getCandles() != null)
-        .flatMap(page -> page.getCandles().stream())
+    if (firstPage.getCandles() == null) {
+      return List.of();
+    }
+
+    return firstPage.getCandles().stream()
         .map(candle -> toDailyCandle(
             stockCode,
             CURRENCY_KRW,
