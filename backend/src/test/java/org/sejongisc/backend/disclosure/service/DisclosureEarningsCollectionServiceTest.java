@@ -281,6 +281,24 @@ class DisclosureEarningsCollectionServiceTest {
         assertThat(metric.getFiling().getReceiptNo()).isEqualTo(FIRST_2026));
   }
 
+  @Test
+  void usesHighestReceiptNumberForCompanyProfileWhenReportedDatesDiffer() {
+    String correction = "20260815000001";
+    var latestReceipt = new LinkedHashMap<>(filing(correction, "[기재정정]분기보고서 (2026.03)", "연"));
+    latestReceipt.put("rcept_dt", "20260813");
+    latestReceipt.put("corp_name", "New Company Name");
+    setReports(List.of(filing(SECOND_2026, "반기보고서 (2026.06)", "연"), latestReceipt));
+    financial(2026, "11013", correction, "CFS", "40", null);
+    financial(2026, "11012", SECOND_2026, "CFS", "50", null);
+
+    storedCompanies.put(COMPANY, new DisclosureCompany(COMPANY, null, "Old Company Name", null, 12));
+    collection.collect(COMPANY, THROUGH);
+
+    verify(companies).insertIfAbsent(any(), eq(COMPANY), isNull(), eq("New Company Name"),
+        isNull(), eq(12), anyBoolean());
+    assertThat(storedCompanies.get(COMPANY).getCompanyName()).isEqualTo("New Company Name");
+  }
+
   private void setReports(List<Map<String, String>> reports) {
     when(client.searchRegularReports(eq(COMPANY), any(), eq(THROUGH), eq(1), eq(100)))
         .thenReturn(page(1, 1, reports));
