@@ -127,6 +127,23 @@ class DisclosureEventRuleEngineTest {
   }
 
   @Test
+  void usesTheTableDeclarationAboveTheTableInsteadOfAPerShareRowUnit() {
+    var doc = parser.parse("""
+        <p>(단위: 백만원)</p>
+        <table>
+          <tr><th>구분</th><th>당기실적</th><th>전기실적</th><th>전년동기대비(%)</th></tr>
+          <tr><td>영업이익</td><td>100</td><td>90</td><td>30</td></tr>
+          <tr><td>주당순이익(원)</td><td>850</td><td>830</td><td>-</td></tr>
+        </table>
+        """);
+
+    var draft = engine.evaluatePreliminaryEarnings("예시", "잠정실적",
+        LocalDate.of(2026, 11, 18), doc).orElseThrow();
+
+    assertThat(draft.metrics().get(1).value()).isEqualTo("1억 (+30.0%)");
+  }
+
+  @Test
   void readsGroupedYoyColumnsFromAnActualDartFiling() throws IOException {
     try (var input = getClass().getResourceAsStream("/disclosure/dart-20251030800790-earnings.html")) {
       var doc = parser.parse(new String(input.readAllBytes(), StandardCharsets.UTF_8));

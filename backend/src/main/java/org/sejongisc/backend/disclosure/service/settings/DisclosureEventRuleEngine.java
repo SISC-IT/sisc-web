@@ -367,15 +367,11 @@ public class DisclosureEventRuleEngine {
   }
 
   private static final Pattern AMOUNT_UNIT = Pattern.compile("단위\\s*[:：]\\s*([^\\s,;()]+)");
-  private static final Pattern PARENTHESIZED_WON_UNIT = Pattern.compile("\\(\\s*(백만원|천원|억원|원)\\s*\\)");
 
-  private Optional<String> detectAmountUnit(String plainText) {
-    var explicitUnit = AMOUNT_UNIT.matcher(plainText);
-    if (explicitUnit.find()) {
-      return Optional.of(explicitUnit.group(1));
-    }
-    var implicitUnit = PARENTHESIZED_WON_UNIT.matcher(plainText);
-    return implicitUnit.find() ? Optional.of(implicitUnit.group(1)) : Optional.empty();
+  private Optional<String> detectAmountUnit(String text) {
+    // Per-row labels such as "주당순이익(원)" do not declare the table's unit.
+    var declaration = AMOUNT_UNIT.matcher(text);
+    return declaration.find() ? Optional.of(declaration.group(1)) : Optional.empty();
   }
 
   private String formatWithUnit(String rawNumber, String unit) {
