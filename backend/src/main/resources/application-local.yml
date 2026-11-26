@@ -4,6 +4,8 @@ point:
     enabled: false
 
 spring:
+  quartz:
+    auto-startup: false
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sisc_db}
