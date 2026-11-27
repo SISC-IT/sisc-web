@@ -173,9 +173,7 @@ const Rankings = ({ competitionId }) => {
               </tbody>
             </table>
           </div>
-          <p className={styles.muted}>
-            팀원 개인 등수의 평균이 낮을수록 앞서요.
-          </p>
+          <p className={styles.muted}>팀원들의 평균 등수로 순위를 매겨요.</p>
         </>
       )}
     </div>
