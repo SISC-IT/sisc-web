@@ -7,7 +7,7 @@ import MyAccount from '../components/competition/MyAccount';
 import Deposit from '../components/competition/Deposit';
 import Rankings from '../components/competition/Rankings';
 import { getCurrentCompetition } from '../utils/competitionApi';
-import { STATUS_LABELS } from '../utils/competitionFormat';
+import { STATUS_LABELS, daysUntil } from '../utils/competitionFormat';
 
 // 탭은 주소(?tab=)에 남겨서 새로고침하거나 링크로 들어와도 같은 탭이 열린다.
 const TABS = [
@@ -20,6 +20,10 @@ const TABS = [
 
 // 내 계좌를 보는 탭. 참가자가 아니면 계좌가 없다(제외된 참가자는 볼 수 있다).
 const ACCOUNT_TABS = ['account', 'deposit'];
+
+// 종료일 16:00에 최종 순위가 나오므로, 결과 공개 전까지 종료일부터 숨긴다
+const isTallying = ({ status, endDate }) =>
+  status === 'ENDED' || (status === 'ACTIVE' && daysUntil(endDate) <= 0);
 
 const TabContent = ({ tab, competition }) => {
   const { competitionId, myStatus } = competition;
@@ -34,6 +38,13 @@ const TabContent = ({ tab, competition }) => {
     case 'deposit':
       return <Deposit competition={competition} />;
     case 'rankings':
+      if (isTallying(competition)) {
+        return (
+          <p className={styles.notice}>
+            결과 집계 중이에요. 결과 발표 후에 볼 수 있어요.
+          </p>
+        );
+      }
       return <Rankings competitionId={competitionId} />;
     default:
       return <CompetitionHome competition={competition} />;
