@@ -172,6 +172,8 @@ public enum ErrorCode {
 
   COMPETITION_TRANSFER_CONFLICT(HttpStatus.CONFLICT, "같은 계좌의 다른 요청과 겹쳤습니다. 잠시 후 다시 시도해 주세요."),
 
+  COMPETITION_RESULT_NOT_PUBLIC(HttpStatus.FORBIDDEN, "결과 발표 전에는 순위를 볼 수 없습니다."),
+
   // USER
 
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
