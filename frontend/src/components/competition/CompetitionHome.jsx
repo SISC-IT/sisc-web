@@ -1,6 +1,5 @@
 import styles from './CompetitionHome.module.css';
 import {
-  STATUS_LABELS,
   ORDER_HOURS,
   daysUntil,
   fullDate,
@@ -29,7 +28,6 @@ const countdown = ({ status, startDate, endDate }) => {
 const CompetitionHome = ({ competition }) => {
   const {
     name,
-    status,
     startDate,
     endDate,
     initialCash,
@@ -59,11 +57,8 @@ const CompetitionHome = ({ competition }) => {
   return (
     <div className={styles.home}>
       <section aria-labelledby="competition-name" className={styles.hero}>
-        <div className={styles.badges}>
-          <span className={styles.statusBadge}>{STATUS_LABELS[status]}</span>
-          {remaining && <span className={styles.countdown}>{remaining}</span>}
-        </div>
         <div className={styles.heroText}>
+          {remaining && <span className={styles.countdown}>{remaining}</span>}
           <h2 id="competition-name" className={styles.name}>
             {name}
           </h2>
