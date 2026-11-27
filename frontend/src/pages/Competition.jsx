@@ -70,6 +70,14 @@ const Competition = () => {
       .catch((err) => setError(err));
   }, []);
 
+  // 결과 공개 여부가 바뀌었을 수 있어 순위 탭을 열 때마다 상태를 다시 읽는다
+  useEffect(() => {
+    if (tab !== 'rankings') return;
+    getCurrentCompetition()
+      .then(setCompetition)
+      .catch(() => {});
+  }, [tab]);
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
