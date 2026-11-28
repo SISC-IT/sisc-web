@@ -66,12 +66,13 @@ class CompetitionRankingControllerTest {
     @DisplayName("GET /rankings - 스냅샷 날짜와 개인 순위를 반환한다")
     void returnsRankings() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(rankingService.getRankings(competitionId, false)).thenReturn(new CompetitionRankingResponse(
+        UUID participantId = UUID.randomUUID();
+        when(rankingService.getRankings(competitionId, null)).thenReturn(new CompetitionRankingResponse(
                 LocalDate.of(2026, 11, 20),
                 List.of(
-                        new CompetitionRankingEntry(1, 1, userId, "이세종", "퀀트팀",
+                        new CompetitionRankingEntry(1, 1, participantId, userId, "이세종", "퀀트팀",
                                 new BigDecimal("10600000.0000"), new BigDecimal("0.060000")),
-                        new CompetitionRankingEntry(2, null, UUID.randomUUID(), "김세종", "매크로팀",
+                        new CompetitionRankingEntry(2, null, UUID.randomUUID(), null, "익명", "매크로팀",
                                 new BigDecimal("10000000.0000"), new BigDecimal("0.000000")))));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/rankings", competitionId))
@@ -79,18 +80,20 @@ class CompetitionRankingControllerTest {
                 .andExpect(jsonPath("$.snapshotDate").value("2026-11-20"))
                 .andExpect(jsonPath("$.rankings[0].rank").value(1))
                 .andExpect(jsonPath("$.rankings[0].rankChange").value(1))
+                .andExpect(jsonPath("$.rankings[0].participantId").value(participantId.toString()))
                 .andExpect(jsonPath("$.rankings[0].userId").value(userId.toString()))
                 .andExpect(jsonPath("$.rankings[0].userName").value("이세종"))
                 .andExpect(jsonPath("$.rankings[0].teamName").value("퀀트팀"))
                 .andExpect(jsonPath("$.rankings[0].totalValue").value(10600000.0))
                 .andExpect(jsonPath("$.rankings[0].profitRate").value(0.06))
-                .andExpect(jsonPath("$.rankings[1].rankChange").doesNotExist());
+                .andExpect(jsonPath("$.rankings[1].rankChange").doesNotExist())
+                .andExpect(jsonPath("$.rankings[1].userName").value("익명"));
     }
 
     @Test
     @DisplayName("GET /rankings - 없는 대회는 404를 반환한다")
     void returns404ForUnknownCompetition() throws Exception {
-        when(rankingService.getRankings(competitionId, false))
+        when(rankingService.getRankings(competitionId, null))
                 .thenThrow(new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/rankings", competitionId))
@@ -101,7 +104,7 @@ class CompetitionRankingControllerTest {
     @Test
     @DisplayName("GET /rankings/teams - 스냅샷 날짜와 팀 순위를 반환한다")
     void returnsTeamRankings() throws Exception {
-        when(rankingService.getTeamRankings(competitionId, false)).thenReturn(new CompetitionTeamRankingResponse(
+        when(rankingService.getTeamRankings(competitionId)).thenReturn(new CompetitionTeamRankingResponse(
                 LocalDate.of(2026, 11, 20),
                 List.of(new CompetitionTeamRankingEntry(1, "퀀트팀", new BigDecimal("1.50"), 3, 2))));
 
@@ -123,14 +126,14 @@ class CompetitionRankingControllerTest {
     @Test
     @DisplayName("GET /rankings - 결과 공개 전이면 403을 반환한다")
     void returns403BeforeResultIsPublic() throws Exception {
-        when(rankingService.getRankings(competitionId, false))
+        when(rankingService.getRankings(competitionId, null))
                 .thenThrow(new CustomException(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/rankings", competitionId))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value("COMPETITION_RESULT_NOT_PUBLIC"));
 
-        when(rankingService.getTeamRankings(competitionId, false))
+        when(rankingService.getTeamRankings(competitionId))
                 .thenThrow(new CustomException(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/rankings/teams", competitionId))
@@ -138,20 +141,17 @@ class CompetitionRankingControllerTest {
     }
 
     @Test
-    @DisplayName("GET /rankings - 부회장 이상은 관리자로 조회한다")
-    void adminRequestsAsAdmin() throws Exception {
-        CustomUserDetails admin = new CustomUserDetails(
-                User.builder().userId(UUID.randomUUID()).role(Role.VICE_PRESIDENT).build());
+    @DisplayName("GET /rankings - 부회장이어도 자기 userId로 일반 순위를 조회한다")
+    void requestsWithViewerId() throws Exception {
+        UUID userId = UUID.randomUUID();
+        CustomUserDetails viewer = new CustomUserDetails(
+                User.builder().userId(userId).role(Role.VICE_PRESIDENT).build());
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(admin, null, admin.getAuthorities()));
-        when(rankingService.getRankings(competitionId, true))
+                new UsernamePasswordAuthenticationToken(viewer, null, viewer.getAuthorities()));
+        when(rankingService.getRankings(competitionId, userId))
                 .thenReturn(new CompetitionRankingResponse(null, List.of()));
-        when(rankingService.getTeamRankings(competitionId, true))
-                .thenReturn(new CompetitionTeamRankingResponse(null, List.of()));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/rankings", competitionId))
-                .andExpect(status().isOk());
-        mockMvc.perform(get("/api/competitions/{competitionId}/rankings/teams", competitionId))
                 .andExpect(status().isOk());
     }
 }

@@ -6,6 +6,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sejongisc.backend.competition.dto.CompetitionCreateRequest;
 import org.sejongisc.backend.competition.dto.CompetitionCreateResponse;
+import org.sejongisc.backend.competition.dto.CompetitionRankingResponse;
+import org.sejongisc.backend.competition.dto.CompetitionTeamRankingResponse;
+import org.sejongisc.backend.competition.service.CompetitionRankingService;
 import org.sejongisc.backend.competition.service.CompetitionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import java.util.UUID;
 public class AdminCompetitionController {
 
   private final CompetitionService competitionService;
+  private final CompetitionRankingService rankingService;
 
   @Operation(
       summary = "대회 생성",
@@ -53,5 +57,33 @@ public class AdminCompetitionController {
   public ResponseEntity<Void> finalizeResult(@PathVariable UUID competitionId) {
     competitionService.finalizeResult(competitionId);
     return ResponseEntity.noContent().build();
+  }
+
+  @Operation(
+      summary = "개인 순위 조회",
+      description = """
+      일반 개인 순위 API와 같은 순위를 모든 참가자의 실명과 userId를 담아 반환합니다. \s
+      - 종료일부터 결과 공개 전까지도 볼 수 있어, 공개 전에 결과를 검토할 때 씁니다. \s
+      - 계산된 순위가 아직 없으면 snapshotDate는 null이고 rankings는 빈 목록입니다.
+      """
+  )
+  @GetMapping("/{competitionId}/rankings")
+  @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
+  public ResponseEntity<CompetitionRankingResponse> getRankings(@PathVariable UUID competitionId) {
+    return ResponseEntity.ok(rankingService.getAdminRankings(competitionId));
+  }
+
+  @Operation(
+      summary = "팀 순위 조회",
+      description = """
+      일반 팀 순위 API와 같은 팀 순위를 반환합니다. \s
+      - 종료일부터 결과 공개 전까지도 볼 수 있어, 공개 전에 결과를 검토할 때 씁니다. \s
+      - 계산된 순위가 아직 없으면 snapshotDate는 null이고 rankings는 빈 목록입니다.
+      """
+  )
+  @GetMapping("/{competitionId}/rankings/teams")
+  @PreAuthorize("hasAnyRole('VICE_PRESIDENT', 'PRESIDENT', 'SYSTEM_ADMIN')")
+  public ResponseEntity<CompetitionTeamRankingResponse> getTeamRankings(@PathVariable UUID competitionId) {
+    return ResponseEntity.ok(rankingService.getAdminTeamRankings(competitionId));
   }
 }
