@@ -72,7 +72,7 @@ class CompetitionRankingControllerTest {
                 List.of(
                         new CompetitionRankingEntry(1, 1, participantId, userId, "이세종", "퀀트팀",
                                 new BigDecimal("10600000.0000"), new BigDecimal("0.060000")),
-                        new CompetitionRankingEntry(2, null, UUID.randomUUID(), null, "익명", null,
+                        new CompetitionRankingEntry(2, null, UUID.randomUUID(), null, "익명", "매크로팀",
                                 new BigDecimal("10000000.0000"), new BigDecimal("0.000000")))));
 
         mockMvc.perform(get("/api/competitions/{competitionId}/rankings", competitionId))

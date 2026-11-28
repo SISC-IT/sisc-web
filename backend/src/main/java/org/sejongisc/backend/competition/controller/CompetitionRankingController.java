@@ -35,7 +35,7 @@ public class CompetitionRankingController {
             - rankChange는 직전 거래일 대비 등수 변동입니다. 양수면 상승, 음수면 하락이고 비교할 기록이 없으면 null입니다. \s
             - 총자산이 같으면 같은 등수이고 다음 등수는 건너뜁니다. \s
             - profitRate는 대회 초기 자산 대비 비율입니다(0.05는 5%). \s
-            - 관리자가 아니면 본인 줄만 userId, userName, teamName이 채워집니다. 다른 참가자는 userName이 "익명"이고 userId와 teamName은 null입니다. \s
+            - 관리자가 아니면 본인 줄만 userId와 실명이 채워집니다. 다른 참가자는 userName이 "익명"이고 userId는 null입니다. teamName은 모두에게 보입니다. \s
             - participantId는 이번 대회 안에서만 쓰는 참가자 ID입니다. \s
             - 종료일부터 결과 공개 전까지는 관리자(부회장 이상)만 볼 수 있습니다. 그 외에는 403 COMPETITION_RESULT_NOT_PUBLIC입니다. \s
             - 계산된 순위가 아직 없으면 snapshotDate는 null이고 rankings는 빈 목록입니다.

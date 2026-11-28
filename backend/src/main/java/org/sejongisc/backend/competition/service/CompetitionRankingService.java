@@ -171,7 +171,7 @@ public class CompetitionRankingService {
                 snapshot.getProfitRate());
     }
 
-    // 동아리 안에서는 이름 일부나 팀 이름만으로도 누군지 알 수 있어, 다른 참가자는 모두 가린다
+    // 동아리 안에서는 이름 일부만으로도 누군지 알 수 있어, 다른 참가자는 이름을 모두 가린다
     private static CompetitionRankingEntry anonymize(CompetitionRankingEntry entry) {
         return new CompetitionRankingEntry(
                 entry.rank(),
@@ -179,7 +179,7 @@ public class CompetitionRankingService {
                 entry.participantId(),
                 null,
                 ANONYMOUS_NAME,
-                null,
+                entry.teamName(),
                 entry.totalValue(),
                 entry.profitRate());
     }

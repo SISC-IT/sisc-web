@@ -156,7 +156,7 @@ class CompetitionRankingServiceTest {
     }
 
     @Test
-    @DisplayName("관리자가 아니면 본인 줄만 실명과 팀 이름을 보여주고 다른 참가자는 익명으로 가린다")
+    @DisplayName("관리자가 아니면 본인 줄만 실명을 보여주고 다른 참가자는 이름을 익명으로 가린다")
     void anonymizesOtherParticipants() {
         givenCompetition();
         givenLatestDate(FRI);
@@ -173,7 +173,7 @@ class CompetitionRankingServiceTest {
                 .extracting(CompetitionRankingEntry::participantId, CompetitionRankingEntry::userId,
                         CompetitionRankingEntry::userName, CompetitionRankingEntry::teamName)
                 .containsExactly(
-                        tuple(lee.getParticipant().getParticipantId(), null, "익명", null),
+                        tuple(lee.getParticipant().getParticipantId(), null, "익명", "퀀트팀"),
                         tuple(kim.getParticipant().getParticipantId(), kim.getParticipant().getUserId(), "김세종", "매크로팀"));
         assertThat(response.rankings().get(0).totalValue()).isEqualByComparingTo("10600000");
     }
