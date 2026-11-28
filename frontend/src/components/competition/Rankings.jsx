@@ -146,7 +146,7 @@ const Rankings = ({ competitionId }) => {
               <tbody>
                 {people.rankings.map((r) => (
                   <tr
-                    key={r.userId}
+                    key={r.participantId}
                     className={r.userId === me?.id ? styles.mine : undefined}
                   >
                     <td className={`${styles.center} ${styles.strong}`}>
