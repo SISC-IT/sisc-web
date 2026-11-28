@@ -156,8 +156,8 @@
   color: #166534;
 }
 
-.moreButton,
-.chip {
+.moreButton {
+  align-self: center;
   font: inherit;
   font-size: 15px;
   font-weight: 700;
@@ -167,21 +167,6 @@
   padding: 0 18px;
   min-height: 44px;
   cursor: pointer;
-}
-
-.moreButton {
-  align-self: center;
-}
-
-.chipOn {
-  background: #111111;
-  border-color: #111111;
-  color: #ffffff;
-}
-
-.chips {
-  display: flex;
-  gap: 8px;
 }
 
 .errorBox,

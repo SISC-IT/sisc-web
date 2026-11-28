@@ -2,6 +2,7 @@ package org.sejongisc.backend.competition.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -19,6 +20,7 @@ import org.sejongisc.backend.competition.dto.CompetitionTeamRankingEntry;
 import org.sejongisc.backend.competition.dto.CompetitionTeamRankingResponse;
 import org.sejongisc.backend.competition.entity.Competition;
 import org.sejongisc.backend.competition.entity.CompetitionParticipant;
+import org.sejongisc.backend.competition.entity.CompetitionStatus;
 import org.sejongisc.backend.competition.entity.DailyAccountSnapshot;
 import org.sejongisc.backend.competition.entity.ParticipantStatus;
 import org.sejongisc.backend.competition.repository.CompetitionRepository;
@@ -40,10 +42,10 @@ public class CompetitionRankingService {
     private final CompetitionRepository competitionRepository;
     private final DailyAccountSnapshotRepository snapshotRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
-    public CompetitionRankingResponse getRankings(UUID competitionId) {
-        Competition competition = competitionRepository.findById(competitionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+    public CompetitionRankingResponse getRankings(UUID competitionId, boolean admin) {
+        Competition competition = findVisibleCompetition(competitionId, admin);
 
         Optional<LocalDate> latestDate = snapshotRepository.findLatestSnapshotDate(competition);
         if (latestDate.isEmpty()) {
@@ -63,9 +65,8 @@ public class CompetitionRankingService {
         return new CompetitionRankingResponse(latestDate.get(), rankings);
     }
 
-    public CompetitionTeamRankingResponse getTeamRankings(UUID competitionId) {
-        Competition competition = competitionRepository.findById(competitionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+    public CompetitionTeamRankingResponse getTeamRankings(UUID competitionId, boolean admin) {
+        Competition competition = findVisibleCompetition(competitionId, admin);
 
         Optional<LocalDate> latestDate = snapshotRepository.findLatestSnapshotDate(competition);
         if (latestDate.isEmpty()) {
@@ -76,6 +77,22 @@ public class CompetitionRankingService {
                 snapshotRepository.findAllByCompetitionAndSnapshotDate(
                         competition, latestDate.get(), ParticipantStatus.ACTIVE);
         return new CompetitionTeamRankingResponse(latestDate.get(), toTeamRankings(snapshots));
+    }
+
+    // 종료일 16:00에 최종 순위가 나오므로, 종료일부터 결과 공개 전까지는 관리자만 볼 수 있다
+    private Competition findVisibleCompetition(UUID competitionId, boolean admin) {
+        Competition competition = competitionRepository.findById(competitionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
+        if (!admin && isTallying(competition)) {
+            throw new CustomException(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC);
+        }
+        return competition;
+    }
+
+    private boolean isTallying(Competition competition) {
+        CompetitionStatus status = competition.getStatus();
+        return status == CompetitionStatus.ENDED
+                || (status == CompetitionStatus.ACTIVE && !LocalDate.now(clock).isBefore(competition.getEndDate()));
     }
 
     private static List<CompetitionTeamRankingEntry> toTeamRankings(List<DailyAccountSnapshot> snapshots) {
