@@ -35,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CompetitionRankingService {
 
+    private static final String ANONYMOUS_NAME = "익명";
+
     private static final Comparator<CompetitionRankingEntry> BY_RANK_THEN_NAME =
             Comparator.comparingInt(CompetitionRankingEntry::rank)
                     .thenComparing(CompetitionRankingEntry::userName, Comparator.nullsLast(Comparator.naturalOrder()));
@@ -44,7 +46,7 @@ public class CompetitionRankingService {
     private final UserRepository userRepository;
     private final Clock clock;
 
-    public CompetitionRankingResponse getRankings(UUID competitionId, boolean admin) {
+    public CompetitionRankingResponse getRankings(UUID competitionId, UUID viewerId, boolean admin) {
         Competition competition = findVisibleCompetition(competitionId, admin);
 
         Optional<LocalDate> latestDate = snapshotRepository.findLatestSnapshotDate(competition);
@@ -61,6 +63,7 @@ public class CompetitionRankingService {
         List<CompetitionRankingEntry> rankings = snapshots.stream()
                 .map(snapshot -> toEntry(snapshot, previousRanks, userNames))
                 .sorted(BY_RANK_THEN_NAME)
+                .map(entry -> admin || entry.userId().equals(viewerId) ? entry : anonymize(entry))
                 .toList();
         return new CompetitionRankingResponse(latestDate.get(), rankings);
     }
@@ -160,10 +163,24 @@ public class CompetitionRankingService {
         return new CompetitionRankingEntry(
                 snapshot.getRank(),
                 previousRank == null ? null : previousRank - snapshot.getRank(),
+                participant.getParticipantId(),
                 participant.getUserId(),
                 userNames.get(participant.getUserId()),
                 participant.getTeamName(),
                 snapshot.getTotalValue(),
                 snapshot.getProfitRate());
+    }
+
+    // 동아리 안에서는 이름 일부나 팀 이름만으로도 누군지 알 수 있어, 다른 참가자는 모두 가린다
+    private static CompetitionRankingEntry anonymize(CompetitionRankingEntry entry) {
+        return new CompetitionRankingEntry(
+                entry.rank(),
+                entry.rankChange(),
+                entry.participantId(),
+                null,
+                ANONYMOUS_NAME,
+                null,
+                entry.totalValue(),
+                entry.profitRate());
     }
 }

@@ -6,6 +6,7 @@ import java.util.UUID;
 public record CompetitionRankingEntry(
         int rank,
         Integer rankChange,
+        UUID participantId,
         UUID userId,
         String userName,
         String teamName,
