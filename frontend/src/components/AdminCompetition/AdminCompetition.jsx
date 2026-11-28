@@ -2,14 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { CalendarDays, Trophy } from 'lucide-react';
 import { toast } from 'react-toastify';
 import styles from './AdminCompetition.module.css';
-import {
-  getCurrentCompetition,
-  getRankings,
-  getTeamRankings,
-} from '../../utils/competitionApi';
+import { getCurrentCompetition } from '../../utils/competitionApi';
 import {
   createCompetition,
   finalizeCompetition,
+  getAdminRankings,
+  getAdminTeamRankings,
 } from '../../utils/adminCompetitionApi';
 import {
   changeColor,
@@ -284,7 +282,10 @@ const RankingPanels = ({ competitionId, isFinal }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    Promise.all([getRankings(competitionId), getTeamRankings(competitionId)])
+    Promise.all([
+      getAdminRankings(competitionId),
+      getAdminTeamRankings(competitionId),
+    ])
       .then(([peopleRes, teamsRes]) => {
         setPeople(peopleRes);
         setTeams(teamsRes);
