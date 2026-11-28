@@ -46,9 +46,27 @@ public class CompetitionRankingService {
     private final UserRepository userRepository;
     private final Clock clock;
 
-    public CompetitionRankingResponse getRankings(UUID competitionId, UUID viewerId, boolean admin) {
-        Competition competition = findVisibleCompetition(competitionId, admin);
+    public CompetitionRankingResponse getRankings(UUID competitionId, UUID viewerId) {
+        CompetitionRankingResponse response = rankingsOf(findPublicCompetition(competitionId));
+        List<CompetitionRankingEntry> rankings = response.rankings().stream()
+                .map(entry -> entry.userId().equals(viewerId) ? entry : anonymize(entry))
+                .toList();
+        return new CompetitionRankingResponse(response.snapshotDate(), rankings);
+    }
 
+    public CompetitionRankingResponse getAdminRankings(UUID competitionId) {
+        return rankingsOf(findCompetition(competitionId));
+    }
+
+    public CompetitionTeamRankingResponse getTeamRankings(UUID competitionId) {
+        return teamRankingsOf(findPublicCompetition(competitionId));
+    }
+
+    public CompetitionTeamRankingResponse getAdminTeamRankings(UUID competitionId) {
+        return teamRankingsOf(findCompetition(competitionId));
+    }
+
+    private CompetitionRankingResponse rankingsOf(Competition competition) {
         Optional<LocalDate> latestDate = snapshotRepository.findLatestSnapshotDate(competition);
         if (latestDate.isEmpty()) {
             return new CompetitionRankingResponse(null, List.of());
@@ -63,14 +81,11 @@ public class CompetitionRankingService {
         List<CompetitionRankingEntry> rankings = snapshots.stream()
                 .map(snapshot -> toEntry(snapshot, previousRanks, userNames))
                 .sorted(BY_RANK_THEN_NAME)
-                .map(entry -> admin || entry.userId().equals(viewerId) ? entry : anonymize(entry))
                 .toList();
         return new CompetitionRankingResponse(latestDate.get(), rankings);
     }
 
-    public CompetitionTeamRankingResponse getTeamRankings(UUID competitionId, boolean admin) {
-        Competition competition = findVisibleCompetition(competitionId, admin);
-
+    private CompetitionTeamRankingResponse teamRankingsOf(Competition competition) {
         Optional<LocalDate> latestDate = snapshotRepository.findLatestSnapshotDate(competition);
         if (latestDate.isEmpty()) {
             return new CompetitionTeamRankingResponse(null, List.of());
@@ -82,11 +97,15 @@ public class CompetitionRankingService {
         return new CompetitionTeamRankingResponse(latestDate.get(), toTeamRankings(snapshots));
     }
 
-    // 종료일 16:00에 최종 순위가 나오므로, 종료일부터 결과 공개 전까지는 관리자만 볼 수 있다
-    private Competition findVisibleCompetition(UUID competitionId, boolean admin) {
-        Competition competition = competitionRepository.findById(competitionId)
+    private Competition findCompetition(UUID competitionId) {
+        return competitionRepository.findById(competitionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPETITION_NOT_FOUND));
-        if (!admin && isTallying(competition)) {
+    }
+
+    // 종료일 16:00에 최종 순위가 나오므로, 종료일부터 결과 공개 전까지는 관리자 API로만 볼 수 있다
+    private Competition findPublicCompetition(UUID competitionId) {
+        Competition competition = findCompetition(competitionId);
+        if (isTallying(competition)) {
             throw new CustomException(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC);
         }
         return competition;

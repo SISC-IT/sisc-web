@@ -86,7 +86,7 @@ class CompetitionRankingServiceTest {
                 snapshot(lee, THU, "10310000", "0.031", 2)));
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));
 
-        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null, true);
+        CompetitionRankingResponse response = rankingService.getAdminRankings(competitionId);
 
         assertThat(response.snapshotDate()).isEqualTo(FRI);
         assertThat(response.rankings()).hasSize(2);
@@ -114,7 +114,7 @@ class CompetitionRankingServiceTest {
                 .thenReturn(List.of(snapshot(kim, FRI, "10000000", "0", 1)));
         givenUsers(user(kim, "김세종"));
 
-        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null, false);
+        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null);
 
         assertThat(response.rankings().get(0).rankChange()).isNull();
     }
@@ -132,7 +132,7 @@ class CompetitionRankingServiceTest {
                 .thenReturn(List.of(snapshot(kim, THU, "10000000", "0", 1)));
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));
 
-        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null, false);
+        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null);
 
         assertThat(response.rankings().get(0).rankChange()).isZero();
         assertThat(response.rankings().get(1).rankChange()).isNull();
@@ -149,14 +149,14 @@ class CompetitionRankingServiceTest {
                 snapshot(kim, FRI, "10000000", "0", 1)));
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));
 
-        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null, true);
+        CompetitionRankingResponse response = rankingService.getAdminRankings(competitionId);
 
         assertThat(response.rankings()).extracting(CompetitionRankingEntry::userName)
                 .containsExactly("김세종", "이세종");
     }
 
     @Test
-    @DisplayName("관리자가 아니면 본인 줄만 실명을 보여주고 다른 참가자는 이름을 익명으로 가린다")
+    @DisplayName("본인 줄만 실명을 보여주고 다른 참가자는 이름을 익명으로 가린다")
     void anonymizesOtherParticipants() {
         givenCompetition();
         givenLatestDate(FRI);
@@ -167,7 +167,7 @@ class CompetitionRankingServiceTest {
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));
 
         CompetitionRankingResponse response =
-                rankingService.getRankings(competitionId, kim.getParticipant().getUserId(), false);
+                rankingService.getRankings(competitionId, kim.getParticipant().getUserId());
 
         assertThat(response.rankings())
                 .extracting(CompetitionRankingEntry::participantId, CompetitionRankingEntry::userId,
@@ -179,7 +179,7 @@ class CompetitionRankingServiceTest {
     }
 
     @Test
-    @DisplayName("관리자는 모든 참가자의 실명과 팀 이름을 본다")
+    @DisplayName("관리자 순위는 모든 참가자의 실명과 팀 이름을 담는다")
     void adminSeesAllNames() {
         givenCompetition();
         givenLatestDate(FRI);
@@ -189,7 +189,7 @@ class CompetitionRankingServiceTest {
                 snapshot(kim, FRI, "10480000", "0.048", 2)));
         givenUsers(user(kim, "김세종"), user(lee, "이세종"));
 
-        CompetitionRankingResponse response = rankingService.getRankings(competitionId, UUID.randomUUID(), true);
+        CompetitionRankingResponse response = rankingService.getAdminRankings(competitionId);
 
         assertThat(response.rankings())
                 .extracting(CompetitionRankingEntry::userName, CompetitionRankingEntry::teamName)
@@ -202,7 +202,7 @@ class CompetitionRankingServiceTest {
         givenCompetition();
         when(snapshotRepository.findLatestSnapshotDate(competition)).thenReturn(Optional.empty());
 
-        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null, false);
+        CompetitionRankingResponse response = rankingService.getRankings(competitionId, null);
 
         assertThat(response.snapshotDate()).isNull();
         assertThat(response.rankings()).isEmpty();
@@ -213,51 +213,51 @@ class CompetitionRankingServiceTest {
     void throwsWhenCompetitionNotFound() {
         when(competitionRepository.findById(competitionId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> rankingService.getRankings(competitionId, null, false))
+        assertThatThrownBy(() -> rankingService.getRankings(competitionId, null))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_NOT_FOUND);
     }
 
     @Test
-    @DisplayName("결과 공개 전(ENDED)에는 관리자가 아니면 개인·팀 순위를 볼 수 없다")
+    @DisplayName("결과 공개 전(ENDED)에는 개인 순위와 팀 순위를 볼 수 없다")
     void hidesRankingsBeforeResultIsPublic() {
         competition = Competition.builder().competitionId(competitionId)
                 .status(CompetitionStatus.ENDED).endDate(THU).build();
         givenCompetition();
 
-        assertThatThrownBy(() -> rankingService.getRankings(competitionId, null, false))
+        assertThatThrownBy(() -> rankingService.getRankings(competitionId, null))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC);
-        assertThatThrownBy(() -> rankingService.getTeamRankings(competitionId, false))
+        assertThatThrownBy(() -> rankingService.getTeamRankings(competitionId))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC);
     }
 
     @Test
-    @DisplayName("진행 중이어도 종료일이면 관리자가 아니면 순위를 볼 수 없다")
+    @DisplayName("진행 중이어도 종료일이면 순위를 볼 수 없다")
     void hidesRankingsOnEndDate() {
         competition = Competition.builder().competitionId(competitionId)
                 .status(CompetitionStatus.ACTIVE).endDate(FRI).build();
         givenCompetition();
 
-        assertThatThrownBy(() -> rankingService.getRankings(competitionId, null, false))
+        assertThatThrownBy(() -> rankingService.getRankings(competitionId, null))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC);
-        assertThatThrownBy(() -> rankingService.getTeamRankings(competitionId, false))
+        assertThatThrownBy(() -> rankingService.getTeamRankings(competitionId))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COMPETITION_RESULT_NOT_PUBLIC);
     }
 
     @Test
-    @DisplayName("결과 공개 전에도 관리자는 순위를 볼 수 있다")
+    @DisplayName("결과 공개 전에도 관리자 순위는 볼 수 있다")
     void adminSeesRankingsBeforeResultIsPublic() {
         competition = Competition.builder().competitionId(competitionId)
                 .status(CompetitionStatus.ENDED).endDate(THU).build();
         givenCompetition();
         when(snapshotRepository.findLatestSnapshotDate(competition)).thenReturn(Optional.empty());
 
-        assertThat(rankingService.getRankings(competitionId, null, true).rankings()).isEmpty();
-        assertThat(rankingService.getTeamRankings(competitionId, true).rankings()).isEmpty();
+        assertThat(rankingService.getAdminRankings(competitionId).rankings()).isEmpty();
+        assertThat(rankingService.getAdminTeamRankings(competitionId).rankings()).isEmpty();
     }
 
     @Test
@@ -268,8 +268,8 @@ class CompetitionRankingServiceTest {
         givenCompetition();
         when(snapshotRepository.findLatestSnapshotDate(competition)).thenReturn(Optional.empty());
 
-        assertThat(rankingService.getRankings(competitionId, null, false).rankings()).isEmpty();
-        assertThat(rankingService.getTeamRankings(competitionId, false).rankings()).isEmpty();
+        assertThat(rankingService.getRankings(competitionId, null).rankings()).isEmpty();
+        assertThat(rankingService.getTeamRankings(competitionId).rankings()).isEmpty();
     }
 
     @Test
@@ -288,7 +288,7 @@ class CompetitionRankingServiceTest {
                 snapshot(park, FRI, "10200000", "0.02", 4),
                 snapshot(jung, FRI, "10100000", "0.01", 5)));
 
-        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId, false);
+        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId);
 
         assertThat(response.snapshotDate()).isEqualTo(FRI);
         assertThat(response.rankings())
@@ -315,7 +315,7 @@ class CompetitionRankingServiceTest {
         when(snapshotRepository.findAllByCompetitionAndSnapshotDate(competition, FRI, ParticipantStatus.ACTIVE))
                 .thenReturn(snapshots);
 
-        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId, false);
+        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId);
 
         assertThat(response.rankings())
                 .extracting(CompetitionTeamRankingEntry::rank, CompetitionTeamRankingEntry::teamName,
@@ -331,7 +331,7 @@ class CompetitionRankingServiceTest {
         givenCompetition();
         when(snapshotRepository.findLatestSnapshotDate(competition)).thenReturn(Optional.empty());
 
-        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId, false);
+        CompetitionTeamRankingResponse response = rankingService.getTeamRankings(competitionId);
 
         assertThat(response.snapshotDate()).isNull();
         assertThat(response.rankings()).isEmpty();
